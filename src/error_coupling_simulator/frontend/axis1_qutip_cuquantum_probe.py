@@ -232,7 +232,7 @@ def axis1_qutip_cuquantum_trajectory_probe_manifest(
 ) -> dict[str, Any]:
     """Execute a restricted qutip-cuquantum MCWF trajectory probe.
 
-    This is a fast candidate seam for the future trajectory/MPS carrier. It
+    This is a fast comparison seam for restricted trajectory/MPS routes. It
     keeps the trajectory state pure and emits final basis probabilities for the
     realized trajectory only; it is not density-matrix evidence and not record
     execution.

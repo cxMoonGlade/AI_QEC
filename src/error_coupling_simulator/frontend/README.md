@@ -243,7 +243,14 @@ Current slice:
   QT/MPS backend knobs are passed explicitly via `execution_backend_options`
   (`max_bond`, `max_branches`, `microstep_count`, `finite_step_order`,
   finite-bond gates, `trajectory_count`, `rng_seed`, and
-  `dense_oracle_certification`). Unknown keys fail closed. The
+  `dense_oracle_certification`, plus the QT-only
+  `max_record_materialization_outcomes`). Unknown keys fail closed. The Carrier
+  does not acquire CUDA before the delegated QT/MPS validation and Record-budget
+  preflight finish. Its auto-router treats a non-real, boolean, nonfinite, or
+  nonpositive free-VRAM observation as invalid and routes toward MCWF/MPS with
+  `route_reasons` containing `invalid_available_vram_bytes`; the decision records
+  `available_vram_is_finite_positive=false` and serializes the unavailable free
+  VRAM and dense budget as JSON `null`, never NaN or Inf. The
   `mcwf_mps_state_record` path accepts `local_dims`, `initial_levels`,
   `leaked_readout_b`, `max_bond`, `microstep_count`, `finite_step_order`,
   finite-bond gates, `trajectory_count`, and `rng_seed`; other execution
@@ -286,22 +293,15 @@ Current slice:
   one-site qutrit leakage lowering against `leakage_channel_super`; it is a
   certification gate, not the default dense evidence path and not a serialized
   channel payload.
-- Axis-1 MCWF/MPS contract seam:
-  `axis1_mcwf_mps_state_record_contract_manifest(...)` consumes the same
-  carrier program with `backend_contract="mcwf_mps_state_record"` and declares
-  the combined architecture: MCWF owns the same-substep trajectory unraveling of
-  the summed `H_list` and `c_list`, while MPS owns the pure-state carrier
-  representation. The contract is dimension-polymorphic through public backend
-  config `local_dims`, so qubit, qutrit, ququart, and mixed local dimensions are
-  carrier-level cases rather than different MCWF logics. This is a contract-only
-  surface: no trajectory execution, no dense channel payload, no `.b8/.dem`
-  decoder semantics, no Axis-2 source timeline, and no production scalable
-  backend claim.
 - Axis-1 MCWF/MPS execution:
   `axis1_mcwf_mps_state_record_execution_manifest(...)` is the first executable
   backend slice behind `mcwf_mps_state_record`. It executes sampled
   fixed-microstep quantum-jump MCWF trajectories stored as quimb/torch-CUDA MPS
-  states with declared `local_dims` and optional `initial_levels`. Existing
+  states with declared `local_dims` and optional `initial_levels`. MCWF owns the
+  same-substep trajectory unraveling of the summed `H_list` and `c_list`, while
+  MPS owns the pure-state representation. Qubit, qutrit, ququart, and mixed local
+  dimensions are carrier-mechanics configurations rather than different MCWF
+  laws. Existing
   computational-subspace Hamiltonian/collapse families are lifted into
   multilevel sites while non-computational levels remain represented in the
   carrier. The first registered one-site qutrit leakage families are
@@ -322,28 +322,54 @@ Current slice:
   the measured local level back to the requested computational reset state. The
   manifest requires explicit CUDA RNG provenance for accepted sampled evidence,
   records jump/no-jump diagnostics, multilevel readout policy, and MPS
-  truncation ledgers. Restricted acceptance also requires a finite declared
+  truncation ledgers. Pre-readout multilevel level records and jump-family counts are stored only
+  under `evaluator_only_diagnostics`; they are not emitted binary Records or downstream estimator
+  inputs. Caller-declared local dimensions, initial levels, and readout mapping remain configuration.
+  Restricted acceptance also requires a finite declared
   `mass_residual_budget`, a finite nonnegative runtime candidate-mass residual
   within that budget, and an executed independent dense certification that
   passes its gross gate. Passing `mass_residual_budget=None` executes only a
   convergence diagnostic, skips dense certification, and returns
   `execution_status="completed"`, `certification_status="not_evaluated"`,
-  `diagnostic_only=true`, and verdict `fail`. An over-cap run whose independent
-  oracle is unavailable similarly cannot use Record-frequency normalization as
-  positive evidence. The manifest keeps
+  `diagnostic_only=true`, and verdict `fail`. Normalization residual, runtime raw
+  candidate mass, runtime mass residual, empirical Record-frequency normalization,
+  and truncation loss are distinct evidence fields; none substitutes for another.
+  At the restricted-acceptance seam, normalization and runtime-residual observations
+  are valid only when they are finite, nonnegative, non-boolean reals; invalid
+  observations prevent restricted acceptance and expose an explicit invalidity field.
+  Dense-certification metric gates are likewise finite, nonnegative, non-boolean
+  reals, and `record_sampling_confidence` lies strictly between zero and one.
+  Verdict-driving certification and seed flags must be actual booleans, and a boolean
+  is not an integer RNG seed. The truncation ledger must explicitly carry its
+  completeness flag, total and worst-cut discarded weights, and `n_truncating_ops`;
+  missing fields never default to passing zeros. An invalid truncation observation
+  prevents restricted acceptance even when no optional threshold was requested. The
+  direct MCWF manifest requires exact booleans at its policy seam and hashes with
+  `allow_nan=False`, so a nonfinite raw payload fails before a content hash is emitted.
+  An over-cap run whose independent oracle is
+  unavailable similarly cannot use Record-frequency normalization as positive
+  evidence. The manifest keeps
   `claims_exact_joint_lindblad_generator=false`,
   `claims_dense_channel_evidence=false`,
   `claims_axis2_source_timeline=false`, and
   `claims_production_scalable_backend=false`.
-- Axis-1 QT/MPS production-carrier contract seam:
-  `axis1_qt_mps_state_record_contract_manifest(...)` consumes the same
-  carrier program with `backend_contract="qt_mps_state_record"`, carries the
-  structured approximation book, certifies dense-checkable schedules through
-  `dense_jointL_probe`, and fails closed on `scalable_required` rows with
-  `blocked_reason="qt_mps_backend_not_implemented_for_scalable_required"`.
-  It is the backend contract surface for the existing computational-subspace
-  QT/MPS line; it does not execute that backend and does not claim production
-  scalable evidence.
+  `certify/axis1_mps.py` consumes the immutable execution evidence and owns the
+  dense References, scientific metrics, and final restricted-acceptance policy;
+  the executor does not certify itself. The certification builder keeps channel
+  and Record gross controls
+  separate: `gross_gate` applies to channel process infidelity, while
+  `record_gross_tv_gate` (default `0.2`) applies to Record and level-record total
+  variation. Public gate overrides may tighten but not loosen registered defaults.
+  The strict Record gate may not exceed the effective Record gross gate, and the
+  finite-shot gross allowance remains capped by the registered Record-TV ceiling.
+  On sampled Record and level-record paths, count vectors must sum exactly to
+  `trajectory_sampling.trajectory_count`; every reported empirical probability
+  must equal its count divided by that trajectory count within `NUMERICAL_ZERO`.
+  The restricted policy binds the metric family to the execution payload, admits
+  only registered comparison-object/metric/oracle identities, requires mandatory
+  dense provenance, and recomputes sampling allowances and strict/gross verdicts
+  from their declared inputs. The same fail-closed discipline extends through the
+  direct MCWF raw-payload/hash boundary.
 - Axis-1 restricted QT/MPS execution:
   `axis1_qt_mps_restricted_execution_manifest(...)` is the first executable
   quimb/torch-CUDA computational-subspace MPS slice for carrier programs with
@@ -375,7 +401,141 @@ Current slice:
   record-frequency spread under a caller-declared gate, and optionally compares
   dense-checkable schedules against dense joint-L record probabilities under a
   separate caller-declared gate. These are verification gates, not metrics,
-  confidence intervals, or production error bounds. When
+  confidence intervals, or production error bounds.
+
+  `axis1_qt_mps_restricted_execution_manifest(...)`,
+  `axis1_qt_mps_bond_sweep_manifest(...)`,
+  `axis1_qt_mps_trajectory_seed_sweep_manifest(...)`,
+  `axis1_qt_mps_restricted_evidence_bundle_manifest(...)`, and
+  `axis1_qt_mps_resource_probe_manifest(...)` all expose the keyword-only
+  `max_record_materialization_outcomes=4096`. It accepts only non-boolean
+  integer-index values in `[1, sys.maxsize]`. This budget is independent of
+  `max_branches` and `max_bond`: it limits the maximum emitted Record support.
+  The preflight sums output width `m` across every measurement boundary. Exact
+  execution requires the full binary-support upper bound `2**m`; sampled execution
+  uses the observed-support upper bound `min(2**m, trajectory_count)`. Either route
+  fails when its upper bound exceeds `max_record_materialization_outcomes`, and
+  equality passes. It emits
+  `error_coupling_simulator.frontend.qt_mps_record_materialization_preflight.v2`
+  with the support policy, trajectory count, boundary count, total width,
+  `materialized_outcome_count_upper_bound`, budget, and the two
+  pre-CUDA/pre-allocation flags. It does not claim that the upper bound was actually
+  materialized. An over-budget schedule raises before CUDA acquisition, Record enumeration,
+  exact or sampled execution, nested sweep/bundle delegation, or resource-probe
+  CUDA accounting. The Carrier QT option forwards the same budget unchanged.
+
+  QT sampled Z measurement is sequential conditional single-site binary sampling:
+  after each target is sampled, the selected projected state conditions the next
+  target. The sampled payload emits only outcomes observed in the declared
+  trajectories, sorted lexicographically, with counts and empirical frequencies;
+  it emits no zero-frequency rows and never constructs the full binary support.
+  QT exact execution continues to emit that full support. Seed-sweep and dense
+  calibration comparisons align probability maps over the union of emitted Record
+  values and assign probability zero when a run omitted an outcome. The conditional
+  algorithm changes RNG draw order, so the compatibility contract is distributional;
+  it does not require the old per-trajectory bit sequence.
+
+  A sampled QT payload must carry an actual non-boolean integer RNG seed, declare
+  `rng_seed_required_for_acceptance=true`, and keep
+  `comparison_outcome_is_metric=false`; an explicit-seed flag cannot substitute for
+  the seed value. Before CUDA acquisition or trajectory execution, both restricted MPS
+  Adapters parse the compiler-sealed schedule exactly once into immutable
+  `error_coupling_simulator.frontend.axis1_schedule_record_layout.v1`. Its tuple-only
+  snapshot fixes every measurement boundary, key, target, basis, per-target reset flag,
+  global slice, and detector/observable XOR column. A trajectory may fill outcomes but
+  may not register or mutate this schema. QT exact and sampled execution therefore use
+  all temporal measurement boundaries, and every sampled outcome is checked against the
+  frozen boundary width before it is added to the observed-outcome histogram.
+
+  MCWF grouped measurement substeps apply reset independently for each target according
+  to the frozen mask; the dense level comparator reconstructs that operation/reset rule
+  independently instead of importing the MPS helper. QT sampled reset metadata is
+  `boundary_only_no_generator_evolution` with
+  `sampled_pauli_reset_internal_outcome_no_record`, and it carries no product-formula
+  fields. An MCWF reset substep containing evolution terms is structurally blocked as
+  `mcwf_mps_reset_substep_contains_evolution_terms`; any evolution-bearing substep with
+  missing, nonfinite, or nonpositive `dt_ns` is blocked as
+  `mcwf_mps_evolution_terms_require_positive_dt_ns`. A QT execution with no
+  measurement and no registered independent state/channel comparator is retained only
+  as diagnostic execution evidence: certification is unavailable and the verdict is
+  `fail`.
+
+  All optional QT/MPS convergence, seed-spread, dense-frequency, truncation, and
+  minimum-memory gates accept only finite, nonnegative, non-boolean real values and
+  are validated before delegation or CUDA work. Maximum-error gates pass on
+  `observed <= gate`; minimum-memory gates pass on `observed >= gate`; equality is
+  therefore inclusive. Acceptance additionally requires finite nonnegative
+  non-boolean probability residuals, actual booleans for verdict-driving dense
+  certification and seed evidence, and mandatory truncation-ledger values. Invalid
+  discarded-weight observations make the truncation gate evaluated and failed even
+  when no optional threshold was declared.
+
+  Execution completion and certification are orthogonal. The executable MPS policy
+  state machine is: blocked/failed execution plus `not_evaluated` or `unavailable`
+  certification gives `fail` and `diagnostic_only=false`; completed plus `rejected`
+  gives `fail` and `diagnostic_only=false`; completed plus `not_evaluated` or
+  `unavailable` gives diagnostic-only `fail`; only completed plus `accepted` gives
+  non-diagnostic `pass`. Thus `pass` is equivalent to
+  `accepted_for_restricted_execution=true`. In particular, a true over-cap QT/MPS
+  run without an independent Record oracle may retain state/Record execution evidence
+  and `qt_mps_backend_executed=true`, but it has
+  `certification_status="unavailable"`, `diagnostic_only=true`,
+  `blocked_reason="overcap_independent_record_oracle_unavailable"`, both restricted
+  over-cap acceptance flags false, and verdict `fail`. The enclosing Carrier copies
+  these statuses and cannot promote execution completion into certification. For
+  both MCWF/MPS and QT/MPS children, the Carrier requires the child verdict to agree
+  with `passed`, binds completed status to actual backend execution, and revalidates
+  the complete `(execution_status, certification_status, diagnostic_only)` tuple
+  against the nested policy. The nested `blocked_reason` must match the child,
+  production-scalable acceptance must remain false, and exact/sampled sub-acceptance
+  cannot be true when restricted acceptance is false. Contradictory child state
+  is rejected rather than summarized.
+  `accepted_for_production_scalable_backend` remains false in every state.
+
+  Current restricted-MPS schema identities are part of this contract:
+
+  - `error_coupling_simulator.frontend.carrier_execution.v3`
+  - `error_coupling_simulator.frontend.carrier_auto_routed_execution.v3`
+  - `error_coupling_simulator.frontend.carrier_auto_routing_decision.v3`
+  - `error_coupling_simulator.frontend.axis1_schedule_record_layout.v1`
+  - `error_coupling_simulator.frontend.qt_mps_restricted_execution.v6`
+  - `error_coupling_simulator.frontend.qt_mps_bond_sweep.v4`
+  - `error_coupling_simulator.frontend.qt_mps_trajectory_seed_sweep.v4`
+  - `error_coupling_simulator.frontend.qt_mps_restricted_evidence_bundle.v4`
+  - `error_coupling_simulator.frontend.qt_mps_resource_probe.v4`
+  - `error_coupling_simulator.frontend.qt_mps_restricted_acceptance_policy.v2`
+  - `error_coupling_simulator.frontend.qt_mps_record_materialization_preflight.v2`
+  - `error_coupling_simulator.frontend.mcwf_mps_state_record_execution.v6`
+  - `error_coupling_simulator.frontend.mcwf_mps_restricted_acceptance_policy.v5`
+
+  The normal and blocked MCWF policies use the same v5 policy schema. The direct QT and MCWF
+  execution schemas changed from v2 to v3 when the Phase-3 Record layout, reset, and
+  metadata behavior changed, then from v3 to v4 when the Phase-4 probability,
+  configuration/route-support, and exact-bond semantics changed. The MCWF direct
+  schema changed from v4 to v5 when the obsolete contract-only child payload was hard
+  cut after executable routes became authoritative. The QT direct schema also changed
+  from v4 to v5 when split-event payloads renamed the retained index size from an
+  ambiguous rank to its actual meaning, `actual_kept_bond_dimension`, then from v5
+  to v6 when sampled execution changed from full-support tables to observed-support
+  histograms. The QT bond sweep, trajectory seed sweep, evidence bundle, and resource
+  probe changed from v2 to v3 because they embed the new direct/preflight semantics, then to v4
+  when exact-shape transitive authentication and current sampled-support semantics became binding.
+  Direct MCWF changed from v5 to v6 and Carrier wrapper/auto execution changed to v3 when child
+  state, evaluator-only diagnostics, and final verdict fields became transitively authenticated;
+  the Record-materialization preflight changed from v1 to v2. There is no earlier
+  direct-execution or aggregate compatibility fallback. Acceptance-policy schemas do
+  not change merely because their execution children change. Schema/content-hash changes are
+  intentional consequences of the stricter interface, Record, probability, routing,
+  exact-bond, and verdict semantics.
+
+  Exact QT execution reports only
+  `static_branch_count_upper_bound_after_substep`, recomputed from the authenticated Carrier
+  program and `max_branches`. It is a numerical resource upper bound, not an observed hidden branch
+  count or a Record statistic. The legacy `branch_count_after_substep` field is rejected. Resource
+  probes authenticate exact shapes and the transitive evidence bundle, but their process-memory
+  counters remain observations from the producing run rather than an independent measurement.
+
+  When
   `max_bond=None`, the MPS manifest carries a complete no-explicit-truncation
   ledger with zero discarded weight. Finite `max_bond` routes supported
   two-site Hamiltonian/control unitaries through a Quimb-1.14-pinned auto-swap
@@ -392,10 +552,18 @@ Current slice:
   evolution restores the pre-gate norm after recording raw loss; Kraus/jump
   branch operators remain uncapped because their raw norm is a physical branch
   probability, which is kept separate from truncation evidence. Capped
-  multi-site MCWF clusters fail closed until they gain the same ledger. The
-  ledger reports a conservative
-  `exact_bond_dimension_sufficient=2**ceil(n_sites/2)` for qubit-MPS
-  representability; being at/above that cap is exact-bond bookkeeping, not a
+  multi-site MCWF clusters fail closed until they gain the same ledger. Uncapped
+  connected three-to-five-site unitary clusters use the non-scientific
+  `carrier/mps` mechanics helper, which explicitly sets `cutoff=0.0` for both
+  dense-to-MPO construction and MPS/MPO compression, validates a deep candidate,
+  and commits transactionally only after finite/unitary/norm checks. It fails before
+  dense allocation above five sites, support Hilbert dimension 256, or 65,536 dense
+  elements. These are numerical-only resource caps, not accuracy or faithfulness
+  gates. The
+  ledger reports the open-chain cut-product sufficient cap
+  `max_{1<=k<n} min(prod(local_dims[:k]), prod(local_dims[k:]))`, with value `1`
+  for a single site. For uniform qubits this is `2**floor(n_sites/2)`.
+  Being at/above that cap is exact-bond bookkeeping, not a
   production logical-error bound. Optional caller-declared
   `worst_cut_discarded_weight_gate` / `total_discarded_weight_gate` values are
   finite-bond candidate gates only. Once a capped run records actual loss, at
@@ -597,35 +765,21 @@ Representability boundary:
   exponentiation. Its freeze file guards only this evidence artifact identity.
 - `representability="axis1_scalable_carrier_program_metadata_no_channel_payload"`
   means `axis1_carrier_program_manifest(...)` emitted a program/provenance IR
-  for a future GPU state/record carrier. Within the dense support cap, rows are
+  for the restricted GPU state/record execution routes. Within the dense support cap, rows are
   marked `dense_oracle_available` and remain checked by the dense
   `joint_lindbladian` channel-evidence path. Over the cap, public static-ZZ
   union-support substeps are marked `scalable_required` with every declared edge,
   calibration source, local Markovian term family, public local Lindblad context
   term such as thermal excitation, frontend ideal-control Hamiltonian where the
   over-cap substep is a supported gate row, measurement boundary, and the
-  structured approximation book required by the future trajectory/MPS production
-  backend. This is not an executed MPS/trajectory backend, not dense Choi/Kraus
+  structured approximation book required by the MCWF/MPS execution Adapter.
+  This program manifest is not itself an executed MPS/trajectory backend, not dense Choi/Kraus
   evidence, not `.dem` semantics, and not Axis-2 source truth.
-- `representability="axis1_qt_mps_state_record_contract_no_backend_execution"`
-  means the future `qt_mps_state_record` backend contract was checked against
-  the carrier program and approximation book. Dense-checkable schedules are
-  certified through the existing dense joint-L execution seam; over-cap
-  `scalable_required` rows fail closed until the actual GPU trajectory/MPS
-  backend exists. It is not MPS execution, not `.dem`, and not decoder
-  integration.
-- `representability="axis1_mcwf_mps_state_record_contract_no_backend_execution"`
-  means the future `mcwf_mps_state_record` backend contract was checked against
-  the carrier program and approximation book. It declares MCWF trajectory
-  semantics over a per-site MPS pure-state carrier and carries public
-  `local_dims` for qubit/qutrit/ququart or mixed-dimension runs. It is not
-  trajectory execution, not restricted QT/MPS product-channel execution, not
-  dense channel evidence, not `.dem`, and not decoder integration.
 - `representability="axis1_carrier_execution_mcwf_mps_fixed_microstep_or_fail_closed"`
   is the carrier-execution wrapper class for `mcwf_mps_state_record`. In the
   first slice it delegates to fixed-microstep MCWF/MPS execution when
-  supported, and otherwise fails closed after returning the MCWF/MPS contract
-  surface. It performs no dense, qutip-cuquantum, or restricted QT/MPS fallback.
+  supported, and otherwise fails closed with structured execution evidence. It
+  performs no dense, qutip-cuquantum, or restricted QT/MPS fallback.
 - `representability="axis1_mcwf_mps_fixed_microstep_local_dims_state_record"` means
   `axis1_mcwf_mps_state_record_execution_manifest(...)` executed sampled
   fixed-microstep MCWF trajectories on a local-dimension MPS carrier. Execution
@@ -705,8 +859,8 @@ Representability boundary:
 - `representability="axis1_qutip_cuquantum_trajectory_probe_no_record_execution"`
   means qutip-cuquantum `mcsolve` was used as a restricted single-trajectory
   probe for carrier-program rows with no measurement boundary. It is a candidate
-  seam toward a future trajectory/MPS carrier, not record emission and not a
-  production scalable backend.
+  comparison probe for restricted trajectory/MPS routes, not record emission and
+  not a production scalable backend.
 - `representability="axis1_qutip_cuquantum_record_probe_restricted_no_b8_no_decoder"`
   means qutip-cuquantum `mcsolve` was followed by restricted Z-basis branch
   enumeration for idle / one-qubit-control / measurement carrier-program rows,

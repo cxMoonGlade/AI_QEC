@@ -49,12 +49,17 @@ The current routes are deliberately not one universal executor:
    bath or a reduced-map divisibility claim.
 4. **Restricted one-dimensional MPS routes (CORE verification surfaces).** The MCWF/MPS and QT/MPS
    executors are finite-step, fail-closed verification paths. They are not universal full-record or
-   production-scaling backends. `max_bond` is either `None` or a strictly positive integral value;
+   production-scaling backends. `carrier/mps` is an execution-mechanics library for restricted
+   verification routes. It makes no state-, Record-, or LER-faithfulness claim.
+   It is not a registered scientific Carrier. PEPS remains the trajectory-carrier frontier.
+   PEPO remains the retained research Carrier. `max_bond` is either `None` or a strictly positive integral value;
    booleans, floats, strings, zero, and negative values are rejected rather than coerced. A finite cap
    on a supported two-site unitary is applied through the pinned Quimb actual-split adapter: every
    forward-swap, operator, and reverse-swap SVD is ledgered, the conditional-state norm is restored
    only after its raw loss is recorded, and the resulting local discarded fractions are explicitly
-   not a global state/record bound. Exact-branch ledgers weight path-local evidence by the incoming
+   not a global state/record bound. Each split reports `actual_kept_bond_dimension`, the retained
+   bond-index size. It is not a numerical rank; thresholded rank diagnostics must separately declare
+   their threshold. Exact-branch ledgers weight path-local evidence by the incoming
    branch probability; sampled ledgers average path totals over the declared trajectory count, with
    trajectories that had no truncation event contributing zero. Each gate occurrence authenticates
    full sampled-trajectory coverage or unit exact-branch mass; incomplete coverage makes the ledger
@@ -63,7 +68,65 @@ The current routes are deliberately not one universal executor:
    needs no such gates. These
    gates remain heuristics, never production error bounds. Kraus/no-jump/jump operators remain
    uncapped because their raw norm carries physical branch probability; that probability is not a
-   truncation score. Capped multi-site MCWF Hamiltonian clusters fail closed.
+   truncation score. Capped multi-site MCWF Hamiltonian clusters fail closed. Uncapped connected
+   three-to-five-site MCWF unitaries instead use the bounded `carrier/mps` execution-mechanics
+   helper: both dense-to-MPO decomposition and MPS/MPO compression carry an explicit zero cutoff,
+   the source is changed only after a finite unitary candidate preserves its norm, and support is
+   rejected before dense allocation above five sites, Hilbert dimension 256, or 65,536 dense
+   elements. Those ceilings are numerical-only resource guards. Both restricted MPS
+   Adapters parse the compiler-sealed schedule once, before CUDA or trajectory execution, into an
+   immutable Record layout that fixes boundaries, keys, targets, bases, per-target reset flags,
+   global slices, and detector/observable XOR columns. Trajectories fill outcome bits only; they
+   cannot discover or mutate the Record schema. QT exact and sampled routes support all declared
+   measurement boundaries and enforce the frozen width. MCWF grouped measurement/reset applies the
+   reset mask per target, while its dense level comparator independently reconstructs that rule.
+   The comparator preserves every finite positive Born branch, skips only exact structural zero,
+   normalizes every finite positive post-measurement reset trace, and fails closed on negative or
+   non-finite branch mass and nonpositive or non-finite reset trace.
+   MCWF pre-readout `level_records`/counts/probabilities and `jump_family_counts` are hidden
+   unraveling diagnostics under `evaluator_only_diagnostics`; they are not emitted binary Records or
+   downstream estimator inputs. Caller-declared `local_dims`, `initial_levels`, and
+   `leaked_readout_b` remain configuration, not evaluator truth. `certify/axis1_mps.py` consumes the
+   immutable execution evidence and owns dense References, metrics, and final restricted acceptance.
+   Reset substeps carrying evolution and evolution-bearing substeps without finite positive duration
+   fail as structured preflight blockers. QT sampled measurement is sequential conditional
+   single-site binary sampling. It emits only lexicographically sorted outcomes observed in the
+   declared trajectories, with no zero-frequency rows; QT exact execution still emits the full
+   binary Record support. Seed-sweep and dense-reference comparisons align the union of emitted
+   supports and assign probability zero to a missing outcome. The v2 Record-materialization
+   preflight remains pre-CUDA and fail closed: for measurement width `m`, exact execution uses the
+   upper bound `2**m`, while sampled execution uses `min(2**m, trajectory_count)`. The conditional
+   sampler changes RNG draw order, so distributional checks replace compatibility with the old
+   per-trajectory bit sequence.
+   Exact execution artifacts do not report an observed hidden branch count. They report only
+   `static_branch_count_upper_bound_after_substep`, a numerical resource bound recomputed exactly
+   from the authenticated carrier program and `max_branches`; the legacy
+   `branch_count_after_substep` field is rejected. QT resource probes are exact-shape authenticated
+   against the evidence bundle, policies, claims, verdicts, and hashes. Their process-memory
+   counters are authenticated observations from the producing run, not an independent second
+   measurement.
+   These are execution/schema guarantees, not a canonical Record backend or a Record-faithfulness
+   upgrade. The direct QT/MPS and MCWF/MPS execution manifests are v6; QT bond sweep, seed sweep,
+   evidence bundle, and resource probe are v4. Carrier execution and auto-routed execution are v3.
+   No earlier
+   direct-execution or aggregate compatibility fallback is retained. A completed true-over-cap run
+   with no registered independent Record oracle remains diagnostic execution
+   evidence: certification is `unavailable`, restricted acceptance is false, and the verdict is
+   `fail`. Empirical Record normalization, a fixed RNG seed, or backend completion cannot promote
+   that run into certification.
+   External comparisons remain role-scoped. Aer checks its own finite-circuit MPS against an
+   independent hand-written dense state; YASTN checks a product-MPS raw MCWF candidate-mass family;
+   Quimb's public leg checks wiring against the repository's actual-split adapter while NumPy owns
+   the independent state math. None is a QEC Record-law, trajectory-law, PEPS, or restricted-
+   acceptance oracle. Canonical service acceptance opts into the isolated Aer and YASTN subprocess
+   runs rather than executing only their helper tests.
+   The restricted-MPS performance instrument is engineering-only. It binds every production owner
+   by file hash and requires each workload's declared public outcome. In particular, the lossy QT
+   cap-one fixture must remain `rejected`, and the over-cap MCWF fixture must remain `unavailable`;
+   benchmark `passed=true` means those outcomes matched the catalog, not that either candidate is a
+   safe truncation. A tiny CPU-only cache stores immutable Stim two-qubit Tableau matrices, but every
+   call creates an independent Torch tensor; no Torch/CUDA tensor, RNG state, split result, or
+   truncation decision is cached.
 5. **Qutrit leakage and ququart transport (CORE bounded channels).** Current owners expose physically
    named leakage/channel operations and explicit parameter objects. Synthetic defaults and sweeps do
    not become device calibration through naming or citation.
@@ -163,14 +226,52 @@ JIT and custom-operation names use the `error_coupling_simulator` namespace.
 
 `python tests/harness/service_acceptance.py` is the canonical aggregate engineering gate. It expands
 the service catalog and starts every acceptance file in a fresh process. The parent imports no
-Torch/CUDA runtime. Independent CPU files use bounded concurrency constrained by `MemAvailable`,
-host-memory/BLAS-heavy CPU files run serially, and GPU files run serially while holding the
-cross-process GPU lock only for that phase. CUDA-Q is routed to its isolated environment.
+Torch/CUDA runtime. CPU children are CUDA-hidden and use one thread per declared BLAS/OpenMP runtime;
+independent CPU files use at most four concurrent processes, further constrained by `MemAvailable`,
+while host-memory-heavy CPU files run serially. GPU files run serially while holding exactly one
+cross-process GPU lease for that phase; they never inherit CPU concurrency. CUDA-Q is routed to its
+isolated environment.
+
+The restricted-MPS mutation gate is a narrow exception to service-file GPU serialism, not a change
+to service acceptance. Its five GPU shards still run one after another under one root lock and one
+leased, pinned device. Within one shard, `jobs` may be one through four; the configured gate uses
+four independent fresh pytest children for concurrent clean admission and then fixed waves of at
+most four mutant children on that same device. Every child is host-thread-limited and has a unique
+log, completion sentinel, and pytest temporary directory; inherited pytest/xdist expansion is
+disabled, and the shared generated tree is read-only for the worker phase. The checkpoint binds the
+sanitized child environment plus the leased GPU UUID and driver version. Startup may recover a
+real, symlink-free generated tree left read-only by an abrupt process or host exit by making only
+its directories owner-deletable and removing the entire disposable tree; a root/internal symlink
+or surviving path fails closed. Only the coordinator may
+commit an authenticated contiguous prefix. Timeout, child error, missing sentinel, host/CUDA
+resource exhaustion, or other non-resumable evidence cancels current-wave siblings, stops admission
+of later waves, and is never credited as a killed mutant. Automatic child timeouts multiply the
+single-worker dynamic budget by the admitted in-shard concurrency, so four-way CUDA startup and
+runtime contention cannot consume a serially estimated deadline; an explicit operator timeout is
+literal and is not scaled. The coordinator records the first completed non-resumable outcome as the
+failure trigger while retaining only the safe plan-ordered prefix. Direct batches honor the suite lock, so
+aggregate publication and checkpoint retirement cannot race a same-tag run.
+
+Before a worker row can enter a checkpoint, its completed log file and containing directory are
+`fsync`-durable and the digest is computed from that same open inode. Checkpoints and terminal JSON
+are written to a same-directory temporary file, flushed and `fsync`ed, atomically replaced, and
+followed by a directory `fsync`. A durability failure is non-resumable and is never downgraded to a
+killed mutant.
 
 This process topology is part of the runtime contract. A monolithic pytest process is not equivalent:
 native-library lifetime interactions can outlive individual test groups. Fresh execution, verified
 process-group cleanup, immutable plans, single-writer aggregation, and atomic summaries remain
-mandatory even when all tests are otherwise green.
+mandatory even when all tests are otherwise green. Every child removes inherited `PYTHONPATH` and
+sets `PYTHONNOUSERSITE=1`. The supervisor fingerprints the resolved Conda executable plus Conda/pip
+metadata and import hooks for every direct and nested runtime declared by the catalog.
+
+Long acceptance runs use one root lock and an atomic, authenticated, lane-major checkpoint. A
+resumable row must match the frozen repository snapshot, semantic task plan, execution policy,
+runtime fingerprints, task-specific log name and log hash, and verified process-group cleanup.
+Ordinary terminal pytest outcomes may advance only a contiguous prefix; timeouts, missing cleanup,
+worker errors, and non-pytest/native-fatal exits do not. Fatal GPU evidence closes the run as `FAIL`
+without admitting another GPU task. A lingering checkpoint beside an already published terminal
+summary is reconciled from the authenticated summary instead of rerunning completed work.
 
 The service catalog and generated code map define the exact current inventory; historical module and
 test counts are intake evidence, not targets.

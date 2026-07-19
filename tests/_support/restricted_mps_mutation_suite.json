@@ -1,0 +1,54 @@
+{
+  "schema": "error_coupling_simulator.harness.mutation_suite.v1",
+  "_comment": [
+    "Authoritative restricted-MPS mutation suite.",
+    "The CPU batch is parallel across four isolated mutmut children; five ordered single-module GPU shards run one after another, each with up to four fresh pytest workers on one leased GPU.",
+    "All six batch module sets must be pairwise disjoint and their exact union must equal the coverage registry's twelve reconciled modules."
+  ],
+  "contract": "docs/SIMULATOR.md",
+  "coverage_registry": "restricted_mps_coverage_targets.json",
+  "semantic_dispositions": "restricted_mps_mutation_semantic_dispositions.json",
+  "harness": {
+    "mutation_gate": {
+      "kill_rate_bar": 0.90
+    }
+  },
+  "batches": [
+    {
+      "name": "restricted_mps_cpu",
+      "registry": "restricted_mps_mutation_cpu.json",
+      "lane": "cpu_parallel",
+      "jobs": 4
+    },
+    {
+      "name": "restricted_mps_gpu_01_mcwf_execution",
+      "registry": "restricted_mps_mutation_gpu_01_mcwf_execution.json",
+      "lane": "gpu_serial",
+      "jobs": 4
+    },
+    {
+      "name": "restricted_mps_gpu_02_qt_execution",
+      "registry": "restricted_mps_mutation_gpu_02_qt_execution.json",
+      "lane": "gpu_serial",
+      "jobs": 4
+    },
+    {
+      "name": "restricted_mps_gpu_03_carrier_execution",
+      "registry": "restricted_mps_mutation_gpu_03_carrier_execution.json",
+      "lane": "gpu_serial",
+      "jobs": 4
+    },
+    {
+      "name": "restricted_mps_gpu_04_carrier_program",
+      "registry": "restricted_mps_mutation_gpu_04_carrier_program.json",
+      "lane": "gpu_serial",
+      "jobs": 4
+    },
+    {
+      "name": "restricted_mps_gpu_05_certification",
+      "registry": "restricted_mps_mutation_gpu_05_certification.json",
+      "lane": "gpu_serial",
+      "jobs": 4
+    }
+  ]
+}

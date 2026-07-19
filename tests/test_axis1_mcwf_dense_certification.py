@@ -29,9 +29,19 @@ from error_coupling_simulator.frontend import (  # noqa: E402
     axis1_mcwf_mps_state_record_execution_manifest,
     circuit_ir_to_substep_schedule,
 )
-from error_coupling_simulator.frontend.axis1_mcwf_dense_certification import (  # noqa: E402
+from error_coupling_simulator.certify.axis1_mps import (  # noqa: E402
     restricted_acceptance_policy,
 )
+
+
+class _AccessTrackingDict(dict):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.accessed_keys = []
+
+    def __getitem__(self, key):
+        self.accessed_keys.append(key)
+        return super().__getitem__(key)
 
 
 def _ququart_transport_schedule():
@@ -87,6 +97,25 @@ def test_restricted_carrier_matches_dense_reference():
     manifest = _run(_ququart_transport_schedule())
     assert manifest["verdict"] == "pass"
     assert manifest["restricted_acceptance_policy"]["accepted_for_restricted_execution"] is True
+    execution = manifest["mps_execution"]
+    diagnostics = execution["evaluator_only_diagnostics"]
+    assert diagnostics["schema"] == (
+        "error_coupling_simulator.frontend."
+        "mcwf_mps_evaluator_only_diagnostics.v1"
+    )
+    assert diagnostics["visibility"] == (
+        "evaluator_only_not_emitted_record_or_downstream_estimator_input"
+    )
+    assert diagnostics["level_records"] == [[3, 0]]
+    assert diagnostics["level_record_counts"] == [4]
+    assert diagnostics["level_record_probabilities"] == [1.0]
+    assert "jump_family_counts" in diagnostics
+    assert not {
+        "level_records",
+        "level_record_counts",
+        "level_record_probabilities",
+    }.intersection(execution)
+    assert "jump_family_counts" not in execution["jump_sampling"]
 
 
 def test_dense_reference_rejects_noop_carrier(monkeypatch):
@@ -132,36 +161,46 @@ def test_missing_seed_not_accepted_as_sampled_evidence(monkeypatch):
 
 def test_restricted_policy_requires_explicit_gross_verdict():
     """A certification row missing the current gross verdict fails loudly."""
-    with pytest.raises(KeyError, match="passed_gross"):
+    certification = _AccessTrackingDict(
+        {
+            "executed": True,
+            "passed": True,
+            "comparison_outcome_is_metric": True,
+        }
+    )
+    with pytest.raises(KeyError):
         restricted_acceptance_policy(
             execution={
                 "total_probability_residual": 0.0,
                 "trajectory_sampling": {
-                    "mode": "sampled_fixed_microstep_mcwf_trajectories"
+                    "mode": "sampled_fixed_microstep_mcwf_trajectories",
+                    "trajectory_count": 4,
                 },
                 "jump_sampling": {"probability_mass_residual_max": 0.0},
             },
-            certification={
-                "executed": True,
-                "passed": True,
-                "comparison_outcome_is_metric": True,
-            },
+            certification=certification,
             program={"requires_scalable_backend": False},
             rng_seed=904,
             trajectory_count=4,
             mass_residual_budget=0.1,
         )
+    assert certification.accessed_keys[-1] == "passed_gross"
+    assert certification.accessed_keys.count("passed_gross") == 1
 
 
 def test_restricted_policy_requires_runtime_mass_residual_evidence():
-    with pytest.raises(KeyError, match="jump_sampling"):
-        restricted_acceptance_policy(
-            execution={
-                "total_probability_residual": 0.0,
-                "trajectory_sampling": {
-                    "mode": "sampled_fixed_microstep_mcwf_trajectories"
-                },
+    execution = _AccessTrackingDict(
+        {
+            "total_probability_residual": 0.0,
+            "trajectory_sampling": {
+                "mode": "sampled_fixed_microstep_mcwf_trajectories",
+                "trajectory_count": 4,
             },
+        }
+    )
+    with pytest.raises(KeyError):
+        restricted_acceptance_policy(
+            execution=execution,
             certification={
                 "executed": True,
                 "passed": True,
@@ -173,3 +212,5 @@ def test_restricted_policy_requires_runtime_mass_residual_evidence():
             trajectory_count=4,
             mass_residual_budget=0.1,
         )
+    assert execution.accessed_keys[-1] == "jump_sampling"
+    assert execution.accessed_keys.count("jump_sampling") == 1

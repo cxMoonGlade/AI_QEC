@@ -14,12 +14,13 @@ physical branch probability.
 from collections.abc import Mapping
 import importlib.metadata
 import math
-import operator
 from typing import Any
 
 import torch
 
-from ..numerics import NUMERICAL_ZERO
+from ...numerics import NUMERICAL_ZERO
+from .controls import normalize_mps_index_sequence, normalize_mps_max_bond
+from .state import mps_norm_squared
 
 
 _SUPPORTED_QUIMB_VERSION = "1.14.0"
@@ -27,29 +28,6 @@ _SPLIT_METHOD = "svd"
 _SPLIT_CUTOFF = 0.0
 _SPLIT_CUTOFF_MODE = "rsum2"
 _SPLIT_RENORM = None
-
-
-def normalize_mps_max_bond(
-    value: Any,
-    *,
-    allow_none: bool = True,
-) -> int | None:
-    """Normalize a bond cap without lossy ``int(...)`` coercion."""
-    if value is None:
-        if allow_none:
-            return None
-        raise TypeError("max_bond must be an integer, got None")
-    if isinstance(value, bool):
-        raise TypeError("max_bond must be an integer, not bool")
-    try:
-        normalized = operator.index(value)
-    except TypeError as exc:
-        raise TypeError(f"max_bond must be an integer, got {value!r}") from exc
-    if normalized < 1:
-        raise ValueError(
-            f"max_bond must be positive (>= 1), got {normalized}"
-        )
-    return int(normalized)
 
 
 def _finite_real_scalar(value: Any, *, name: str) -> float:
@@ -70,10 +48,6 @@ def _frobenius_weight(data: torch.Tensor) -> float:
         torch.vdot(flat, flat).real,
         name="pre-split local Frobenius weight",
     )
-
-
-def _mps_norm_sq(mps: Any) -> float:
-    return _finite_real_scalar(mps.H @ mps, name="MPS norm squared")
 
 
 def _assert_quimb_contract() -> str:
@@ -97,9 +71,9 @@ def _preflight(
         raise ValueError("actual-split adapter supports open-boundary MPS only")
     if int(max_bond) < 1:
         raise ValueError(f"max_bond must be >= 1, got {max_bond}")
-    if len(support) != 2 or int(support[0]) == int(support[1]):
+    if len(support) != 2 or support[0] == support[1]:
         raise ValueError(f"support must contain two distinct sites, got {support!r}")
-    a, b = (int(support[0]), int(support[1]))
+    a, b = support
     length = int(mps.L)
     if not (0 <= a < length and 0 <= b < length):
         raise ValueError(f"support {support!r} lies outside MPS length {length}")
@@ -164,7 +138,6 @@ def _split_with_event(
         "get": "tensors",
         "method": _SPLIT_METHOD,
         "max_bond": int(max_bond),
-        "cutoff": _SPLIT_CUTOFF,
         "cutoff_mode": _SPLIT_CUTOFF_MODE,
         "renorm": _SPLIT_RENORM,
         "info": split_info,
@@ -177,7 +150,7 @@ def _split_with_event(
     pre_split_weight = _frobenius_weight(joined.data)
     if pre_split_weight <= 0.0:
         raise RuntimeError("pre-split local Frobenius weight must be positive")
-    result = joined.split(**kwargs)
+    result = joined.split(cutoff=_SPLIT_CUTOFF, **kwargs)
     if not isinstance(result, tuple) or len(result) != 2:
         raise RuntimeError("quimb Tensor.split return contract drifted")
     left, right = result
@@ -199,10 +172,11 @@ def _split_with_event(
         raise RuntimeError(
             f"split tensors must share exactly one bond, found {shared!r}"
         )
-    kept_rank = int(left.ind_size(shared[0]))
-    if not 1 <= kept_rank <= int(max_bond):
+    kept_bond_dimension = int(left.ind_size(shared[0]))
+    if not 1 <= kept_bond_dimension <= int(max_bond):
         raise RuntimeError(
-            f"actual kept rank {kept_rank} violates requested max_bond={max_bond}"
+            "actual kept bond dimension "
+            f"{kept_bond_dimension} violates requested max_bond={max_bond}"
         )
     event = {
         "sequence_index": int(sequence_index),
@@ -220,7 +194,7 @@ def _split_with_event(
         "requested_cutoff_mode": _SPLIT_CUTOFF_MODE,
         "requested_renorm": _SPLIT_RENORM,
         "pre_split_total_weight": float(pre_split_weight),
-        "actual_kept_rank": int(kept_rank),
+        "actual_kept_bond_dimension": int(kept_bond_dimension),
         "actual_discarded_weight_raw": float(discarded_raw),
         "actual_discarded_weight_fraction_of_pre_split": float(
             discarded_raw / pre_split_weight
@@ -346,7 +320,12 @@ def apply_capped_two_site_unitary(
     quimb_version = _assert_quimb_contract()
     normalized_max_bond = normalize_mps_max_bond(max_bond, allow_none=False)
     assert normalized_max_bond is not None
-    normalized_support = (int(support[0]), int(support[1]))
+    normalized_support = normalize_mps_index_sequence(
+        support,
+        name="support",
+        minimum=0,
+        require_nonempty=True,
+    )
     gate, _device = _preflight(
         mps,
         gate,
@@ -354,7 +333,7 @@ def apply_capped_two_site_unitary(
         max_bond=normalized_max_bond,
     )
     candidate = mps.copy()
-    input_norm_sq = _mps_norm_sq(candidate)
+    input_norm_sq = mps_norm_squared(candidate)
     if input_norm_sq <= 0.0:
         raise RuntimeError("input MPS norm squared must be positive")
 
@@ -410,13 +389,7 @@ def apply_capped_two_site_unitary(
             )
         )
 
-    expected_split_count = 2 * (hi - lo - 1) + 1
-    if len(split_records) != expected_split_count:
-        raise RuntimeError(
-            "actual split-count invariant failed: "
-            f"{len(split_records)} != {expected_split_count}"
-        )
-    raw_output_norm_sq = _mps_norm_sq(candidate)
+    raw_output_norm_sq = mps_norm_squared(candidate)
     if raw_output_norm_sq <= 0.0:
         raise RuntimeError("capped unitary produced a nonpositive raw norm")
     if raw_output_norm_sq > input_norm_sq + NUMERICAL_ZERO * max(1.0, input_norm_sq):
@@ -444,7 +417,7 @@ def apply_capped_two_site_unitary(
     if not math.isfinite(restore_factor) or restore_factor <= 0.0:
         raise RuntimeError(f"invalid deterministic norm restore factor {restore_factor!r}")
     candidate.multiply_(restore_factor, spread_over=1)
-    restored_output_norm_sq = _mps_norm_sq(candidate)
+    restored_output_norm_sq = mps_norm_squared(candidate)
     if not math.isclose(
         restored_output_norm_sq,
         input_norm_sq,
@@ -487,45 +460,3 @@ def apply_capped_two_site_unitary(
         }
     )
     return candidate, event
-
-
-def commit_mps_candidate_(target: Any, candidate: Any) -> None:
-    """Commit an already-validated candidate with rollback on an update error."""
-    if int(target.L) != int(candidate.L):
-        raise ValueError("target and candidate MPS lengths differ")
-    old_arrays: list[torch.Tensor] = []
-    target_tensors = []
-    candidate_tensors = []
-    for site in range(int(target.L)):
-        target_tensor = target[site]
-        candidate_tensor = candidate[site]
-        if tuple(target_tensor.inds) != tuple(candidate_tensor.inds):
-            raise RuntimeError(f"candidate index structure drifted at site {site}")
-        if set(target_tensor.tags) != set(candidate_tensor.tags):
-            raise RuntimeError(f"candidate tag structure drifted at site {site}")
-        target_tensors.append(target_tensor)
-        candidate_tensors.append(candidate_tensor)
-        old_arrays.append(target_tensor.data)
-    try:
-        for target_tensor, candidate_tensor in zip(
-            target_tensors, candidate_tensors, strict=True
-        ):
-            target_tensor.modify(data=candidate_tensor.data)
-    except Exception as commit_error:
-        rollback_errors = []
-        for site, (target_tensor, old_array) in enumerate(
-            zip(target_tensors, old_arrays, strict=True)
-        ):
-            try:
-                target_tensor.modify(data=old_array)
-            except Exception as rollback_error:  # noqa: BLE001
-                rollback_errors.append((site, rollback_error))
-        if rollback_errors:
-            details = ", ".join(
-                f"site{site}:{type(error).__name__}"
-                for site, error in rollback_errors
-            )
-            raise RuntimeError(
-                f"MPS candidate commit failed and rollback was incomplete ({details})"
-            ) from commit_error
-        raise

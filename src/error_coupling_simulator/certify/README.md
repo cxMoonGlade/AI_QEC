@@ -19,6 +19,15 @@ scale and never allocates the infeasible density matrix. Closed-form identities 
   record-shuffle negative controls (each **wraps** an existing package/wheel route, never
   reimplements physics).
 - `facade.py` — the implemented `certify_noise_process` entry point.
+- `axis1_mps.py` — evaluator-side dense Reference construction, metric evaluation, and
+  fail-closed restricted-acceptance policy for immutable QT/MCWF MPS execution evidence. The
+  frontend composes this result into the final evidence manifest; the execution mechanics do not
+  certify themselves. The independent oracle never imports QT execution policy or MCWF grouping.
+  Lazy MCWF imports are limited to constructing the carrier-under-test and to per-term operator
+  definitions that have their own independent tests. Its dense level-measurement path preserves
+  every finite positive Born branch and skips only exact zero; a post-measurement reset is normalized
+  for every finite positive trace, while negative/non-finite branch mass and nonpositive/non-finite
+  reset trace fail closed.
 
 **Invariants.** Negative controls are first-class + non-optional (an inert control forces FAIL);
 feasibility is data (cannot OOM); every row carries its epistemic class (a)/(b)/(c) (METRICS.md);

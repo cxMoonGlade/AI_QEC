@@ -30,7 +30,6 @@ from error_coupling_simulator.frontend import (  # noqa: E402
     AXIS1_CARRIER_MCWF_MPS_EXECUTION_REPRESENTABILITY,
     AXIS1_CARRIER_QUTIP_RESTRICTED_EXECUTION_BACKEND_CONTRACT,
     AXIS1_CARRIER_QT_MPS_RESTRICTED_EXECUTION_BACKEND_CONTRACT,
-    AXIS1_MCWF_MPS_CONTRACT_BACKEND_CONTRACT,
     AXIS1_MCWF_MPS_EXECUTION_BACKEND_CONTRACT,
     AXIS1_QUTRIT_LEAKAGE_CERTIFICATION_REPRESENTABILITY,
     AXIS1_QUTRIT_LEAKAGE_CERTIFICATION_SCHEMA,
@@ -58,11 +57,9 @@ from error_coupling_simulator.frontend import (  # noqa: E402
     Axis1SubstepChannelRow,
     axis1_carrier_execution_manifest,
     axis1_carrier_program_manifest,
-    axis1_mcwf_mps_state_record_contract_manifest,
     axis1_mcwf_mps_state_record_execution_manifest,
     axis1_qutrit_leakage_oracle_certification_manifest,
     axis1_two_site_leakage_hamiltonian_certification_manifest,
-    axis1_qt_mps_state_record_contract_manifest,
     Tick,
     joint_channel_comparison_gate,
     joint_channel_comparison_manifest,
@@ -1970,50 +1967,6 @@ def test_axis1_carrier_program_accepts_mcwf_mps_state_record_contract():
     assert carrier["claims_axis2_source_timeline"] is False
 
 
-def test_axis1_mcwf_mps_contract_declares_dimension_polymorphic_carrier_without_execution():
-    builder = CircuitBuilder(num_qubits=6)
-    builder.declare_static_zz_couplings(((0, 5),))
-    builder.idle(tuple(range(6)), duration_ns=75.0)
-    schedule = circuit_ir_to_substep_schedule(builder.build())
-
-    contract = axis1_mcwf_mps_state_record_contract_manifest(
-        schedule,
-        local_dims=(2, 3, 4, 2, 3, 4),
-    )
-
-    assert contract["schema"] == (
-        "error_coupling_simulator.frontend.mcwf_mps_state_record_contract.v1"
-    )
-    assert contract["backend_contract"] == AXIS1_MCWF_MPS_CONTRACT_BACKEND_CONTRACT
-    # A contract-only surface (no execution) must not claim verdict:"pass"/passed.
-    assert contract["verdict"] == "contract_only"
-    assert contract["passed"] is False
-    assert contract["contract_valid"] is True
-    assert contract["backend_executed"] is False
-    assert contract["mcwf_mps_backend_executed"] is False
-    assert contract["carrier_program"]["backend_contract"] == "mcwf_mps_state_record"
-    assert contract["carrier_program"]["requires_scalable_backend"] is True
-    assert contract["carrier_program"]["routes"] == ["scalable_required"]
-    hilbert = contract["local_hilbert_space"]
-    assert hilbert["local_dims"] == [2, 3, 4, 2, 3, 4]
-    assert hilbert["hilbert_dim"] == 576
-    assert hilbert["supports_qubit_sites"] is True
-    assert hilbert["supports_qutrit_sites"] is True
-    assert hilbert["supports_ququart_sites"] is True
-    assert hilbert["supports_mixed_local_dimensions"] is True
-    semantics = contract["mcwf_semantics"]
-    assert "summed H_list and c_list" in semantics["same_substep_policy"]
-    assert "E1_after_E2" in semantics["same_substep_policy"]
-    assert semantics["single_trajectory_density_claim"] is False
-    assert semantics["exact_joint_lindblad_channel_claim"] is False
-    assert contract["claims_qt_mps_restricted_product_channel_execution"] is False
-    assert contract["claims_production_scalable_backend"] is False
-    assert contract["claims_exact_joint_lindblad_generator"] is False
-    assert contract["claims_dense_channel_evidence"] is False
-    assert contract["claims_dem_decoder_semantics"] is False
-    assert contract["claims_axis2_source_timeline"] is False
-
-
 def test_axis1_mcwf_mps_execution_runs_qubit_fixed_microstep_record_fixture():
     builder = CircuitBuilder(num_qubits=1)
     builder.declare_axis1_local_lindblad_context(
@@ -2036,7 +1989,7 @@ def test_axis1_mcwf_mps_execution_runs_qubit_fixed_microstep_record_fixture():
     )
 
     assert manifest["schema"] == (
-        "error_coupling_simulator.frontend.mcwf_mps_state_record_execution.v2"
+        "error_coupling_simulator.frontend.mcwf_mps_state_record_execution.v6"
     )
     assert manifest["backend_contract"] == AXIS1_MCWF_MPS_EXECUTION_BACKEND_CONTRACT
     assert manifest["verdict"] == "pass"
@@ -2059,9 +2012,9 @@ def test_axis1_mcwf_mps_execution_runs_qubit_fixed_microstep_record_fixture():
     assert execution["trajectory_sampling"]["rng_seed_was_explicit"] is True
     assert execution["trajectory_sampling"]["single_trajectory_density_claim"] is False
     assert execution["jump_sampling"]["max_jumps_per_microstep"] == 1
-    assert execution["measurement_records"] == [[0], [1]]
-    assert execution["record_counts"] == [6, 0]
-    assert execution["record_probabilities"] == [1.0, 0.0]
+    assert execution["measurement_records"] == [[0]]
+    assert execution["record_counts"] == [6]
+    assert execution["record_probabilities"] == [1.0]
     assert execution["mps_truncation_ledger"]["accepted_as_exact_bond_representation"] is True
 
 
@@ -2080,7 +2033,7 @@ def test_axis1_mcwf_mps_execution_preserves_qutrit_level_record_without_projecti
     )
 
     assert manifest["schema"] == (
-        "error_coupling_simulator.frontend.mcwf_mps_state_record_execution.v2"
+        "error_coupling_simulator.frontend.mcwf_mps_state_record_execution.v6"
     )
     assert manifest["verdict"] == "pass"
     assert manifest["passed"] is True
@@ -2094,11 +2047,18 @@ def test_axis1_mcwf_mps_execution_preserves_qutrit_level_record_without_projecti
     assert execution["local_dims"] == [3]
     assert execution["initial_levels"] == [2]
     assert execution["multilevel_measurement_policy"]["leaked_readout_b"] == 1.0
-    assert execution["measurement_records"] == [[0], [1]]
-    assert execution["record_counts"] == [0, 5]
-    assert execution["record_probabilities"] == [0.0, 1.0]
-    assert execution["level_records"] == [[2]]
-    assert execution["level_record_counts"] == [5]
+    assert execution["measurement_records"] == [[1]]
+    assert execution["record_counts"] == [5]
+    assert execution["record_probabilities"] == [1.0]
+    evaluator_diagnostics = execution["evaluator_only_diagnostics"]
+    assert evaluator_diagnostics["schema"] == (
+        "error_coupling_simulator.frontend.mcwf_mps_evaluator_only_diagnostics.v1"
+    )
+    assert evaluator_diagnostics["visibility"] == (
+        "evaluator_only_not_emitted_record_or_downstream_estimator_input"
+    )
+    assert evaluator_diagnostics["level_records"] == [[2]]
+    assert evaluator_diagnostics["level_record_counts"] == [5]
     assert execution["mps_truncation_ledger"]["local_dims"] == [3]
 
 
@@ -2121,11 +2081,12 @@ def test_axis1_mcwf_mps_multilevel_measure_reset_measure_keeps_all_record_keys()
     execution = manifest["mps_execution"]
     assert execution["measurement_keys"] == ["m0", "m1"]
     assert execution["measurement_targets"] == [0, 0]
-    assert execution["measurement_records"] == [[0, 0], [1, 0], [0, 1], [1, 1]]
-    assert execution["record_counts"] == [0, 4, 0, 0]
-    assert execution["record_probabilities"] == [0.0, 1.0, 0.0, 0.0]
-    assert execution["level_records"] == [[2, 0]]
-    assert execution["level_record_counts"] == [4]
+    assert execution["measurement_records"] == [[1, 0]]
+    assert execution["record_counts"] == [4]
+    assert execution["record_probabilities"] == [1.0]
+    evaluator_diagnostics = execution["evaluator_only_diagnostics"]
+    assert evaluator_diagnostics["level_records"] == [[2, 0]]
+    assert evaluator_diagnostics["level_record_counts"] == [4]
     assert execution["multilevel_measurement_policy"]["leaked_readout_b"] == 1.0
 
 
@@ -2156,9 +2117,11 @@ def test_axis1_mcwf_mps_execution_runs_qutrit_exchange_leakage_from_public_conte
     assert manifest["mcwf_mps_backend_executed"] is True
     execution = manifest["mps_execution"]
     assert execution["local_dims"] == [3]
-    assert execution["level_records"] == [[2]]
-    assert execution["level_record_counts"] == [4]
-    assert execution["record_counts"] == [0, 4]
+    evaluator_diagnostics = execution["evaluator_only_diagnostics"]
+    assert evaluator_diagnostics["level_records"] == [[2]]
+    assert evaluator_diagnostics["level_record_counts"] == [4]
+    assert execution["measurement_records"] == [[1]]
+    assert execution["record_counts"] == [4]
     assert execution["applied_substeps"][0]["hamiltonian_term_count"] >= 1
     assert "LEAK_EXCHANGE_12" in execution["applied_substeps"][0][
         "hamiltonian_operator_families"
@@ -2200,10 +2163,12 @@ def test_axis1_mcwf_mps_execution_runs_qutrit_seepage_jump_from_public_context()
     assert manifest["certification_status"] == "not_evaluated"
     assert manifest["diagnostic_only"] is True
     execution = manifest["mps_execution"]
-    assert execution["level_records"] == [[1]]
-    assert execution["level_record_counts"] == [4]
-    assert execution["record_counts"] == [0, 4]
-    assert execution["jump_sampling"]["jump_family_counts"] == {"LEAK_SEEP_21": 4}
+    evaluator_diagnostics = execution["evaluator_only_diagnostics"]
+    assert evaluator_diagnostics["level_records"] == [[1]]
+    assert evaluator_diagnostics["level_record_counts"] == [4]
+    assert execution["measurement_records"] == [[1]]
+    assert execution["record_counts"] == [4]
+    assert evaluator_diagnostics["jump_family_counts"] == {"LEAK_SEEP_21": 4}
     assert "LEAK_SEEP_21" in execution["applied_substeps"][0][
         "nonzero_collapse_operator_families"
     ]
@@ -2288,7 +2253,9 @@ def test_axis1_mcwf_mps_same_substep_leakage_static_zz_and_local_collapse_joint_
         "Hamiltonian terms and collapse jump candidates are consumed from the "
         "same compiler-generated carrier substep"
     )
-    assert execution["jump_sampling"]["jump_family_counts"] == {"LEAK_SEEP_21": 3}
+    assert execution["evaluator_only_diagnostics"]["jump_family_counts"] == {
+        "LEAK_SEEP_21": 3
+    }
 
 
 def test_axis1_carrier_execution_mcwf_mps_backend_runs_qubit_fixture():
@@ -2315,7 +2282,7 @@ def test_axis1_carrier_execution_mcwf_mps_backend_runs_qubit_fixture():
         },
     )
 
-    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v2"
+    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v3"
     assert execution["execution_backend_contract"] == "mcwf_mps_state_record"
     assert execution["representability"] == (
         AXIS1_CARRIER_MCWF_MPS_EXECUTION_REPRESENTABILITY
@@ -2328,8 +2295,8 @@ def test_axis1_carrier_execution_mcwf_mps_backend_runs_qubit_fixture():
     assert execution["qutip_cuquantum_probe_executed"] is False
     assert execution["state_execution"]["executed"] is True
     assert execution["record_execution"]["executed"] is True
-    assert execution["record_execution"]["record_counts"] == [6, 0]
-    assert execution["record_execution"]["record_probabilities"] == [1.0, 0.0]
+    assert execution["record_execution"]["record_counts"] == [6]
+    assert execution["record_execution"]["record_probabilities"] == [1.0]
     assert execution["record_execution"]["jump_sampling"]["max_jumps_per_microstep"] == 1
     assert execution["claims_mcwf_mps_backend_execution"] is True
     assert execution["claims_qt_mps_backend_execution"] is False
@@ -2355,7 +2322,7 @@ def test_axis1_carrier_execution_mcwf_mps_mixed_local_dims_runs_without_dense_fa
         },
     )
 
-    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v2"
+    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v3"
     assert execution["execution_backend_contract"] == "mcwf_mps_state_record"
     assert execution["representability"] == (
         AXIS1_CARRIER_MCWF_MPS_EXECUTION_REPRESENTABILITY
@@ -2363,7 +2330,7 @@ def test_axis1_carrier_execution_mcwf_mps_mixed_local_dims_runs_without_dense_fa
     assert execution["verdict"] == "fail"
     assert execution["passed"] is False
     assert execution["blocked_reason"].startswith("dense_jointL_certification:")
-    assert execution["contract_surface_valid"] is True
+    assert execution["local_hilbert_space"]["local_dims"] == [2, 3, 4, 2, 3, 4]
     policy = execution["restricted_acceptance_policy"]
     assert policy["certification_status"] == "unavailable"
     assert policy["diagnostic_only"] is True
@@ -2373,14 +2340,6 @@ def test_axis1_carrier_execution_mcwf_mps_mixed_local_dims_runs_without_dense_fa
     assert execution["qt_mps_backend_executed"] is False
     assert execution["mcwf_mps_backend_executed"] is True
     assert execution["qutip_cuquantum_probe_executed"] is False
-    assert execution["mcwf_mps_contract"]["local_hilbert_space"]["local_dims"] == [
-        2,
-        3,
-        4,
-        2,
-        3,
-        4,
-    ]
     assert execution["state_execution"]["executed"] is True
     assert execution["state_execution"]["mps_truncation_ledger"]["local_dims"] == [
         2,
@@ -2416,7 +2375,7 @@ def test_axis1_carrier_execution_mcwf_mps_multilevel_finite_bond_fails_closed():
         },
     )
 
-    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v2"
+    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v3"
     assert execution["execution_backend_contract"] == "mcwf_mps_state_record"
     assert execution["verdict"] == "fail"
     assert execution["passed"] is False
@@ -2647,11 +2606,12 @@ def test_axis1_mcwf_mps_runs_qutrit_two_site_leakage_exchange_from_public_contex
 
     assert manifest["verdict"] == "pass"
     execution = manifest["mps_execution"]
+    evaluator_diagnostics = execution["evaluator_only_diagnostics"]
     level_probabilities = {
         tuple(record): probability
         for record, probability in zip(
-            execution["level_records"],
-            execution["level_record_probabilities"],
+            evaluator_diagnostics["level_records"],
+            evaluator_diagnostics["level_record_probabilities"],
             strict=True,
         )
     }
@@ -2886,14 +2846,21 @@ def test_axis1_mcwf_mps_runs_ququart_transport_only_with_declared_level_three():
 
     assert manifest["verdict"] == "pass"
     execution = manifest["mps_execution"]
-    assert execution["level_records"] == [[3, 0]]
-    assert execution["level_record_counts"] == [4]
+    evaluator_diagnostics = execution["evaluator_only_diagnostics"]
+    assert evaluator_diagnostics["level_records"] == [[3, 0]]
+    assert evaluator_diagnostics["level_record_counts"] == [4]
     assert "LEAK_TRANSPORT_30_12" in execution["applied_substeps"][0][
         "hamiltonian_operator_families"
     ]
 
 
-def test_dense_axis1_evidence_refuses_to_ignore_public_qutrit_leakage_context():
+def test_dense_axis1_evidence_refuses_to_ignore_public_qutrit_leakage_context(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from error_coupling_simulator.frontend import (
+        axis1_carrier_execution as carrier_execution,
+    )
+
     builder = CircuitBuilder(num_qubits=1)
     builder.declare_axis1_local_lindblad_context(
         Axis1LocalLindbladContextSpec(
@@ -2917,15 +2884,27 @@ def test_dense_axis1_evidence_refuses_to_ignore_public_qutrit_leakage_context():
         for term in step["terms"]
     )
 
-    message = "cannot silently ignore public qutrit leakage context"
-    with pytest.raises(ValueError, match=message):
+    with pytest.raises(ValueError):
         axis1_substep_channel_evidence_manifest(schedule)
-    with pytest.raises(ValueError, match=message):
+    with pytest.raises(ValueError):
         axis1_state_evolution_evidence_manifest(schedule)
-    with pytest.raises(ValueError, match=message):
+    with pytest.raises(ValueError):
         axis1_measurement_record_evidence_manifest(schedule)
-    with pytest.raises(ValueError, match=message):
+
+    dense_child_calls = []
+    monkeypatch.setattr(
+        carrier_execution,
+        "axis1_state_evolution_evidence_manifest",
+        lambda *_args, **_kwargs: dense_child_calls.append("state"),
+    )
+    monkeypatch.setattr(
+        carrier_execution,
+        "axis1_measurement_record_evidence_manifest",
+        lambda *_args, **_kwargs: dense_child_calls.append("record"),
+    )
+    with pytest.raises(ValueError):
         axis1_carrier_execution_manifest(schedule)
+    assert dense_child_calls == []
 
 
 def test_axis1_qutrit_leakage_oracle_certification_matches_declared_superop():
@@ -3161,7 +3140,7 @@ def test_axis1_carrier_execution_probe_consumes_program_and_matches_jointL_state
     record = axis1_measurement_record_evidence_manifest(schedule)
     execution = axis1_carrier_execution_manifest(schedule)
 
-    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v2"
+    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v3"
     assert execution["verdict"] == "pass"
     assert execution["passed"] is True
     assert execution["execution_backend_contract"] == "dense_jointL_probe"
@@ -3210,7 +3189,7 @@ def test_axis1_carrier_execution_probe_fails_closed_on_over_cap_static_route():
 
     execution = axis1_carrier_execution_manifest(schedule)
 
-    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v2"
+    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v3"
     assert execution["verdict"] == "fail"
     assert execution["passed"] is False
     assert execution["execution_backend_contract"] == "dense_jointL_probe"
@@ -3238,7 +3217,7 @@ def test_axis1_carrier_execution_qutip_backend_executes_over_cap_static_idle():
         ),
     )
 
-    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v2"
+    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v3"
     assert execution["verdict"] == "pass"
     assert execution["passed"] is True
     assert execution["execution_backend_contract"] == (
@@ -3391,7 +3370,7 @@ def test_axis1_carrier_execution_qt_mps_backend_records_over_cap_h_readout():
         ),
     )
 
-    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v2"
+    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v3"
     assert execution["execution_status"] == "completed"
     assert execution["certification_status"] == "unavailable"
     assert execution["diagnostic_only"] is True
@@ -3420,7 +3399,7 @@ def test_axis1_carrier_execution_qt_mps_backend_records_over_cap_h_readout():
     assert execution["claims_axis2_source_timeline"] is False
 
     qt_mps = execution["qt_mps_execution"]
-    assert qt_mps["schema"] == "error_coupling_simulator.frontend.qt_mps_restricted_execution.v2"
+    assert qt_mps["schema"] == "error_coupling_simulator.frontend.qt_mps_restricted_execution.v6"
     assert qt_mps["execution_status"] == "completed"
     assert qt_mps["certification_status"] == "unavailable"
     assert qt_mps["diagnostic_only"] is True
@@ -3510,10 +3489,26 @@ def test_axis1_carrier_execution_qt_mps_backend_accepts_declared_options():
     ] is False
 
 
-def test_axis1_carrier_execution_qt_mps_backend_rejects_unknown_option():
-    schedule = _joint_channel_schedule()
+def test_axis1_carrier_execution_qt_mps_backend_rejects_unknown_option(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    import error_coupling_simulator.frontend.axis1_qt_mps_execution as qt
 
-    with pytest.raises(ValueError, match="unsupported QT/MPS execution_backend_options"):
+    schedule = _joint_channel_schedule()
+    child_calls = 0
+
+    def unexpected_child(*_args, **_kwargs):
+        nonlocal child_calls
+        child_calls += 1
+        raise AssertionError("invalid options must be rejected before delegation")
+
+    monkeypatch.setattr(
+        qt,
+        "axis1_qt_mps_restricted_execution_manifest",
+        unexpected_child,
+    )
+
+    with pytest.raises(ValueError):
         axis1_carrier_execution_manifest(
             schedule,
             execution_backend_contract=(
@@ -3521,98 +3516,30 @@ def test_axis1_carrier_execution_qt_mps_backend_rejects_unknown_option():
             ),
             execution_backend_options={"silent_metric": 1.0},
         )
+    assert child_calls == 0
 
 
-def test_axis1_carrier_execution_rejects_backend_options_for_dense_probe():
+def test_axis1_carrier_execution_rejects_backend_options_for_dense_probe(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    import error_coupling_simulator.frontend.axis1_carrier_execution as carrier
+
     schedule = _joint_channel_schedule()
+    cuda_calls = 0
 
-    with pytest.raises(ValueError, match="execution_backend_options"):
+    def unexpected_cuda(_device):
+        nonlocal cuda_calls
+        cuda_calls += 1
+        raise AssertionError("invalid options must be rejected before CUDA")
+
+    monkeypatch.setattr(carrier, "_require_cuda_device", unexpected_cuda)
+
+    with pytest.raises(ValueError):
         axis1_carrier_execution_manifest(
             schedule,
             execution_backend_options={"max_bond": 2},
         )
-
-
-def test_axis1_qt_mps_contract_uses_dense_oracle_for_within_cap_schedule():
-    builder = CircuitBuilder(num_qubits=2)
-    builder.declare_static_zz_couplings(((0, 1),))
-    builder.h(0)
-    builder.tick()
-    builder.cz((0, 1))
-    builder.tick()
-    builder.measure((0, 1), key=("m0", "m1"))
-    builder.detector("d0", xor=("m0", "m1"))
-    schedule = circuit_ir_to_substep_schedule(builder.build())
-
-    dense = axis1_carrier_execution_manifest(schedule)
-    contract = axis1_qt_mps_state_record_contract_manifest(schedule)
-
-    assert contract["schema"] == (
-        "error_coupling_simulator.frontend.qt_mps_state_record_contract.v1"
-    )
-    assert contract["verdict"] == "pass"
-    assert contract["passed"] is True
-    assert contract["backend_contract"] == "qt_mps_state_record"
-    assert contract["claims_qt_mps_backend_execution"] is False
-    assert contract["claims_production_scalable_backend"] is False
-    assert contract["claims_dense_channel_evidence"] is False
-    assert contract["claims_dem_decoder_semantics"] is False
-    assert contract["carrier_program"]["requires_scalable_backend"] is False
-    assert contract["carrier_program"]["routes"] == [
-        "boundary_only",
-        "dense_oracle_available",
-    ]
-    assert contract["qt_mps_backend_executed"] is False
-    assert contract["dense_oracle_certification"]["executed"] is True
-    assert contract["dense_oracle_certification"]["backend_contract"] == "dense_jointL_probe"
-    assert contract["dense_oracle_certification"]["evidence_content_hash"] == (
-        dense["content_hash"]
-    )
-    assert contract["dense_oracle_certification"]["comparison_outcome_is_metric"] is False
-    assert contract["approximation_book"]["schema"] == (
-        "error_coupling_simulator.frontend.carrier_approximation_book.v1"
-    )
-    assert contract["approximation_book"]["dense_oracle_certification"][
-        "overcap_dense_channel_rows_claimed"
-    ] is False
-
-
-def test_axis1_qt_mps_contract_fails_closed_on_scalable_required_rows():
-    builder = CircuitBuilder(num_qubits=6)
-    builder.declare_static_zz_couplings(((0, 5), (1, 4)))
-    builder.idle(tuple(range(6)), duration_ns=1.0e-6)
-    schedule = circuit_ir_to_substep_schedule(builder.build())
-
-    contract = axis1_qt_mps_state_record_contract_manifest(schedule)
-
-    assert contract["schema"] == (
-        "error_coupling_simulator.frontend.qt_mps_state_record_contract.v1"
-    )
-    assert contract["verdict"] == "fail"
-    assert contract["passed"] is False
-    assert contract["blocked_reason"] == (
-        "qt_mps_backend_not_implemented_for_scalable_required"
-    )
-    assert contract["backend_contract"] == "qt_mps_state_record"
-    assert contract["carrier_program"]["requires_scalable_backend"] is True
-    assert contract["carrier_program"]["routes"] == ["scalable_required"]
-    assert contract["qt_mps_backend_executed"] is False
-    assert contract["dense_oracle_certification"] == {
-        "executed": False,
-        "reason": "schedule_contains_scalable_required_rows",
-    }
-    assert contract["required_backend_slice"] == "qt_mps_state_record_execution"
-    assert contract["claims_qt_mps_backend_execution"] is False
-    assert contract["claims_production_scalable_backend"] is False
-    assert contract["claims_dem_decoder_semantics"] is False
-    assert contract["claims_axis2_source_timeline"] is False
-
-
-def test_axis1_qt_mps_contract_refuses_cpu_device():
-    schedule = _joint_channel_schedule()
-
-    with pytest.raises(ValueError, match="GPU-only"):
-        axis1_qt_mps_state_record_contract_manifest(schedule, device="cpu")
+    assert cuda_calls == 0
 
 
 def test_axis1_qt_mps_restricted_execution_records_over_cap_h_readout_zero_collapse():
@@ -3637,7 +3564,7 @@ def test_axis1_qt_mps_restricted_execution_records_over_cap_h_readout_zero_colla
 
     manifest = axis1_qt_mps_restricted_execution_manifest(schedule)
 
-    assert manifest["schema"] == "error_coupling_simulator.frontend.qt_mps_restricted_execution.v2"
+    assert manifest["schema"] == "error_coupling_simulator.frontend.qt_mps_restricted_execution.v6"
     assert manifest["representability"] == (
         "axis1_qt_mps_restricted_control_hamiltonian_z_record_product_channel"
     )
@@ -4106,7 +4033,7 @@ def test_axis1_qt_mps_restricted_execution_finite_bond_ledger_catches_truncation
     assert event["raw_output_norm_sq"] == pytest.approx(0.5, abs=1.0e-8)
     assert event["restored_output_norm_sq"] == pytest.approx(1.0, abs=1.0e-8)
     assert event["split_records"][0]["path_role"] == "two_site_operator_split"
-    assert event["split_records"][0]["actual_kept_rank"] == 1
+    assert event["split_records"][0]["actual_kept_bond_dimension"] == 1
     assert event["split_records"][0][
         "actual_discarded_weight_fraction_of_pre_split"
     ] == pytest.approx(0.5, abs=1.0e-8)
@@ -4175,7 +4102,7 @@ def test_axis1_qt_mps_bond_sweep_detects_underbonded_record_difference():
         convergence_record_probability_gate=1.0e-3,
     )
 
-    assert sweep["schema"] == "error_coupling_simulator.frontend.qt_mps_bond_sweep.v2"
+    assert sweep["schema"] == "error_coupling_simulator.frontend.qt_mps_bond_sweep.v4"
     assert sweep["verdict"] == "fail"
     assert sweep["passed"] is False
     assert sweep["bond_values"] == [1, 2]
@@ -4296,10 +4223,11 @@ def test_axis1_qt_mps_trajectory_seed_sweep_passes_dense_calibrated_deterministi
         dense_record_frequency_gate=1.0e-12,
     )
 
-    assert sweep["schema"] == "error_coupling_simulator.frontend.qt_mps_trajectory_seed_sweep.v2"
+    assert sweep["schema"] == "error_coupling_simulator.frontend.qt_mps_trajectory_seed_sweep.v4"
     assert sweep["verdict"] == "pass"
     assert sweep["passed"] is True
     policy = sweep["seed_sweep_policy"]
+    assert policy["all_sampled_runs_accepted"] is True
     assert policy["accepted_as_restricted_seed_sweep_evidence"] is True
     assert policy["accepted_as_dense_calibrated_trajectory_evidence"] is True
     assert policy["accepted_as_production_error_bound"] is False
@@ -4384,10 +4312,13 @@ def test_axis1_qt_mps_trajectory_seed_sweep_overcap_is_not_dense_calibrated():
         dense_record_frequency_gate=1.0e-8,
     )
 
-    assert sweep["verdict"] == "pass"
-    assert sweep["passed"] is True
+    assert sweep["verdict"] == "fail"
+    assert sweep["passed"] is False
     policy = sweep["seed_sweep_policy"]
-    assert policy["accepted_as_restricted_seed_sweep_evidence"] is True
+    assert policy["all_sampled_runs_accepted"] is False
+    assert policy["seed_spread_gate"]["evaluated"] is True
+    assert policy["seed_spread_gate"]["passed"] is True
+    assert policy["accepted_as_restricted_seed_sweep_evidence"] is False
     assert policy["accepted_as_dense_calibrated_trajectory_evidence"] is False
     assert policy["dense_reference_calibration"]["status"] == "not_available_overcap"
     assert policy["dense_reference_calibration"]["executed"] is False
@@ -4396,21 +4327,38 @@ def test_axis1_qt_mps_trajectory_seed_sweep_overcap_is_not_dense_calibrated():
     assert sweep["claims_production_scalable_backend"] is False
 
 
-def test_axis1_qt_mps_trajectory_seed_sweep_requires_explicit_distinct_seeds():
-    schedule = _joint_channel_schedule()
+def test_axis1_qt_mps_trajectory_seed_sweep_requires_explicit_distinct_seeds(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    import error_coupling_simulator.frontend.axis1_qt_mps_execution as qt
 
-    with pytest.raises(ValueError, match="at least two explicit seeds"):
+    schedule = _joint_channel_schedule()
+    child_calls = 0
+
+    def unexpected_child(*_args, **_kwargs):
+        nonlocal child_calls
+        child_calls += 1
+        raise AssertionError("invalid seeds must be rejected before delegation")
+
+    monkeypatch.setattr(
+        qt,
+        "axis1_qt_mps_restricted_execution_manifest",
+        unexpected_child,
+    )
+
+    with pytest.raises(ValueError):
         axis1_qt_mps_trajectory_seed_sweep_manifest(
             schedule,
             trajectory_count=4,
             rng_seeds=(1,),
         )
-    with pytest.raises(ValueError, match="rng_seeds must be distinct"):
+    with pytest.raises(ValueError):
         axis1_qt_mps_trajectory_seed_sweep_manifest(
             schedule,
             trajectory_count=4,
             rng_seeds=(1, 1),
         )
+    assert child_calls == 0
 
 
 def test_axis1_qt_mps_restricted_evidence_bundle_passes_deterministic_dense_case():
@@ -4436,7 +4384,7 @@ def test_axis1_qt_mps_restricted_evidence_bundle_passes_deterministic_dense_case
     )
 
     assert bundle["schema"] == (
-        "error_coupling_simulator.frontend.qt_mps_restricted_evidence_bundle.v2"
+        "error_coupling_simulator.frontend.qt_mps_restricted_evidence_bundle.v4"
     )
     assert bundle["verdict"] == "pass"
     assert bundle["passed"] is True
@@ -4513,7 +4461,7 @@ def test_axis1_qt_mps_resource_probe_reports_actual_cuda_memory_without_producti
         min_peak_reserved_gib=0.0,
     )
 
-    assert probe["schema"] == "error_coupling_simulator.frontend.qt_mps_resource_probe.v2"
+    assert probe["schema"] == "error_coupling_simulator.frontend.qt_mps_resource_probe.v4"
     assert probe["verdict"] == "pass"
     assert probe["passed"] is True
     assert probe["workload_passed"] is True
@@ -4663,12 +4611,17 @@ def test_axis1_qt_mps_restricted_execution_sampled_trajectories_are_seeded():
         "trajectory_count": 16,
         "rng_seed": 123,
         "rng_seed_required_for_acceptance": True,
-        "rng_seed_was_explicit": True,
-        "rng_seed_default_policy": "default_zero_when_not_provided",
-        "rng_backend": "torch.Generator(cuda)",
-        "probability_semantics": "empirical_record_frequencies",
-        "comparison_outcome_is_metric": False,
-    }
+            "rng_seed_was_explicit": True,
+            "rng_seed_default_policy": "default_zero_when_not_provided",
+            "rng_backend": "torch.Generator(cuda)",
+            "measurement_sampling_policy": (
+                "sequential_conditional_single_site_z_v1"
+            ),
+            "record_support_policy": "observed_empirical_outcomes_only",
+            "zero_frequency_records_emitted": False,
+            "probability_semantics": "empirical_record_frequencies",
+            "comparison_outcome_is_metric": False,
+        }
     assert execution["record_counts"] == second["mps_execution"]["record_counts"]
     assert sum(execution["record_counts"]) == 16
     assert sum(execution["record_probabilities"]) == pytest.approx(1.0, abs=1.0e-12)
@@ -4734,12 +4687,23 @@ def test_axis1_qt_mps_restricted_execution_runs_over_cap_local_collapse_branches
 
     manifest = axis1_qt_mps_restricted_execution_manifest(schedule)
 
-    assert manifest["verdict"] == "pass"
-    assert manifest["passed"] is True
+    assert manifest["execution_status"] == "completed"
+    assert manifest["certification_status"] == "unavailable"
+    assert manifest["diagnostic_only"] is True
+    assert manifest["blocked_reason"] == (
+        "overcap_independent_record_oracle_unavailable"
+    )
+    assert manifest["verdict"] == "fail"
+    assert manifest["passed"] is False
     assert manifest["qt_mps_backend_executed"] is True
     assert manifest["claims_qt_mps_backend_execution"] is True
     assert manifest["claims_production_scalable_backend"] is False
     assert manifest["claims_exact_joint_lindblad_generator"] is False
+    policy = manifest["restricted_acceptance_policy"]
+    assert policy["accepted_for_restricted_execution"] is False
+    assert policy["overcap"][
+        "accepted_as_restricted_overcap_execution"
+    ] is False
 
     execution = manifest["mps_execution"]
     assert execution["collapse_evolution_policy"] == "local_product_channel_branching"
@@ -4781,7 +4745,14 @@ def test_axis1_qt_mps_restricted_execution_samples_over_cap_without_dense_fallba
         finite_step_order="strang_second_order",
     )
 
-    assert manifest["verdict"] == "pass"
+    assert manifest["execution_status"] == "completed"
+    assert manifest["certification_status"] == "unavailable"
+    assert manifest["diagnostic_only"] is True
+    assert manifest["blocked_reason"] == (
+        "overcap_independent_record_oracle_unavailable"
+    )
+    assert manifest["verdict"] == "fail"
+    assert manifest["passed"] is False
     assert manifest["carrier_program"]["requires_scalable_backend"] is True
     assert manifest["carrier_program"]["routes"] == ["scalable_required"]
     certification = manifest["dense_jointL_record_certification"]
@@ -4796,8 +4767,8 @@ def test_axis1_qt_mps_restricted_execution_samples_over_cap_without_dense_fallba
     assert sum(execution["record_counts"]) == 8
     assert sum(execution["record_probabilities"]) == pytest.approx(1.0, abs=1.0e-12)
     policy = manifest["restricted_acceptance_policy"]
-    assert policy["accepted_for_restricted_execution"] is True
-    assert policy["accepted_for_sampled_execution_evidence"] is True
+    assert policy["accepted_for_restricted_execution"] is False
+    assert policy["accepted_for_sampled_execution_evidence"] is False
     assert policy["accepted_for_exact_dense_probability_evidence"] is False
     assert policy["finite_step"]["order"] == "strang_second_order"
     assert policy["finite_step"]["dense_window_certification_status"] == (
@@ -4806,6 +4777,9 @@ def test_axis1_qt_mps_restricted_execution_samples_over_cap_without_dense_fallba
     assert policy["overcap"]["requires_scalable_backend"] is True
     assert policy["overcap"]["dense_fallback_forbidden"] is True
     assert policy["overcap"]["dense_certification_used_for_overcap"] is False
+    assert policy["overcap"][
+        "accepted_as_restricted_overcap_execution"
+    ] is False
     assert policy["accepted_for_production_scalable_backend"] is False
     assert "sampled_probabilities_not_exact_dense_evidence" in policy["production_blockers"]
 
@@ -4830,7 +4804,19 @@ def test_axis1_qt_mps_restricted_execution_carries_t1_population_decay():
 
     manifest = axis1_qt_mps_restricted_execution_manifest(schedule)
 
-    assert manifest["verdict"] == "pass"
+    assert manifest["execution_status"] == "completed"
+    assert manifest["certification_status"] == "unavailable"
+    assert manifest["diagnostic_only"] is True
+    assert manifest["blocked_reason"] == (
+        "overcap_independent_record_oracle_unavailable"
+    )
+    assert manifest["verdict"] == "fail"
+    assert manifest["passed"] is False
+    policy = manifest["restricted_acceptance_policy"]
+    assert policy["accepted_for_restricted_execution"] is False
+    assert policy["overcap"][
+        "accepted_as_restricted_overcap_execution"
+    ] is False
     execution = manifest["mps_execution"]
     p_m0_one = sum(
         probability
@@ -4849,49 +4835,103 @@ def test_axis1_qt_mps_restricted_execution_carries_t1_population_decay():
     ) == 6
 
 
-def test_axis1_qt_mps_restricted_execution_refuses_cpu_device():
-    schedule = _joint_channel_schedule()
+def test_axis1_qt_mps_restricted_execution_refuses_cpu_device(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    import error_coupling_simulator.frontend.axis1_qt_mps_execution as qt
 
-    with pytest.raises(ValueError, match="GPU-only"):
+    schedule = _joint_channel_schedule()
+    cuda_devices = []
+    require_cuda_device = qt._require_cuda_device
+
+    def counted_cuda_guard(device):
+        cuda_devices.append(device)
+        return require_cuda_device(device)
+
+    monkeypatch.setattr(qt, "_require_cuda_device", counted_cuda_guard)
+
+    with pytest.raises(ValueError):
         axis1_qt_mps_restricted_execution_manifest(schedule, device="cpu")
+    assert cuda_devices == ["cpu"]
 
 
-def test_axis1_qt_mps_restricted_execution_refuses_nonpositive_microstep_count():
+def test_axis1_qt_mps_restricted_execution_refuses_nonpositive_microstep_count(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    import error_coupling_simulator.frontend.axis1_qt_mps_execution as qt
+
     schedule = _joint_channel_schedule()
+    cuda_devices = []
+    monkeypatch.setattr(qt, "_require_cuda_device", cuda_devices.append)
 
-    with pytest.raises(ValueError, match="microstep_count must be positive"):
+    with pytest.raises(ValueError):
         axis1_qt_mps_restricted_execution_manifest(schedule, microstep_count=0)
+    assert cuda_devices == []
 
 
-def test_axis1_qt_mps_restricted_execution_refuses_nonpositive_branch_cap():
+def test_axis1_qt_mps_restricted_execution_refuses_nonpositive_branch_cap(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    import error_coupling_simulator.frontend.axis1_qt_mps_execution as qt
+
     schedule = _joint_channel_schedule()
+    cuda_devices = []
+    monkeypatch.setattr(qt, "_require_cuda_device", cuda_devices.append)
 
-    with pytest.raises(ValueError, match="max_branches must be positive"):
+    with pytest.raises(ValueError):
         axis1_qt_mps_restricted_execution_manifest(schedule, max_branches=0)
+    assert cuda_devices == []
 
 
-def test_axis1_qt_mps_restricted_execution_refuses_nonpositive_max_bond():
+def test_axis1_qt_mps_restricted_execution_refuses_nonpositive_max_bond(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    import error_coupling_simulator.frontend.axis1_qt_mps_execution as qt
+
     schedule = _joint_channel_schedule()
+    cuda_devices = []
+    monkeypatch.setattr(qt, "_require_cuda_device", cuda_devices.append)
 
-    with pytest.raises(ValueError, match="max_bond must be positive"):
+    with pytest.raises(ValueError):
         axis1_qt_mps_restricted_execution_manifest(schedule, max_bond=0)
+    assert cuda_devices == []
 
 
-def test_axis1_qt_mps_restricted_execution_refuses_unknown_finite_step_order():
+def test_axis1_qt_mps_restricted_execution_refuses_unknown_finite_step_order(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    import error_coupling_simulator.frontend.axis1_qt_mps_execution as qt
+
     schedule = _joint_channel_schedule()
+    cuda_devices = []
+    monkeypatch.setattr(qt, "_require_cuda_device", cuda_devices.append)
 
-    with pytest.raises(ValueError, match="finite_step_order must be one of"):
+    with pytest.raises(ValueError):
         axis1_qt_mps_restricted_execution_manifest(
             schedule,
             finite_step_order="exact_joint_lindbladian",
         )
+    assert cuda_devices == []
 
 
-def test_axis1_carrier_execution_probe_refuses_cpu_device():
+def test_axis1_carrier_execution_probe_refuses_cpu_device(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    import error_coupling_simulator.frontend.axis1_carrier_execution as carrier
+
     schedule = _joint_channel_schedule()
+    cuda_devices = []
+    require_cuda_device = carrier._require_cuda_device
 
-    with pytest.raises(ValueError, match="GPU-only"):
+    def counted_cuda_guard(device):
+        cuda_devices.append(device)
+        return require_cuda_device(device)
+
+    monkeypatch.setattr(carrier, "_require_cuda_device", counted_cuda_guard)
+
+    with pytest.raises(ValueError):
         axis1_carrier_execution_manifest(schedule, device="cpu")
+    assert cuda_devices == ["cpu"]
 
 
 def test_axis1_qutip_cuquantum_probe_lowers_over_cap_static_program_symbolically():

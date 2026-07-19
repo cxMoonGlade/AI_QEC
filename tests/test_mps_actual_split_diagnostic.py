@@ -285,7 +285,7 @@ def test_independent_dense_application_preserves_nonadjacent_site_order() -> Non
 
     np.testing.assert_allclose(target, expected, rtol=0.0, atol=1.0e-14)
     schmidt = DIAGNOSTIC._schmidt_records(target, num_sites=5, max_bond=1)
-    assert [record["pre_truncation_rank"] for record in schmidt] == [2, 2, 2, 2]
+    assert [record["pre_truncation_numerical_rank"] for record in schmidt] == [2, 2, 2, 2]
     assert [
         record["discarded_weight_fraction_at_cap"] for record in schmidt
     ] == pytest.approx(
@@ -476,7 +476,7 @@ def test_split_observer_uses_backend_svd_without_mutating_production_call() -> N
     assert records[0]["singular_value_probe"] == (
         "quimb_backend_svd_get_arrays_without_truncation"
     )
-    assert records[0]["actual_kept_rank"] == 1
+    assert records[0]["actual_kept_bond_dimension"] == 1
     assert records[0]["actual_discarded_weight_raw"] == pytest.approx(0.5)
     assert records[0][
         "actual_discarded_weight_fraction_of_pre_split"

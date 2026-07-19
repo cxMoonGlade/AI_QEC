@@ -230,7 +230,8 @@ class Ran:
 
 def run(cmd: Sequence[str], *, cwd: Optional[str] = None, env: Optional[dict] = None,
         timeout: Optional[float] = None, log_path: Optional[str] = None,
-        append: bool = False) -> Ran:
+        append: bool = False,
+        cancellation_event: Optional[threading.Event] = None) -> Ran:
     """Run ``cmd`` (a LIST -- no shell, no quoting traps) in its own process group. Combined
     stdout+stderr go to ``log_path`` (or are inherited if None). On ``timeout`` the WHOLE group is
     killed (no runaway, no orphans). The group is ALWAYS torn down on return, so a child that
@@ -268,6 +269,8 @@ def run(cmd: Sequence[str], *, cwd: Optional[str] = None, env: Optional[dict] = 
             # Worker threads do not receive Python signal callbacks, but they observe the same
             # pending event and tear down their owned group while the main thread unwinds.
             _raise_pending_signal()
+            if cancellation_event is not None and cancellation_event.is_set():
+                break
             wait_for = _WAIT_POLL_SECONDS
             if deadline is not None:
                 remaining = deadline - time.monotonic()

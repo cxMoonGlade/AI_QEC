@@ -296,8 +296,19 @@ def test_mcwf_overcap_none_budget_cannot_pass_restricted_acceptance():
     [math.nan, math.inf, -math.inf],
     ids=["nan", "positive_inf", "negative_inf"],
 )
-def test_mcwf_rejects_nonfinite_mass_residual_budget_before_execution(budget):
-    with pytest.raises(ValueError, match="mass_residual_budget must be finite"):
+def test_mcwf_rejects_nonfinite_mass_residual_budget_before_execution(
+    monkeypatch: pytest.MonkeyPatch,
+    budget,
+):
+    cuda_calls = []
+
+    def unexpected_cuda(device: str) -> str:
+        cuda_calls.append(device)
+        raise AssertionError("nonfinite budget reached CUDA")
+
+    monkeypatch.setattr(execution, "_require_cuda_device", unexpected_cuda)
+
+    with pytest.raises(ValueError):
         axis1_mcwf_mps_state_record_execution_manifest(
             _overcap_high_decay_schedule(),
             local_dims=[2] * 6,
@@ -307,6 +318,7 @@ def test_mcwf_rejects_nonfinite_mass_residual_budget_before_execution(budget):
             microstep_count=1,
             mass_residual_budget=budget,
         )
+    assert cuda_calls == []
 
 
 def test_mcwf_overcap_finite_mass_budget_without_oracle_is_diagnostic_only():

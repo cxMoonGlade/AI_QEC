@@ -1,0 +1,49 @@
+{
+  "schema": "error_coupling_simulator.harness.mutation_batch.v1",
+  "_comment": [
+    "GPU-serial mutation shard 3/5 for restricted-MPS Carrier composition.",
+    "Exactly one GPU is leased; up to four fresh pytest workers may share it, while the outer suite runs all five shards sequentially.",
+    "Raw-source AST/text ownership scanners remain service/release gates but are intentionally excluded here: a mutmut trampoline contains every generated candidate at once, so these scanners cannot identify the active mutant."
+  ],
+  "contract": "docs/SIMULATOR.md",
+  "semantic_dispositions": "tests/_support/restricted_mps_mutation_semantic_dispositions.json",
+  "lane": "gpu_serial",
+  "requires_gpu": true,
+  "covered_by_test_files": [
+    "tests/test_mps_phase1b_fail_closed.py",
+    "tests/test_mps_actual_split_helper.py",
+    "tests/test_mps_uncapped_nonlocal.py",
+    "tests/test_axis1_record_layout.py",
+    "tests/test_mps_phase3_record_layout.py",
+    "tests/test_mps_phase4a_probability_and_norm.py",
+    "tests/test_mps_phase4b_configuration_support_and_bond.py",
+    "tests/test_mps_phase5_consolidation.py",
+    "tests/test_mps_phase6_evaluator_metric_binding.py",
+    "tests/test_mps_phase7_sparse_sampled_records.py",
+    "tests/test_mps_qt_aggregate_binding.py",
+    "tests/test_mps_qt_transitive_semantics.py",
+    "tests/test_mps_qt_aggregate_deep_auth.py",
+    "tests/test_mps_carrier_child_authentication.py",
+    "tests/test_mps_mcwf_measurement_semantics.py",
+    "tests/test_axis1_mcwf_dense_certification.py",
+    "tests/test_simulator_axis1_schedule.py",
+    "tests/test_collective_decay_finite_step_guard.py"
+  ],
+  "mutation_also_copy": [
+    "docs/ARCHITECTURE.md",
+    "docs/SIMULATOR.md",
+    "docs/service_status.json",
+    "tests/_support/restricted_mps_coverage_targets.json",
+    "scripts/mps_actual_split_diagnostic.py",
+    "scripts/mps_three_leg_comparator.py"
+  ],
+  "reconcile_modules": [
+    "src/error_coupling_simulator/frontend/axis1_carrier_execution.py"
+  ],
+  "harness": {
+    "mutation_gate": {
+      "jobs": 4,
+      "kill_rate_bar": 0.9
+    }
+  }
+}

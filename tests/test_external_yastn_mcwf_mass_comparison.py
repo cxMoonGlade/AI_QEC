@@ -5,7 +5,10 @@ from __future__ import annotations
 import base64
 import hashlib
 import importlib.util
+import json
+import os
 from pathlib import Path
+import shutil
 
 import pytest
 
@@ -106,3 +109,47 @@ def test_yastn_source_tree_verification_is_bidirectional_and_fail_closed():
             installed_sha256={**installed, "yastn/unexpected.py": "e" * 64},
             clone_sha256=clone,
         )
+
+
+@pytest.mark.skipif(
+    os.environ.get("ECS_RUN_YASTN_MPS_COMPARISON") != "1",
+    reason=(
+        "set ECS_RUN_YASTN_MPS_COMPARISON=1 for the isolated YASTN integration run"
+    ),
+)
+def test_optional_isolated_yastn_mps_comparison(tmp_path: Path) -> None:
+    from harness import proc
+
+    conda = shutil.which("conda")
+    assert conda is not None
+    output = tmp_path / "yastn_mps_comparison.json"
+    log = tmp_path / "yastn_mps_comparison.log"
+    environment = os.environ.copy()
+    environment.pop("PYTHONPATH", None)
+    ran = proc.run(
+        [
+            conda,
+            "run",
+            "-n",
+            "ecs-baseline-yastn",
+            "python",
+            str(SCRIPT),
+            "--output",
+            str(output),
+        ],
+        cwd=str(REPO),
+        env=environment,
+        timeout=120.0,
+        log_path=str(log),
+    )
+
+    assert ran.ok, log.read_text(encoding="utf-8", errors="replace")
+    assert ran.group_cleanup_verified is True
+    report = json.loads(output.read_text(encoding="utf-8"))
+    assert report["schema"] == "ai_qec.external_baseline.yastn_mcwf_candidate_mass.v2"
+    assert report["all_checks_passed"] is True
+    assert report["runtime_provenance"]["environment"] == "ecs-baseline-yastn"
+    assert report["runtime_provenance"]["expected_commit"] == (
+        "595bd802ba0753a187b4bf7fd5c6d5007c0170d0"
+    )
+    assert report["runtime_provenance"]["clone_pristine"] is True

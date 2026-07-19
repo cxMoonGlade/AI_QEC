@@ -1,8 +1,9 @@
 {
   "_comment": [
-    "Strict Phase 0 coverage and mutation registry for the restricted MPS verification surface.",
-    "A RED gate is expected until every public unit reaches 100% statement and branch coverage; do not lower targets or add exemptions to manufacture green.",
-    "axis1_mcwf_dense_certification.py is currently a registered support path, not a service owner."
+    "Strict coverage registry for the current restricted MPS verification surface.",
+    "Every canonical public unit must meet 100% statement and branch coverage; do not lower targets or add exemptions to manufacture green.",
+    "certify/axis1_mps.py owns dense references, metrics, and restricted acceptance for this route.",
+    "The authoritative mutation topology is tests/_support/restricted_mps_mutation_suite.json: CPU-parallel mechanics plus GPU-serial execution and certification."
   ],
   "contract": "docs/SIMULATOR.md",
   "default_target": {"statement": 1.0, "branch": 1.0},
@@ -10,64 +11,363 @@
   "covered_by_test_files": [
     "tests/test_mps_phase1b_fail_closed.py",
     "tests/test_mps_actual_split_helper.py",
+    "tests/test_mps_uncapped_nonlocal.py",
+    "tests/test_mps_capped_uncapped_mutation_firewall.py",
+    "tests/test_axis1_record_layout.py",
+    "tests/test_mps_phase3_record_layout.py",
+    "tests/test_mps_phase4a_probability_and_norm.py",
+    "tests/test_mps_phase4b_configuration_support_and_bond.py",
+    "tests/test_mps_phase5_consolidation.py",
+    "tests/test_mps_truncation_mechanics.py",
+    "tests/test_mps_state_mechanics.py",
+    "tests/test_mps_phase6_certification_ownership.py",
+    "tests/test_mps_phase6_evaluator_metric_binding.py",
+    "tests/test_mps_phase7_sparse_sampled_records.py",
+    "tests/test_mps_qt_aggregate_binding.py",
+    "tests/test_mps_qt_transitive_semantics.py",
+    "tests/test_mps_qt_aggregate_deep_auth.py",
+    "tests/test_mps_carrier_child_authentication.py",
+    "tests/test_mps_mcwf_measurement_semantics.py",
     "tests/test_axis1_mcwf_dense_certification.py",
     "tests/test_simulator_axis1_schedule.py",
     "tests/test_collective_decay_finite_step_guard.py"
   ],
+  "mutation_also_copy": [
+    "docs/service_status.json",
+    "tests/_support/restricted_mps_coverage_targets.json",
+    "scripts/mps_actual_split_diagnostic.py",
+    "scripts/mps_three_leg_comparator.py"
+  ],
   "reconcile_modules": [
-    "src/error_coupling_simulator/frontend/_mps_actual_split.py",
-    "src/error_coupling_simulator/frontend/axis1_mcwf_mps_contract.py",
+    "src/error_coupling_simulator/carrier/mps/uncapped_nonlocal.py",
+    "src/error_coupling_simulator/carrier/mps/probability.py",
+    "src/error_coupling_simulator/carrier/mps/controls.py",
+    "src/error_coupling_simulator/carrier/mps/state.py",
+    "src/error_coupling_simulator/carrier/mps/capped_two_site.py",
+    "src/error_coupling_simulator/carrier/mps/truncation.py",
     "src/error_coupling_simulator/frontend/axis1_mcwf_mps_execution.py",
-    "src/error_coupling_simulator/frontend/axis1_qt_mps_contract.py",
+    "src/error_coupling_simulator/frontend/axis1_record_layout.py",
     "src/error_coupling_simulator/frontend/axis1_qt_mps_execution.py",
-    "src/error_coupling_simulator/frontend/axis1_mcwf_dense_certification.py"
+    "src/error_coupling_simulator/frontend/axis1_carrier_execution.py",
+    "src/error_coupling_simulator/frontend/axis1_carrier_program.py",
+    "src/error_coupling_simulator/certify/axis1_mps.py"
   ],
   "out_of_scope": {},
   "canonical_units": [
+    "preflight_uncapped_nonlocal_resource",
+    "apply_uncapped_nonlocal_unitary",
+    "RawProbabilityMass.__post_init__",
+    "validate_raw_probability_mass",
+    "multiply_probability_values",
+    "one_minus_exp_neg_probability",
+    "sample_raw_probability_mass",
+    "normalize_mps_bool",
+    "normalize_mps_device",
+    "normalize_mps_index",
+    "normalize_optional_mps_index",
+    "normalize_mps_index_sequence",
+    "normalize_mps_choice",
+    "normalize_mps_finite_real",
     "normalize_mps_max_bond",
+    "normalize_optional_mps_nonnegative_real",
     "apply_capped_two_site_unitary",
+    "mps_norm_squared",
+    "max_mps_bond",
+    "exact_mps_bond_dimension",
     "commit_mps_candidate_",
-    "axis1_mcwf_mps_state_record_contract_manifest",
+    "aggregate_exact_branch_truncation_events",
+    "aggregate_sampled_truncation_events",
+    "build_mps_truncation_ledger",
+    "Axis1MeasurementBoundaryLayout.width",
+    "Axis1ScheduleRecordLayout.measurement_width",
+    "Axis1ScheduleRecordLayout.boundary_for_substep_id",
+    "axis1_record_layout_from_schedule",
+    "materialize_binary_records",
+    "project_axis1_xor_records",
+    "_validate_axis1_projected_record_payload",
+    "_require_exact_text_list",
+    "_require_exact_binary_record_matrix",
     "axis1_mcwf_mps_state_record_execution_manifest",
-    "axis1_qt_mps_state_record_contract_manifest",
     "axis1_qt_mps_restricted_execution_manifest",
     "axis1_qt_mps_bond_sweep_manifest",
     "axis1_qt_mps_trajectory_seed_sweep_manifest",
     "axis1_qt_mps_restricted_evidence_bundle_manifest",
     "axis1_qt_mps_resource_probe_manifest",
+    "axis1_carrier_execution_manifest",
+    "Axis1CarrierTerm.__post_init__",
+    "Axis1CarrierTerm.to_manifest",
+    "Axis1CarrierSubstep.to_manifest",
+    "Axis1CarrierProgram.__post_init__",
+    "Axis1CarrierProgram.requires_scalable_backend",
+    "Axis1CarrierProgram.to_manifest",
+    "axis1_carrier_program_manifest",
+    "axis1_reset_basis",
+    "axis1_carrier_substep_summary",
     "dense_jointL_record_certification",
     "restricted_acceptance_policy"
   ],
   "units": [
     {
-      "group": "mps_actual_split",
-      "module": "src/error_coupling_simulator/frontend/_mps_actual_split.py",
+      "group": "mps_uncapped_nonlocal",
+      "module": "src/error_coupling_simulator/carrier/mps/uncapped_nonlocal.py",
+      "unit": "preflight_uncapped_nonlocal_resource",
+      "qualname": "preflight_uncapped_nonlocal_resource",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "mps_uncapped_nonlocal",
+      "module": "src/error_coupling_simulator/carrier/mps/uncapped_nonlocal.py",
+      "unit": "apply_uncapped_nonlocal_unitary",
+      "qualname": "apply_uncapped_nonlocal_unitary",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "mps_probability",
+      "module": "src/error_coupling_simulator/carrier/mps/probability.py",
+      "unit": "RawProbabilityMass.__post_init__",
+      "qualname": "RawProbabilityMass.__post_init__",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "mps_probability",
+      "module": "src/error_coupling_simulator/carrier/mps/probability.py",
+      "unit": "validate_raw_probability_mass",
+      "qualname": "validate_raw_probability_mass",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "mps_probability",
+      "module": "src/error_coupling_simulator/carrier/mps/probability.py",
+      "unit": "multiply_probability_values",
+      "qualname": "multiply_probability_values",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "mps_probability",
+      "module": "src/error_coupling_simulator/carrier/mps/probability.py",
+      "unit": "one_minus_exp_neg_probability",
+      "qualname": "one_minus_exp_neg_probability",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "mps_probability",
+      "module": "src/error_coupling_simulator/carrier/mps/probability.py",
+      "unit": "sample_raw_probability_mass",
+      "qualname": "sample_raw_probability_mass",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "mps_controls",
+      "module": "src/error_coupling_simulator/carrier/mps/controls.py",
+      "unit": "normalize_mps_bool",
+      "qualname": "normalize_mps_bool",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "mps_controls",
+      "module": "src/error_coupling_simulator/carrier/mps/controls.py",
+      "unit": "normalize_mps_device",
+      "qualname": "normalize_mps_device",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "mps_controls",
+      "module": "src/error_coupling_simulator/carrier/mps/controls.py",
+      "unit": "normalize_mps_index",
+      "qualname": "normalize_mps_index",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "mps_controls",
+      "module": "src/error_coupling_simulator/carrier/mps/controls.py",
+      "unit": "normalize_optional_mps_index",
+      "qualname": "normalize_optional_mps_index",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "mps_controls",
+      "module": "src/error_coupling_simulator/carrier/mps/controls.py",
+      "unit": "normalize_mps_index_sequence",
+      "qualname": "normalize_mps_index_sequence",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "mps_controls",
+      "module": "src/error_coupling_simulator/carrier/mps/controls.py",
+      "unit": "normalize_mps_choice",
+      "qualname": "normalize_mps_choice",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "mps_controls",
+      "module": "src/error_coupling_simulator/carrier/mps/controls.py",
+      "unit": "normalize_mps_finite_real",
+      "qualname": "normalize_mps_finite_real",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "mps_controls",
+      "module": "src/error_coupling_simulator/carrier/mps/controls.py",
       "unit": "normalize_mps_max_bond",
       "qualname": "normalize_mps_max_bond",
       "target": {"statement": 1.0, "branch": 1.0},
       "exemptions": []
     },
     {
+      "group": "mps_controls",
+      "module": "src/error_coupling_simulator/carrier/mps/controls.py",
+      "unit": "normalize_optional_mps_nonnegative_real",
+      "qualname": "normalize_optional_mps_nonnegative_real",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
       "group": "mps_actual_split",
-      "module": "src/error_coupling_simulator/frontend/_mps_actual_split.py",
+      "module": "src/error_coupling_simulator/carrier/mps/capped_two_site.py",
       "unit": "apply_capped_two_site_unitary",
       "qualname": "apply_capped_two_site_unitary",
       "target": {"statement": 1.0, "branch": 1.0},
       "exemptions": []
     },
     {
-      "group": "mps_actual_split",
-      "module": "src/error_coupling_simulator/frontend/_mps_actual_split.py",
+      "group": "mps_state",
+      "module": "src/error_coupling_simulator/carrier/mps/state.py",
+      "unit": "mps_norm_squared",
+      "qualname": "mps_norm_squared",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "mps_state",
+      "module": "src/error_coupling_simulator/carrier/mps/state.py",
+      "unit": "max_mps_bond",
+      "qualname": "max_mps_bond",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "mps_state",
+      "module": "src/error_coupling_simulator/carrier/mps/state.py",
+      "unit": "exact_mps_bond_dimension",
+      "qualname": "exact_mps_bond_dimension",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "mps_state",
+      "module": "src/error_coupling_simulator/carrier/mps/state.py",
       "unit": "commit_mps_candidate_",
       "qualname": "commit_mps_candidate_",
       "target": {"statement": 1.0, "branch": 1.0},
       "exemptions": []
     },
     {
-      "group": "mcwf_mps_contract",
-      "module": "src/error_coupling_simulator/frontend/axis1_mcwf_mps_contract.py",
-      "unit": "axis1_mcwf_mps_state_record_contract_manifest",
-      "qualname": "axis1_mcwf_mps_state_record_contract_manifest",
+      "group": "mps_truncation",
+      "module": "src/error_coupling_simulator/carrier/mps/truncation.py",
+      "unit": "aggregate_exact_branch_truncation_events",
+      "qualname": "aggregate_exact_branch_truncation_events",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "mps_truncation",
+      "module": "src/error_coupling_simulator/carrier/mps/truncation.py",
+      "unit": "aggregate_sampled_truncation_events",
+      "qualname": "aggregate_sampled_truncation_events",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "mps_truncation",
+      "module": "src/error_coupling_simulator/carrier/mps/truncation.py",
+      "unit": "build_mps_truncation_ledger",
+      "qualname": "build_mps_truncation_ledger",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "axis1_record_layout",
+      "module": "src/error_coupling_simulator/frontend/axis1_record_layout.py",
+      "unit": "Axis1MeasurementBoundaryLayout.width",
+      "qualname": "Axis1MeasurementBoundaryLayout.width",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "axis1_record_layout",
+      "module": "src/error_coupling_simulator/frontend/axis1_record_layout.py",
+      "unit": "Axis1ScheduleRecordLayout.measurement_width",
+      "qualname": "Axis1ScheduleRecordLayout.measurement_width",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "axis1_record_layout",
+      "module": "src/error_coupling_simulator/frontend/axis1_record_layout.py",
+      "unit": "Axis1ScheduleRecordLayout.boundary_for_substep_id",
+      "qualname": "Axis1ScheduleRecordLayout.boundary_for_substep_id",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "axis1_record_layout",
+      "module": "src/error_coupling_simulator/frontend/axis1_record_layout.py",
+      "unit": "axis1_record_layout_from_schedule",
+      "qualname": "axis1_record_layout_from_schedule",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "axis1_record_layout",
+      "module": "src/error_coupling_simulator/frontend/axis1_record_layout.py",
+      "unit": "materialize_binary_records",
+      "qualname": "materialize_binary_records",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "axis1_record_layout",
+      "module": "src/error_coupling_simulator/frontend/axis1_record_layout.py",
+      "unit": "project_axis1_xor_records",
+      "qualname": "project_axis1_xor_records",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "axis1_record_layout",
+      "module": "src/error_coupling_simulator/frontend/axis1_record_layout.py",
+      "unit": "_validate_axis1_projected_record_payload",
+      "qualname": "_validate_axis1_projected_record_payload",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "axis1_record_layout",
+      "module": "src/error_coupling_simulator/frontend/axis1_record_layout.py",
+      "unit": "_require_exact_text_list",
+      "qualname": "_require_exact_text_list",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "axis1_record_layout",
+      "module": "src/error_coupling_simulator/frontend/axis1_record_layout.py",
+      "unit": "_require_exact_binary_record_matrix",
+      "qualname": "_require_exact_binary_record_matrix",
       "target": {"statement": 1.0, "branch": 1.0},
       "exemptions": []
     },
@@ -76,14 +376,6 @@
       "module": "src/error_coupling_simulator/frontend/axis1_mcwf_mps_execution.py",
       "unit": "axis1_mcwf_mps_state_record_execution_manifest",
       "qualname": "axis1_mcwf_mps_state_record_execution_manifest",
-      "target": {"statement": 1.0, "branch": 1.0},
-      "exemptions": []
-    },
-    {
-      "group": "qt_mps_contract",
-      "module": "src/error_coupling_simulator/frontend/axis1_qt_mps_contract.py",
-      "unit": "axis1_qt_mps_state_record_contract_manifest",
-      "qualname": "axis1_qt_mps_state_record_contract_manifest",
       "target": {"statement": 1.0, "branch": 1.0},
       "exemptions": []
     },
@@ -128,8 +420,88 @@
       "exemptions": []
     },
     {
+      "group": "axis1_carrier_execution",
+      "module": "src/error_coupling_simulator/frontend/axis1_carrier_execution.py",
+      "unit": "axis1_carrier_execution_manifest",
+      "qualname": "axis1_carrier_execution_manifest",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "axis1_carrier_program",
+      "module": "src/error_coupling_simulator/frontend/axis1_carrier_program.py",
+      "unit": "Axis1CarrierTerm.__post_init__",
+      "qualname": "Axis1CarrierTerm.__post_init__",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "axis1_carrier_program",
+      "module": "src/error_coupling_simulator/frontend/axis1_carrier_program.py",
+      "unit": "Axis1CarrierTerm.to_manifest",
+      "qualname": "Axis1CarrierTerm.to_manifest",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "axis1_carrier_program",
+      "module": "src/error_coupling_simulator/frontend/axis1_carrier_program.py",
+      "unit": "Axis1CarrierSubstep.to_manifest",
+      "qualname": "Axis1CarrierSubstep.to_manifest",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "axis1_carrier_program",
+      "module": "src/error_coupling_simulator/frontend/axis1_carrier_program.py",
+      "unit": "Axis1CarrierProgram.__post_init__",
+      "qualname": "Axis1CarrierProgram.__post_init__",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "axis1_carrier_program",
+      "module": "src/error_coupling_simulator/frontend/axis1_carrier_program.py",
+      "unit": "Axis1CarrierProgram.requires_scalable_backend",
+      "qualname": "Axis1CarrierProgram.requires_scalable_backend",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "axis1_carrier_program",
+      "module": "src/error_coupling_simulator/frontend/axis1_carrier_program.py",
+      "unit": "Axis1CarrierProgram.to_manifest",
+      "qualname": "Axis1CarrierProgram.to_manifest",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "axis1_carrier_program",
+      "module": "src/error_coupling_simulator/frontend/axis1_carrier_program.py",
+      "unit": "axis1_carrier_program_manifest",
+      "qualname": "axis1_carrier_program_manifest",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "axis1_carrier_program",
+      "module": "src/error_coupling_simulator/frontend/axis1_carrier_program.py",
+      "unit": "axis1_reset_basis",
+      "qualname": "axis1_reset_basis",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "axis1_carrier_program",
+      "module": "src/error_coupling_simulator/frontend/axis1_carrier_program.py",
+      "unit": "axis1_carrier_substep_summary",
+      "qualname": "axis1_carrier_substep_summary",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
       "group": "mcwf_mps_certification",
-      "module": "src/error_coupling_simulator/frontend/axis1_mcwf_dense_certification.py",
+      "module": "src/error_coupling_simulator/certify/axis1_mps.py",
       "unit": "dense_jointL_record_certification",
       "qualname": "dense_jointL_record_certification",
       "target": {"statement": 1.0, "branch": 1.0},
@@ -137,7 +509,7 @@
     },
     {
       "group": "mcwf_mps_certification",
-      "module": "src/error_coupling_simulator/frontend/axis1_mcwf_dense_certification.py",
+      "module": "src/error_coupling_simulator/certify/axis1_mps.py",
       "unit": "restricted_acceptance_policy",
       "qualname": "restricted_acceptance_policy",
       "target": {"statement": 1.0, "branch": 1.0},

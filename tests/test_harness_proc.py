@@ -5,6 +5,7 @@ from pathlib import Path
 import signal
 import subprocess
 import sys
+import threading
 import time
 
 import pytest
@@ -99,6 +100,73 @@ def test_run_reports_verified_group_cleanup() -> None:
     assert ran.group_cleanup_verified is True
     assert ran.ok
     assert ran.pgid not in proc._LIVE_GROUPS
+
+
+def test_run_cancellation_event_terminates_and_reaps_group() -> None:
+    cancellation = threading.Event()
+    trigger = threading.Timer(0.2, cancellation.set)
+    started = time.monotonic()
+    trigger.start()
+    try:
+        ran = proc.run(
+            [sys.executable, "-c", "import time; time.sleep(60)"],
+            cancellation_event=cancellation,
+        )
+    finally:
+        trigger.cancel()
+
+    assert time.monotonic() - started < 5.0
+    assert ran.timed_out is False
+    assert ran.group_cleanup_verified is True
+    assert ran.returncode != 0
+    assert ran.pgid not in proc._LIVE_GROUPS
+
+
+def test_four_concurrent_groups_share_cancellation_and_leave_no_orphans() -> None:
+    cancellation = threading.Event()
+    start = threading.Barrier(4)
+    result_lock = threading.Lock()
+    results: list[proc.Ran] = []
+    errors: list[BaseException] = []
+
+    def worker(index: int) -> None:
+        try:
+            start.wait(timeout=2.0)
+            code = (
+                "import sys; sys.exit(1)"
+                if index == 4
+                else "import time; time.sleep(60)"
+            )
+            ran = proc.run(
+                [sys.executable, "-c", code],
+                cancellation_event=cancellation,
+            )
+            if index == 4:
+                cancellation.set()
+            with result_lock:
+                results.append(ran)
+        except BaseException as exc:
+            cancellation.set()
+            with result_lock:
+                errors.append(exc)
+
+    threads = [
+        threading.Thread(target=worker, args=(index,), daemon=True)
+        for index in range(1, 5)
+    ]
+    started = time.monotonic()
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(5.0)
+
+    assert time.monotonic() - started < 5.0
+    assert all(not thread.is_alive() for thread in threads)
+    assert errors == []
+    assert len(results) == 4
+    assert all(ran.group_cleanup_verified for ran in results)
+    assert all(not proc.group_alive(ran.pgid) for ran in results)
+    assert all(ran.pgid not in proc._LIVE_GROUPS for ran in results)
 
 
 def test_terminate_group_keeps_unverified_survivor_registered(

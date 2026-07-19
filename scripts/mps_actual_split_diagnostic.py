@@ -42,12 +42,13 @@ import numpy as np
 
 
 FIXTURE_SCHEMA = "error_coupling_simulator.diagnostics.mps_split_fixture.v1"
-RESULT_SCHEMA = "error_coupling_simulator.diagnostics.mps_split_result.v1"
+RESULT_SCHEMA = "error_coupling_simulator.diagnostics.mps_split_result.v2"
 DTYPE = "complex128"
 EXPECTED_QUIMB_VERSION = "1.14.0"
 EXPECTED_TORCH_VERSION = "2.12.0"
 FIDELITY_TOL = 1.0e-10
 DISCARD_FRACTION_TOL = 1.0e-10
+NUMERICAL_RANK_ABSOLUTE_THRESHOLD = 1.0e-14
 DEFAULT_RESULT = Path(
     "outputs/simulator_validation/diagnostics/mps_actual_split/result.json"
 )
@@ -632,14 +633,23 @@ def _schmidt_records(state: np.ndarray, *, num_sites: int, max_bond: int) -> lis
             compute_uv=False,
         )
         weights = np.square(np.abs(singular_values))
-        kept = min(int(max_bond), int(singular_values.size))
+        kept_bond_dimension = min(int(max_bond), int(singular_values.size))
         records.append(
             {
                 "cut_index": cut,
-                "pre_truncation_rank": int(np.count_nonzero(singular_values > 1.0e-14)),
+                "pre_truncation_numerical_rank": int(
+                    np.count_nonzero(
+                        singular_values > NUMERICAL_RANK_ABSOLUTE_THRESHOLD
+                    )
+                ),
+                "numerical_rank_absolute_threshold": (
+                    NUMERICAL_RANK_ABSOLUTE_THRESHOLD
+                ),
                 "svd_vector_length": int(singular_values.size),
-                "kept_rank_cap": kept,
-                "discarded_weight_fraction_at_cap": float(np.sum(weights[kept:])),
+                "kept_bond_dimension_cap": kept_bond_dimension,
+                "discarded_weight_fraction_at_cap": float(
+                    np.sum(weights[kept_bond_dimension:])
+                ),
                 "total_schmidt_weight": float(np.sum(weights)),
                 "singular_values": [float(value) for value in singular_values],
             }
@@ -711,11 +721,11 @@ def _make_observed_split(original: Any, records: list[dict[str, Any]]):
             left_inds,
             right_inds=kwargs.get("right_inds"),
         )
-        kept_rank = _shared_bond_dimension(output)
-        if kept_rank is None:
-            kept_rank = min(int(max_bond), int(singular_values.size))
+        kept_bond_dimension = _shared_bond_dimension(output)
+        if kept_bond_dimension is None:
+            kept_bond_dimension = min(int(max_bond), int(singular_values.size))
         weights = np.square(np.abs(singular_values))
-        discarded = float(np.sum(weights[kept_rank:]))
+        discarded = float(np.sum(weights[kept_bond_dimension:]))
         total = float(np.sum(weights))
         records.append(
             {
@@ -733,7 +743,7 @@ def _make_observed_split(original: Any, records: list[dict[str, Any]]):
                     float(value) for value in singular_values
                 ],
                 "pre_split_total_weight": total,
-                "actual_kept_rank": int(kept_rank),
+                "actual_kept_bond_dimension": int(kept_bond_dimension),
                 "actual_discarded_weight_raw": discarded,
                 "actual_discarded_weight_fraction_of_pre_split": (
                     discarded / total if total > 0.0 else 0.0

@@ -5,6 +5,10 @@
 This package owns backend-neutral record containers and folds, reusable channel algebra, exact and
 research carrier implementations, and the fused within-cycle execution boundary.
 
+`mps/` is a deliberately non-scientific child: it contains bounded execution mechanics for the
+restricted frontend routes, not a registered Carrier and not a state-, Record-, or LER-faithfulness
+claim. Its child README is binding for that local boundary.
+
 ## Boundary
 
 Carrier code propagates a specified process and emits state, trajectory, or record results. It does

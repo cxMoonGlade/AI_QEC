@@ -1,0 +1,44 @@
+{
+  "schema": "error_coupling_simulator.harness.mutation_batch.v1",
+  "_comment": [
+    "CPU-parallel mutation batch for restricted-MPS mechanics, numerical controls, truncation aggregation, and immutable Record layout.",
+    "CUDA is intentionally unavailable in this lane; independent mutmut children may run concurrently while each child keeps BLAS/OpenMP single-threaded.",
+    "The package-wide raw-source Quimb cutoff scanner remains a service/release gate but is intentionally excluded here: a mutmut trampoline file contains every generated cutoff-removal candidate at once, so raw AST scanning cannot identify the active mutant."
+  ],
+  "contract": "docs/SIMULATOR.md",
+  "semantic_dispositions": "tests/_support/restricted_mps_mutation_semantic_dispositions.json",
+  "lane": "cpu_parallel",
+  "requires_gpu": false,
+  "covered_by_test_files": [
+    "tests/test_mps_actual_split_helper.py",
+    "tests/test_mps_uncapped_nonlocal.py",
+    "tests/test_mps_capped_uncapped_mutation_firewall.py",
+    "tests/test_mps_three_leg_comparator.py",
+    "tests/test_axis1_record_layout.py",
+    "tests/test_mps_phase4a_probability_and_norm.py",
+    "tests/test_mps_phase4b_configuration_support_and_bond.py",
+    "tests/test_mps_truncation_mechanics.py",
+    "tests/test_mps_state_mechanics.py"
+  ],
+  "mutation_also_copy": [
+    "docs/service_status.json",
+    "tests/_support/restricted_mps_coverage_targets.json",
+    "scripts/mps_actual_split_diagnostic.py",
+    "scripts/mps_three_leg_comparator.py"
+  ],
+  "reconcile_modules": [
+    "src/error_coupling_simulator/carrier/mps/uncapped_nonlocal.py",
+    "src/error_coupling_simulator/carrier/mps/probability.py",
+    "src/error_coupling_simulator/carrier/mps/controls.py",
+    "src/error_coupling_simulator/carrier/mps/state.py",
+    "src/error_coupling_simulator/carrier/mps/capped_two_site.py",
+    "src/error_coupling_simulator/carrier/mps/truncation.py",
+    "src/error_coupling_simulator/frontend/axis1_record_layout.py"
+  ],
+  "harness": {
+    "mutation_gate": {
+      "jobs": 4,
+      "kill_rate_bar": 0.90
+    }
+  }
+}

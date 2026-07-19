@@ -17,45 +17,66 @@ from typing import Any, Sequence
 import numpy as np
 import torch
 
+from ..carrier.mps.controls import (
+    normalize_mps_choice,
+    normalize_mps_device,
+    normalize_mps_finite_real,
+    normalize_mps_index,
+    normalize_mps_index_sequence,
+    normalize_mps_max_bond,
+    normalize_optional_mps_nonnegative_real,
+    normalize_optional_mps_index,
+)
+from ..carrier.mps.probability import (
+    RawProbabilityMass,
+    sample_raw_probability_mass,
+    validate_raw_probability_mass,
+)
+from ..carrier.mps.uncapped_nonlocal import (
+    apply_uncapped_nonlocal_unitary,
+    preflight_uncapped_nonlocal_resource,
+)
+from ..numerics import NUMERICAL_ZERO
 from .analog_schedule import SubstepSchedule
 from .axis1_carrier_program import (
     AXIS1_CARRIER_MCWF_MPS_BACKEND_CONTRACT,
     axis1_carrier_program_manifest,
+    axis1_carrier_substep_summary,
+    axis1_reset_basis,
 )
 from .axis1_channel_evidence import (
     _validate_schedule_for_axis1_channel_evidence,
 )
-from .axis1_mcwf_mps_contract import (
-    AXIS1_MCWF_MPS_CONTRACT_BACKEND_CONTRACT,
-    axis1_mcwf_mps_state_record_contract_manifest,
+from .axis1_record_layout import (
+    Axis1MeasurementBoundaryLayout,
+    Axis1ScheduleRecordLayout,
+    axis1_record_layout_from_schedule,
+    materialize_binary_records,
+    project_axis1_xor_records,
 )
 from .axis1_state_evidence import _require_cuda_device
 from .axis1_ideal_controls import (
     _one_qubit_generator_and_coefficient,
     _two_qubit_generator_and_coefficient,
 )
-from ._mps_actual_split import (
+from .axis1_selection import (
+    AXIS1_FRONTEND_ONE_QUBIT_CONTROL_GATES,
+    AXIS1_FRONTEND_TWO_QUBIT_CONTROL_GATES,
+)
+from ..carrier.mps.capped_two_site import (
     apply_capped_two_site_unitary,
+)
+from ..carrier.mps.state import (
     commit_mps_candidate_,
-    normalize_mps_max_bond,
+    max_mps_bond,
+    mps_norm_squared,
 )
-from .axis1_qt_mps_execution import (
-    _is_supported_hamiltonian_term,
-    _max_branch_bond,
-    _measurement_boundary,
-    _measurement_records,
-    _normalize_optional_nonnegative_gate,
-    _norm_sq,
-    _reset_basis,
-    _sample_index,
-    _substep_summary,
-    _truncation_ledger,
-    _xor_records,
+from ..carrier.mps.truncation import (
+    aggregate_sampled_truncation_events,
+    build_mps_truncation_ledger,
 )
-
-
 AXIS1_MCWF_MPS_EXECUTION_SCHEMA = (
-    "error_coupling_simulator.frontend.mcwf_mps_state_record_execution.v2"
+    "error_coupling_simulator.frontend.mcwf_mps_state_record_execution.v6"
 )
 AXIS1_MCWF_MPS_EXECUTION_REPRESENTABILITY = (
     "axis1_mcwf_mps_fixed_microstep_local_dims_state_record"
@@ -64,6 +85,13 @@ AXIS1_MCWF_MPS_EXECUTION_BACKEND_CONTRACT = AXIS1_CARRIER_MCWF_MPS_BACKEND_CONTR
 _FINITE_STEP_ORDER_FIRST = "first_order"
 _FINITE_STEP_ORDER_STRANG = "strang_second_order"
 _FINITE_STEP_ORDERS = (_FINITE_STEP_ORDER_FIRST, _FINITE_STEP_ORDER_STRANG)
+_RESTRICTED_ACCEPTANCE_POLICY_SCHEMA = (
+    "error_coupling_simulator.frontend."
+    "mcwf_mps_restricted_acceptance_policy.v5"
+)
+_RESTRICTED_ACCEPTANCE_POLICY_ROLE = (
+    "restricted_execution_acceptance_not_metric"
+)
 _ONE_SITE_LEAKAGE_HAMILTONIAN_FAMILIES = frozenset({"LEAK_EXCHANGE_12"})
 _TWO_SITE_LEAKAGE_HAMILTONIAN_LEVELS = {
     "LEAK_EXCHANGE_11_02": ((1, 1), (0, 2)),
@@ -75,6 +103,36 @@ _TWO_SITE_CONDITIONAL_PHASE_FAMILIES = frozenset(
     {"LEAK_COND_PHASE_LEFT2_RIGHTZ", "LEAK_COND_PHASE_LEFTZ_RIGHT2"}
 )
 _LEAKAGE_COLLAPSE_FAMILIES = frozenset({"LEAK_SEEP_21", "LEAK_HEAT_12"})
+_EVALUATOR_ONLY_DIAGNOSTICS_SCHEMA = (
+    "error_coupling_simulator.frontend.mcwf_mps_evaluator_only_diagnostics.v1"
+)
+
+
+def _require_mcwf_projective_unit_probability_mass(
+    values: list[float] | tuple[float, ...],
+    *,
+    name: str,
+) -> RawProbabilityMass:
+    mass = validate_raw_probability_mass(values, name=name)
+    if mass.residual_from_one > NUMERICAL_ZERO:
+        raise ValueError(
+            f"{name} raw probability mass must sum to one within "
+            f"NUMERICAL_ZERO={NUMERICAL_ZERO}; got {mass.total!r}"
+        )
+    return mass
+
+
+def _normalize_mcwf_mutated_state_(state: Any, *, name: str) -> Any:
+    mass = validate_raw_probability_mass(
+        (mps_norm_squared(state),),
+        name=f"{name} norm",
+    )
+    norm = mass.values[0]
+    if norm == 0.0:
+        raise ValueError(f"{name} norm must be finite and strictly positive")
+    state.multiply_(1.0 / (norm**0.5), spread_over=1)
+    return state
+
 
 # --------------------------------------------------------------------------- #
 # Coherent Pauli-tensor families: over-rotation, parasitic coupling, and crosstalk
@@ -92,6 +150,35 @@ CROSSTALK_COHERENT_FAMILIES = frozenset({"COH_CROSSTALK_ZZ"})
 COHERENT_PAULI_FAMILIES = (
     ONE_SITE_COHERENT_FAMILIES | TWO_SITE_COHERENT_FAMILIES | CROSSTALK_COHERENT_FAMILIES
 )
+
+
+def _is_supported_mcwf_hamiltonian_term(term: dict[str, Any]) -> bool:
+    """Return whether MCWF owns a lowering for this family and support arity.
+
+    This predicate does not call or import the narrower QT support predicate.
+    MCWF owns all eight coherent Pauli families in addition to shared controls.
+    """
+
+    family = str(term["operator_family"]).upper()
+    support = tuple(term.get("support", ()))
+    if family in {"ZZ", "FSIM_PHASE"}:
+        return len(support) == 2
+    if family in ONE_SITE_COHERENT_FAMILIES:
+        return len(support) == 1
+    if family in (
+        TWO_SITE_COHERENT_FAMILIES | CROSSTALK_COHERENT_FAMILIES
+    ):
+        return len(support) == 2
+    if not family.startswith("CTRL_"):
+        return False
+    gate = family.removeprefix("CTRL_")
+    if len(support) == 1:
+        return gate in AXIS1_FRONTEND_ONE_QUBIT_CONTROL_GATES
+    return (
+        len(support) == 2
+        and gate in AXIS1_FRONTEND_TWO_QUBIT_CONTROL_GATES
+    )
+
 
 # Two-site joint (collective/Dicke) collapse families. Distinguished from the one-site
 # collapse families (T1/T1_UP/T2/RD/LEAK_*) so the support-arity preflight can fail closed on a
@@ -141,24 +228,31 @@ def axis1_mcwf_mps_state_record_execution_manifest(
     run may execute and emit diagnostics but cannot pass restricted acceptance.
     """
 
+    device = normalize_mps_device(device)
     max_bond = normalize_mps_max_bond(max_bond)
-    worst_cut_discarded_weight_gate = _normalize_optional_nonnegative_gate(
+    worst_cut_discarded_weight_gate = normalize_optional_mps_nonnegative_real(
         worst_cut_discarded_weight_gate,
         name="worst_cut_discarded_weight_gate",
     )
-    total_discarded_weight_gate = _normalize_optional_nonnegative_gate(
+    total_discarded_weight_gate = normalize_optional_mps_nonnegative_real(
         total_discarded_weight_gate,
         name="total_discarded_weight_gate",
     )
-    mass_residual_budget = _normalize_optional_nonnegative_gate(
+    mass_residual_budget = normalize_optional_mps_nonnegative_real(
         mass_residual_budget,
         name="mass_residual_budget",
     )
-    dev = _require_cuda_device(device)
-    if int(microstep_count) <= 0:
-        raise ValueError("microstep_count must be positive")
-    if int(trajectory_count) <= 0:
-        raise ValueError("trajectory_count must be positive")
+    microstep_count = normalize_mps_index(
+        microstep_count,
+        name="microstep_count",
+        minimum=1,
+    )
+    trajectory_count = normalize_mps_index(
+        trajectory_count,
+        name="trajectory_count",
+        minimum=1,
+    )
+    rng_seed = normalize_optional_mps_index(rng_seed, name="rng_seed")
     step_order = _normalize_finite_step_order(finite_step_order)
     _validate_schedule_for_axis1_channel_evidence(
         schedule,
@@ -167,15 +261,12 @@ def axis1_mcwf_mps_state_record_execution_manifest(
     dims = _normalize_local_dims(local_dims, num_sites=int(schedule.num_qubits))
     levels = _normalize_initial_levels(initial_levels, local_dims=dims)
     readout_b = _normalize_leaked_readout_b(leaked_readout_b)
-    contract = axis1_mcwf_mps_state_record_contract_manifest(
-        schedule,
-        local_dims=dims,
-        device=dev,
-    )
     program = axis1_carrier_program_manifest(
         schedule,
-        backend_contract=AXIS1_MCWF_MPS_CONTRACT_BACKEND_CONTRACT,
+        backend_contract=AXIS1_CARRIER_MCWF_MPS_BACKEND_CONTRACT,
     )
+    record_layout = axis1_record_layout_from_schedule(schedule)
+    dev = _require_cuda_device(device)
     base: dict[str, Any] = {
         "schema": AXIS1_MCWF_MPS_EXECUTION_SCHEMA,
         "source_kind": schedule.source_kind,
@@ -186,8 +277,7 @@ def axis1_mcwf_mps_state_record_execution_manifest(
         "gpu_required": True,
         "device": dev,
         "carrier_program": _program_summary(program),
-        "mcwf_mps_contract": _contract_summary(contract),
-        "local_hilbert_space": dict(contract["local_hilbert_space"]),
+        "local_hilbert_space": _local_hilbert_space_summary(dims),
         "max_bond": None if max_bond is None else int(max_bond),
         "worst_cut_discarded_weight_gate": worst_cut_discarded_weight_gate,
         "total_discarded_weight_gate": total_discarded_weight_gate,
@@ -327,7 +417,7 @@ def axis1_mcwf_mps_state_record_execution_manifest(
 
     execution = _execute_sampled_mcwf_program(
         program,
-        record_layout_ref=schedule.record_layout_ref,
+        record_layout=record_layout,
         device=dev,
         max_bond=max_bond,
         microstep_count=int(microstep_count),
@@ -338,7 +428,7 @@ def axis1_mcwf_mps_state_record_execution_manifest(
         initial_levels=levels,
         leaked_readout_b=readout_b,
     )
-    from .axis1_mcwf_dense_certification import (
+    from ..certify.axis1_mps import (
         dense_jointL_record_certification,
         restricted_acceptance_policy,
     )
@@ -354,29 +444,39 @@ def axis1_mcwf_mps_state_record_execution_manifest(
         }
     else:
         certification = dense_jointL_record_certification(
-            schedule, execution, program, device=dev
+            schedule,
+            execution,
+            program,
+            declared_local_dims=dims,
+            device=dev,
         )
     acceptance = restricted_acceptance_policy(
         execution=execution,
         certification=certification,
         program=program,
+        declared_local_dims=dims,
         rng_seed=rng_seed,
         trajectory_count=int(trajectory_count),
         mass_residual_budget=mass_residual_budget,
         worst_cut_discarded_weight_gate=worst_cut_discarded_weight_gate,
         total_discarded_weight_gate=total_discarded_weight_gate,
     )
-    passed = bool(acceptance["accepted_for_restricted_execution"])
+    (
+        passed,
+        certification_status,
+        diagnostic_only,
+        blocked_reason,
+    ) = _validate_completed_acceptance_policy(acceptance, execution=execution)
     payload = {
         **base,
         "verdict": "pass" if passed else "fail",
         "passed": passed,
         "execution_status": "completed",
-        "certification_status": acceptance["certification_status"],
-        "diagnostic_only": bool(acceptance["diagnostic_only"]),
+        "certification_status": certification_status,
+        "diagnostic_only": diagnostic_only,
         "mcwf_mps_backend_executed": True,
         "claims_mcwf_mps_backend_execution": True,
-        "blocked_reason": None if passed else acceptance["blocked_reason"],
+        "blocked_reason": blocked_reason,
         "blocked_substeps": [],
         "mps_execution": execution,
         "restricted_acceptance_policy": acceptance,
@@ -394,7 +494,7 @@ def axis1_mcwf_mps_state_record_execution_manifest(
 def _execute_sampled_mcwf_program(
     program: dict[str, Any],
     *,
-    record_layout_ref: dict[str, Any],
+    record_layout: Axis1ScheduleRecordLayout,
     device: str,
     max_bond: int | None,
     microstep_count: int,
@@ -439,11 +539,12 @@ def _execute_sampled_mcwf_program(
     records_by_levels: dict[tuple[int, ...], int] = {}
     applied: list[dict[str, Any]] = []
     truncation_events: list[dict[str, Any]] = []
+    uncapped_nonlocal_events: list[dict[str, Any]] = []
     jump_family_counts: dict[str, int] = {}
     microstep_mass_residuals: list[float] = []
-    max_observed_bond = _max_branch_bond([((), 1.0, initial)])
-    measurement_keys: list[str] = []
-    measurement_targets: list[int] = []
+    max_observed_bond = max_mps_bond((initial,))
+    measurement_keys = list(record_layout.measurement_keys)
+    measurement_targets = list(record_layout.measurement_targets)
 
     for trajectory_index in range(ntraj):
         bits: tuple[int, ...] = ()
@@ -469,6 +570,7 @@ def _execute_sampled_mcwf_program(
                         generator=generator,
                         max_bond=max_bond,
                         truncation_events=truncation_events,
+                        uncapped_nonlocal_events=uncapped_nonlocal_events,
                         dt_ns=dt_micro,
                         finite_step_order=step_order,
                         microstep_index=microstep_index,
@@ -486,20 +588,20 @@ def _execute_sampled_mcwf_program(
                         jump_count += 1
             max_observed_bond = max(
                 max_observed_bond,
-                _max_branch_bond([(bits, 1.0, state)]),
+                max_mps_bond((state,)),
             )
             if trajectory_index == 0:
                 applied.append(
                     {
-                        **_substep_summary(substep),
+                        **axis1_carrier_substep_summary(substep),
                         "unraveling_policy": "fixed_microstep_first_order_quantum_jump_mcwf",
                         "finite_step_order": step_order,
                         "microstep_count": int(microstep_count),
                         "sampled_trajectory_count": ntraj,
                         "sampled_jump_count_max_over_trajectories": int(jump_count),
                         "max_jumps_per_microstep": 1,
-                        "max_observed_bond_after_substep": _max_branch_bond(
-                            [(bits, 1.0, state)]
+                        "max_observed_bond_after_substep": max_mps_bond(
+                            (state,)
                         ),
                     }
                 )
@@ -510,18 +612,16 @@ def _execute_sampled_mcwf_program(
                 )
                 applied[substep_index]["max_observed_bond_after_substep"] = max(
                     int(applied[substep_index]["max_observed_bond_after_substep"]),
-                    _max_branch_bond([(bits, 1.0, state)]),
+                    max_mps_bond((state,)),
                 )
             if str(substep["substep_kind"]) != "measurement":
                 continue
-            boundary = _aggregating_measurement_boundary(substep)
-            if trajectory_index == 0:
-                measurement_keys.extend(boundary["measurement_keys"])
-                measurement_targets.extend(boundary["measurement_targets"])
+            boundary = record_layout.boundary_for_substep_id(substep["substep_id"])
             outcome_levels, outcome_bits, state = _sample_measurement_multilevel(
                 state,
-                targets=boundary["measurement_targets"],
-                bases=boundary["measurement_bases"],
+                targets=boundary.targets,
+                bases=boundary.bases,
+                reset_after=boundary.reset_after,
                 local_dims=local_dims,
                 device=device,
                 generator=generator,
@@ -529,18 +629,26 @@ def _execute_sampled_mcwf_program(
             )
             state = _apply_measurement_reset_if_requested_multilevel(
                 state,
-                substep,
+                boundary,
                 outcome_levels=outcome_levels,
                 local_dims=local_dims,
                 device=device,
             )
             bits = bits + tuple(int(bit) for bit in outcome_bits)
             levels = levels + tuple(int(level) for level in outcome_levels)
+        if len(bits) != record_layout.measurement_width:
+            raise ValueError(
+                "sampled MCWF/MPS outcome width does not match immutable Record layout"
+            )
+        if levels and len(levels) != record_layout.measurement_width:
+            raise ValueError(
+                "sampled MCWF/MPS level width does not match immutable Record layout"
+            )
         records_by_bits[bits] = records_by_bits.get(bits, 0) + 1
         if levels:
             records_by_levels[levels] = records_by_levels.get(levels, 0) + 1
 
-    records = _measurement_records(len(measurement_keys)) if measurement_keys else [()]
+    records = sorted(records_by_bits)
     record_counts = [int(records_by_bits.get(tuple(record), 0)) for record in records]
     probabilities = [float(count) / float(ntraj) for count in record_counts]
     level_records = sorted(records_by_levels)
@@ -550,16 +658,11 @@ def _execute_sampled_mcwf_program(
     level_record_probabilities = [
         float(count) / float(ntraj) for count in level_record_counts
     ]
-    detector_records, detector_names = _xor_records(
-        [list(record) for record in records],
-        measurement_keys,
-        record_layout_ref.get("detectors", ()),
-    )
-    logical_records, logical_names = _xor_records(
-        [list(record) for record in records],
-        measurement_keys,
-        record_layout_ref.get("observables", ()),
-    )
+    projected_records = project_axis1_xor_records(record_layout, records)
+    detector_names = list(projected_records.detector_names)
+    detector_records = [list(row) for row in projected_records.detector_records]
+    logical_names = list(projected_records.observable_names)
+    logical_records = [list(row) for row in projected_records.observable_records]
     total = float(sum(probabilities))
     return {
         "initial_state": "local_basis_product_mps",
@@ -595,13 +698,17 @@ def _execute_sampled_mcwf_program(
             "rng_seed_was_explicit": rng_seed is not None,
             "rng_seed_default_policy": "default_zero_when_not_provided",
             "rng_backend": "torch.Generator(cuda)",
+            "measurement_sampling_policy": (
+                "sequential_conditional_single_site_level_xz_v1"
+            ),
+            "record_support_policy": "observed_empirical_outcomes_only",
+            "zero_frequency_records_emitted": False,
             "probability_semantics": "empirical_record_frequencies",
             "single_trajectory_density_claim": False,
             "comparison_outcome_is_metric": False,
         },
         "jump_sampling": {
             "max_jumps_per_microstep": 1,
-            "jump_family_counts": dict(sorted(jump_family_counts.items())),
             "probability_mass_residual_max": float(
                 max(microstep_mass_residuals, default=0.0)
             ),
@@ -630,20 +737,33 @@ def _execute_sampled_mcwf_program(
         "measurement_records": [list(record) for record in records],
         "record_counts": record_counts,
         "record_probabilities": probabilities,
-        "level_records": [list(record) for record in level_records],
-        "level_record_counts": level_record_counts,
-        "level_record_probabilities": level_record_probabilities,
+        "evaluator_only_diagnostics": {
+            "schema": _EVALUATOR_ONLY_DIAGNOSTICS_SCHEMA,
+            "visibility": (
+                "evaluator_only_not_emitted_record_or_downstream_estimator_input"
+            ),
+            "level_records": [list(record) for record in level_records],
+            "level_record_counts": level_record_counts,
+            "level_record_probabilities": level_record_probabilities,
+            "jump_family_counts": dict(sorted(jump_family_counts.items())),
+        },
         "record_count": len(records),
         "total_probability": total,
         "total_probability_residual": abs(total - 1.0),
-        "mps_truncation_ledger": _mcwf_mps_truncation_ledger(
+        "mps_truncation_ledger": build_mps_truncation_ledger(
             max_bond=max_bond,
             local_dims=local_dims,
             max_observed_bond=max_observed_bond,
             truncation_events=truncation_events,
-            trajectory_count=ntraj,
-            expected_gate_occurrences=expected_gate_occurrences,
+            aggregation=aggregate_sampled_truncation_events(
+                truncation_events,
+                trajectory_count=ntraj,
+                expected_gate_occurrences=(
+                    expected_gate_occurrences if max_bond is not None else ()
+                ),
+            ),
         ),
+        "uncapped_nonlocal_unitary_events": uncapped_nonlocal_events,
         "applied_substeps": applied,
         "detector_records_emitted": bool(detector_names),
         "detector_names": detector_names,
@@ -667,6 +787,7 @@ def _mcwf_microstep(
     generator: torch.Generator,
     max_bond: int | None,
     truncation_events: list[dict[str, Any]],
+    uncapped_nonlocal_events: list[dict[str, Any]],
     dt_ns: float,
     finite_step_order: str,
     microstep_index: int,
@@ -684,6 +805,7 @@ def _mcwf_microstep(
             max_bond=max_bond,
             branch_bits=branch_bits,
             truncation_events=truncation_events,
+            uncapped_nonlocal_events=uncapped_nonlocal_events,
             dt_ns=0.5 * float(dt_ns),
             microstep_index=microstep_index,
             microstep_count=microstep_count,
@@ -706,6 +828,7 @@ def _mcwf_microstep(
             max_bond=max_bond,
             branch_bits=branch_bits,
             truncation_events=truncation_events,
+            uncapped_nonlocal_events=uncapped_nonlocal_events,
             dt_ns=0.5 * float(dt_ns),
             microstep_index=microstep_index,
             microstep_count=microstep_count,
@@ -721,6 +844,7 @@ def _mcwf_microstep(
         max_bond=max_bond,
         branch_bits=branch_bits,
         truncation_events=truncation_events,
+        uncapped_nonlocal_events=uncapped_nonlocal_events,
         dt_ns=float(dt_ns),
         microstep_index=microstep_index,
         microstep_count=microstep_count,
@@ -746,6 +870,7 @@ def _apply_hamiltonian_terms_multilevel(
     max_bond: int | None,
     branch_bits: tuple[int, ...],
     truncation_events: list[dict[str, Any]],
+    uncapped_nonlocal_events: list[dict[str, Any]] | None = None,
     dt_ns: float,
     microstep_index: int,
     microstep_count: int,
@@ -755,34 +880,40 @@ def _apply_hamiltonian_terms_multilevel(
 ) -> None:
     dt = float(dt_ns)
     all_qubit_dims = all(dim == 2 for dim in local_dims)
+    hamiltonian_supports = [
+        tuple(int(q) for q in term["support"])
+        for term in substep.get("terms", ())
+        if str(term["kind"]) == "hamiltonian"
+    ]
+    support_clusters = _connected_support_clusters(hamiltonian_supports)
+    multisite = []
+    for member_indices in support_clusters:
+        cluster_support = tuple(
+            sorted(
+                {
+                    site
+                    for member_index in member_indices
+                    for site in hamiltonian_supports[member_index]
+                }
+            )
+        )
+        if len(cluster_support) > 2:
+            multisite.append(cluster_support)
     if max_bond is not None:
         if not all_qubit_dims:
             raise ValueError(
                 "finite-bond actual-split ledger is not implemented for multilevel sites"
             )
-        hamiltonian_supports = [
-            tuple(int(q) for q in term["support"])
-            for term in substep.get("terms", ())
-            if str(term["kind"]) == "hamiltonian"
-        ]
-        support_clusters = _connected_support_clusters(hamiltonian_supports)
-        multisite = []
-        for member_indices in support_clusters:
-            cluster_support = tuple(
-                sorted(
-                    {
-                        site
-                        for member_index in member_indices
-                        for site in hamiltonian_supports[member_index]
-                    }
-                )
-            )
-            if len(cluster_support) > 2:
-                multisite.append(cluster_support)
         if multisite:
             raise ValueError(
                 "actual_split_ledger_not_implemented_for_multisite_cluster: "
                 f"supports={multisite!r}"
+            )
+    else:
+        for cluster_support in multisite:
+            preflight_uncapped_nonlocal_resource(
+                support=cluster_support,
+                local_dims=local_dims,
             )
     groups = list(
         _hamiltonian_group_gates(
@@ -807,6 +938,7 @@ def _apply_hamiltonian_terms_multilevel(
             microstep_index=microstep_index,
             microstep_count=microstep_count,
             truncation_events=truncation_events,
+            uncapped_nonlocal_events=uncapped_nonlocal_events,
             track_actual_splits=all_qubit_dims,
             hamiltonian_pass_index=hamiltonian_pass_index,
             trajectory_index=trajectory_index,
@@ -1507,6 +1639,7 @@ def _apply_mps_gate(
     microstep_count: int,
     truncation_events: list[dict[str, Any]],
     track_actual_splits: bool,
+    uncapped_nonlocal_events: list[dict[str, Any]] | None = None,
     hamiltonian_pass_index: int = 0,
     trajectory_index: int | None = None,
 ) -> None:
@@ -1566,6 +1699,35 @@ def _apply_mps_gate(
             commit_mps_candidate_(mps, candidate)
             truncation_events.append(event)
             return
+    if max_bond is None and len(support) >= 3:
+        local_dims = tuple(
+            int(mps.ind_size(mps.site_ind(site))) for site in range(int(mps.L))
+        )
+        candidate, event = apply_uncapped_nonlocal_unitary(
+            mps,
+            gate,
+            support=support,
+            local_dims=local_dims,
+            context={
+                "substep_id": str(substep["substep_id"]),
+                "substep_kind": str(substep["substep_kind"]),
+                "term_index": int(term_index),
+                "operator_family": str(term["operator_family"]),
+                "branch_record_prefix": list(branch_bits),
+                "trajectory_index": (
+                    None if trajectory_index is None else int(trajectory_index)
+                ),
+                "dt_ns_effective": float(dt_ns),
+                "microstep_index": int(microstep_index),
+                "microstep_count": int(microstep_count),
+                "hamiltonian_pass_index": int(hamiltonian_pass_index),
+                "epistemic_class": "c",
+            },
+        )
+        commit_mps_candidate_(mps, candidate)
+        if uncapped_nonlocal_events is not None:
+            uncapped_nonlocal_events.append(event)
+        return
     mps.gate_(
         gate,
         where=support if len(support) > 1 else support[0],
@@ -1627,11 +1789,10 @@ def _sample_joint_jump_or_nojump(
                 max_bond=None,
                 cutoff=0.0,
             )
-    p0 = _norm_sq(nojump)
-    if p0 > 1.0e-15:
-        candidates.append(nojump)
-        probabilities.append(float(p0))
-        families.append("NO_JUMP")
+    p0 = mps_norm_squared(nojump)
+    candidates.append(nojump)
+    probabilities.append(float(p0))
+    families.append("NO_JUMP")
 
     for term in collapse_terms:
         support = tuple(int(q) for q in term["support"])
@@ -1652,25 +1813,28 @@ def _sample_joint_jump_or_nojump(
                 max_bond=None,
                 cutoff=0.0,
             )
-        p = _norm_sq(jump)
-        if p <= 1.0e-15:
-            continue
+        p = mps_norm_squared(jump)
         candidates.append(jump)
         probabilities.append(float(p))
         families.append(str(term["operator_family"]).upper())
-    if not candidates:
-        raise ValueError("MCWF microstep has no nonzero no-jump or jump candidate")
-    total = float(sum(probabilities))
-    index = _sample_index(probabilities, device=device, generator=generator)
+    mass = validate_raw_probability_mass(
+        probabilities,
+        name="MCWF first-order jump candidates",
+    )
+    index = sample_raw_probability_mass(
+        mass,
+        device=device,
+        generator=generator,
+    )
     selected = candidates[index]
-    selected.multiply_(1.0 / (probabilities[index] ** 0.5), spread_over=1)
+    selected.multiply_(1.0 / (mass.values[index] ** 0.5), spread_over=1)
     return (
         selected,
         {
             "selected_jump_family": families[index],
-            "candidate_count": len(candidates),
-            "probability_mass": total,
-            "probability_mass_residual": abs(total - 1.0),
+            "candidate_count": len(mass.positive_indices),
+            "probability_mass": mass.total,
+            "probability_mass_residual": mass.residual_from_one,
         },
     )
 
@@ -1887,41 +2051,6 @@ def _two_site_level_exchange_gate(
 _SUPPORTED_MCWF_MEASUREMENT_BASES = ("X", "Z")
 
 
-def _aggregating_measurement_boundary(substep: dict[str, Any]) -> dict[str, Any]:
-    """Aggregate ALL operation_records of a measurement substep into a single ordered
-    boundary: ``measurement_keys``, ``measurement_targets``, and per-target
-    ``measurement_bases`` (in operation/record then per-record-target order).
-
-    This is the multi-record generalisation of the shared single-record
-    ``_measurement_boundary`` (``axis1_qt_mps_execution._measurement_boundary``), used by
-    the MCWF execute loop and the dense certification. The shared single-record helper is
-    left untouched so the qt_mps callers keep their byte-identical single-record contract.
-
-    Distinct-qubit measurements within a terminal readout substep commute, so the
-    per-target rotate-then-sample sequence the MCWF sampler applies in this order is exact.
-    """
-    keys: list[str] = []
-    targets: list[int] = []
-    bases: list[str] = []
-    for op in substep.get("operation_records", ()):
-        op_keys = [str(key) for key in op.get("measurement_keys", ())]
-        op_targets = [int(q) for q in op.get("targets", ())]
-        if len(op_keys) != len(op_targets):
-            raise ValueError(
-                "measurement operation keys do not match targets in aggregating boundary: "
-                f"keys={op_keys!r} targets={op_targets!r}"
-            )
-        basis = str(op.get("basis", "Z")).upper()
-        keys.extend(op_keys)
-        targets.extend(op_targets)
-        bases.extend([basis] * len(op_targets))
-    return {
-        "measurement_keys": keys,
-        "measurement_targets": targets,
-        "measurement_bases": bases,
-    }
-
-
 def _x_basis_rotation_local(local_dim: int, *, device: str) -> torch.Tensor:
     """The Hadamard X<->Z basis rotation embedded in the local (qudit) space: the 2x2
     H = (1/sqrt2)[[1,1],[1,-1]] on the computational {|0>,|1>} block and identity on every
@@ -1945,6 +2074,7 @@ def _sample_measurement_multilevel(
     *,
     targets: Sequence[int],
     bases: Sequence[str] | None = None,
+    reset_after: Sequence[bool] | None = None,
     local_dims: tuple[int, ...],
     device: str,
     generator: torch.Generator,
@@ -1962,16 +2092,31 @@ def _sample_measurement_multilevel(
         raise ValueError(
             f"measurement bases {basis_tuple!r} do not match targets {target_tuple!r}"
         )
-    for target, basis in zip(target_tuple, basis_tuple, strict=True):
+    reset_tuple = (
+        tuple(False for _ in target_tuple)
+        if reset_after is None
+        else tuple(bool(value) for value in reset_after)
+    )
+    if len(reset_tuple) != len(target_tuple):
+        raise ValueError(
+            f"measurement reset flags {reset_tuple!r} do not match targets "
+            f"{target_tuple!r}"
+        )
+    for target, basis, reset_requested in zip(
+        target_tuple,
+        basis_tuple,
+        reset_tuple,
+        strict=True,
+    ):
         if basis not in _SUPPORTED_MCWF_MEASUREMENT_BASES:
             raise ValueError(
                 "MCWF/MPS multi-record measurement supports only X/Z bases (bounded "
                 f"d3/5q slice); got basis {basis!r}"
             )
         if basis == "X":
-            # Terminal measurement: rotate the X-target site into the Z eigenbasis with H
-            # (no rotate-back needed). Distinct-qubit targets commute, so doing this per
-            # target in sequence before its own Z-level sampling is exact.
+            # Rotate the X-target into the Z eigenbasis before level sampling.
+            # A non-reset measurement rotates the conditioned state back below;
+            # a reset consumes the rotated level directly.
             state = state.copy()
             state.gate_(
                 _x_basis_rotation_local(local_dims[target], device=device),
@@ -1985,6 +2130,17 @@ def _sample_measurement_multilevel(
             device=device,
             generator=generator,
         )
+        if basis == "X" and not reset_requested:
+            # Projection happened in the H-rotated computational frame. Restore
+            # the conditioned X eigenstate in the original frame before any
+            # later substep consumes it. For measurement-reset, the reset
+            # operator consumes the rotated level directly and prepares the
+            # requested basis-zero state.
+            state.gate_(
+                _x_basis_rotation_local(local_dims[target], device=device),
+                where=int(target),
+                contract=True,
+            )
         levels.append(level)
         bits.append(
             _sample_level_bit(
@@ -2014,14 +2170,20 @@ def _sample_one_site_level(
             where=int(site),
             contract=True,
         )
-        p = _norm_sq(candidate)
+        p = mps_norm_squared(candidate)
         candidates.append(candidate)
-        probabilities.append(float(max(p, 0.0)))
-    if sum(probabilities) <= 0.0:
-        raise ValueError("cannot sample a measurement with zero total Born weight")
-    index = _sample_index(probabilities, device=device, generator=generator)
+        probabilities.append(float(p))
+    mass = _require_mcwf_projective_unit_probability_mass(
+        probabilities,
+        name="MCWF projective measurement partition",
+    )
+    index = sample_raw_probability_mass(
+        mass,
+        device=device,
+        generator=generator,
+    )
     selected = candidates[index]
-    selected.multiply_(1.0 / (probabilities[index] ** 0.5), spread_over=1)
+    selected.multiply_(1.0 / (mass.values[index] ** 0.5), spread_over=1)
     return int(index), selected
 
 
@@ -2066,7 +2228,7 @@ def _sample_reset_for_operations_multilevel(
 ) -> Any:
     state = mps
     for op in substep.get("operation_records", ()):
-        basis = _reset_basis(str(op.get("name", "")))
+        basis = axis1_reset_basis(str(op.get("name", "")))
         if basis is None:
             continue
         for target in op.get("targets", ()):
@@ -2093,9 +2255,10 @@ def _sample_reset_for_operations_multilevel(
                 where=site,
                 contract=True,
             )
-            norm = _norm_sq(state)
-            if norm > 0.0:
-                state.multiply_(1.0 / (norm ** 0.5), spread_over=1)
+            _normalize_mcwf_mutated_state_(
+                state,
+                name="MCWF standalone reset post-operation state",
+            )
     return state
 
 
@@ -2145,31 +2308,29 @@ def _reset_operator(
 
 def _apply_measurement_reset_if_requested_multilevel(
     mps,
-    substep: dict[str, Any],
+    boundary: Axis1MeasurementBoundaryLayout,
     *,
     outcome_levels: tuple[int, ...],
     local_dims: tuple[int, ...],
     device: str,
 ) -> Any:
-    records = list(substep.get("operation_records", ()))
-    if len(records) != 1:
-        return mps
-    op = records[0]
-    if not bool(op.get("reset_after_measurement", False)):
-        return mps
-    reset_basis = str(op.get("basis", "Z")).upper()
-    if reset_basis not in {"Z", "X", "Y"}:
-        raise ValueError(
-            "MCWF/MPS multilevel measurement reset supports Pauli measurement basis only"
-        )
-    # Asymmetry note (single-record reset-after-measurement only; the d3/5q terminal readout
-    # has reset_after=None so this path is inert there): the carrier accepts X/Y reset here,
-    # but the dense LEVEL oracle only CERTIFIES Z-basis post-measurement reset (it raises
-    # level_oracle_measurement_reset_supports_z_basis_only otherwise). So an X/Y reset-after
-    # run EXECUTES but comes back honestly uncertified (executed=False) -- never a false pass.
-    targets = tuple(int(q) for q in op.get("targets", ()))
+    if len(outcome_levels) != boundary.width:
+        raise ValueError("MCWF/MPS measurement levels do not match Record boundary")
     state = mps
-    for site, level in zip(targets, outcome_levels, strict=True):
+    for site, level, reset_basis, requested in zip(
+        boundary.targets,
+        outcome_levels,
+        boundary.bases,
+        boundary.reset_after,
+        strict=True,
+    ):
+        if not requested:
+            continue
+        reset_basis = str(reset_basis).upper()
+        if reset_basis not in {"Z", "X", "Y"}:
+            raise ValueError(
+                "MCWF/MPS multilevel measurement reset supports Pauli measurement basis only"
+            )
         dim = int(local_dims[site])
         state.gate_(
             _reset_operator(
@@ -2185,71 +2346,11 @@ def _apply_measurement_reset_if_requested_multilevel(
             where=site,
             contract=True,
         )
-        norm = _norm_sq(state)
-        if norm > 0.0:
-            state.multiply_(1.0 / (norm ** 0.5), spread_over=1)
-    return state
-
-
-def _mcwf_mps_truncation_ledger(
-    *,
-    max_bond: int | None,
-    local_dims: tuple[int, ...],
-    max_observed_bond: int,
-    truncation_events: list[dict[str, Any]],
-    trajectory_count: int,
-    expected_gate_occurrences: tuple[dict[str, Any], ...] | list[dict[str, Any]],
-) -> dict[str, Any]:
-    if all(dim == 2 for dim in local_dims):
-        return _truncation_ledger(
-            max_bond=max_bond,
-            num_sites=len(local_dims),
-            max_observed_bond=max_observed_bond,
-            truncation_events=truncation_events,
-            aggregation_mode="sampled_trajectory_mean",
-            trajectory_count=trajectory_count,
-            expected_gate_occurrences=expected_gate_occurrences,
+        _normalize_mcwf_mutated_state_(
+            state,
+            name="MCWF measurement-reset post-operation state",
         )
-    exact_bond = _exact_mixed_dim_bond_sufficient(local_dims)
-    if max_bond is not None:
-        raise ValueError("finite-bond multilevel ledger should fail closed before execution")
-    return {
-        "explicit_truncation_requested": False,
-        "local_dims": list(local_dims),
-        "exact_bond_dimension_sufficient": exact_bond,
-        "exact_bond_policy": "unbounded_no_explicit_cap_mixed_local_dims",
-        "accepted_as_exact_bond_representation": True,
-        "discarded_weight_ledger_complete": True,
-        "discarded_weight_sum": 0.0,
-        "worst_cut_discarded_weight": 0.0,
-        "path_aggregated_local_discarded_fraction_sum": 0.0,
-        "path_aggregated_actual_discarded_weight_raw_sum": 0.0,
-        "path_aggregated_unitary_truncation_mass_loss_sum": 0.0,
-        "aggregation": {
-            "mode": "sampled_trajectory_mean",
-            "weight_source": "uniform_over_explicit_trajectory_count",
-            "trajectory_count": int(trajectory_count),
-            "observed_context_count": 0,
-            "max_observed_sampled_path_fraction_sum": 0.0,
-            "context_complete": True,
-            "not_a_global_error_bound": True,
-        },
-        "n_truncating_ops": 0,
-        "max_observed_bond": int(max_observed_bond),
-        "ledger_scope": "no_explicit_mps_truncation_requested_mixed_local_dims",
-        "epistemic_class": "a/c",
-    }
-
-
-def _exact_mixed_dim_bond_sufficient(local_dims: tuple[int, ...]) -> int:
-    if len(local_dims) <= 1:
-        return max(1, int(local_dims[0]) if local_dims else 1)
-    out = 1
-    for cut in range(1, len(local_dims)):
-        left = math.prod(int(dim) for dim in local_dims[:cut])
-        right = math.prod(int(dim) for dim in local_dims[cut:])
-        out = max(out, min(int(left), int(right)))
-    return int(out)
+    return state
 
 
 def _first_order_mass_residual_blocks(
@@ -2325,6 +2426,25 @@ def _unsupported_substeps(
         if kind not in {"idle", "one_qubit_gate", "two_qubit_gate", "measurement", "reset"}:
             out.append(_unsupported(substep, "substep_kind_not_supported_by_mcwf_mps"))
             continue
+        has_evolution_terms = _substep_has_mcwf_terms(substep)
+        if kind == "reset" and has_evolution_terms:
+            out.append(
+                _unsupported(
+                    substep,
+                    "mcwf_mps_reset_substep_contains_evolution_terms",
+                )
+            )
+            continue
+        if has_evolution_terms:
+            dt_ns = substep.get("dt_ns")
+            if dt_ns is None or not math.isfinite(float(dt_ns)) or float(dt_ns) <= 0.0:
+                out.append(
+                    _unsupported(
+                        substep,
+                        "mcwf_mps_evolution_terms_require_positive_dt_ns",
+                    )
+                )
+                continue
         if substep.get("dt_ns") is None and kind not in {"measurement", "reset"}:
             out.append(_unsupported(substep, "positive_duration_required_for_mcwf_evolution"))
             continue
@@ -2389,7 +2509,7 @@ def _unsupported_substeps(
                 and family not in _ONE_SITE_LEAKAGE_HAMILTONIAN_FAMILIES
                 and family not in _TWO_SITE_LEAKAGE_HAMILTONIAN_LEVELS
                 and family not in _TWO_SITE_CONDITIONAL_PHASE_FAMILIES
-                and not _is_supported_hamiltonian_term(term)
+                and not _is_supported_mcwf_hamiltonian_term(term)
             ):
                 out.append(_unsupported(substep, f"unsupported_mcwf_hamiltonian_family:{family}"))
                 break
@@ -2418,7 +2538,7 @@ def _unsupported_substeps(
                     break
         if kind == "reset":
             for op in substep.get("operation_records", ()):
-                if _reset_basis(str(op.get("name", ""))) is None:
+                if axis1_reset_basis(str(op.get("name", ""))) is None:
                     out.append(_unsupported(substep, "mcwf_mps_first_slice_supports_pauli_reset_only"))
                     break
     return out
@@ -2441,8 +2561,8 @@ def _blocked_acceptance_policy(
     trajectory_count: int,
 ) -> dict[str, Any]:
     return {
-        "schema": "error_coupling_simulator.frontend.mcwf_mps_restricted_acceptance_policy.v4",
-        "policy_role": "restricted_execution_acceptance_not_metric",
+        "schema": _RESTRICTED_ACCEPTANCE_POLICY_SCHEMA,
+        "policy_role": _RESTRICTED_ACCEPTANCE_POLICY_ROLE,
         "execution_status": "blocked",
         "certification_status": "not_evaluated",
         "diagnostic_only": False,
@@ -2477,7 +2597,11 @@ def _normalize_local_dims(
 ) -> tuple[int, ...]:
     if local_dims is None:
         return tuple(2 for _ in range(int(num_sites)))
-    dims = tuple(int(dim) for dim in local_dims)
+    dims = normalize_mps_index_sequence(
+        local_dims,
+        name="local_dims",
+        minimum=2,
+    )
     if len(dims) != int(num_sites):
         raise ValueError(f"local_dims must have length {int(num_sites)}, got {len(dims)}")
     if any(dim < 2 for dim in dims):
@@ -2492,7 +2616,11 @@ def _normalize_initial_levels(
 ) -> tuple[int, ...]:
     if initial_levels is None:
         return tuple(0 for _ in local_dims)
-    levels = tuple(int(level) for level in initial_levels)
+    levels = normalize_mps_index_sequence(
+        initial_levels,
+        name="initial_levels",
+        minimum=0,
+    )
     if len(levels) != len(local_dims):
         raise ValueError(
             f"initial_levels must have length {len(local_dims)}, got {len(levels)}"
@@ -2504,18 +2632,20 @@ def _normalize_initial_levels(
 
 
 def _normalize_leaked_readout_b(value: float) -> float:
-    b = float(value)
-    if not 0.0 <= b <= 1.0:
-        raise ValueError("leaked_readout_b must lie in [0, 1]")
-    return b
+    return normalize_mps_finite_real(
+        value,
+        name="leaked_readout_b",
+        minimum=0.0,
+        maximum=1.0,
+    )
 
 
 def _normalize_finite_step_order(value: str) -> str:
-    order = str(value)
-    if order not in _FINITE_STEP_ORDERS:
-        allowed = ", ".join(_FINITE_STEP_ORDERS)
-        raise ValueError(f"finite_step_order must be one of: {allowed}")
-    return order
+    return normalize_mps_choice(
+        value,
+        name="finite_step_order",
+        choices=_FINITE_STEP_ORDERS,
+    )
 
 
 def _mcwf_finite_step_policy_name(order: str) -> str:
@@ -2545,20 +2675,25 @@ def _program_summary(program: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _contract_summary(contract: dict[str, Any]) -> dict[str, Any]:
+def _local_hilbert_space_summary(local_dims: tuple[int, ...]) -> dict[str, Any]:
+    dimension_classes = {
+        int(dim) if int(dim) <= 4 else 5
+        for dim in local_dims
+    }
     return {
-        "schema": contract.get("schema"),
-        "content_hash": contract.get("content_hash"),
-        "representability": contract.get("representability"),
-        "backend_contract": contract.get("backend_contract"),
-        "contract_valid": bool(contract.get("contract_valid")),
-        "contract_manifest_implementation_status": contract.get(
-            "implementation_status"
+        "local_dims": list(local_dims),
+        "num_sites": len(local_dims),
+        "hilbert_dim": int(math.prod(local_dims)),
+        "site_order_policy": "identity_schedule_qubit_order_v1",
+        "local_dims_source": (
+            "caller_backend_config_or_default_qubit_dims_not_evaluator_truth"
         ),
-        "execution_manifest_status": "fixed_microstep_local_dims_execution_or_fail_closed",
-        "claims_production_scalable_backend": bool(
-            contract.get("claims_production_scalable_backend", False)
-        ),
+        "supports_qubit_sites": 2 in dimension_classes,
+        "supports_qutrit_sites": 3 in dimension_classes,
+        "supports_ququart_sites": 4 in dimension_classes,
+        "supports_mixed_local_dimensions": len(set(local_dims)) > 1,
+        "dimension_validation_epistemic_class": "a",
+        "modeling_choice_epistemic_class": "c",
     }
 
 
@@ -2570,8 +2705,103 @@ def _stable_payload_hash(payload: dict[str, Any]) -> str:
         sort_keys=True,
         separators=(",", ":"),
         ensure_ascii=True,
+        allow_nan=False,
     ).encode("utf-8")
     return hashlib.sha256(data).hexdigest()
+
+
+def _require_exact_bool_field(payload: dict[str, Any], field: str) -> bool:
+    value = payload[field]
+    if type(value) is not bool:
+        raise TypeError(f"{field} must be bool")
+    return value
+
+
+def _validate_completed_acceptance_policy(
+    policy: dict[str, Any],
+    *,
+    execution: dict[str, Any],
+) -> tuple[bool, str, bool, str | None]:
+    trajectory = policy.get("trajectory")
+    if not isinstance(trajectory, dict):
+        raise TypeError("direct MCWF policy trajectory must be a mapping")
+    policy_mode = trajectory.get("mode")
+    if not isinstance(policy_mode, str) or not policy_mode:
+        raise TypeError("direct MCWF policy trajectory mode must be nonempty text")
+    sampling = execution.get("trajectory_sampling")
+    if not isinstance(sampling, dict):
+        raise TypeError("direct MCWF execution trajectory_sampling must be a mapping")
+    actual_mode = sampling.get("mode")
+    if not isinstance(actual_mode, str) or not actual_mode:
+        raise TypeError("direct MCWF execution trajectory mode must be nonempty text")
+    if policy_mode != actual_mode:
+        raise ValueError(
+            "direct MCWF policy trajectory mode must match actual execution"
+        )
+    expected_identity = {
+        "schema": _RESTRICTED_ACCEPTANCE_POLICY_SCHEMA,
+        "policy_role": _RESTRICTED_ACCEPTANCE_POLICY_ROLE,
+        "execution_status": "completed",
+    }
+    for field, expected in expected_identity.items():
+        value = policy[field]
+        if value != expected:
+            raise ValueError(f"{field} must equal {expected!r}")
+
+    accepted = _require_exact_bool_field(
+        policy,
+        "accepted_for_restricted_execution",
+    )
+    diagnostic_only = _require_exact_bool_field(policy, "diagnostic_only")
+    certification_status = policy["certification_status"]
+    if not isinstance(certification_status, str):
+        raise TypeError("certification_status must be text")
+    blocked_reason = policy["blocked_reason"]
+    if blocked_reason is not None and not isinstance(blocked_reason, str):
+        raise TypeError("blocked_reason must be text or None")
+
+    production_accepted = _require_exact_bool_field(
+        policy,
+        "accepted_for_production_scalable_backend",
+    )
+    if production_accepted:
+        raise ValueError("restricted MPS policy cannot claim production acceptance")
+    exact_accepted = _require_exact_bool_field(
+        policy,
+        "accepted_for_exact_dense_probability_evidence",
+    )
+    if exact_accepted:
+        raise ValueError(
+            "accepted_for_exact_dense_probability_evidence must be false "
+            "for the sampled-only direct MCWF route"
+        )
+    sampled_accepted = _require_exact_bool_field(
+        policy,
+        "accepted_for_sampled_execution_evidence",
+    )
+    if sampled_accepted != accepted:
+        raise ValueError(
+            "accepted_for_sampled_execution_evidence must equal "
+            "accepted_for_restricted_execution"
+        )
+
+    if accepted:
+        valid = (
+            certification_status == "accepted"
+            and not diagnostic_only
+            and blocked_reason is None
+        )
+    elif certification_status == "rejected":
+        valid = not diagnostic_only and bool(blocked_reason)
+    elif certification_status in {"not_evaluated", "unavailable"}:
+        valid = diagnostic_only and bool(blocked_reason)
+    else:
+        valid = False
+    if not valid:
+        raise ValueError(
+            "direct MCWF restricted acceptance policy state is inconsistent"
+        )
+    return accepted, certification_status, diagnostic_only, blocked_reason
 
 
 __all__ = [

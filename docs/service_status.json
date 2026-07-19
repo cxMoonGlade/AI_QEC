@@ -33,6 +33,7 @@
     "decoder",
     "certification",
     "diagnostic",
+    "restricted_verification",
     "research_suite"
   ],
   "acceptance_execution": {
@@ -65,7 +66,21 @@
       },
       "tests/test_pepo_density_token_ops.py": {
         "PYTORCH_ALLOC_CONF": "expandable_segments:True"
+      },
+      "tests/test_external_aer_mps_comparison.py": {
+        "ECS_RUN_AER_MPS_COMPARISON": "1"
+      },
+      "tests/test_external_yastn_mcwf_mass_comparison.py": {
+        "ECS_RUN_YASTN_MPS_COMPARISON": "1"
       }
+    },
+    "nested_environment_overrides": {
+      "tests/test_external_aer_mps_comparison.py": [
+        "ecs-baseline-aer"
+      ],
+      "tests/test_external_yastn_mcwf_mass_comparison.py": [
+        "ecs-baseline-yastn"
+      ]
     },
     "default_lane": "cpu_light",
     "lane_overrides": {
@@ -91,6 +106,12 @@
         "tests/test_coupled_cycle_units.py",
         "tests/test_frontend_experiments.py",
         "tests/test_joint_lindbladian.py",
+        "tests/test_mps_actual_split_helper.py",
+        "tests/test_mps_carrier_child_authentication.py",
+        "tests/test_mps_phase1b_fail_closed.py",
+        "tests/test_mps_phase3_record_layout.py",
+        "tests/test_mps_phase7_conditional_distribution_diagnostic.py",
+        "tests/test_mps_qt_transitive_semantics.py",
         "tests/test_pepo_density_compressed_caps.py",
         "tests/test_pepo_density_killers.py",
         "tests/test_pepo_density_nonselective_round.py",
@@ -117,7 +138,7 @@
       ]
     },
     "runner": "tests/harness/service_acceptance.py",
-    "reason": "Service acceptance is process-isolated and lane-scheduled because the catalog spans Torch, QuTiP/cuQuantum/CuPy, fused CUDA extensions, CPU-exclusive quantum-bath work, and an isolated CUDA-Q plugin. A single long-lived pytest process can exit 139 after otherwise passing service groups; fresh processes reset native allocator/lifetime state, while the declared lanes keep GPU/native work serial and allow only bounded independent CPU-light concurrency. The eight GPU PEPO owner files additionally declare PyTorch expandable segments in their private fresh-exec environments; the supervisor and unrelated services do not inherit that allocator setting."
+    "reason": "Service acceptance is process-isolated and lane-scheduled because the catalog spans Torch, QuTiP/cuQuantum/CuPy, fused CUDA extensions, CPU-exclusive quantum-bath work, and an isolated CUDA-Q plugin. A single long-lived pytest process can exit 139 after otherwise passing service groups. Fresh processes reset native allocator/lifetime state; CPU children are CUDA-hidden and admit at most four independent one-thread workers, while every GPU file runs serially under exactly one cross-process lease. Every child removes PYTHONPATH and disables user-site imports. The authenticated lane-major checkpoint binds the repository snapshot, semantic plan, execution policy, resolved Conda executable, direct and nested environment metadata, task-specific log hashes, and verified process-group cleanup; corruption or drift fails before new task or GPU-lease admission. The eight GPU PEPO owner files additionally declare PyTorch expandable segments in their private fresh-exec environments. The Aer and YASTN MPS files receive exact opt-in flags and declare their nested baseline environments so canonical acceptance executes and fingerprints those isolated subprocesses."
   },
   "services": [
     {
@@ -405,32 +426,66 @@
     },
     {
       "id": "restricted_axis1_1d_mps",
-      "name": "Restricted Axis-1 one-dimensional MCWF/MPS execution",
+      "name": "Restricted Axis-1 one-dimensional MPS verification",
       "status": "CORE",
-      "kind": "carrier",
+      "kind": "restricted_verification",
       "canonical_record_output": false,
-      "layer": "frontend/carrier execution",
+      "layer": "restricted verification frontend/mechanics/certification",
       "owners": [
-        "src/error_coupling_simulator/frontend/_mps_actual_split.py",
-        "src/error_coupling_simulator/frontend/axis1_mcwf_mps_contract.py",
+        "src/error_coupling_simulator/carrier/mps/__init__.py",
+        "src/error_coupling_simulator/carrier/mps/capped_two_site.py",
+        "src/error_coupling_simulator/carrier/mps/controls.py",
+        "src/error_coupling_simulator/carrier/mps/probability.py",
+        "src/error_coupling_simulator/carrier/mps/state.py",
+        "src/error_coupling_simulator/carrier/mps/truncation.py",
+        "src/error_coupling_simulator/carrier/mps/uncapped_nonlocal.py",
+        "src/error_coupling_simulator/certify/axis1_mps.py",
         "src/error_coupling_simulator/frontend/axis1_mcwf_mps_execution.py",
-        "src/error_coupling_simulator/frontend/axis1_qt_mps_contract.py",
+        "src/error_coupling_simulator/frontend/axis1_record_layout.py",
         "src/error_coupling_simulator/frontend/axis1_qt_mps_execution.py"
       ],
       "entrypoints": [
         "error_coupling_simulator.frontend:axis1_mcwf_mps_state_record_execution_manifest",
-        "error_coupling_simulator.frontend:axis1_qt_mps_restricted_execution_manifest"
+        "error_coupling_simulator.frontend:axis1_qt_mps_restricted_execution_manifest",
+        "error_coupling_simulator.frontend:axis1_qt_mps_bond_sweep_manifest",
+        "error_coupling_simulator.frontend:axis1_qt_mps_trajectory_seed_sweep_manifest",
+        "error_coupling_simulator.frontend:axis1_qt_mps_restricted_evidence_bundle_manifest",
+        "error_coupling_simulator.frontend:axis1_qt_mps_resource_probe_manifest"
       ],
       "dependencies": {"core": ["torch", "quimb", "numpy"], "extras": ["gpu-cu130"]},
       "external_inputs": ["Sealed Axis-1 schedule, local dimensions and explicit approximation controls including max_bond=None or a strict positive integer"],
-      "outputs": ["Restricted execution/evidence manifest, sampled record frequencies and actual-Quimb-split approximation ledger with explicit path aggregation"],
+      "outputs": ["Restricted execution/evidence manifest with immutable schedule-derived Record layout, exact full-support or sampled observed-support Record probabilities, and actual-Quimb-split approximation ledger with explicit path aggregation"],
       "acceptance": [
         "tests/test_mps_phase1b_fail_closed.py",
         "tests/test_simulator_axis1_schedule.py",
         "tests/test_axis1_mcwf_dense_certification.py",
-        "tests/test_mps_actual_split_helper.py"
+        "tests/test_mps_actual_split_diagnostic.py",
+        "tests/test_mps_actual_split_helper.py",
+        "tests/test_mps_uncapped_nonlocal.py",
+        "tests/test_mps_capped_uncapped_mutation_firewall.py",
+        "tests/test_mps_quimb_cutoff_static_gate.py",
+        "tests/test_mps_three_leg_comparator.py",
+        "tests/test_axis1_record_layout.py",
+        "tests/test_mps_phase3_record_layout.py",
+        "tests/test_mps_phase4a_probability_and_norm.py",
+        "tests/test_mps_phase4b_configuration_support_and_bond.py",
+        "tests/test_mps_phase5_consolidation.py",
+        "tests/test_mps_phase6_certification_ownership.py",
+        "tests/test_mps_phase6_evaluator_metric_binding.py",
+        "tests/test_mps_phase7_sparse_sampled_records.py",
+        "tests/test_mps_phase7_conditional_distribution_diagnostic.py",
+        "tests/test_mps_qt_aggregate_binding.py",
+        "tests/test_mps_qt_aggregate_deep_auth.py",
+        "tests/test_mps_qt_transitive_semantics.py",
+        "tests/test_mps_carrier_child_authentication.py",
+        "tests/test_mps_mcwf_measurement_semantics.py",
+        "tests/test_mps_state_mechanics.py",
+        "tests/test_mps_truncation_mechanics.py",
+        "tests/test_restricted_mps_benchmark.py",
+        "tests/test_external_aer_mps_comparison.py",
+        "tests/test_external_yastn_mcwf_mass_comparison.py"
       ],
-      "note": "This is a finite-microstep verification slice, not a production full-dxd/full-record backend. Finite qubit two-site unitary caps ledger every actual Quimb forward-swap/operator/reverse-swap split. Exact branches use incoming-probability weighting; sampled paths average over the declared trajectory count, including zero-event paths. Each gate occurrence authenticates complete trajectory coverage or unit branch mass and fails closed when incomplete. Actual finite-bond loss requires both explicit heuristic worst-cut and path-total discarded-weight gates for restricted acceptance; an observed lossless capped run does not. Local discarded fractions are not a global error bound; uncapped Kraus/jump norms retain separate physical branch-probability semantics."
+      "note": "carrier/mps is an execution-mechanics library for restricted verification routes. It makes no state-, Record-, or LER-faithfulness claim and is not a registered scientific Carrier. PEPS remains the trajectory-carrier frontier, and PEPO remains the retained research Carrier. This is a finite-microstep verification slice, not a production full-dxd/full-record backend. Every Quimb decomposition call in the package must name an explicit cutoff. Uncapped connected three-to-five-site MCWF unitaries use explicit zero cutoffs at both dense-to-MPO and MPS/MPO layers, candidate validation, and fixed numerical-only preallocation guards. Finite qubit two-site unitary caps ledger every actual Quimb forward-swap/operator/reverse-swap split; capped multi-site clusters remain fail-closed. Split events report the retained bond index as actual_kept_bond_dimension; numerical rank is a distinct thresholded diagnostic. Exact branches use incoming-probability weighting; sampled paths average path totals over the declared trajectory count, including zero-event paths. Each gate occurrence authenticates complete trajectory coverage or unit branch mass and fails closed when incomplete. Actual finite-bond loss requires both explicit heuristic worst-cut and path-total discarded-weight gates for restricted acceptance; an observed lossless capped run does not. A completed true-over-cap execution without an independent Record oracle is diagnostic-only and fails certification. The compiler-sealed schedule is parsed once before CUDA or trajectories into immutable axis1_schedule_record_layout.v1; QT uses every measurement boundary, MCWF applies grouped reset masks per target, and reset/evolution duration violations fail as structured blockers. QT sampled measurement uses sequential conditional single-site Z draws and emits only sorted observed Record outcomes; QT exact execution retains full binary support. The strategy-aware preflight bounds exact support by 2**m and sampled support by min(2**m, trajectory_count) before CUDA. Seed and dense comparisons align union support with missing probabilities set to zero. Current schema identities are Carrier execution/auto/routing decision v3, direct QT/MPS v6, QT aggregate/resource v4, QT acceptance/preflight v2, direct MCWF/MPS v6, and MCWF acceptance v5; no compatibility fallback is retained. Exact QT execution reports static_branch_count_upper_bound_after_substep as a recomputed numerical resource bound, never an observed hidden branch count, and rejects legacy branch_count_after_substep. These are execution/schema guarantees, not Record-faithfulness evidence. Local discarded fractions are not a global error bound; uncapped Kraus/jump norms retain separate physical branch-probability semantics."
     },
     {
       "id": "peps_single_wire",
@@ -901,13 +956,12 @@
       "reason": "Repository-style python -m evidence/reproduction runners with no installed console entry point; not stable services."
     },
     {
-      "role": "axis1_certification_harnesses",
+      "role": "axis1_qutrit_certification_harness",
       "paths": [
-        "src/error_coupling_simulator/frontend/axis1_mcwf_dense_certification.py",
         "src/error_coupling_simulator/frontend/axis1_qutrit_leakage_certification.py"
       ],
-      "used_by": ["axis1_dense_jointl_record", "restricted_axis1_1d_mps", "qutrit_leakage_channel_and_process"],
-      "reason": "Restricted evidence/corruption-falsifier harnesses around registered carriers, not independent user services."
+      "used_by": ["axis1_dense_jointl_record", "qutrit_leakage_channel_and_process"],
+      "reason": "Restricted qutrit evidence/corruption-falsifier harness around registered carriers, not an independent user service."
     },
     {
       "role": "evaluator_source_sidecar",
@@ -1007,7 +1061,7 @@
       {"id": "cz", "label": "Package-derived / injected ququart CZ channel", "group": "Mechanisms and channels", "services": ["ququart_cz_transport"]},
       {"id": "exact_qubit", "label": "Exact small-N qubit DM\nstate + branch probabilities", "group": "Carriers", "services": ["exact_qubit_circuit_dm"]},
       {"id": "axis1_dense", "label": "Dense Axis-1 joint-L carrier\nstate + canonical records", "group": "Carriers", "services": ["axis1_dense_jointl_record"]},
-      {"id": "mps", "label": "Restricted Axis-1 1D MPS\nverification slice", "group": "Carriers", "services": ["restricted_axis1_1d_mps"], "class": "restricted"},
+      {"id": "mps", "label": "Restricted Axis-1 1D MPS\nverification slice", "group": "Restricted verification routes", "services": ["restricted_axis1_1d_mps"], "class": "restricted"},
       {"id": "qutip_probe", "label": "QuTiP-cuQuantum probes\nsymbolic/state/trajectory/branch table", "group": "Carriers", "services": ["qutip_cuquantum_probe"], "class": "restricted"},
       {"id": "within_cycle_host", "label": "Shared within-cycle schedule host\nSUPPORT", "group": "Carriers", "services": [], "class": "support"},
       {"id": "fused", "label": "Fused d3 state-vector MCWF\nc64 screen / c128 candidate", "group": "Carriers", "services": ["fused_within_cycle"]},

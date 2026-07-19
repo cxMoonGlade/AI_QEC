@@ -2,7 +2,16 @@
 
 ## Status and authority
 
-Status: **proposed implementation plan; no `src/**` change is authorized by this document**.
+Status: **active phased implementation plan**. Phases 0 through 7 are GREEN at their scoped
+implementation and falsifier boundaries. The repaired current registry contains 51 canonical units
+across twelve Modules with no exemptions: 48 public units and three deliberately registered private
+Record-payload authentication helpers. External comparator execution, the hardened
+engineering benchmark, and one CPU-only immutable-matrix cache have also been exercised; the final
+current-provenance package/map, aggregate acceptance, and mutation reruns remain the closing gates.
+On 2026-07-17 the user explicitly authorized
+changes to every `src/**` file directly related to restricted MPS execution, certification,
+contracts, Carrier routing/mechanics, and a future `carrier/mps/**` owner. This does not authorize
+PEPS/PEPO scientific-carrier changes.
 
 Baseline: repository `HEAD 29cf949` on 2026-07-17. This document promotes and replaces the two
 unversioned 2026-07-16 scratchpad plans. It contains no `qec_twin` code, owner, compatibility path,
@@ -36,7 +45,8 @@ The current scientific disposition remains:
   exists;
 - PEPS/FET is outside this plan and its RED scientific gates remain RED.
 
-Every phase that changes `src/**` requires a separate user confirmation and a reviewed phase diff.
+Every phase still requires a reviewed phase diff. A new confirmation is required only when a change
+falls outside the directly MPS-related source boundary above.
 
 ## 1. Frozen architectural decision
 
@@ -221,7 +231,9 @@ This is an intentional public behavior tightening, not an incidental test fallou
 
 | Surface | Before Phase 1 | Required Phase 1 behavior | Deliberately affected assertions/consumers |
 |---|---|---|---|
-| QT true-over-cap execution with no independent Record oracle | a completed backend run could set `accepted_as_restricted_overcap_execution=true`, `accepted_for_restricted_execution=true`, and `verdict="pass"` | retain execution and diagnostic evidence, but set both acceptance flags false, certification `unavailable`, diagnostic-only true, and verdict `fail` | `test_axis1_qt_mps_restricted_execution_records_over_cap_h_readout_zero_collapse` must change from pass/true to fail/false |
+| QT true-over-cap exact execution with no independent oracle | a completed backend run could set `accepted_as_restricted_overcap_execution=true`, `accepted_for_restricted_execution=true`, and `verdict="pass"` | retain exact-branch, collapse, Record, and state diagnostics, but set both acceptance flags false, certification `unavailable`, diagnostic-only true, and verdict `fail` | `test_axis1_qt_mps_restricted_execution_records_over_cap_h_readout_zero_collapse`, `test_axis1_qt_mps_restricted_execution_runs_over_cap_local_collapse_branches`, and `test_axis1_qt_mps_restricted_execution_carries_t1_population_decay` must change from pass/true to fail/false while retaining their numerical assertions |
+| QT true-over-cap sampled execution with no independent Record oracle | an explicit RNG seed plus empirical normalization could set `accepted_for_sampled_execution_evidence=true`, `accepted_for_restricted_execution=true`, and `verdict="pass"` | retain seeded counts/frequencies and cross-seed spread as diagnostic execution evidence, but set sampled, seed-sweep, and restricted acceptance false, certification `unavailable`, diagnostic-only true, and verdict `fail` | `test_axis1_qt_mps_restricted_execution_samples_over_cap_without_dense_fallback` must deliberately flip both acceptance assertions and the verdict while retaining seed/count assertions; `test_axis1_qt_mps_trajectory_seed_sweep_overcap_is_not_dense_calibrated` must retain its passing internal spread gate but change the overall sweep and restricted-evidence acceptance to fail |
+| QT execution with no measurement and no independent state/channel comparator | completion plus a `schedule_has_no_measurement_records` non-certification reason could be promoted to `certification_status="accepted"` and `verdict="pass"` | retain state-evolution mechanics as diagnostic execution evidence, but set restricted acceptance false, certification `unavailable`, diagnostic-only true, and verdict `fail` until an independent comparator is registered | consumers must not interpret absence of a Record as positive certification; the Phase 1B hostile regression pins this behavior |
 | Carrier wrapping that QT result | the child pass propagated to a top-level Carrier pass | the top-level Carrier verdict must remain fail; completion must not be promoted into certification | `test_axis1_carrier_execution_qt_mps_backend_records_over_cap_h_readout` and consumers of the top-level `passed` field must change deliberately |
 | MCWF true-over-cap execution with no independent Record oracle | already diagnostic-only/fail in the retained fixtures | remain diagnostic-only/fail and use the same state-machine meaning; no new acceptance alias | existing MCWF over-cap diagnostic fixtures remain negative controls |
 
@@ -269,6 +281,15 @@ Scope: `MPS-004`, `MPS-005`, `MPS-012`, and `MPS-013`.
 
 Exit: multi-boundary QT sampled Records, temporal XOR, reset metadata, and MCWF reset policy pass their
 independent falsifiers; no Record schema depends on `trajectory_index == 0`.
+
+Implementation disposition on 2026-07-17: **GREEN inside the restricted execution contract**. The
+sealed schedule now has one immutable Record-layout owner, both Adapters parse it exactly once before
+trajectory work, QT sampled execution supports all declared boundaries, MCWF grouped resets use
+per-target masks, and invalid reset/evolution duration combinations fail structurally. The direct QT
+and MCWF execution schemas changed from v2 to v3 with no compatibility fallback. The six newly
+registered layout units are 100% statement/branch covered; the full strict registry remains RED with
+9 of 21 pre-existing/public units under target. Evidence is recorded in
+[`MPS_PHASE3_RECORD_LAYOUT_AND_RESET_GREEN_2026-07-17.md`](MPS_PHASE3_RECORD_LAYOUT_AND_RESET_GREEN_2026-07-17.md).
 
 ### Phase 4 — probability, configuration, and route support hygiene
 
@@ -332,6 +353,31 @@ Scope: certification movement and the remaining `MPS-017` items.
 Exit: execution does not self-certify; every remaining public Interface has a current owner and falsifier;
 no stale “backend not implemented” claim remains.
 
+Implementation disposition on 2026-07-17: **source/Interface and strict named-unit coverage GREEN;
+final current-provenance aggregate acceptance and mutation reruns still pending**.
+
+- The dense certification owner was hard-moved from
+  `frontend/axis1_mcwf_dense_certification.py` to `certify/axis1_mps.py`; no forwarding shim remains.
+- The obsolete QT and MCWF contract-only Modules were deleted. Executable Adapters now own execution
+  contracts, while `certify/axis1_mps.py` owns dense References, metrics, and final restricted
+  acceptance.
+- MCWF pre-readout multilevel records and jump-family counts are nested under
+  `evaluator_only_diagnostics`, never on the emitted binary-Record or downstream-estimator surface.
+- Split payloads report `actual_kept_bond_dimension`; thresholded numerical-rank diagnostics remain a
+  separate quantity that must declare their threshold.
+- The machine service kind is `restricted_verification`, not a scientific Carrier classification.
+- The strict registry now reconciles 51 of 51 canonical units across twelve Modules, with zero
+  exemptions. Three private Record-payload authentication helpers were added after their former 92
+  `no_tests` mutants received direct corruption matrices. The current measured gate gives every
+  registered unit 100% statement and branch coverage; mutation effectiveness remains a separate
+  pending rerun rather than being inferred from structural coverage.
+
+The generated `docs/CODE_MAP.md`, package build, full fresh-process service acceptance, and the
+split-lane mutation suite are closing gates for the final tree. Therefore this paragraph does not
+promote the complete Phase 6 exit to final acceptance before those commands finish. The scoped
+evidence packet is
+[`MPS_PHASE6_CERTIFICATION_OWNERSHIP_AND_PUBLIC_INTERFACE_GREEN_2026-07-17.md`](MPS_PHASE6_CERTIFICATION_OWNERSHIP_AND_PUBLIC_INTERFACE_GREEN_2026-07-17.md).
+
 ### Phase 7 — sampled scalability after correctness
 
 Scope: the algorithmic half of `MPS-014`; no scientific claim upgrade.
@@ -346,6 +392,44 @@ Scope: the algorithmic half of `MPS-014`; no scientific claim upgrade.
 Exit: bounded distributions agree within the preregistered statistical band; large declared workloads
 either run within the resource contract or fail closed; no performance result is promoted to Record
 faithfulness.
+
+Implementation disposition on 2026-07-17: **GREEN for sparse support, fail-closed resource behavior,
+and the bounded distributional implementation diagnostic**.
+
+- Sampled QT measurement now conditions on one binary site at a time. It emits only
+  lexicographically sorted observed outcomes with no zero-frequency rows; exact execution retains
+  the full binary support.
+- The pre-CUDA v2 preflight uses `2**m` for exact execution and
+  `min(2**m, trajectory_count)` for sampled execution, and rejects either route when that upper bound
+  exceeds the declared outcome budget.
+- Seed-sweep and dense-reference comparisons align the union of emitted Record supports and assign
+  probability zero to missing outcomes.
+- The direct QT schema is v6; bond sweep, trajectory seed sweep, evidence bundle, and resource probe
+  are v4 after later exact-shape transitive authentication; the Record-materialization preflight is
+  v2. No old-schema compatibility reader was added.
+- The conditional sampler changes RNG draw order. Old per-trajectory bit identity is deliberately not
+  an acceptance requirement; the required evidence is distributional.
+
+The frozen Bell/two-boundary diagnostic compares the exact table with three explicit-seed sampled
+runs of 2,048 trajectories using union-support total variation. Exact-versus-hand TV is `0.0`;
+sampled TVs are `0.0205078125`, `0.01416015625`, and `0.0078125`; all pass the strict `0.2` and
+confidence-adjusted `0.45` gates. A final-bit corruption has TV `1.0` and is rejected. The stable
+artifact hash is `3851e6dd351744b1fcd88076d9d4eadc8028cf6aa2eec19dbe287ae65251c31f`.
+Because exact and sampled modes share the same restricted implementation, this is an implementation
+diagnostic rather than an independent Record-law oracle or production error bound. The scoped Phase
+7 packet is
+[`MPS_PHASE7_SPARSE_SAMPLED_RECORD_ALGORITHM_GREEN_2026-07-17.md`](MPS_PHASE7_SPARSE_SAMPLED_RECORD_ALGORITHM_GREEN_2026-07-17.md).
+
+The subsequent engineering-only performance step first hardened the benchmark against a false-green:
+each workload now declares the exact required public outcome, so the intentionally lossy QT cap-one
+fixture passes the instrument only by remaining rejected and the true-over-cap MCWF fixture passes
+only by remaining unavailable. Production MPS owners are file-hash bound. The sole optimization is
+a CPU-only cache of immutable NumPy Stim two-qubit Tableau matrices; every call still creates an
+independent Torch tensor. No CUDA tensor, RNG state, split result, truncation decision, precision,
+operator order, or acceptance result is cached or changed. Pre/post smoke runs retained identical
+numerical semantic hashes and identical CUDA allocator peaks for all five workloads. The localized
+matrix-construction microbenchmark improved materially, while the end-to-end smoke timing changes
+were small and are not promoted into a broad speedup claim.
 
 ## 6. Per-phase review and verification contract
 
@@ -382,17 +466,96 @@ This plan does not:
 The future production-pruning program remains gated by an independent bridge from local truncation events
 to the complete adaptive multi-round Record law.
 
-## 8. Next authorized action
+## 8. Current authorization and next action
 
-Phase 0 evidence work remains incomplete until the package-wide cutoff scanner and the full `MPS-016`
-three-leg gate are committed. Separately, the user confirmed the Phase 1B source scope on 2026-07-17;
-implementation may proceed only in the following five files while that slice is active:
+Phases 0 through 7 are GREEN at their scoped implementation and independent-falsifier boundaries.
+Phase 6 completed its hard ownership cuts, evaluator-only boundary, terminology repair, service
+reclassification, and strict public-unit registration. Phase 7 completed the sparse conditional
+sampled-Record algorithm, its fail-closed strategy-specific preflight, and the frozen bounded
+TV/confidence implementation diagnostic. The current strict registry contains 51 canonical units
+across twelve Modules with zero exemptions: 48 public units plus three private authentication
+helpers.
 
-- `src/error_coupling_simulator/frontend/axis1_qt_mps_execution.py`;
-- `src/error_coupling_simulator/frontend/axis1_mcwf_dense_certification.py`;
-- `src/error_coupling_simulator/frontend/axis1_carrier_execution.py`;
-- `src/error_coupling_simulator/frontend/axis1_mcwf_mps_execution.py`, limited to blocked-policy schema
-  synchronization and no algorithm change; and
-- `src/error_coupling_simulator/frontend/README.md`.
+The closing sequence is deliberately ordered: freeze and check documentation plus the generated
+map; build the package; run the final serial-GPU full benchmark; rerun isolated Aer, YASTN, and
+Quimb/NumPy comparisons; rerun the 51-unit coverage gate; run canonical fresh-process service
+acceptance; then run mutation last. Mutation uses exactly four concurrent CPU-only workers with CUDA
+hidden, followed by five ordered single-module GPU shards. Each GPU shard has `jobs=4`, acquires one
+lease, runs four concurrent clean-control replicas, and then admits fixed waves of at most four fresh
+mutant processes with authenticated completion sentinels. Shards remain strictly serial; overlap is
+bounded to one shard and one four-child wave. No later source, test, catalog, or contract edit may
+inherit a prior mutation result.
 
-Every later phase and any expansion beyond these files still requires a new file-scoped confirmation.
+The active source authorization covers all files directly related to restricted MPS execution,
+certification, contracts, Carrier MPS routing/mechanics, `_mps_actual_split.py`, and a future
+README-owned `src/error_coupling_simulator/carrier/mps/**` Module. Work remains separated by phase and
+reviewed as such. The authorization explicitly excludes PEPS/PEPO scientific-carrier implementation,
+unrelated Carrier mechanisms, and any production-pruning or Record-faithfulness claim upgrade.
+
+## 9. Historical evidence and current terminal-gate authority
+
+The artifacts below predate the current acceptance/mutation supervisor hardening. They remain useful
+historical provenance, but none is silently promoted to a current terminal result. Repository `HEAD`
+remains `f0d52b3f153d3f4dd9e9a9cb30f65ed3b3f3ae54`; the reviewed working tree is intentionally
+uncommitted and dirty.
+
+Historical pre-hardening evidence is:
+
+- The earlier code-map check reported input prefix `cf207b2d2ac6`, 27 services, and 110 installed
+  Modules. The earlier wheel SHA-256 was
+  `6c1b35ffdce07df38eb6108b30a3d30ab341fa127a22255af2aa12590fabe87d`. Both must be
+  regenerated from the final documentation/catalog snapshot.
+- The five-workload serial-GPU engineering benchmark passed its frozen outcome catalog at
+  `outputs/simulator_validation/benchmarks/restricted_mps/final_full.json`, exact-byte SHA-256
+  `b10491906d7ab11f4d610d8207b17a3bc2059fae1f8368a856a3ebcb34bf1f04`.
+- The isolated Aer, source/commit-bound YASTN, and Quimb/NumPy reports passed with respective
+  exact-byte SHA-256 values
+  `6d8143ba96a0a0607556a314db7185cfa0e413eb29ccaea801bf14758d353440`,
+  `b6f17d3134eab7fdced7b1e981aef0721aa02456266979a902d6a81a7c00aa9f`, and
+  `55103cb51e85c5f92bc3f52571827477d769571c1a49da72830b9c1eb2f5bb42`. Their bounded
+  roles remain the ones in Section 4; none certifies a QEC Record law.
+- The most recent strict 51-unit coverage report had statement and branch coverage 1.0 with no
+  exemptions. Its exact-byte SHA-256 was
+  `a60c0914c5558e4483e11696f6bd82d8bf50620935e5a462eee16605c1bd3e18`. A current
+  closing run is still required after the supervisor/test/contract edits.
+- The schema-v2 service run at
+  `outputs/simulator_validation/logs/service_acceptance/run-20260718T085051.064856Z-p694622-41eddf74/summary.json`
+  executed the then-current 97-file plan: 96 passed and the declared out-of-scope PEPS/FET
+  non-degeneracy gate failed. That summary lacks the current repository-snapshot, semantic-plan,
+  runtime-fingerprint, and authenticated-resume contract and is historical only.
+
+The current catalog contains 98 files: 50 `cpu_light`, seven `cpu_exclusive`, and 41 `gpu_serial`.
+Direct environments are `ecs` and `aiqec`; the two external adapters additionally declare
+`ecs-baseline-aer` and `ecs-baseline-yastn`. Attempts
+`run-20260718T120005.359526Z-p785003-6889d070` and
+`run-20260718T155338.566687Z-p31526-c8d248cb` have no terminal summary and are unscoreable.
+No current 98-file aggregate verdict is claimed until a current schema-v3 terminal summary exists.
+
+The hardened service supervisor uses CUDA-hidden one-thread CPU children, an absolute four-process
+CPU-light ceiling, serial GPU admission under one lease, sealed Python import paths, four-environment
+metadata fingerprints, and an authenticated lane-major checkpoint. Its 62 focused regressions cover
+corruption/drift refusal, cross-lane resume, out-of-order CPU completion, log authentication, fatal
+GPU termination, and terminal-summary crash reconciliation. The service and mutation harnesses pass
+136 regressions together.
+
+Mutation history remains explicit. The first formal invocation failed before any mutant was scored
+because the raw-source cutoff scanner saw dormant mutmut trampolines. The second authentically scored
+3,694 CPU mutants: 2,607 killed, 995 survived, and 92 `no_tests`, aggregate kill rate 0.7057; all
+seven CPU Modules were below 0.90. Its later monolithic GPU clean control failed because required
+binding documents were absent, so it has no GPU score. These are valid historical RED/incomplete
+results, never a current PASS.
+
+The current mutation harness copies the binding documents, uses exactly four CUDA-hidden CPU
+workers, and partitions the five GPU Modules into five ordered `jobs=4` shards. Each GPU shard holds
+one pinned-device lease across plan generation, checkpoint validation, four concurrent clean-control
+replicas, and fixed waves of at most four fresh mutant processes. Every child has an authenticated
+pytest sentinel and isolated log/temp path; timeout, crash, missing sentinel, resource exhaustion,
+`no_tests`, or null metadata cannot improve the score. Only an authenticated contiguous prefix may
+resume, and the checkpoint is retired only after atomic aggregate publication. An abrupt exit may
+leave the generated tree read-only; startup removes only a real symlink-free residual tree before
+regeneration and fails closed on symlinks or a surviving path.
+
+Current terminal status is therefore artifact-defined: the final map check/package build, current
+51-unit coverage report, current schema-v3 98-file service summary, and current split-lane mutation
+aggregate must all be regenerated from the same frozen source/test/catalog/contract snapshot. This
+section makes no mutation-PASS or current service-PASS claim in advance of those artifacts.

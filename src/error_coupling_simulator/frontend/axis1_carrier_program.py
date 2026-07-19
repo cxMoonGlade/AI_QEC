@@ -228,7 +228,7 @@ def _axis1_carrier_approximation_book(
                 "contract"
             ),
             "mcwf_mps_state_record": (
-                "future production route: MCWF trajectory semantics with MPS "
+                "restricted execution route: MCWF trajectory semantics with MPS "
                 "pure-state carrier and per-site local Hilbert dimensions"
             ),
             "dimension_polymorphic_local_dims_required": (
@@ -965,7 +965,7 @@ def _reset_boundary_terms(substep) -> tuple[Axis1CarrierTerm, ...]:
         return ()
     terms: list[Axis1CarrierTerm] = []
     for op in substep.operations:
-        basis = _reset_basis(str(op.name))
+        basis = axis1_reset_basis(str(op.name))
         if basis is None:
             continue
         for q in op.targets:
@@ -987,7 +987,9 @@ def _reset_boundary_terms(substep) -> tuple[Axis1CarrierTerm, ...]:
     return tuple(terms)
 
 
-def _reset_basis(name: str) -> str | None:
+def axis1_reset_basis(name: str) -> str | None:
+    """Resolve a public Axis-1 reset operation name to its Pauli basis."""
+
     op_name = str(name).upper()
     if op_name in {"R", "RZ"}:
         return "Z"
@@ -996,6 +998,39 @@ def _reset_basis(name: str) -> str | None:
     if op_name == "RY":
         return "Y"
     return None
+
+
+def axis1_carrier_substep_summary(substep: dict[str, Any]) -> dict[str, Any]:
+    """Summarize one JSON-safe carrier-program substep without route policy."""
+
+    h_families = [
+        str(term["operator_family"])
+        for term in substep.get("terms", ())
+        if str(term["kind"]) == "hamiltonian"
+    ]
+    c_families = [
+        str(term["operator_family"])
+        for term in substep.get("terms", ())
+        if str(term["kind"]) == "collapse"
+        and abs(float(term["coefficient"])) > 0.0
+    ]
+    return {
+        "substep_id": str(substep["substep_id"]),
+        "substep_kind": str(substep["substep_kind"]),
+        "route": str(substep["route"]),
+        "route_reason": str(substep["route_reason"]),
+        "support": list(substep["support"]),
+        "dt_ns": substep["dt_ns"],
+        "hamiltonian_operator_families": h_families,
+        "hamiltonian_term_count": len(h_families),
+        "nonzero_collapse_operator_families": c_families,
+        "nonzero_collapse_term_count": len(c_families),
+        "measurement_boundary_count": sum(
+            1
+            for term in substep.get("terms", ())
+            if str(term["kind"]) == "measurement_boundary"
+        ),
+    }
 
 
 def _axis1_primitive_params_for_schedule(schedule: SubstepSchedule) -> Axis1PrimitiveParams:
