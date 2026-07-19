@@ -849,6 +849,7 @@ def test_optional_public_gpu_mcwf_matches_isolated_qutip_and_detects_corruption(
     assert len(envelope["worker_report_raw_json_sha256"]) == 64
     assert envelope["worker_report_raw_json_size_bytes"] > 0
     comparator = _load_comparator(monkeypatch)
+    protocol = _load_protocol()
     fixture = protocol.load_fixture(FIXTURE)
     inner = envelope["worker_report"]
     comparator._validate_isolated_qutip_report(
@@ -926,5 +927,4 @@ def test_optional_public_gpu_mcwf_matches_isolated_qutip_and_detects_corruption(
     assert report["x_coherence_mutation_negative_control"][
         "forces_overall_fail"
     ] is True
-    protocol = _load_protocol()
     assert report["content_hash"] == protocol.canonical_content_hash(report)
