@@ -243,20 +243,33 @@ sanitized child environment plus the leased GPU UUID and driver version. Startup
 real, symlink-free generated tree left read-only by an abrupt process or host exit by making only
 its directories owner-deletable and removing the entire disposable tree; a root/internal symlink
 or surviving path fails closed. Only the coordinator may
-commit an authenticated contiguous prefix. Timeout, child error, missing sentinel, host/CUDA
-resource exhaustion, or other non-resumable evidence cancels current-wave siblings, stops admission
-of later waves, and is never credited as a killed mutant. Automatic child timeouts multiply the
-single-worker dynamic budget by the admitted in-shard concurrency, so four-way CUDA startup and
-runtime contention cannot consume a serially estimated deadline; an explicit operator timeout is
-literal and is not scaled. The coordinator records the first completed non-resumable outcome as the
-failure trigger while retaining only the safe plan-ordered prefix. Direct batches honor the suite lock, so
-aggregate publication and checkpoint retirement cannot race a same-tag run.
+commit an authenticated contiguous prefix. One narrow timeout class is a terminal killed mutant: a
+GPU mutant child whose identity-bound completion sentinel proves pytest exit code 1 before the
+supervisor deadline, whose log proves no host/CUDA resource exhaustion, and whose process-group
+cleanup is verified. The supervisor may terminate that already-completed wrapper, but the
+authenticated row remains resumable. Clean-admission timeouts, CPU-lane timeouts, missing or
+inconsistent sentinels, resource exhaustion, unverified cleanup, child errors, and all other timeouts
+are non-resumable: they cancel current-wave siblings, stop later admission, and never improve the
+score. Automatic child timeouts multiply the single-worker dynamic budget by the admitted in-shard
+concurrency, so four-way CUDA startup and runtime contention cannot consume a serially estimated
+deadline; an explicit operator timeout is literal and is not scaled. The coordinator records the first
+completed non-resumable outcome as the failure trigger while retaining only the safe plan-ordered
+prefix. Direct batches honor the suite lock, so aggregate publication and checkpoint retirement cannot
+race a same-tag run.
 
 Before a worker row can enter a checkpoint, its completed log file and containing directory are
 `fsync`-durable and the digest is computed from that same open inode. Checkpoints and terminal JSON
 are written to a same-directory temporary file, flushed and `fsync`ed, atomically replaced, and
 followed by a directory `fsync`. A durability failure is non-resumable and is never downgraded to a
 killed mutant.
+
+Semantic mutation scoring is machine-authoritative. The v2 AST catalog may exclude only a proven
+non-contractual exception-prose mutation; the v2 human disposition file is authenticated annotation
+and cannot change a mutant's kind, criticality, denominator membership, or pass result. Raw counts
+must equal semantic counts plus machine exclusions both globally and for every canonical status.
+Batch and suite result schemas are v3, GPU checkpoints are v4, and legacy records are rejected. Merge
+reauthenticates required score fields, canonical status domains, critical-mutant identities, module
+rates, configured bars, raw aliases, and conservation before recomputing the aggregate verdict.
 
 This process topology is part of the runtime contract. A monolithic pytest process is not equivalent:
 native-library lifetime interactions can outlive individual test groups. Fresh execution, verified
@@ -268,10 +281,11 @@ metadata and import hooks for every direct and nested runtime declared by the ca
 Long acceptance runs use one root lock and an atomic, authenticated, lane-major checkpoint. A
 resumable row must match the frozen repository snapshot, semantic task plan, execution policy,
 runtime fingerprints, task-specific log name and log hash, and verified process-group cleanup.
-Ordinary terminal pytest outcomes may advance only a contiguous prefix; timeouts, missing cleanup,
-worker errors, and non-pytest/native-fatal exits do not. Fatal GPU evidence closes the run as `FAIL`
-without admitting another GPU task. A lingering checkpoint beside an already published terminal
-summary is reconciled from the authenticated summary instead of rerunning completed work.
+Ordinary terminal pytest outcomes and the narrowly authenticated, resource-clean GPU mutant timeout
+defined above may advance only a contiguous prefix; all other timeouts, missing cleanup, worker
+errors, and non-pytest/native-fatal exits do not. Fatal GPU evidence closes the run as `FAIL` without
+admitting another GPU task. A lingering checkpoint beside an already published terminal summary is
+reconciled from the authenticated summary instead of rerunning completed work.
 
 The service catalog and generated code map define the exact current inventory; historical module and
 test counts are intake evidence, not targets.

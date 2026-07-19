@@ -1,6 +1,6 @@
 {
-  "schema": "error_coupling_simulator.harness.mutation_semantic_dispositions.v1",
-  "classifier_policy": "conservative_exception_prose_ast.v1",
+  "schema": "error_coupling_simulator.harness.mutation_semantic_dispositions.v2",
+  "classifier_policy": "conservative_exception_prose_ast.v2",
   "reviewed": [
     {
       "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x__assert_quimb_contract__mutmut_7",

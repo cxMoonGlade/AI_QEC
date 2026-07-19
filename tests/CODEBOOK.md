@@ -117,9 +117,12 @@ python tests/harness/mutation.py tests/_support/restricted_mps_mutation_suite.js
 
 The GPU lane may never inherit CPU-lane parallelism: each fresh child fixes its host thread pools at
 one and all children share the shard's single pinned GPU lease. Every clean replica and each tested
-mutant must emit an authenticated, identity-bound pytest-completion sentinel; timeout, crash,
-missing sentinel, `no_tests`, host/CUDA resource exhaustion, or other suspicious status is not a
-killed mutant. The suite snapshots source, tests, configuration, and copied support inputs and
+mutant must emit an authenticated, identity-bound pytest-completion sentinel. A GPU mutant timeout
+is killed and resumable only when that sentinel proves pytest exit code 1, no host/CUDA resource
+exhaustion is present, and process-group cleanup is verified. Clean-control and CPU timeouts, crashes,
+missing or inconsistent sentinels, `no_tests`, resource exhaustion, unverified cleanup, and every
+other suspicious status are not killed mutants. The suite snapshots source, tests, configuration,
+and copied support inputs and
 serializes whole-suite result publication so concurrent invocations cannot reuse a stale PASS. A GPU
 interruption retains only an authenticated contiguous prefix bound to the input snapshot, generated
 semantic AST catalog, mutant/test plan, execution and timeout policy, Conda/Python runtime
@@ -132,7 +135,10 @@ after that trigger. Automatic timeouts scale the single-worker dynamic budget by
 in-wave CUDA startup and runtime contention; an explicit timeout remains literal. Resume always
 regenerates the plan, reauthenticates every retained worker log, and reruns all clean-admission
 replicas. Fresh plans use schema v3, completion sentinels use schema v2, and GPU checkpoints use
-schema v3. Direct batches and the outer suite share one lock order, so aggregate publication and
+schema v4. The machine semantic catalog and annotation-only disposition manifest use v2; batch and
+suite result artifacts use v3. Direct batches statically reject stale or malformed disposition
+manifests before setup mutation or mutant generation. Direct batches and the outer suite share one
+lock order, so aggregate publication and
 checkpoint retirement cannot delete a same-tag direct run's state. A checkpoint is removed only
 after the aggregate result is atomically published. Before checkpoint admission, each completed
 worker log and its directory are `fsync`-durable and its digest is computed from the same open inode;
@@ -140,6 +146,14 @@ checkpoint/terminal JSON publication uses temp-file flush plus `fsync`, atomic r
 post-replace directory `fsync`. Durability errors propagate as non-resumable failures. In
 the CPU lane, a null raw mutmut exit code is canonical `not_checked` and causes the incomplete suite
 to fail; it is never scored as suspicious or killed.
+
+Only the machine AST classifier may remove a mutant from the semantic denominator, and only for the
+exact non-contractual exception-prose class. Human review rows are authenticated annotations: they
+cannot alter kind, criticality, denominator membership, or pass/fail. Raw, semantic, and
+machine-excluded counts conserve exactly for every canonical status. Suite merge requires complete
+v3 score fields and status domains, strict raw aliases, identity-bound critical evidence, matching
+configured bars, and count-derived module rates and verdicts; injected fields, forged summaries, and
+legacy child artifacts fail closed.
 
 GPU mutation preparation holds the same single GPU lease used by the clean control and mutant
 workers. This is required because the exact mutant/test association run collects GPU-gated tests,
@@ -227,8 +241,9 @@ independent dense references, external comparisons, and mutation gate remain sep
 - Structural coverage executes every reachable statement and branch; it does not prove that an
   assertion discriminates correct from corrupted behavior.
 - Property tests exercise physical and data-contract invariants across generated inputs.
-- Mutation tests verify that assertions reject meaningful code perturbations. Timeouts and
-  `no_tests` outcomes remain non-killed and never improve the score.
+- Mutation tests verify that assertions reject meaningful code perturbations. Only the authenticated,
+  resource-clean GPU mutant timeout defined above is a terminal kill; every other timeout and every
+  `no_tests` outcome remain non-killed and never improve the score.
 - Independent-reference checks must reconstruct the expected value without calling the
   implementation path being checked.
 - A corruption falsifier must demonstrate that the test fails for an intentionally wrong physical

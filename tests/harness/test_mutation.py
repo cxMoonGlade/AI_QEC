@@ -349,109 +349,58 @@ def test_input_snapshot_is_order_independent_and_detects_drift(tmp_path) -> None
 
 
 def test_suite_merge_weights_by_mutant_count_not_batch_percentage() -> None:
-    cpu = {
-        "tag": "cpu",
-        "total": 10,
-        "killed": 9,
-        "status_counts": {"killed": 9, "survived": 1},
-        "pass": True,
-    }
-    gpu = {
-        "tag": "gpu",
-        "total": 1,
-        "killed": 1,
-        "status_counts": {"killed": 1, "survived": 0},
-        "pass": True,
-    }
+    cpu = mutation.score_mutation_rows(
+        {
+            **{f"pkg.cpu.x_check__mutmut_{index}": "killed" for index in range(9)},
+            "pkg.cpu.x_check__mutmut_9": "survived",
+        },
+        modules=("src/pkg/cpu.py",),
+        bar=0.90,
+    )
+    cpu.update(schema=mutation._MUTATION_BATCH_RUN_SCHEMA, tag="cpu")
+    gpu = mutation.score_mutation_rows(
+        {"pkg.gpu.x_check__mutmut_1": "killed"},
+        modules=("src/pkg/gpu.py",),
+        bar=0.90,
+    )
+    gpu.update(schema=mutation._MUTATION_BATCH_RUN_SCHEMA, tag="gpu")
 
     merged = mutation.merge_mutation_batches((cpu, gpu), bar=0.90)
 
     assert merged["total"] == 11
     assert merged["killed"] == 10
     assert merged["kill_rate"] == 0.9091
-    assert merged["status_counts"] == {"killed": 10, "survived": 1}
+    assert merged["status_counts"]["killed"] == 10
+    assert merged["status_counts"]["survived"] == 1
     assert merged["pass"] is True
 
 
 def test_suite_merge_weights_raw_and_semantic_denominators_independently() -> None:
-    cpu = {
-        "tag": "cpu",
-        "total": 2,
-        "killed": 1,
-        "status_counts": {"killed": 1, "survived": 1},
-        "raw": {
-            "total": 2,
-            "killed": 1,
-            "status_counts": {"killed": 1, "survived": 1},
-            "kill_rate": 0.5,
-            "bar": 0.9,
-            "modules": {"src/pkg/cpu.py": {"pass": False}},
-            "pass": False,
-        },
-        "semantic": {
-            "total": 1,
-            "killed": 1,
-            "status_counts": {"killed": 1, "survived": 0},
-            "kill_rate": 1.0,
-            "bar": 0.9,
-            "excluded_counts": {
-                "exception_prose_noncontractual": 1,
-                "reviewed_equivalent": 0,
+    cpu_semantic = "pkg.cpu.x_check__mutmut_1"
+    cpu_prose = "pkg.cpu.x_check__mutmut_2"
+    cpu = mutation.score_mutation_rows(
+        {cpu_semantic: "killed", cpu_prose: "survived"},
+        modules=("src/pkg/cpu.py",),
+        bar=0.90,
+        classifications={
+            cpu_semantic: {"kind": "semantic", "criticality": "critical"},
+            cpu_prose: {
+                "kind": "exception_prose_noncontractual",
+                "criticality": "not_applicable",
             },
-            "excluded_by_status": {"survived": 1},
-            "critical": {"declared": 1, "killed": 1, "not_killed": []},
-            "modules": {
-                "src/pkg/cpu.py": {
-                    "total": 1,
-                    "killed": 1,
-                    "kill_rate": 1.0,
-                    "bar": 0.9,
-                    "pass": True,
-                }
-            },
-            "pass": True,
         },
-        "pass": True,
-    }
-    gpu = {
-        "tag": "gpu",
-        "total": 1,
-        "killed": 1,
-        "status_counts": {"killed": 1, "survived": 0},
-        "raw": {
-            "total": 1,
-            "killed": 1,
-            "status_counts": {"killed": 1, "survived": 0},
-            "kill_rate": 1.0,
-            "bar": 0.9,
-            "modules": {"src/pkg/gpu.py": {"pass": True}},
-            "pass": True,
+    )
+    cpu.update(schema=mutation._MUTATION_BATCH_RUN_SCHEMA, tag="cpu")
+    gpu_semantic = "pkg.gpu.x_check__mutmut_1"
+    gpu = mutation.score_mutation_rows(
+        {gpu_semantic: "killed"},
+        modules=("src/pkg/gpu.py",),
+        bar=0.90,
+        classifications={
+            gpu_semantic: {"kind": "semantic", "criticality": "critical"}
         },
-        "semantic": {
-            "total": 1,
-            "killed": 1,
-            "status_counts": {"killed": 1, "survived": 0},
-            "kill_rate": 1.0,
-            "bar": 0.9,
-            "excluded_counts": {
-                "exception_prose_noncontractual": 0,
-                "reviewed_equivalent": 0,
-            },
-            "excluded_by_status": {},
-            "critical": {"declared": 1, "killed": 1, "not_killed": []},
-            "modules": {
-                "src/pkg/gpu.py": {
-                    "total": 1,
-                    "killed": 1,
-                    "kill_rate": 1.0,
-                    "bar": 0.9,
-                    "pass": True,
-                }
-            },
-            "pass": True,
-        },
-        "pass": True,
-    }
+    )
+    gpu.update(schema=mutation._MUTATION_BATCH_RUN_SCHEMA, tag="gpu")
 
     merged = mutation.merge_mutation_batches((cpu, gpu), bar=0.90)
 
@@ -463,8 +412,8 @@ def test_suite_merge_weights_raw_and_semantic_denominators_independently() -> No
     assert merged["semantic"]["kill_rate"] == 1.0
     assert merged["semantic"]["excluded_counts"] == {
         "exception_prose_noncontractual": 1,
-        "reviewed_equivalent": 0,
     }
+    assert merged["machine_excluded"]["total"] == 1
     assert set(merged["semantic"]["modules"]) == {
         "src/pkg/cpu.py",
         "src/pkg/gpu.py",
@@ -473,30 +422,22 @@ def test_suite_merge_weights_raw_and_semantic_denominators_independently() -> No
 
 
 def test_suite_merge_rejects_raw_semantic_batch_mixture() -> None:
-    raw = {
-        "tag": "raw",
-        "total": 1,
-        "killed": 1,
-        "status_counts": {"killed": 1},
-        "pass": True,
-    }
-    semantic = {
-        **raw,
-        "tag": "semantic",
-        "raw": dict(raw),
-        "semantic": {
-            "total": 1,
-            "killed": 1,
-            "status_counts": {"killed": 1},
-            "kill_rate": 1.0,
-            "bar": 0.9,
-            "excluded_counts": {},
-            "excluded_by_status": {},
-            "critical": {"declared": 1, "killed": 1, "not_killed": []},
-            "modules": {},
-            "pass": True,
+    raw = mutation.score_mutation_rows(
+        {"pkg.raw.x_check__mutmut_1": "killed"},
+        modules=("src/pkg/raw.py",),
+        bar=0.90,
+    )
+    raw.update(schema=mutation._MUTATION_BATCH_RUN_SCHEMA, tag="raw")
+    semantic_mutant = "pkg.semantic.x_check__mutmut_1"
+    semantic = mutation.score_mutation_rows(
+        {semantic_mutant: "killed"},
+        modules=("src/pkg/semantic.py",),
+        bar=0.90,
+        classifications={
+            semantic_mutant: {"kind": "semantic", "criticality": "critical"}
         },
-    }
+    )
+    semantic.update(schema=mutation._MUTATION_BATCH_RUN_SCHEMA, tag="semantic")
 
     with pytest.raises(ValueError, match="raw/semantic mixture"):
         mutation.merge_mutation_batches((raw, semantic), bar=0.90)
@@ -647,6 +588,121 @@ def test_fresh_rc_one_requires_authenticated_pytest_completion_sentinel(
     assert evidence["sentinel_name"] == sentinel.name
     assert evidence["resource_exhaustion_detected"] is False
     assert not sentinel.exists()
+
+
+def test_authenticated_resource_clean_mutant_timeout_is_killed_and_resumable(
+    tmp_path: Path,
+) -> None:
+    ran = SimpleNamespace(
+        ok=False,
+        returncode=-15,
+        timed_out=True,
+        group_cleanup_verified=True,
+    )
+    sentinel = tmp_path / "timeout_completion.json"
+    sentinel.write_text(
+        json.dumps(
+            {
+                "schema": mutation._PYTEST_SENTINEL_SCHEMA,
+                "completed": True,
+                "pytest_exit_code": 1,
+                "sentinel_name": sentinel.name,
+                "resource_exhaustion_detected": False,
+                "resource_exhaustion_kinds": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    status, evidence = mutation._authenticated_fresh_worker_status(
+        ran,
+        sentinel_path=sentinel,
+    )
+    row = {
+        "process_executed": True,
+        "status": status,
+        "group_cleanup_verified": ran.group_cleanup_verified,
+        "timed_out": ran.timed_out,
+        "completion_sentinel_authenticated": evidence is not None,
+        "completion_sentinel": evidence,
+    }
+
+    assert status == "killed"
+    assert evidence is not None
+    assert evidence["pytest_exit_code"] == 1
+    assert mutation._gpu_worker_row_is_resumable(row) is True
+    assert not sentinel.exists()
+
+
+def test_mutant_timeout_without_authenticated_completion_is_not_resumable(
+    tmp_path: Path,
+) -> None:
+    ran = SimpleNamespace(
+        ok=False,
+        returncode=-15,
+        timed_out=True,
+        group_cleanup_verified=True,
+    )
+    status, evidence = mutation._authenticated_fresh_worker_status(
+        ran,
+        sentinel_path=tmp_path / "missing.json",
+    )
+
+    assert status == "timeout"
+    assert evidence is None
+    assert mutation._gpu_worker_row_is_resumable(
+        {
+            "process_executed": True,
+            "status": status,
+            "group_cleanup_verified": True,
+            "timed_out": True,
+            "completion_sentinel_authenticated": False,
+            "completion_sentinel": None,
+        }
+    ) is False
+
+
+def test_mutant_timeout_with_resource_exhaustion_is_not_resumable(
+    tmp_path: Path,
+) -> None:
+    ran = SimpleNamespace(
+        ok=False,
+        returncode=-15,
+        timed_out=True,
+        group_cleanup_verified=True,
+    )
+    sentinel = tmp_path / "oom_timeout.json"
+    sentinel.write_text(
+        json.dumps(
+            {
+                "schema": mutation._PYTEST_SENTINEL_SCHEMA,
+                "completed": True,
+                "pytest_exit_code": 1,
+                "sentinel_name": sentinel.name,
+                "resource_exhaustion_detected": True,
+                "resource_exhaustion_kinds": ["cuda_out_of_memory"],
+            }
+        ),
+        encoding="utf-8",
+    )
+    status, evidence = mutation._authenticated_fresh_worker_status(
+        ran,
+        sentinel_path=sentinel,
+    )
+
+    assert status == "timeout"
+    assert evidence is not None
+    assert evidence["resource_exhaustion_detected"] is True
+    assert mutation._gpu_worker_row_is_resumable(
+        {
+            "process_executed": True,
+            "status": status,
+            "group_cleanup_verified": True,
+            "timed_out": True,
+            "completion_sentinel_authenticated": True,
+            "completion_sentinel": evidence,
+        }
+    ) is False
 
 
 def test_fresh_rc_one_with_cuda_oom_sentinel_is_never_credited_as_killed(
@@ -1148,7 +1204,12 @@ def _write_suite_fixture(root: Path) -> tuple[Path, Path]:
                     "requires_gpu": requires_gpu,
                     "covered_by_test_files": [f"tests/test_{name}.py"],
                     "reconcile_modules": [f"src/pkg/{name}.py"],
-                    "harness": {"mutation_gate": {"jobs": jobs}},
+                    "harness": {
+                        "mutation_gate": {
+                            "jobs": jobs,
+                            "kill_rate_bar": 0.75,
+                        }
+                    },
                 }
             ),
             encoding="utf-8",
@@ -1181,6 +1242,31 @@ def _write_suite_fixture(root: Path) -> tuple[Path, Path]:
     return suite, source / "cpu.py"
 
 
+def _fake_raw_batch_result(
+    tag: str,
+    *,
+    total: int = 1,
+    killed: int = 1,
+    bar: float = 0.75,
+) -> dict:
+    rows = {
+        f"pkg.{tag}.x_check__mutmut_{index}": (
+            "killed" if index < killed else "survived"
+        )
+        for index in range(total)
+    }
+    result = mutation.score_mutation_rows(
+        rows,
+        modules=(f"src/pkg/{tag}.py",),
+        bar=bar,
+    )
+    return {
+        "schema": mutation._MUTATION_BATCH_RUN_SCHEMA,
+        "tag": tag,
+        **result,
+    }
+
+
 def test_suite_executes_cpu_parallel_then_gpu_serial_and_weights_results(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
@@ -1191,20 +1277,8 @@ def test_suite_executes_cpu_parallel_then_gpu_serial_and_weights_results(
     def fake_run(registry, *, jobs=None, timeout=None, lane=None):
         calls.append((Path(registry).stem, jobs, lane))
         if lane == "cpu_parallel":
-            return {
-                "tag": "cpu",
-                "total": 3,
-                "killed": 2,
-                "status_counts": {"killed": 2, "survived": 1},
-                "pass": True,
-            }
-        return {
-            "tag": "gpu",
-            "total": 1,
-            "killed": 1,
-            "status_counts": {"killed": 1, "survived": 0},
-            "pass": True,
-        }
+            return _fake_raw_batch_result("cpu", total=3, killed=3)
+        return _fake_raw_batch_result("gpu")
 
     monkeypatch.setattr(mutation, "REPO", tmp_path)
     monkeypatch.setattr(mutation, "LOGDIR", tmp_path / "logs")
@@ -1218,9 +1292,10 @@ def test_suite_executes_cpu_parallel_then_gpu_serial_and_weights_results(
         ("gpu", 4, "gpu_serial"),
     ]
     assert result["total"] == 4
-    assert result["killed"] == 3
-    assert result["kill_rate"] == 0.75
+    assert result["killed"] == 4
+    assert result["kill_rate"] == 1.0
     assert result["pass"] is True
+    assert result["schema"] == mutation._MUTATION_SUITE_RUN_SCHEMA
     assert result["input_snapshot_sha256"] == result["verified_snapshot_sha256"]
     assert json.loads(
         (tmp_path / "logs/suite_mutation_survivors.json").read_text(encoding="utf-8")
@@ -1239,6 +1314,365 @@ def test_suite_rejects_gpu_jobs_above_four(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="at most 4"):
         mutation.load_mutation_suite(suite)
+
+
+def test_suite_loader_rejects_child_kill_bar_drift(tmp_path: Path) -> None:
+    suite, _source = _write_suite_fixture(tmp_path)
+    child = tmp_path / "gpu.json"
+    child_doc = json.loads(child.read_text(encoding="utf-8"))
+    child_doc["harness"]["mutation_gate"]["kill_rate_bar"] = 0.76
+    child.write_text(json.dumps(child_doc), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="suite/child kill-rate bar mismatch"):
+        mutation.load_mutation_suite(suite)
+
+
+def test_suite_rejects_v1_semantic_manifest_before_any_batch(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    suite, _source = _write_suite_fixture(tmp_path)
+    manifest = tmp_path / "dispositions.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "schema": (
+                    "error_coupling_simulator.harness."
+                    "mutation_semantic_dispositions.v1"
+                ),
+                "classifier_policy": "conservative_exception_prose_ast.v2",
+                "reviewed": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    suite_doc = json.loads(suite.read_text(encoding="utf-8"))
+    suite_doc["semantic_dispositions"] = manifest.name
+    suite.write_text(json.dumps(suite_doc), encoding="utf-8")
+    for child_name in ("cpu.json", "gpu.json"):
+        child = tmp_path / child_name
+        child_doc = json.loads(child.read_text(encoding="utf-8"))
+        child_doc["semantic_dispositions"] = manifest.name
+        child.write_text(json.dumps(child_doc), encoding="utf-8")
+
+    monkeypatch.setattr(mutation, "REPO", tmp_path)
+    monkeypatch.setattr(mutation, "LOGDIR", tmp_path / "logs")
+    monkeypatch.setattr(mutation, "CONFIG_PATH", tmp_path / "tests/harness_config.json")
+
+    def forbidden_batch(*_args, **_kwargs):
+        raise AssertionError("batch executed before semantic manifest validation")
+
+    monkeypatch.setattr(mutation, "run_mutation", forbidden_batch)
+    with pytest.raises(ValueError, match="unsupported semantic disposition schema"):
+        mutation.run_mutation_suite(str(suite))
+
+
+@pytest.mark.parametrize(
+    ("manifest_document", "message"),
+    [
+        (
+            {
+                "schema": (
+                    "error_coupling_simulator.harness."
+                    "mutation_semantic_dispositions.v1"
+                ),
+                "classifier_policy": "conservative_exception_prose_ast.v2",
+                "reviewed": [],
+            },
+            "unsupported semantic disposition schema",
+        ),
+        (
+            {
+                "schema": mutation._SEMANTIC_DISPOSITION_SCHEMA,
+                "classifier_policy": mutation._SEMANTIC_CLASSIFIER_POLICY,
+                "reviewed": [{}],
+            },
+            "semantic disposition review fields mismatch",
+        ),
+    ],
+)
+def test_direct_batch_rejects_static_semantic_manifest_defects_before_setup_mutation(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    manifest_document: dict,
+    message: str,
+) -> None:
+    manifest = tmp_path / "dispositions.json"
+    manifest.write_text(
+        json.dumps(manifest_document),
+        encoding="utf-8",
+    )
+    registry = tmp_path / "direct.json"
+    registry.write_text(
+        json.dumps(
+            {
+                "schema": "error_coupling_simulator.harness.mutation_batch.v1",
+                "lane": "cpu_parallel",
+                "requires_gpu": False,
+                "covered_by_test_files": ["tests/test_direct.py"],
+                "reconcile_modules": ["src/pkg/direct.py"],
+                "semantic_dispositions": manifest.name,
+                "harness": {
+                    "mutation_gate": {
+                        "jobs": 1,
+                        "kill_rate_bar": 0.90,
+                        "timeout_multiplier": 15.0,
+                        "timeout_constant": 1.0,
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(mutation, "REPO", tmp_path)
+    monkeypatch.setattr(mutation, "LOGDIR", tmp_path / "logs")
+    monkeypatch.setattr(
+        mutation,
+        "_begin_setup_override",
+        lambda **_kwargs: (_ for _ in ()).throw(
+            AssertionError("setup mutated before semantic manifest validation")
+        ),
+    )
+
+    with pytest.raises(ValueError, match=message):
+        mutation.run_mutation(str(registry))
+
+
+def test_merge_rejects_forged_child_module_rate_and_pass() -> None:
+    first = mutation.score_mutation_rows(
+        {
+            **{f"pkg.first.x_check__mutmut_{index}": "killed" for index in range(8)},
+            **{
+                f"pkg.first.x_check__mutmut_{index}": "survived"
+                for index in range(8, 10)
+            },
+        },
+        modules=("src/pkg/first.py",),
+        bar=0.90,
+    )
+    first["modules"]["src/pkg/first.py"]["kill_rate"] = 1.0
+    first["modules"]["src/pkg/first.py"]["pass"] = True
+    first["pass"] = True
+    first["schema"] = mutation._MUTATION_BATCH_RUN_SCHEMA
+    second = mutation.score_mutation_rows(
+        {
+            f"pkg.second.x_check__mutmut_{index}": "killed"
+            for index in range(10)
+        },
+        modules=("src/pkg/second.py",),
+        bar=0.90,
+    )
+    second["schema"] = mutation._MUTATION_BATCH_RUN_SCHEMA
+
+    with pytest.raises(ValueError, match="module score disagrees with counts"):
+        mutation.merge_mutation_batches((first, second), bar=0.90)
+
+
+def test_merge_rejects_legacy_batch_result_schema() -> None:
+    legacy = mutation.score_mutation_rows(
+        {"pkg.mod.x_check__mutmut_1": "killed"},
+        modules=("src/pkg/mod.py",),
+        bar=0.90,
+    )
+    legacy["schema"] = (
+        "error_coupling_simulator.harness.mutation_batch_run.v2"
+    )
+
+    with pytest.raises(ValueError, match="unsupported mutation batch result schema"):
+        mutation.merge_mutation_batches((legacy,), bar=0.90)
+
+
+@pytest.mark.parametrize("field", ["bar", "kill_rate", "modules", "pass"])
+def test_merge_rejects_v3_batch_missing_required_score_field(field: str) -> None:
+    batch = _fake_raw_batch_result("required", bar=0.75)
+    del batch[field]
+
+    with pytest.raises(ValueError, match="required score fields"):
+        mutation.merge_mutation_batches((batch,), bar=0.75)
+
+
+def test_merge_rejects_v3_batch_with_incomplete_status_vector() -> None:
+    batch = _fake_raw_batch_result("statuses", bar=0.75)
+    del batch["status_counts"]["timeout"]
+
+    with pytest.raises(ValueError, match="status keys"):
+        mutation.merge_mutation_batches((batch,), bar=0.75)
+
+
+def test_merge_rejects_v3_batch_with_unknown_zero_status() -> None:
+    batch = _fake_raw_batch_result("unknown-status", bar=0.75)
+    batch["status_counts"]["invented"] = 0
+
+    with pytest.raises(ValueError, match="status keys"):
+        mutation.merge_mutation_batches((batch,), bar=0.75)
+
+
+@pytest.mark.parametrize("score_name", ["raw", "semantic"])
+def test_merge_rejects_unexpected_nested_score_field(score_name: str) -> None:
+    mutant = "pkg.extra.x_check__mutmut_1"
+    batch = mutation.score_mutation_rows(
+        {mutant: "killed"},
+        modules=("src/pkg/extra.py",),
+        bar=0.90,
+        classifications={
+            mutant: {"kind": "semantic", "criticality": "critical"}
+        },
+    )
+    batch["schema"] = mutation._MUTATION_BATCH_RUN_SCHEMA
+    batch[score_name]["forged"] = 0
+
+    with pytest.raises(ValueError, match="score fields"):
+        mutation.merge_mutation_batches((batch,), bar=0.90)
+
+
+@pytest.mark.parametrize("field", ["bar", "kill_rate", "modules"])
+def test_merge_rejects_semantic_batch_raw_alias_drift(field: str) -> None:
+    mutant = "pkg.alias.x_check__mutmut_1"
+    batch = mutation.score_mutation_rows(
+        {mutant: "killed"},
+        modules=("src/pkg/alias.py",),
+        bar=0.90,
+        classifications={
+            mutant: {"kind": "semantic", "criticality": "critical"}
+        },
+    )
+    batch["schema"] = mutation._MUTATION_BATCH_RUN_SCHEMA
+    batch[field] = {} if field == "modules" else 0.5
+
+    with pytest.raises(ValueError, match="raw aliases disagree"):
+        mutation.merge_mutation_batches((batch,), bar=0.90)
+
+
+@pytest.mark.parametrize("corruption", ["total_bool", "killed_text", "pass"])
+def test_merge_rejects_typed_semantic_batch_alias_drift(corruption: str) -> None:
+    mutant = "pkg.typed_alias.x_check__mutmut_1"
+    batch = mutation.score_mutation_rows(
+        {mutant: "killed"},
+        modules=("src/pkg/typed_alias.py",),
+        bar=0.90,
+        classifications={
+            mutant: {"kind": "semantic", "criticality": "critical"}
+        },
+    )
+    batch["schema"] = mutation._MUTATION_BATCH_RUN_SCHEMA
+    if corruption == "total_bool":
+        batch["total"] = True
+    elif corruption == "killed_text":
+        batch["killed"] = "1"
+    else:
+        batch["pass"] = not batch["semantic"]["pass"]
+
+    with pytest.raises(ValueError, match="raw aliases disagree|pass alias disagrees"):
+        mutation.merge_mutation_batches((batch,), bar=0.90)
+
+
+@pytest.mark.parametrize("corruption", ["declared", "killed", "not_killed"])
+def test_merge_rejects_forged_semantic_critical_evidence(corruption: str) -> None:
+    killed = "pkg.critical.x_check__mutmut_1"
+    survived = "pkg.critical.x_check__mutmut_2"
+    batch = mutation.score_mutation_rows(
+        {killed: "killed", survived: "survived"},
+        modules=("src/pkg/critical.py",),
+        bar=0.50,
+        classifications={
+            killed: {"kind": "semantic", "criticality": "critical"},
+            survived: {"kind": "semantic", "criticality": "critical"},
+        },
+    )
+    batch["schema"] = mutation._MUTATION_BATCH_RUN_SCHEMA
+    critical = batch["semantic"]["critical"]
+    if corruption == "declared":
+        critical["declared"] -= 1
+    elif corruption == "killed":
+        critical["killed"] -= 1
+    else:
+        critical["not_killed"] = []
+
+    with pytest.raises(ValueError, match="critical evidence"):
+        mutation.merge_mutation_batches((batch,), bar=0.50)
+
+
+@pytest.mark.parametrize("corruption", ["status", "bool_count", "identity"])
+def test_merge_rejects_malformed_semantic_critical_identity(corruption: str) -> None:
+    killed = "pkg.identity.x_check__mutmut_1"
+    survived = "pkg.identity.x_check__mutmut_2"
+    batch = mutation.score_mutation_rows(
+        {killed: "killed", survived: "survived"},
+        modules=("src/pkg/identity.py",),
+        bar=0.50,
+        classifications={
+            killed: {"kind": "semantic", "criticality": "critical"},
+            survived: {"kind": "semantic", "criticality": "critical"},
+        },
+    )
+    batch["schema"] = mutation._MUTATION_BATCH_RUN_SCHEMA
+    critical = batch["semantic"]["critical"]
+    if corruption == "status":
+        critical["not_killed"][0]["status"] = "timeout"
+    elif corruption == "bool_count":
+        critical["declared"] = True
+    else:
+        critical["not_killed"][0]["mutant"] = ""
+
+    with pytest.raises((TypeError, ValueError), match="critical evidence"):
+        mutation.merge_mutation_batches((batch,), bar=0.50)
+
+
+@pytest.mark.parametrize("corruption", ["status", "kind"])
+def test_merge_rejects_noncanonical_machine_exclusion_domain(
+    corruption: str,
+) -> None:
+    semantic = "pkg.machine.x_check__mutmut_1"
+    prose = "pkg.machine.x_check__mutmut_2"
+    batch = mutation.score_mutation_rows(
+        {semantic: "killed", prose: "survived"},
+        modules=("src/pkg/machine.py",),
+        bar=0.90,
+        classifications={
+            semantic: {"kind": "semantic", "criticality": "critical"},
+            prose: {
+                "kind": "exception_prose_noncontractual",
+                "criticality": "not_applicable",
+            },
+        },
+    )
+    batch["schema"] = mutation._MUTATION_BATCH_RUN_SCHEMA
+    machine = batch["machine_excluded"]
+    if corruption == "status":
+        machine["status_counts"]["invented"] = 0
+    else:
+        count = machine["kind_counts"].pop("exception_prose_noncontractual")
+        machine["kind_counts"]["renamed"] = count
+
+    with pytest.raises(ValueError, match="machine exclusion"):
+        mutation.merge_mutation_batches((batch,), bar=0.90)
+
+
+@pytest.mark.parametrize("field", ["total", "survived_status"])
+def test_merge_rejects_nonconserved_machine_exclusion(field: str) -> None:
+    semantic = "pkg.mod.x_check__mutmut_1"
+    prose = "pkg.mod.x_check__mutmut_2"
+    batch = mutation.score_mutation_rows(
+        {semantic: "killed", prose: "survived"},
+        modules=("src/pkg/mod.py",),
+        bar=0.90,
+        classifications={
+            semantic: {"kind": "semantic", "criticality": "critical"},
+            prose: {
+                "kind": "exception_prose_noncontractual",
+                "criticality": "not_applicable",
+            },
+        },
+    )
+    batch["schema"] = mutation._MUTATION_BATCH_RUN_SCHEMA
+    if field == "total":
+        batch["machine_excluded"]["total"] = 0
+    else:
+        batch["machine_excluded"]["status_counts"]["survived"] = 0
+
+    with pytest.raises(ValueError, match="machine exclusion is not conserved"):
+        mutation.merge_mutation_batches((batch,), bar=0.90)
 
 
 def test_direct_mutation_waits_for_suite_orchestration_lock(
@@ -1294,13 +1728,7 @@ def test_suite_retires_gpu_checkpoint_only_after_aggregate_publish(
         tag = Path(registry).stem
         if lane == "gpu_serial":
             checkpoint.write_text('{"resume": true}\n', encoding="utf-8")
-        return {
-            "tag": tag,
-            "total": 1,
-            "killed": 1,
-            "status_counts": {"killed": 1},
-            "pass": True,
-        }
+        return _fake_raw_batch_result(tag)
 
     def tracked_publish(destination: Path, payload: dict) -> None:
         assert checkpoint.is_file()
@@ -1332,13 +1760,7 @@ def test_suite_publish_failure_retains_gpu_checkpoint(
         tag = Path(registry).stem
         if lane == "gpu_serial":
             checkpoint.write_text('{"resume": true}\n', encoding="utf-8")
-        return {
-            "tag": tag,
-            "total": 1,
-            "killed": 1,
-            "status_counts": {"killed": 1},
-            "pass": True,
-        }
+        return _fake_raw_batch_result(tag)
 
     def fail_publish(_destination: Path, _payload: dict) -> None:
         assert checkpoint.is_file()
@@ -1392,13 +1814,7 @@ def test_suite_stops_before_gpu_if_cpu_batch_mutates_an_input(
     def drifting_run(registry, **_kwargs):
         calls.append(Path(registry).stem)
         source.write_text("VALUE = 999\n", encoding="utf-8")
-        return {
-            "tag": "cpu",
-            "total": 1,
-            "killed": 1,
-            "status_counts": {"killed": 1},
-            "pass": True,
-        }
+        return _fake_raw_batch_result("cpu")
 
     monkeypatch.setattr(mutation, "REPO", tmp_path)
     monkeypatch.setattr(mutation, "LOGDIR", logs)
@@ -1421,13 +1837,7 @@ def test_suite_rejects_final_snapshot_drift_before_publish(
     snapshots = iter(["stable", "stable", "stable", "stable", "stable", "drifted"])
 
     def fake_run(registry, **_kwargs):
-        return {
-            "tag": Path(registry).stem,
-            "total": 1,
-            "killed": 1,
-            "status_counts": {"killed": 1},
-            "pass": True,
-        }
+        return _fake_raw_batch_result(Path(registry).stem)
 
     monkeypatch.setattr(mutation, "REPO", tmp_path)
     monkeypatch.setattr(mutation, "LOGDIR", logs)
@@ -1454,13 +1864,7 @@ def test_suite_rechecks_snapshot_after_merge_before_publish(
     real_merge = mutation.merge_mutation_batches
 
     def fake_run(registry, **_kwargs):
-        return {
-            "tag": Path(registry).stem,
-            "total": 1,
-            "killed": 1,
-            "status_counts": {"killed": 1},
-            "pass": True,
-        }
+        return _fake_raw_batch_result(Path(registry).stem)
 
     def drifting_merge(batches, *, bar):
         result = real_merge(batches, bar=bar)
@@ -1497,13 +1901,7 @@ def test_suite_lock_prevents_failed_second_run_from_leaving_first_pass(
             if batch == "cpu":
                 a_entered.set()
                 assert allow_a.wait(timeout=2.0)
-            return {
-                "tag": batch,
-                "total": 1,
-                "killed": 1,
-                "status_counts": {"killed": 1},
-                "pass": True,
-            }
+            return _fake_raw_batch_result(batch)
         b_entered.set()
         raise RuntimeError("second suite forced failure")
 
@@ -1598,6 +1996,17 @@ def test_exception_prose_classifier_accepts_only_outer_text_replacements(
     )
 
 
+def test_exception_prose_classifier_accepts_one_static_fstring_segment() -> None:
+    original = ast.parse(
+        "def f(value):\n    raise ValueError(f'bad {value!r} suffix')\n"
+    ).body[0]
+    mutant = ast.parse(
+        "def g(value):\n    raise ValueError(f'XXbad XX{value!r} suffix')\n"
+    ).body[0]
+
+    assert mutation._is_exception_prose_only(original, mutant)
+
+
 @pytest.mark.parametrize(
     ("original", "mutant"),
     [
@@ -1620,6 +2029,18 @@ def test_exception_prose_classifier_accepts_only_outer_text_replacements(
         (
             "def f(tensor):\n    raise RuntimeError(f'bad {tuple(tensor.shape)}')\n",
             "def g(tensor):\n    raise RuntimeError(f'bad {tuple(None)}')\n",
+        ),
+        (
+            "def f(value):\n    raise RuntimeError(f'bad {value!r}')\n",
+            "def g(value):\n    raise RuntimeError(f'bad {value!s}')\n",
+        ),
+        (
+            "def f(value):\n    raise RuntimeError(f'bad {value:.2f}')\n",
+            "def g(value):\n    raise RuntimeError(f'bad {value:.3f}')\n",
+        ),
+        (
+            "def f(value):\n    raise RuntimeError(f'bad {value} suffix')\n",
+            "def g(value):\n    raise RuntimeError(f'XXbad XX{value}XX suffixXX')\n",
         ),
         (
             "def f(value):\n    raise ValueError(('bad', value))\n",
@@ -1716,8 +2137,49 @@ def test_semantic_score_keeps_raw_informational_and_excludes_prose_survivor() ->
     assert score["semantic"]["kill_rate"] == 1.0
     assert score["semantic"]["excluded_counts"] == {
         "exception_prose_noncontractual": 1,
-        "reviewed_equivalent": 0,
     }
+    assert score["machine_excluded"]["total"] == 1
+    assert score["pass"] is True
+
+
+def test_machine_exclusion_is_status_independent_and_exactly_conserved() -> None:
+    semantic = "pkg.mod.x_check__mutmut_1"
+    survived_prose = "pkg.mod.x_check__mutmut_2"
+    killed_prose = "pkg.mod.x_check__mutmut_3"
+    rows = {
+        semantic: "killed",
+        survived_prose: "survived",
+        killed_prose: "killed",
+    }
+    classifications = {
+        semantic: {"kind": "semantic", "criticality": "critical"},
+        survived_prose: {
+            "kind": "exception_prose_noncontractual",
+            "criticality": "not_applicable",
+        },
+        killed_prose: {
+            "kind": "exception_prose_noncontractual",
+            "criticality": "not_applicable",
+        },
+    }
+
+    score = mutation.score_mutation_rows(
+        rows,
+        modules=("src/pkg/mod.py",),
+        bar=0.90,
+        classifications=classifications,
+    )
+
+    excluded = score["machine_excluded"]
+    assert excluded["total"] == 2
+    assert excluded["status_counts"]["killed"] == 1
+    assert excluded["status_counts"]["survived"] == 1
+    assert score["raw"]["total"] == score["semantic"]["total"] + excluded["total"]
+    for status, raw_count in score["raw"]["status_counts"].items():
+        assert raw_count == (
+            score["semantic"]["status_counts"][status]
+            + excluded["status_counts"][status]
+        )
     assert score["pass"] is True
 
 
@@ -1746,7 +2208,7 @@ def test_semantic_score_fails_closed_on_unreviewed_critical_survivor() -> None:
     assert score["pass"] is False
 
 
-def test_semantic_score_allows_only_explicit_reviewed_noncritical_headroom() -> None:
+def test_semantic_score_rejects_human_reviewed_noncritical_headroom() -> None:
     rows = {
         **{f"pkg.mod.x_check__mutmut_{index}": "killed" for index in range(1, 10)},
         "pkg.mod.x_check__mutmut_10": "survived",
@@ -1760,36 +2222,35 @@ def test_semantic_score_allows_only_explicit_reviewed_noncritical_headroom() -> 
         "criticality": "reviewed_noncritical",
     }
 
-    score = mutation.score_mutation_rows(
-        rows,
-        modules=("src/pkg/mod.py",),
-        bar=0.90,
-        classifications=classifications,
-    )
-
-    assert score["semantic"]["kill_rate"] == 0.9
-    assert score["semantic"]["critical"]["not_killed"] == []
-    assert score["pass"] is True
-
-
-def test_semantic_score_rejects_killed_exclusion_and_identity_drift() -> None:
-    mutant = "pkg.mod.x_check__mutmut_1"
-    with pytest.raises(ValueError, match="excluded mutant must have survived"):
+    with pytest.raises(ValueError, match="invalid semantic classification"):
         mutation.score_mutation_rows(
-            {mutant: "killed"},
+            rows,
             modules=("src/pkg/mod.py",),
             bar=0.90,
-            classifications={
-                mutant: {
-                    "kind": "exception_prose_noncontractual",
-                    "criticality": "not_applicable",
-                }
-            },
+            classifications=classifications,
         )
+
+
+def test_semantic_score_accepts_killed_machine_exclusion_and_rejects_identity_drift() -> None:
+    semantic = "pkg.mod.x_check__mutmut_1"
+    excluded = "pkg.mod.x_check__mutmut_2"
+    score = mutation.score_mutation_rows(
+        {semantic: "killed", excluded: "killed"},
+        modules=("src/pkg/mod.py",),
+        bar=0.90,
+        classifications={
+            semantic: {"kind": "semantic", "criticality": "critical"},
+            excluded: {
+                "kind": "exception_prose_noncontractual",
+                "criticality": "not_applicable",
+            },
+        },
+    )
+    assert score["machine_excluded"]["status_counts"]["killed"] == 1
 
     with pytest.raises(ValueError, match="classification identities"):
         mutation.score_mutation_rows(
-            {mutant: "survived"},
+            {semantic: "survived"},
             modules=("src/pkg/mod.py",),
             bar=0.90,
             classifications={},
@@ -1798,8 +2259,8 @@ def test_semantic_score_rejects_killed_exclusion_and_identity_drift() -> None:
 
 def _semantic_disposition_catalog(mutant: str) -> dict:
     return {
-        "schema": "error_coupling_simulator.harness.semantic_mutant_catalog.v1",
-        "classifier_policy": "conservative_exception_prose_ast.v1",
+        "schema": "error_coupling_simulator.harness.semantic_mutant_catalog.v2",
+        "classifier_policy": "conservative_exception_prose_ast.v2",
         "python_version": "3.test",
         "modules": {
             "src/pkg/mod.py": {
@@ -1836,9 +2297,9 @@ def test_semantic_disposition_authenticates_fingerprint_and_evidence(tmp_path) -
             {
                 "schema": (
                     "error_coupling_simulator.harness."
-                    "mutation_semantic_dispositions.v1"
+                    "mutation_semantic_dispositions.v2"
                 ),
-                "classifier_policy": "conservative_exception_prose_ast.v1",
+                "classifier_policy": "conservative_exception_prose_ast.v2",
                 "reviewed": [
                     {
                         "mutant": mutant,
@@ -1862,13 +2323,16 @@ def test_semantic_disposition_authenticates_fingerprint_and_evidence(tmp_path) -
     )
 
     assert classifications[mutant]["kind"] == "semantic"
-    assert classifications[mutant]["criticality"] == "reviewed_noncritical"
+    assert classifications[mutant]["criticality"] == "critical"
+    assert classifications[mutant]["review"]["disposition"] == (
+        "reviewed_noncritical"
+    )
     assert authentication["reviewed_count"] == 1
     assert authentication["path"] == "tests/_support/dispositions.json"
     assert len(authentication["sha256"]) == 64
 
 
-def test_reviewed_noncontractual_disposition_uses_the_prose_exclusion(
+def test_reviewed_noncontractual_disposition_is_annotation_only(
     tmp_path,
 ) -> None:
     mutant = "pkg.mod.x_check__mutmut_1"
@@ -1881,9 +2345,9 @@ def test_reviewed_noncontractual_disposition_uses_the_prose_exclusion(
             {
                 "schema": (
                     "error_coupling_simulator.harness."
-                    "mutation_semantic_dispositions.v1"
+                    "mutation_semantic_dispositions.v2"
                 ),
-                "classifier_policy": "conservative_exception_prose_ast.v1",
+                "classifier_policy": "conservative_exception_prose_ast.v2",
                 "reviewed": [
                     {
                         "mutant": mutant,
@@ -1909,12 +2373,67 @@ def test_reviewed_noncontractual_disposition_uses_the_prose_exclusion(
         repo=tmp_path,
     )
 
-    assert classifications[mutant]["kind"] == "exception_prose_noncontractual"
-    assert classifications[mutant]["criticality"] == "not_applicable"
+    assert classifications[mutant]["kind"] == "semantic"
+    assert classifications[mutant]["criticality"] == "critical"
     assert classifications[mutant]["review"]["disposition"] == (
         "reviewed_noncontractual"
     )
     assert authentication["reviewed_count"] == 1
+
+
+def test_v2_human_annotation_never_changes_machine_classification(
+    tmp_path: Path,
+) -> None:
+    mutant = "pkg.mod.x_check__mutmut_1"
+    evidence = tmp_path / "tests" / "test_mod.py"
+    evidence.parent.mkdir(parents=True)
+    evidence.write_text("def test_witness(): pass\n", encoding="utf-8")
+    path = tmp_path / "annotations.json"
+    path.write_text(
+        json.dumps(
+            {
+                "schema": (
+                    "error_coupling_simulator.harness."
+                    "mutation_semantic_dispositions.v2"
+                ),
+                "classifier_policy": "conservative_exception_prose_ast.v2",
+                "reviewed": [
+                    {
+                        "mutant": mutant,
+                        "mutation_diff_sha256": "f" * 64,
+                        "disposition": "reviewed_noncontractual",
+                        "reviewer": "restricted-mps-review",
+                        "rationale": "Human annotation only; no scoring authority.",
+                        "evidence_locator": "tests/test_mod.py::test_witness",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    catalog = _semantic_disposition_catalog(mutant)
+    machine_classification = json.loads(
+        json.dumps(catalog["classifications"][mutant])
+    )
+
+    classifications, authentication = mutation.authenticate_semantic_dispositions(
+        path,
+        rows={mutant: "survived"},
+        catalog=catalog,
+        repo=tmp_path,
+    )
+
+    assert {
+        key: value
+        for key, value in classifications[mutant].items()
+        if key != "review"
+    } == machine_classification
+    assert classifications[mutant]["kind"] == "semantic"
+    assert classifications[mutant]["criticality"] == "critical"
+    assert classifications[mutant]["review"]["disposition"] == (
+        "reviewed_noncontractual"
+    )
+    assert authentication["applied_reviewed_count"] == 1
 
 
 def test_global_disposition_scopes_reviews_to_the_current_batch_catalog(
@@ -1942,9 +2461,9 @@ def test_global_disposition_scopes_reviews_to_the_current_batch_catalog(
             {
                 "schema": (
                     "error_coupling_simulator.harness."
-                    "mutation_semantic_dispositions.v1"
+                    "mutation_semantic_dispositions.v2"
                 ),
-                "classifier_policy": "conservative_exception_prose_ast.v1",
+                "classifier_policy": "conservative_exception_prose_ast.v2",
                 "reviewed": [review(mutant, "f" * 64), review(other, "e" * 64)],
             }
         ),
@@ -1958,7 +2477,8 @@ def test_global_disposition_scopes_reviews_to_the_current_batch_catalog(
         repo=tmp_path,
     )
 
-    assert classifications[mutant]["kind"] == "reviewed_equivalent"
+    assert classifications[mutant]["kind"] == "semantic"
+    assert classifications[mutant]["criticality"] == "critical"
     assert authentication["reviewed_count"] == 2
     assert authentication["applied_reviewed_count"] == 1
     assert authentication["out_of_scope_reviewed_count"] == 1
@@ -1978,9 +2498,9 @@ def test_global_disposition_rejects_unknown_mutant_in_owned_scope(tmp_path) -> N
             {
                 "schema": (
                     "error_coupling_simulator.harness."
-                    "mutation_semantic_dispositions.v1"
+                    "mutation_semantic_dispositions.v2"
                 ),
-                "classifier_policy": "conservative_exception_prose_ast.v1",
+                "classifier_policy": "conservative_exception_prose_ast.v2",
                 "reviewed": [
                     {
                         "mutant": stale,
@@ -2016,9 +2536,9 @@ def test_global_disposition_validates_foreign_rows_before_deferring(tmp_path) ->
             {
                 "schema": (
                     "error_coupling_simulator.harness."
-                    "mutation_semantic_dispositions.v1"
+                    "mutation_semantic_dispositions.v2"
                 ),
-                "classifier_policy": "conservative_exception_prose_ast.v1",
+                "classifier_policy": "conservative_exception_prose_ast.v2",
                 "reviewed": [
                     {
                         "mutant": "pkg.other.x_check__mutmut_1",
@@ -2054,9 +2574,9 @@ def test_suite_disposition_partition_requires_every_review_exactly_once(
             {
                 "schema": (
                     "error_coupling_simulator.harness."
-                    "mutation_semantic_dispositions.v1"
+                    "mutation_semantic_dispositions.v2"
                 ),
-                "classifier_policy": "conservative_exception_prose_ast.v1",
+                "classifier_policy": "conservative_exception_prose_ast.v2",
                 "reviewed": [
                     {"mutant": first},
                     {"mutant": second},
@@ -2071,11 +2591,11 @@ def test_suite_disposition_partition_requires_every_review_exactly_once(
         return {
             "schema": (
                 "error_coupling_simulator.harness."
-                "mutation_semantic_dispositions.v1"
+                "mutation_semantic_dispositions.v2"
             ),
             "path": "dispositions.json",
             "sha256": digest,
-            "classifier_policy": "conservative_exception_prose_ast.v1",
+            "classifier_policy": "conservative_exception_prose_ast.v2",
             "reviewed_count": 2,
             "applied_reviewed_count": 1,
             "out_of_scope_reviewed_count": 1,
@@ -2130,9 +2650,9 @@ def test_suite_disposition_partition_rejects_batch_policy_mismatch(
             {
                 "schema": (
                     "error_coupling_simulator.harness."
-                    "mutation_semantic_dispositions.v1"
+                    "mutation_semantic_dispositions.v2"
                 ),
-                "classifier_policy": "conservative_exception_prose_ast.v1",
+                "classifier_policy": "conservative_exception_prose_ast.v2",
                 "reviewed": [review],
             }
         ),
@@ -2144,7 +2664,7 @@ def test_suite_disposition_partition_rejects_batch_policy_mismatch(
         "disposition_authentication": {
             "schema": (
                 "error_coupling_simulator.harness."
-                "mutation_semantic_dispositions.v1"
+                "mutation_semantic_dispositions.v2"
             ),
             "path": "dispositions.json",
             "sha256": digest,
@@ -2191,9 +2711,9 @@ def test_suite_disposition_partition_rejects_scope_catalog_mismatch(
             {
                 "schema": (
                     "error_coupling_simulator.harness."
-                    "mutation_semantic_dispositions.v1"
+                    "mutation_semantic_dispositions.v2"
                 ),
-                "classifier_policy": "conservative_exception_prose_ast.v1",
+                "classifier_policy": "conservative_exception_prose_ast.v2",
                 "reviewed": [review],
             }
         ),
@@ -2206,11 +2726,11 @@ def test_suite_disposition_partition_rejects_scope_catalog_mismatch(
         "disposition_authentication": {
             "schema": (
                 "error_coupling_simulator.harness."
-                "mutation_semantic_dispositions.v1"
+                "mutation_semantic_dispositions.v2"
             ),
             "path": "dispositions.json",
             "sha256": digest,
-            "classifier_policy": "conservative_exception_prose_ast.v1",
+            "classifier_policy": "conservative_exception_prose_ast.v2",
             "reviewed_count": 1,
             "applied_reviewed_count": 1,
             "out_of_scope_reviewed_count": 0,
@@ -2270,9 +2790,9 @@ def test_semantic_disposition_rejects_stale_or_unauditable_review(
             {
                 "schema": (
                     "error_coupling_simulator.harness."
-                    "mutation_semantic_dispositions.v1"
+                    "mutation_semantic_dispositions.v2"
                 ),
-                "classifier_policy": "conservative_exception_prose_ast.v1",
+                "classifier_policy": "conservative_exception_prose_ast.v2",
                 "reviewed": [row],
             }
         ),
@@ -2624,6 +3144,107 @@ def _prepared_gpu_plan(
         "resumed_workers": [],
         "raw_plan_sha256_history": ["b" * 64],
     }
+
+
+def test_gpu_authenticated_timeout_kill_is_checkpointed_and_resumed(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    harness = tmp_path / "tests" / "harness"
+    harness.mkdir(parents=True)
+    (harness / "mutation.py").write_text("# harness\n", encoding="utf-8")
+    (tmp_path / "mutants").mkdir()
+    policy = _gpu_test_execution_policy(1)
+    prepared = _prepared_gpu_plan(1, policy=policy)
+    checkpoint = tmp_path / "checkpoint.json"
+    calls: list[str] = []
+
+    def fake_run(command, **kwargs):
+        command = list(command)
+        mutant = kwargs["env"]["MUTANT_UNDER_TEST"]
+        calls.append(mutant)
+        Path(kwargs["log_path"]).write_text(
+            f"mutant={mutant}\n",
+            encoding="utf-8",
+        )
+        sentinel_path = Path(command[command.index("--run-fresh-pytest") + 1])
+        exit_code = 0 if mutant == "" else 1
+        _write_fake_pytest_sentinel(sentinel_path, exit_code=exit_code)
+        if mutant == "":
+            return SimpleNamespace(
+                ok=True,
+                returncode=0,
+                timed_out=False,
+                group_cleanup_verified=True,
+            )
+        return SimpleNamespace(
+            ok=False,
+            returncode=-15,
+            timed_out=True,
+            group_cleanup_verified=True,
+        )
+
+    monkeypatch.setattr(mutation, "REPO", tmp_path)
+    monkeypatch.setattr(mutation.proc, "run", fake_run)
+    rows, _evidence = mutation._run_gpu_fresh_exec(
+        tag="gpu",
+        env={"CUDA_VISIBLE_DEVICES": "0", "ECS_GPU_SLOT": "0"},
+        timeout=None,
+        log=tmp_path / "mutation.log",
+        plan_path=tmp_path / "plan.json",
+        checkpoint_path=checkpoint,
+        input_snapshot_sha256="snapshot",
+        execution_policy=policy,
+        runtime_fingerprint=_GPU_TEST_RUNTIME_FINGERPRINT,
+        timeout_multiplier=15.0,
+        timeout_constant=1.0,
+        prepared=prepared,
+    )
+
+    assert calls == ["", "pkg.mod.x_value__mutmut_1"]
+    assert rows == {"pkg.mod.x_value__mutmut_1": "killed"}
+    checkpoint_doc = json.loads(checkpoint.read_text(encoding="utf-8"))
+    worker = checkpoint_doc["completed_prefix"][0]
+    assert worker["status"] == "killed"
+    assert worker["timed_out"] is True
+    assert worker["returncode"] == -15
+    assert worker["completion_sentinel"]["pytest_exit_code"] == 1
+
+    loaded_rows, loaded_workers, history = mutation._load_gpu_checkpoint(
+        checkpoint,
+        tag="gpu",
+        input_snapshot_sha256="snapshot",
+        plan=prepared["plan"],
+        plan_identity_sha256=prepared["plan_identity_sha256"],
+        raw_plan_sha256=prepared["plan_sha256"],
+        execution_policy=policy,
+        runtime_fingerprint=_GPU_TEST_RUNTIME_FINGERPRINT,
+    )
+    resumed = {
+        **prepared,
+        "rows": loaded_rows,
+        "resumed_workers": loaded_workers,
+        "raw_plan_sha256_history": history,
+    }
+    calls.clear()
+    resumed_rows, resumed_evidence = mutation._run_gpu_fresh_exec(
+        tag="gpu",
+        env={"CUDA_VISIBLE_DEVICES": "0", "ECS_GPU_SLOT": "0"},
+        timeout=None,
+        log=tmp_path / "mutation.log",
+        plan_path=tmp_path / "plan.json",
+        checkpoint_path=checkpoint,
+        input_snapshot_sha256="snapshot",
+        execution_policy=policy,
+        runtime_fingerprint=_GPU_TEST_RUNTIME_FINGERPRINT,
+        timeout_multiplier=15.0,
+        timeout_constant=1.0,
+        prepared=resumed,
+    )
+
+    assert calls == [""]
+    assert resumed_rows == rows
+    assert resumed_evidence["checkpoint"]["resumed_prefix_count"] == 1
 
 
 def test_gpu_mutant_worker_authenticates_only_a_durable_log(
@@ -3214,6 +3835,32 @@ def _authenticated_gpu_checkpoint_fixture(tmp_path: Path) -> tuple[dict, dict]:
         ],
     }
     return plan, checkpoint
+
+
+def test_gpu_checkpoint_resumes_authenticated_resource_clean_timeout_kill(
+    tmp_path: Path,
+) -> None:
+    plan, checkpoint = _authenticated_gpu_checkpoint_fixture(tmp_path)
+    checkpoint["completed_prefix"][0]["timed_out"] = True
+    checkpoint["completed_prefix"][0]["returncode"] = -15
+    checkpoint_path = tmp_path / "checkpoint.json"
+    checkpoint_path.write_text(json.dumps(checkpoint), encoding="utf-8")
+
+    rows, workers, history = mutation._load_gpu_checkpoint(
+        checkpoint_path,
+        tag="gpu",
+        input_snapshot_sha256="snapshot",
+        plan=plan,
+        plan_identity_sha256=mutation._fresh_exec_plan_identity(plan),
+        raw_plan_sha256="b" * 64,
+        execution_policy=_GPU_TEST_EXECUTION_POLICY,
+        runtime_fingerprint=_GPU_TEST_RUNTIME_FINGERPRINT,
+    )
+
+    assert rows == {"pkg.mod.x_value__mutmut_1": "killed"}
+    assert workers[0]["timed_out"] is True
+    assert workers[0]["status"] == "killed"
+    assert history == ["a" * 64, "b" * 64]
 
 
 @pytest.mark.parametrize(

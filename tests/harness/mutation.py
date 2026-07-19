@@ -57,9 +57,26 @@ _MUTMUT_RESULT = re.compile(
     + r")\s*$"
 )
 _SEMANTIC_CATALOG_SCHEMA = (
-    "error_coupling_simulator.harness.semantic_mutant_catalog.v1"
+    "error_coupling_simulator.harness.semantic_mutant_catalog.v2"
 )
-_SEMANTIC_CLASSIFIER_POLICY = "conservative_exception_prose_ast.v1"
+_SEMANTIC_CLASSIFIER_POLICY = "conservative_exception_prose_ast.v2"
+_SEMANTIC_DISPOSITION_SCHEMA = (
+    "error_coupling_simulator.harness.mutation_semantic_dispositions.v2"
+)
+_MUTATION_BATCH_RUN_SCHEMA = (
+    "error_coupling_simulator.harness.mutation_batch_run.v3"
+)
+_MUTATION_SUITE_RUN_SCHEMA = (
+    "error_coupling_simulator.harness.mutation_suite_run.v3"
+)
+_MUTATION_SCORE_FIELDS = frozenset(
+    {"total", "killed", "status_counts", "kill_rate", "bar", "modules", "pass"}
+)
+_SEMANTIC_SCORE_FIELDS = _MUTATION_SCORE_FIELDS | {
+    "excluded_counts",
+    "excluded_by_status",
+    "critical",
+}
 _EXCEPTION_PROSE_TYPES = {"RuntimeError", "TypeError", "ValueError"}
 _MUTMUT_NUMERIC_VARIANT = re.compile(r"^.+__mutmut_[0-9]+$")
 _GPU_BOUND_ENVIRONMENT_SCHEMA = (
@@ -186,6 +203,33 @@ def _recognized_exception_text_mutation(
         return isinstance(original, (ast.Constant, ast.JoinedStr)) and (
             not isinstance(original, ast.Constant) or isinstance(original.value, str)
         )
+    if isinstance(original, ast.JoinedStr) and isinstance(mutant, ast.JoinedStr):
+        if len(original.values) != len(mutant.values):
+            return False
+        changed_static_segments = 0
+        for original_part, mutant_part in zip(
+            original.values,
+            mutant.values,
+            strict=True,
+        ):
+            if ast.dump(original_part, include_attributes=False) == ast.dump(
+                mutant_part,
+                include_attributes=False,
+            ):
+                continue
+            if not (
+                isinstance(original_part, ast.Constant)
+                and isinstance(original_part.value, str)
+                and isinstance(mutant_part, ast.Constant)
+                and isinstance(mutant_part.value, str)
+                and _recognized_exception_text_mutation(
+                    original_part,
+                    mutant_part,
+                )
+            ):
+                return False
+            changed_static_segments += 1
+        return changed_static_segments == 1
     if not (
         isinstance(original, ast.Constant)
         and isinstance(original.value, str)
@@ -777,17 +821,14 @@ def score_mutation_rows(
 
     allowed = {
         ("exception_prose_noncontractual", "not_applicable"),
-        ("reviewed_equivalent", "not_applicable"),
         ("semantic", "critical"),
-        ("semantic", "reviewed_noncritical"),
     }
-    excluded_kinds = {
-        "exception_prose_noncontractual",
-        "reviewed_equivalent",
-    }
+    excluded_kinds = {"exception_prose_noncontractual"}
     semantic_rows: dict[str, str] = {}
     excluded_counts = {kind: 0 for kind in sorted(excluded_kinds)}
-    excluded_by_status: dict[str, int] = {}
+    excluded_by_status = {
+        status: 0 for status in _MUTMUT_STATUS_TO_KEY.values()
+    }
     critical_not_killed: list[dict[str, str]] = []
     critical_declared = 0
     critical_killed = 0
@@ -803,13 +844,8 @@ def score_mutation_rows(
                 f"kind={kind!r}, criticality={criticality!r}"
             )
         if kind in excluded_kinds:
-            if status != "survived":
-                raise ValueError(
-                    "excluded mutant must have survived: "
-                    f"{mutant} has status {status}"
-                )
             excluded_counts[str(kind)] += 1
-            excluded_by_status[status] = excluded_by_status.get(status, 0) + 1
+            excluded_by_status[status] += 1
             continue
         semantic_rows[mutant] = status
         if criticality == "critical":
@@ -848,6 +884,14 @@ def score_mutation_rows(
         status: sum(value == status for value in semantic_rows.values())
         for status in _MUTMUT_STATUS_TO_KEY.values()
     }
+    machine_excluded_total = sum(excluded_counts.values())
+    if total != semantic_total + machine_excluded_total:
+        raise ValueError("raw/semantic/machine-excluded totals are not conserved")
+    for status, raw_count in status_counts.items():
+        if raw_count != semantic_status_counts[status] + excluded_by_status[status]:
+            raise ValueError(
+                "raw/semantic/machine-excluded status counts are not conserved"
+            )
     critical_not_killed.sort(key=lambda item: item["mutant"])
     semantic_pass = (
         semantic_rate >= bar
@@ -870,10 +914,16 @@ def score_mutation_rows(
         "modules": semantic_modules,
         "pass": semantic_pass,
     }
+    machine_excluded = {
+        "total": machine_excluded_total,
+        "status_counts": excluded_by_status,
+        "kind_counts": excluded_counts,
+    }
     return {
         **raw,
         "raw": raw,
         "semantic": semantic,
+        "machine_excluded": machine_excluded,
         "pass": semantic_pass,
     }
 
@@ -1158,6 +1208,91 @@ def input_snapshot(
     return digest.hexdigest()
 
 
+def _validate_mutation_score_summary(
+    score: object,
+    *,
+    bar: float,
+    context: str,
+    validate_pass: bool = True,
+    exact_fields: frozenset[str] | set[str] | None = None,
+) -> None:
+    if not isinstance(score, dict):
+        raise TypeError(f"{context} score must be an object")
+    required_fields = _MUTATION_SCORE_FIELDS
+    missing_fields = required_fields - set(score)
+    if missing_fields:
+        raise ValueError(
+            f"{context} required score fields are missing: {sorted(missing_fields)}"
+        )
+    if exact_fields is not None and set(score) != set(exact_fields):
+        raise ValueError(f"{context} score fields do not match the v3 schema")
+    total = score.get("total")
+    killed = score.get("killed")
+    if (
+        type(total) is not int
+        or type(killed) is not int
+        or total <= 0
+        or killed < 0
+        or killed > total
+    ):
+        raise ValueError(f"{context} score has invalid counts")
+    status_counts = score.get("status_counts")
+    if not isinstance(status_counts, dict) or any(
+        type(value) is not int or value < 0 for value in status_counts.values()
+    ):
+        raise TypeError(f"{context} status counts are invalid")
+    expected_status_keys = set(_MUTMUT_STATUS_TO_KEY.values())
+    if set(status_counts) != expected_status_keys:
+        raise ValueError(f"{context} status keys do not match the normalized domain")
+    if sum(status_counts.values()) != total:
+        raise ValueError(f"{context} status counts do not equal total")
+    if int(status_counts.get("killed", 0)) != killed:
+        raise ValueError(f"{context} killed count disagrees with status counts")
+    if score["bar"] != bar:
+        raise ValueError(f"{context} kill-rate bar mismatch")
+    expected_rate = round(killed / total, 4)
+    if score["kill_rate"] != expected_rate:
+        raise ValueError(f"{context} kill rate disagrees with counts")
+
+    modules = score.get("modules")
+    expected_modules_pass = True
+    if not isinstance(modules, dict) or not modules:
+        raise ValueError(f"{context} modules must be a nonempty object")
+    module_total = 0
+    module_killed = 0
+    for module, module_score in modules.items():
+        if not isinstance(module, str) or not isinstance(module_score, dict):
+            raise TypeError(f"{context} module score is malformed")
+        current_total = module_score.get("total")
+        current_killed = module_score.get("killed")
+        if (
+            type(current_total) is not int
+            or type(current_killed) is not int
+            or current_total <= 0
+            or current_killed < 0
+            or current_killed > current_total
+        ):
+            raise ValueError(f"{context} module score has invalid counts")
+        current_rate = round(current_killed / current_total, 4)
+        current_pass = current_killed / current_total >= bar
+        if (
+            module_score.get("bar") != bar
+            or module_score.get("kill_rate") != current_rate
+            or module_score.get("pass") is not current_pass
+        ):
+            raise ValueError(f"{context} module score disagrees with counts")
+        module_total += current_total
+        module_killed += current_killed
+        expected_modules_pass = expected_modules_pass and current_pass
+    if module_total != total or module_killed != killed:
+        raise ValueError(f"{context} module counts do not equal batch counts")
+    expected_pass = killed / total >= bar and expected_modules_pass
+    if type(score["pass"]) is not bool:
+        raise TypeError(f"{context} pass must be boolean")
+    if validate_pass and score["pass"] is not expected_pass:
+        raise ValueError(f"{context} pass disagrees with counts")
+
+
 def merge_mutation_batches(batches: tuple[dict, ...], *, bar: float) -> dict:
     """Merge batch scores with mutant-count weighting and no masking of a failed batch."""
 
@@ -1168,6 +1303,66 @@ def merge_mutation_batches(batches: tuple[dict, ...], *, bar: float) -> dict:
     )
     if not batches:
         raise ValueError("mutation suite requires at least one batch")
+    for index, batch in enumerate(batches):
+        if batch.get("schema") != _MUTATION_BATCH_RUN_SCHEMA:
+            raise ValueError("unsupported mutation batch result schema")
+        raw_score = batch.get("raw") if "semantic" in batch else batch
+        _validate_mutation_score_summary(
+            raw_score,
+            bar=bar,
+            context=f"mutation batch {index} raw",
+            exact_fields=_MUTATION_SCORE_FIELDS if "semantic" in batch else None,
+        )
+        if "semantic" in batch:
+            semantic_score = batch.get("semantic")
+            _validate_mutation_score_summary(
+                semantic_score,
+                bar=bar,
+                context=f"mutation batch {index} semantic",
+                validate_pass=False,
+                exact_fields=_SEMANTIC_SCORE_FIELDS,
+            )
+            machine_excluded = batch.get("machine_excluded")
+            if not isinstance(machine_excluded, dict) or set(machine_excluded) != {
+                "total",
+                "status_counts",
+                "kind_counts",
+            }:
+                raise ValueError("mutation batch machine exclusion is malformed")
+            excluded_total = machine_excluded["total"]
+            excluded_status_counts = machine_excluded["status_counts"]
+            excluded_kind_counts = machine_excluded["kind_counts"]
+            if (
+                type(excluded_total) is not int
+                or excluded_total < 0
+                or not isinstance(excluded_status_counts, dict)
+                or not isinstance(excluded_kind_counts, dict)
+                or set(excluded_status_counts)
+                != set(_MUTMUT_STATUS_TO_KEY.values())
+                or set(excluded_kind_counts)
+                != {"exception_prose_noncontractual"}
+                or any(
+                    type(value) is not int or value < 0
+                    for value in (
+                        *excluded_status_counts.values(),
+                        *excluded_kind_counts.values(),
+                    )
+                )
+                or sum(excluded_status_counts.values()) != excluded_total
+                or sum(excluded_kind_counts.values()) != excluded_total
+                or raw_score["total"] != semantic_score["total"] + excluded_total
+            ):
+                raise ValueError("mutation batch machine exclusion is not conserved")
+            all_statuses = set(raw_score["status_counts"]) | set(
+                semantic_score["status_counts"]
+            ) | set(excluded_status_counts)
+            if any(
+                int(raw_score["status_counts"].get(status, 0))
+                != int(semantic_score["status_counts"].get(status, 0))
+                + int(excluded_status_counts.get(status, 0))
+                for status in all_statuses
+            ):
+                raise ValueError("mutation batch machine exclusion is not conserved")
     total = sum(int(batch["total"]) for batch in batches)
     killed = sum(int(batch["killed"]) for batch in batches)
     if total <= 0 or killed < 0 or killed > total:
@@ -1215,12 +1410,24 @@ def merge_mutation_batches(batches: tuple[dict, ...], *, bar: float) -> dict:
         semantic = batch.get("semantic")
         if not isinstance(raw, dict) or not isinstance(semantic, dict):
             raise TypeError("semantic mutation batch requires raw and semantic objects")
-        if (
-            int(raw.get("total", -1)) != int(batch["total"])
-            or int(raw.get("killed", -1)) != int(batch["killed"])
-            or raw.get("status_counts") != batch.get("status_counts")
+        if any(
+            type(raw.get(field)) is not type(batch.get(field))
+            or raw.get(field) != batch.get(field)
+            for field in (
+                "total",
+                "killed",
+                "status_counts",
+                "kill_rate",
+                "bar",
+                "modules",
+            )
         ):
             raise ValueError("semantic batch raw aliases disagree")
+        if (
+            type(batch.get("pass")) is not bool
+            or batch["pass"] is not semantic.get("pass")
+        ):
+            raise ValueError("semantic batch pass alias disagrees")
         batch_semantic_total = int(semantic.get("total", -1))
         batch_semantic_killed = int(semantic.get("killed", -1))
         if (
@@ -1244,20 +1451,69 @@ def merge_mutation_batches(batches: tuple[dict, ...], *, bar: float) -> dict:
         if overlap:
             raise ValueError(f"semantic mutation modules overlap: {sorted(overlap)}")
         semantic_modules.update(batch_modules)
-        excluded = semantic.get("excluded_counts")
-        excluded_by_status = semantic.get("excluded_by_status")
+        machine_excluded = batch["machine_excluded"]
+        excluded = machine_excluded["kind_counts"]
+        excluded_by_status = machine_excluded["status_counts"]
         if not isinstance(excluded, dict) or not isinstance(excluded_by_status, dict):
             raise TypeError("semantic mutation exclusions must be objects")
+        if (
+            semantic.get("excluded_counts") != excluded
+            or semantic.get("excluded_by_status") != excluded_by_status
+        ):
+            raise ValueError("semantic exclusion aliases disagree with machine evidence")
         excluded_kinds.update(excluded)
         excluded_statuses.update(excluded_by_status)
         critical = semantic.get("critical")
-        if not isinstance(critical, dict) or not isinstance(
-            critical.get("not_killed"), list
+        if (
+            not isinstance(critical, dict)
+            or set(critical) != {"declared", "killed", "not_killed"}
+            or type(critical.get("declared")) is not int
+            or type(critical.get("killed")) is not int
+            or not isinstance(critical.get("not_killed"), list)
         ):
             raise TypeError("semantic mutation critical evidence is malformed")
-        critical_declared += int(critical.get("declared", -1))
-        critical_killed += int(critical.get("killed", -1))
-        critical_not_killed.extend(critical["not_killed"])
+        batch_not_killed = critical["not_killed"]
+        if (
+            critical["declared"] != batch_semantic_total
+            or critical["killed"] != batch_semantic_killed
+            or len(batch_not_killed)
+            != batch_semantic_total - batch_semantic_killed
+            or any(
+                not isinstance(item, dict)
+                or set(item) != {"mutant", "status"}
+                or not isinstance(item["mutant"], str)
+                or not item["mutant"]
+                or item["status"] not in _MUTMUT_STATUS_TO_KEY.values()
+                or item["status"] == "killed"
+                for item in batch_not_killed
+            )
+            or len({item["mutant"] for item in batch_not_killed})
+            != len(batch_not_killed)
+            or any(
+                sum(item["status"] == status for item in batch_not_killed)
+                != int(batch_status_counts[status])
+                for status in _MUTMUT_STATUS_TO_KEY.values()
+                if status != "killed"
+            )
+        ):
+            raise ValueError(
+                "semantic mutation critical evidence disagrees with counts"
+            )
+        expected_semantic_pass = (
+            batch_semantic_killed / batch_semantic_total >= bar
+            and all(
+                module_score.get("pass") is True
+                for module_score in batch_modules.values()
+            )
+            and not batch_not_killed
+        )
+        if semantic.get("pass") is not expected_semantic_pass:
+            raise ValueError(
+                "semantic mutation pass disagrees with critical evidence"
+            )
+        critical_declared += critical["declared"]
+        critical_killed += critical["killed"]
+        critical_not_killed.extend(batch_not_killed)
 
     semantic_status_counts = {
         status: sum(
@@ -1309,6 +1565,21 @@ def merge_mutation_batches(batches: tuple[dict, ...], *, bar: float) -> dict:
         "modules": semantic_modules,
         "pass": semantic_pass,
     }
+    machine_excluded_total = sum(excluded_counts.values())
+    machine_excluded = {
+        "total": machine_excluded_total,
+        "status_counts": excluded_by_status,
+        "kind_counts": excluded_counts,
+    }
+    if total != semantic_total + machine_excluded_total or any(
+        int(status_counts.get(status, 0))
+        != int(semantic_status_counts.get(status, 0))
+        + int(excluded_by_status.get(status, 0))
+        for status in set(status_counts)
+        | set(semantic_status_counts)
+        | set(excluded_by_status)
+    ):
+        raise ValueError("merged machine exclusion is not conserved")
     raw_summary = {
         key: value for key, value in raw_merged.items() if key != "batches"
     }
@@ -1319,6 +1590,7 @@ def merge_mutation_batches(batches: tuple[dict, ...], *, bar: float) -> dict:
         **raw_merged,
         "raw": raw_summary,
         "semantic": semantic_merged,
+        "machine_excluded": machine_excluded,
         "pass": semantic_pass,
     }
 
@@ -1405,6 +1677,64 @@ def _validate_evidence_locator(locator: object, *, repo: Path) -> str:
     return locator
 
 
+def _preflight_semantic_disposition_document(
+    path: Path,
+    *,
+    repo: Path = REPO,
+) -> dict:
+    """Reject stale or malformed annotation authority before mutation setup."""
+
+    document = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(document, dict) or set(document) != {
+        "schema",
+        "classifier_policy",
+        "reviewed",
+    }:
+        raise ValueError("semantic disposition document fields mismatch")
+    if document["schema"] != _SEMANTIC_DISPOSITION_SCHEMA:
+        raise ValueError("unsupported semantic disposition schema")
+    if document["classifier_policy"] != _SEMANTIC_CLASSIFIER_POLICY:
+        raise ValueError("semantic disposition classifier policy mismatch")
+    reviewed = document["reviewed"]
+    if not isinstance(reviewed, list):
+        raise TypeError("semantic disposition reviewed field must be a list")
+    expected_row_fields = {
+        "mutant",
+        "mutation_diff_sha256",
+        "disposition",
+        "reviewer",
+        "rationale",
+        "evidence_locator",
+    }
+    seen: set[str] = set()
+    for review in reviewed:
+        if not isinstance(review, dict) or set(review) != expected_row_fields:
+            raise ValueError("semantic disposition review fields mismatch")
+        mutant = review["mutant"]
+        if not isinstance(mutant, str) or not mutant or mutant in seen:
+            raise ValueError(f"duplicate or invalid semantic disposition: {mutant!r}")
+        seen.add(mutant)
+        if not isinstance(review["mutation_diff_sha256"], str) or re.fullmatch(
+            r"[0-9a-f]{64}", review["mutation_diff_sha256"]
+        ) is None:
+            raise ValueError(
+                f"semantic disposition fingerprint must be lowercase sha256: {mutant}"
+            )
+        if review["disposition"] not in {
+            "reviewed_equivalent",
+            "reviewed_noncontractual",
+            "reviewed_noncritical",
+        }:
+            raise ValueError(
+                f"unknown semantic disposition: {review['disposition']!r}"
+            )
+        for field in ("reviewer", "rationale"):
+            if not isinstance(review[field], str) or not review[field].strip():
+                raise ValueError(f"semantic disposition {field} must be nonempty")
+        _validate_evidence_locator(review["evidence_locator"], repo=repo)
+    return document
+
+
 def authenticate_semantic_dispositions(
     path: Path,
     *,
@@ -1412,16 +1742,14 @@ def authenticate_semantic_dispositions(
     catalog: dict,
     repo: Path = REPO,
 ) -> tuple[dict[str, dict], dict]:
-    """Apply only exact-fingerprint, repository-evidenced manual reviews."""
+    """Authenticate manual annotations without granting scoring authority."""
 
     raw = path.read_bytes()
     document = json.loads(raw.decode("utf-8"))
     expected_document_fields = {"schema", "classifier_policy", "reviewed"}
     if not isinstance(document, dict) or set(document) != expected_document_fields:
         raise ValueError("semantic disposition document fields mismatch")
-    if document["schema"] != (
-        "error_coupling_simulator.harness.mutation_semantic_dispositions.v1"
-    ):
+    if document["schema"] != _SEMANTIC_DISPOSITION_SCHEMA:
         raise ValueError("unsupported semantic disposition schema")
     if document["classifier_policy"] != catalog.get("classifier_policy"):
         raise ValueError("semantic disposition classifier policy mismatch")
@@ -1492,14 +1820,6 @@ def authenticate_semantic_dispositions(
             )
         if fingerprint != current.get("mutation_diff_sha256"):
             raise ValueError(f"semantic disposition fingerprint mismatch: {mutant}")
-        if disposition == "reviewed_equivalent":
-            current["kind"] = "reviewed_equivalent"
-            current["criticality"] = "not_applicable"
-        elif disposition == "reviewed_noncontractual":
-            current["kind"] = "exception_prose_noncontractual"
-            current["criticality"] = "not_applicable"
-        else:
-            current["criticality"] = "reviewed_noncritical"
         current["review"] = copy.deepcopy(review)
         applied_mutants.append(mutant)
 
@@ -1540,9 +1860,7 @@ def _authenticate_suite_disposition_partition(
     expected_document_fields = {"schema", "classifier_policy", "reviewed"}
     if not isinstance(document, dict) or set(document) != expected_document_fields:
         raise ValueError("semantic disposition document fields mismatch")
-    if document["schema"] != (
-        "error_coupling_simulator.harness.mutation_semantic_dispositions.v1"
-    ):
+    if document["schema"] != _SEMANTIC_DISPOSITION_SCHEMA:
         raise ValueError("unsupported semantic disposition schema")
     if document["classifier_policy"] != _SEMANTIC_CLASSIFIER_POLICY:
         raise ValueError("semantic disposition classifier policy mismatch")
@@ -2058,7 +2376,10 @@ def _read_pytest_completion_sentinel(
         if payload["sentinel_name"] != sentinel_path.name:
             raise ValueError("fresh pytest completion sentinel identity mismatch")
         exit_code = payload["pytest_exit_code"]
-        if type(exit_code) is not int or exit_code != int(ran.returncode):
+        if type(exit_code) is not int:
+            raise TypeError("fresh pytest sentinel exit code is invalid")
+        timeout_kill_exit = bool(ran.timed_out and exit_code == 1)
+        if exit_code != int(ran.returncode) and not timeout_kill_exit:
             raise ValueError("fresh pytest sentinel/process exit-code mismatch")
         resource_detected = payload["resource_exhaustion_detected"]
         resource_kinds = payload["resource_exhaustion_kinds"]
@@ -2095,6 +2416,12 @@ def _authenticated_fresh_worker_status(ran, *, sentinel_path: Path) -> tuple[str
         required=False,
     )
     if ran.timed_out:
+        if (
+            sentinel is not None
+            and sentinel["pytest_exit_code"] == 1
+            and sentinel["resource_exhaustion_detected"] is False
+        ):
+            return "killed", sentinel
         return "timeout", sentinel
     if sentinel is None:
         return "suspicious", None
@@ -2223,7 +2550,7 @@ def _load_fresh_exec_plan(plan_path: Path) -> tuple[dict, str]:
 
 
 _GPU_CHECKPOINT_SCHEMA = (
-    "error_coupling_simulator.harness.mutation_gpu_checkpoint.v3"
+    "error_coupling_simulator.harness.mutation_gpu_checkpoint.v4"
 )
 
 
@@ -2364,8 +2691,6 @@ def _validated_gpu_checkpoint_row(
         raise ValueError(
             "GPU mutation checkpoint worker requires authenticated completion sentinel"
         )
-    if raw["timed_out"]:
-        raise ValueError("GPU mutation checkpoint cannot resume a timed-out worker")
     if not isinstance(sentinel, dict) or set(sentinel) != {
         "schema",
         "sha256",
@@ -2377,9 +2702,15 @@ def _validated_gpu_checkpoint_row(
         raise ValueError("GPU mutation checkpoint sentinel fields mismatch")
     if sentinel["schema"] != _PYTEST_SENTINEL_SCHEMA:
         raise ValueError("GPU mutation checkpoint sentinel schema mismatch")
-    if type(sentinel["pytest_exit_code"]) is not int:
+    sentinel_exit_code = sentinel["pytest_exit_code"]
+    if type(sentinel_exit_code) is not int:
         raise TypeError("GPU mutation checkpoint sentinel exit code is invalid")
-    if sentinel["pytest_exit_code"] != returncode:
+    authenticated_timeout_kill = bool(
+        raw["timed_out"]
+        and sentinel_exit_code == 1
+        and raw["status"] == "killed"
+    )
+    if sentinel_exit_code != returncode and not authenticated_timeout_kill:
         raise ValueError("GPU mutation checkpoint sentinel/process rc mismatch")
     expected_sentinel_name = _gpu_worker_sentinel_name(tag, sequence_index)
     if sentinel["sentinel_name"] != expected_sentinel_name:
@@ -2388,13 +2719,18 @@ def _validated_gpu_checkpoint_row(
         "resource_exhaustion_kinds"
     ] != []:
         raise ValueError("GPU mutation checkpoint cannot resume resource exhaustion")
+    if raw["timed_out"] and not authenticated_timeout_kill:
+        raise ValueError(
+            "GPU mutation checkpoint timed-out worker is not an authenticated kill"
+        )
     if sentinel["sha256"] != _completion_sentinel_sha256(
-        returncode,
+        sentinel_exit_code,
         sentinel_name=expected_sentinel_name,
     ):
         raise ValueError("GPU mutation checkpoint sentinel digest mismatch")
 
-    derived_status = _EXIT_STATUS.get(returncode, "suspicious")
+    status_exit_code = sentinel_exit_code if raw["timed_out"] else returncode
+    derived_status = _EXIT_STATUS.get(status_exit_code, "suspicious")
     if raw["status"] != derived_status:
         raise ValueError("GPU mutation checkpoint worker status is inconsistent")
     return dict(raw)
@@ -2851,9 +3187,15 @@ def _gpu_worker_row_is_resumable(row: dict) -> bool:
     if not row["process_executed"]:
         return row["status"] == "no_tests"
     sentinel = row["completion_sentinel"]
+    authenticated_timeout_kill = bool(
+        row["status"] == "killed"
+        and row["timed_out"] is True
+        and isinstance(sentinel, dict)
+        and sentinel.get("pytest_exit_code") == 1
+    )
     return bool(
         row["group_cleanup_verified"] is True
-        and row["timed_out"] is False
+        and (row["timed_out"] is False or authenticated_timeout_kill)
         and row["completion_sentinel_authenticated"] is True
         and isinstance(sentinel, dict)
         and sentinel["resource_exhaustion_detected"] is False
@@ -3203,6 +3545,18 @@ def load_mutation_suite(suite_path: Path) -> dict:
     suite = json.loads(path.read_text(encoding="utf-8"))
     if suite.get("schema") != "error_coupling_simulator.harness.mutation_suite.v1":
         raise ValueError("unsupported mutation suite schema")
+    suite_bar = _configured_knob(
+        suite,
+        "mutation_gate",
+        "kill_rate_bar",
+        0.90,
+        float,
+    )
+    _validate_mutation_gate_knobs(
+        bar=suite_bar,
+        timeout_multiplier=1.0,
+        timeout_constant=0.0,
+    )
     raw_batches = suite.get("batches")
     if not isinstance(raw_batches, list) or not raw_batches:
         raise ValueError("mutation suite requires nonempty batches")
@@ -3219,6 +3573,8 @@ def load_mutation_suite(suite_path: Path) -> dict:
         if suite_semantic_value is None
         else _resolve_registry_reference(path, suite_semantic_value)
     )
+    if suite_semantic_path is not None:
+        _preflight_semantic_disposition_document(suite_semantic_path, repo=REPO)
 
     names: set[str] = set()
     registry_paths: set[Path] = set()
@@ -3248,6 +3604,20 @@ def load_mutation_suite(suite_path: Path) -> dict:
             raise ValueError(f"suite/child lane mismatch: {name}")
         if bool(registry_doc.get("requires_gpu")) != (lane == "gpu_serial"):
             raise ValueError(f"suite/child requires_gpu mismatch: {name}")
+        child_bar = _configured_knob(
+            registry_doc,
+            "mutation_gate",
+            "kill_rate_bar",
+            0.90,
+            float,
+        )
+        _validate_mutation_gate_knobs(
+            bar=child_bar,
+            timeout_multiplier=1.0,
+            timeout_constant=0.0,
+        )
+        if child_bar != suite_bar:
+            raise ValueError(f"suite/child kill-rate bar mismatch: {name}")
         child_semantic_path = _semantic_dispositions_path(
             registry_doc,
             repo=REPO,
@@ -3500,11 +3870,7 @@ def _run_mutation_suite_locked(
     merged = merge_mutation_batches(tuple(batch_results), bar=bar)
     status_counts = merged["status_counts"]
     doc = {
-        "schema": (
-            "error_coupling_simulator.harness.mutation_suite_run.v2"
-            if "semantic" in merged
-            else "error_coupling_simulator.harness.mutation_suite_run.v1"
-        ),
+        "schema": _MUTATION_SUITE_RUN_SCHEMA,
         "tag": plan["path"].stem,
         "input_snapshot_sha256": snapshot_before,
         "verified_snapshot_sha256": snapshot_after,
@@ -3554,6 +3920,9 @@ def run_mutation(
         return run_mutation_suite(str(registry_path), timeout=timeout)
     if reg.get("schema") != "error_coupling_simulator.harness.mutation_batch.v1":
         raise ValueError("direct mutation registry must use mutation_batch.v1 schema")
+    semantic_dispositions = _semantic_dispositions_path(reg, repo=REPO)
+    if semantic_dispositions is not None:
+        _preflight_semantic_disposition_document(semantic_dispositions, repo=REPO)
 
     tag = registry_path.stem
     modules = tuple(reg["reconcile_modules"])
@@ -3800,11 +4169,7 @@ def run_mutation(
         )
         status_counts = score["status_counts"]
         doc = {
-            "schema": (
-                "error_coupling_simulator.harness.mutation_batch_run.v2"
-                if semantic_catalog is not None
-                else "error_coupling_simulator.harness.mutation_batch_run.v1"
-            ),
+            "schema": _MUTATION_BATCH_RUN_SCHEMA,
             "tag": tag,
             "lane": selected_lane,
             "jobs": worker_count,
