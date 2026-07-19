@@ -1,318 +1,177 @@
-# Full-text review — Kilda, Biella, Kshetrimayum, Weimer, Orus, "On the stability of the infinite Projected Entangled Pair Operator ansatz for driven-dissipative 2D lattices" (arXiv:2012.03095, SciPost Physics Submission)
++++
+schema = "error_coupling_simulator.literature.note.v1"
+source_id = "arxiv:2012.03095"
+source_version = "v2"
+source_uri = "https://arxiv.org/abs/2012.03095v2"
+source_artifact = "outputs/papers/pepo_survey/2012.03095.pdf"
+source_sha256 = "d750982bd052408459beb0a6b1ce2655dcac236273bbd6e65ec660e79cedd25b"
+title = "On the stability of the infinite Projected Entangled Pair Operator ansatz for driven-dissipative 2D lattices"
+publication_status = "preprint"
+read_status = "complete"
+evidence_status = "persisted"
+review_scope = "full_text"
+operation_replay_status = "complete"
+audit_packet = "docs/simulator_validation/KILDA_2012_03095_PROJECT_FIT_AUDIT_2026-07-17.md"
+audit_packet_sha256 = "80b6e2c02deebd8166651ecb2e83d5ffe0bc09b4ca5dd0b01afbd8bf1a8f52a5"
+admission_status = "source_only_reviewed"
+admission_reviewer = "codex-xhigh-source-review-2026-07-17"
+admission_date = "2026-07-17"
+visually_checked_pages = [1, 3, 4, 6, 7, 8, 10, 11, 15]
 
-> **Provenance (2026-07-09): FULL-TEXT 精读.** PDF (arXiv:2012.03095v2, 8 Feb 2021) ->
-> `outputs/papers/pepo_survey/2012.03095.txt` (pdftotext, 21 pp / 1585 lines). All section/eq/figure
-> references from that text. Figures not pixel-extracted — figure facts = captions + numbers stated
-> in text.
->
-> **CRITICAL for our iPEPO carrier plan.** This paper directly investigates the stability
-> **failure modes of the SU-iPEPO algorithm** — the exact method we are considering for 2D open-system
-> simulation. The findings are sobering: near dissipative critical points, increasing bond dimension
-> can make the algorithm **less stable**, not more accurate.
->
-> **Second full-text verification pass (2026-07-09, pre-engine-build):** re-read the original
-> end-to-end. All load-bearing claims of this note confirmed verbatim (ε_Λ Eq. 3; D=3,4-pass/D=5,6-fail
-> at J_y=1.5; D=12-pass/D=14,15-fail at J_y=1.2; κ≥5.2; J_y threshold 1.33/1.32; CTM-independence;
-> "spurious steady states" p.8; >128 GB CTM at D=15; github.com/The-iPEPO-Project/iPEPO). Three
-> details ADDED in this revision (previously missing): (i) the steady-state STOP RULE is per-bond —
-> ε_Λ < ε required for EACH Λ ∈ {Λ[U,D,R,L]} (App. A.2, after Eq. 3); Fig. 2 plots the Λ[U] one;
-> (ii) they GRADUALLY DECREASE δt during a run to shrink Trotter error at fixed cost (App. A.2);
-> (iii) venue: later published as SciPost Phys. Core 4, 005 (2021) (this note reads the v2 submission
-> text).
+[[relations]]
+predicate = "defines"
+object_id = "ipepo-density-operator-evolution"
+object_type = "method"
+object_label = "iPEPO density-operator evolution"
+fact_id = "fact.ipepo-vectorization"
 
-## Metadata [paper]
-- **Authors / affiliation:** D. Kilda (Caltech, corresponding), A. Biella (Paris-Saclay / College de France),
-  M. Schiro (Paris-Saclay / College de France), R. Fazio (ICTP Trieste / Napoli),
-  J. Keeling (U. St Andrews).
-- **Venue / status:** arXiv:2012.03095v2 [cond-mat.other], submitted to SciPost Physics (submission
-  received 31 Dec 2020, revised 8 Feb 2021). NOT final-published (the arXiv submission status at the
-  time of this note was "SciPost Physics Submission" — it is the pre-review submission manuscript).
-- **Type:** Method critique / numerical stability analysis. NOT a new method paper — it examines the
-  failure modes of the existing iPEPO algorithm from Kshetrimayum et al. (Nat. Commun. 8, 1291, 2017).
-- **Code:** Fortran implementation available at https://github.com/The-iPEPO-Project/iPEPO [ref 36].
+[[relations]]
+predicate = "defines"
+object_id = "bond-spectrum-stationarity-diagnostic"
+object_type = "observable"
+object_label = "bond-spectrum stationarity diagnostic"
+fact_id = "fact.stationarity-diagnostic"
 
-## Executive summary [paper]
+[[relations]]
+predicate = "contradicts"
+object_id = "monotone-bond-dimension-convergence"
+object_type = "limitation"
+object_label = "monotone bond-dimension convergence"
+fact_id = "fact.nonmonotone-bond-stability"
++++
+# Full-text review — Kilda et al., “On the stability of the infinite Projected Entangled Pair Operator ansatz for driven-dissipative 2D lattices”
 
-The paper performs a systematic stability analysis of the **simple-update (SU) infinite Projected
-Entangled Pair Operator (iPEPO)** algorithm for finding the nonequilibrium steady state (NESS) of
-driven-dissipative 2D lattice systems. The testbed is the dissipative spin-1/2 XYZ model on an
-infinite square lattice (Eqs. 1-2).
+## Source identity [paper_fact]
+Fact ID: fact.source-identity
+Source locator: Title page and arXiv version stamp, page 1
+PDF page: 1
+Claim: The source is the 8 February 2021 arXiv v2 submission by Kilda, Biella, Schiró, Fazio, and Keeling on the stability of the iPEPO ansatz for driven-dissipative two-dimensional lattices.
 
-**Key result (sobering for our plans):** The SU-iPEPO algorithm is **not always stable** — it only
-reaches a steady state in some parameter regimes, typically away from dissipative critical points.
-Close to critical points (where correlation lengths diverge), the algorithm **fails to converge
-regardless of bond dimension D, timestep size, or initial condition**. Worse, increasing D does not
-monotonically improve accuracy: for some parameter regimes, **a steady state found at low D
-destabilizes when D is increased** (Fig. 6, Jy=1.5: D=3,4 converge; D=5,6 do not). The instability
-resides entirely in the **simple-update (SU) time evolution** — it is unaffected by the
-corner-transfer-matrix (CTM) contraction accuracy.
+The PDF title page labels the object as a SciPost Physics submission, dates the manuscript 10
+February 2021, and carries the arXiv:2012.03095v2 stamp dated 8 February 2021. The abstract states
+that the study tests when the earlier iPEPO approach reaches a steady state and when apparently
+converged calculations become unstable as bond dimension increases.
 
-## Method (deep) [paper]
+## Dissipative XYZ model [paper_fact]
+Fact ID: fact.xyz-liouvillian
+Source locator: Section 2, Eqs. (1)-(2), page 3
+PDF page: 3
+Claim: The tested model is an infinite-square-lattice dissipative spin-one-half XYZ master equation with nearest-neighbor XYZ couplings and local lowering-operator dissipation.
 
-### The iPEPO approach (restated from Appendix A)
+Equation (1) evolves the density operator with a Hamiltonian commutator and a sum of local
+amplitude-damping dissipators at rate `kappa`. Equation (2) defines the nearest-neighbor Hamiltonian
+with couplings `J_x`, `J_y`, and `J_z`. The numerical study fixes `J_x=0.5` and `J_z=1` in units
+where `kappa=1` while scanning `J_y` unless a dissipation sweep is explicitly stated.
 
-The density matrix rho is represented as a **Projected Entangled Pair Operator (PEPO)**, then
-reshaped (vectorized) into an infinite PEPS (iPEPS) by fusing bra/ket physical indices at each site
-(Sec. A.2). The Liouvillian evolution replaces imaginary-time Hamiltonian evolution with real-time
-Liouvillian propagation. The algorithm reuses the same simple-update (SU) machinery as ground-state
-iPEPS:
+## iPEPO vectorization [paper_fact]
+Fact ID: fact.ipepo-vectorization
+Source locator: Appendix A.2, first three paragraphs, page 15
+PDF page: 15
+Claim: The iPEPO density-operator evolution vectorizes a PEPO into a PEPS-shaped state and replaces imaginary-time Hamiltonian gates by real-time two-body Liouvillian gates.
 
-1. **Trotter decomposition:** Split the Liouvillian into four bond directions L_U, L_D, L_R, L_L
-   (Eq. 4-5).
-2. **Vidal form:** The iPEPS is represented by two site tensors Gamma[A,B] and four diagonal bond
-   matrices Lambda[U,R,D,L] (Fig. 7).
-3. **The SU step (Sec. A.1.1):** absorb external Lambdas into Gammas, decompose into rank-3
-   subtensors via SVD/QR (cost O(d^6 D^3)), apply the two-body propagator, re-SVD with truncation
-   to D singular values, re-contract, divide out external Lambdas.
-4. **CTM for observables (Sec. A.1.2):** Compute environment via corner transfer matrix renormalization
-   with environmental bond dimension chi. Cost O(chi^3 D^6 + chi^2 D^8).
+The bra and ket physical indices at each lattice site are fused to form a vectorized object
+`|rho>`. For every bond direction `alpha` in `{U,R,D,L}`, the iPEPS imaginary-time gate is replaced
+by `exp(-delta t L_alpha)`. Observables are evaluated as `Tr[O rho]`, and the normalization condition
+is `Tr[rho]=1`, so local physical indices are traced rather than paired in a wavefunction inner
+product.
 
-### The stability diagnostic (Eq. 3, central to the paper)
+## Simple-update operation [paper_fact]
+Fact ID: fact.simple-update-operation
+Source locator: Appendix A.1.1, numbered steps 1-6, pages 10-11
+PDF page: 11
+Claim: The simple update applies a two-body propagator to a locally gauged tensor pair, performs an SVD on the updated bond, and retains the largest D singular values.
 
-The stability metric monitors **singular value convergence**:
-```
-epsilon_Lambda = |Lambda_n - Lambda_{n-1}|_max / (delta_t * |Lambda_n|_max)
-```
-where Lambda_n are the diagonal bond matrices at timestep n. For a steady state, epsilon_Lambda
-should approach zero (or machine precision). **Noisy oscillations that persist indefinitely** signal
-failure to converge. **Precise stop rule (App. A.2, added 2026-07-09):** a steady state is declared
-only when epsilon_Lambda < epsilon holds for EACH of the four bond matrices Lambda in
-{Lambda[U], Lambda[D], Lambda[R], Lambda[L]} separately — a per-bond spectrum-stationarity
-criterion (Fig. 2 shows the Lambda[U] trace). They also gradually DECREASE the timestep delta_t
-during a run to reduce Trotter error while keeping cost low.
+The operation absorbs the three external diagonal bond spectra into the two site tensors, factors the
+sites into rank-three subtensors, applies the directional two-body propagator, and decomposes the
+result by SVD. It truncates the updated bond to the `D` largest singular values, reconstructs the
+rank-five site tensors, and divides out the external spectra to restore the Vidal-form representation.
 
-### The model (dissipative XYZ, Eqs. 1-2)
+## Local-environment truncation limitation [paper_fact]
+Fact ID: fact.local-truncation-limitation
+Source locator: Appendix A.1.1, final two paragraphs, page 11
+PDF page: 11
+Claim: The simple-update truncation is suboptimal because it omits the full unit-cell environment, and the paper states that PEPS has no known MPS-like canonical form that removes this problem.
 
-```
-d/dt rho = -i[H_XYZ, rho] + kappa/2 * sum_j (2 sigma^-_j rho sigma^+_j - {sigma^+_j sigma^-_j, rho})
-H_XYZ = sum_{<i,j>} (J_x sigma^x_i sigma^x_j + J_y sigma^y_i sigma^y_j + J_z sigma^z_i sigma^z_j)
-```
+The source contrasts the `O(D^3 d^6)` local update with full update, which constructs a full
+environment at higher cost. It says simple update is generally adequate for large gaps and short
+correlation lengths but that its local truncation becomes problematic near critical points with long
+correlation lengths.
 
-with J_x=0.5, J_z=1 (in units of kappa=1), varying J_y.
+## Bond-spectrum stationarity diagnostic [paper_fact]
+Fact ID: fact.stationarity-diagnostic
+Source locator: Section 2, Eq. (3) and Figure 2, page 4
+PDF page: 4
+Claim: The bond-spectrum stationarity diagnostic epsilon_Lambda is the maximum consecutive-step singular-value change divided by the timestep and the current maximum singular value.
 
-## Findings + numbers [paper]
+For a directional diagonal spectrum `Lambda_n`, Eq. (3) defines
+`epsilon_Lambda=max|Lambda_n-Lambda_(n-1)|/(delta t max|Lambda_n|)`. Figure 2 illustrates a
+decaying history at `J_y=1.5` and persistent noisy oscillations at `J_y=1.2` for timesteps
+`10^-1`, `10^-2`, and `10^-3`. Appendix A.2 specifies that the numerical stop rule must hold
+separately for every one of the four directional spectra.
 
-### 1. Instability regime (Sec. 2, Figs. 1-5)
+## Protocol-robust nonconvergence [paper_fact]
+Fact ID: fact.protocol-robust-nonconvergence
+Source locator: Section 2.1, Figures 2-5 and summary paragraph, pages 4-6
+PDF page: 6
+Claim: In the tested J_y=1.2 regime, persistent spectrum oscillations survive smaller timesteps, several initial states, and adiabatic sweeps in J_y or kappa.
 
-| Observation | Details |
-|---|---|
-| **No steady state near dissipative critical points** | For J_y in ~1.2-1.32 (at J_x=0.5, J_z=1, kappa=1), the algorithm fails to converge for ALL timesteps delta_t={10^-1,10^-2,10^-3} (Fig. 2). The singular-value metric epsilon_Lambda shows noisy oscillations that never decay (Fig. 2a-c, blue lines). |
-| **Stable regime exists** | For J_y=1.5, epsilon_Lambda decays cleanly to ~10^-6 (Fig. 2a-c, green lines). |
-| **Threshold is sharp** | Adiabatic sweeping from J_y=1.4->1.2 reveals a clear threshold: steady states found for J_y >= 1.33, no steady state for J_y <= 1.32 (Figs. 4a-b). This is robust to timestep size and sweep step. |
-| **Strong dissipation helps** | Sweeping from large kappa (kappa=8) to small (kappa=1) at fixed J_y=1.2: steady state for kappa >= 5.2, fails for kappa < 5.2 (Figs. 5a-b). Strong dissipation suppresses correlations (NESS becomes approximately factorizable), making iPEPO tractable. |
-| **Initial conditions don't matter** | Testing four different initial conditions (random, all-down, all-up, mixed xyz) at J_y=1.2: ALL show persistent noisy oscillations (Figs. 3a-c). The instability is robust to initial state choice. |
-| **The original 2017 results (Fig. 1b) are reproduced by stopping early** | Using a large timestep delta_t=10^-1 and stopping after N=1000 steps yields results similar to Kshetrimayum et al. [27] — but these are NOT steady states, just early-time snapshots with large Trotter error (Fig. 1b vs 1a). |
+The timestep comparison covers `10^-1`, `10^-2`, and `10^-3`. Four explicitly plotted initial
+conditions remain nonconvergent. A sweep from `J_y=1.4` stops finding a steady state between
+`J_y=1.33` and `1.32`, while a dissipation sweep at `J_y=1.2` finds a steady state for
+`kappa>=5.2` but again becomes oscillatory below that value in the stated units and protocols.
 
-### 2. Bond dimension effects — THE critical finding (Sec. 2.2, Fig. 6)
+## Nonmonotone bond-dimension stability [paper_fact]
+Fact ID: fact.nonmonotone-bond-stability
+Source locator: Section 2.2, Figure 6 and accompanying text, pages 6-8
+PDF page: 7
+Claim: The reported simulations contradict monotone bond-dimension convergence because increasing D can destroy a previously stationary simple-update iPEPO history.
 
-**THIS IS THE MOST IMPORTANT RESULT FOR OUR USE CASE.**
+At `J_y=1.5`, the histories converge for `D=3,4` but not for `D=5,6`. At `J_y=1.2`, the
+`D=12` histories converge for timesteps `10^-2` and `10^-3`, whereas `D=14,15` again show
+noisy oscillations. The paper interprets this as evidence that small-`D` stationary states can be
+spurious rather than as a monotone accuracy sequence.
 
-| Observation | Details |
-|---|---|
-| **At J_y=1.2 (unstable regime), D=3-6 all fail** (Fig. 6a-c) | No steady state found at ANY tested bond dimension. No monotonic improvement with D. |
-| **At J_y=1.5 (stable regime), HIGHER D DESTABILIZES** (Fig. 6d-f) | D=3,4 reach steady state; D=5,6 FAIL to reach steady state. **This is the counterintuitive and dangerous result**: increasing the variational自由度 makes the algorithm LESS stable. |
-| **At J_y=1.2, D=12 transiently works; D=14,15 fail again** (Fig. 6g-i) | For D=12, epsilon_Lambda shows a decaying trend at delta_t=10^-2,10^-3. But D=14,15 drive noisy oscillations. Suggests that while SOME higher D may eventually work, the approach is not systematic — D must be "just right" and there is no a priori way to find the correct D. |
-| **The instability is NOT a CTM issue** | The SU time evolution is completely unaffected by CTM contraction or environment bond dimension chi (explicitly stated, paragraph near Fig. 1). All results are CTM-independent. |
-| **D=15 CTM is impractical** | CTM at D=15 would require >128 GB of RAM (p.8, paragraph after Fig. 6) — distributed memory and quantum symmetries needed to extract observables at D>=15. |
+## CTM independence of the reported instability [paper_fact]
+Fact ID: fact.ctm-independence
+Source locator: Section 2, paragraphs following Figure 1, page 4
+PDF page: 4
+Claim: The stability histories reported in the paper arise in the simple-update evolution before CTM contraction and therefore do not depend on the CTM environment dimension.
 
-### 3. Interpretation (Sec. 3, Conclusion)
+CTM is needed to extract observables from the evolved infinite network, but the paper's stability
+test monitors the directional singular-value spectra during SU evolution itself. It therefore states
+that the remaining stability results do not depend on CTM contraction. The same source later notes
+that evaluating observables at `D=15` would require more than 128 GB for its CTM calculation.
 
-The authors state clearly: **"the SU iPEPO algorithm at low bond dimensions is not always stable,
-reaching a steady state only in some parameter regimes, typically away from dissipative critical
-points."** They believe there EXISTS a sufficiently high D that can faithfully represent the NESS
-(when spatial correlations decay exponentially), but the study cannot determine what typical D
-is needed for prototypical driven-dissipative models.
+## Unknown sufficient bond dimension [paper_fact]
+Fact ID: fact.unknown-sufficient-bond
+Source locator: Section 3, first conclusion paragraph, page 8
+PDF page: 8
+Claim: The study is unable to determine a typical bond dimension sufficient for faithfully representing a prototypical driven-dissipative lattice steady state.
 
-## Proposed mitigations (Sec. 3) [paper]
+The authors state a belief that a suitable `D` exists when spatial correlations decay exponentially,
+but explicitly distinguish that belief from what their study concludes. They advise substantial
+caution when extending two-dimensional simple-update iPEPS machinery to Liouvillian evolution and
+discuss full-environment or global variational alternatives rather than certifying a finite `D`.
 
-The paper discusses three alternative approaches, none implemented:
+## Positivity preservation [literature_gap]
+Fact ID: gap.positivity-preservation
+Source locator: Appendix A.2, representation, propagation, and normalization description, page 15
+PDF page: 15
+Claim: The source does not establish that finite-D simple-update iPEPO evolution preserves Hermiticity or positive semidefiniteness of the represented density operator.
+Gap scope: source_local
 
-1. **Full Update (FU) iPEPS** (Sec. 3, paragraph 2): Adapt the variational two-site FU algorithm
-   to Lindblad time evolution. **Problem:** non-Hermitian operators require a non-Hermitian
-   alternating least-squares scheme, which doesn't exist robustly. Hubig & Cirac [39] found FU
-   can be LESS stable than SU for closed-system time evolution. McKeever & Szymanska [43] showed
-   that a **"full environment truncation"** variant (not full FU) can improve iPEPO stability —
-   this is the most promising near-term mitigation.
+The appendix specifies vectorization, Liouvillian propagation, trace normalization, local observables,
+and the bond-spectrum stop rule. It does not provide a positivity-preserving parametrization, a
+negative-eigenvalue or negativity test, or a theorem that the SVD-truncated PEPO remains a physical
+density operator.
 
-2. **Global variational search for L|rho>>=0** (Sec. 3, paragraph 3): Solve for the null eigenstate
-   of either the Liouvillian L or the positive-semidefinite L†L directly. **Appealing because**
-   L†L enables reusing standard Hermitian optimization. **Problems:** (a) L†L of a
-   nearest-neighbor Lindbladian produces highly non-local couplings (even when L = sum L_{l,l+1},
-   L†L = sum_{l,r} L†_{l,l+1} L_{l+r,l+r+1}) — manageable in 1D but leads to unfeasibly large
-   bond dimensions in 2D. (b) Contractions involve BOTH the iPEPS representing |rho>> AND the
-   iPEPO representing L or L†L — expensive.
+## Outcome-distribution accuracy [literature_gap]
+Fact ID: gap.outcome-distribution-accuracy
+Source locator: Sections 2-3 and Appendix A, complete evaluated-output scope, pages 3-16
+PDF page: 8
+Claim: The source does not establish an accuracy bound for a sequential measurement-outcome distribution produced from the truncated iPEPO.
+Gap scope: source_local
 
-3. **Tangent-space / generalized eigenvalue iPEPS** (Sec. 3, paragraph 4): Extend the novel
-   variational iPEPS techniques from Refs. [46,47] to Lindbladians. These optimize iPEPS tensors
-   using tangent space methods or local generalized eigenvalue problems, avoiding explicit PEPO
-   construction for the Hamiltonian/Liouvillian. **This could dramatically reduce costs** and
-   potentially be more robust than two-body SU updates — but adapting to the non-Hermitian L or
-   L†L is open research.
-
-## Limitations [paper]
-
-- **Single model testbed:** Only the dissipative XYZ model is studied in detail (with brief mention
-  that similar issues arise for the 2D dissipative transverse-field Ising model). The universality
-  of the instability across other driven-dissipative systems is asserted but not systematically
-  tested.
-- **No theoretical mechanism for instability:** The paper identifies WHEN instability occurs but
-  provides no **theoretical explanation for WHY** increasing D destabilizes a previously stable
-  fixed point. Is it a truncation artifact? A Trotter-error entanglement-seeding effect? A
-  gauge-fixing pathology? The root cause is not identified.
-- **No a priori stability criterion:** There is no diagnostic that predicts stability without
-  running the simulation. The epsilon_Lambda metric is a posteriori (needs to run to see if it
-  decays).
-- **SU-only study:** The analysis is entirely within the simple-update framework. The FU,
-  variational, and tangent-space mitigations are not implemented — they remain speculative.
-  The "full environment truncation" variant [43] that showed improvement is cited but not tested
-  here.
-- **No CTM dependence studied:** The paper explicitly states the CTM contraction does not affect
-  the SU instability, but this means the CTM environment approximation's own stability limits
-  are NOT explored in relation to the SU failure.
-- **D=15 compute wall:** Even finding D that works for the SU time evolution, CTM observables
-  at D>=15 are infeasible (>128 GB RAM) without distributed memory and symmetries.
-- **D=12 hint, not proof:** The transient stabilization at D=12 for J_y=1.2 is intriguing but
-  not conclusive — the paper does not establish whether D=12 is genuinely sufficient or just
-  appears to converge on the timescale studied.
-
-## Relevance to qec_twin [ours]
-
-**Verdict: HIGH-STAKES RELEVANCE. The paper documents a fundamental stability ceiling on the
-SU-iPEPO algorithm that directly constrains any plan to use iPEPO as the 2D open-system carrier
-for non-Markovian dynamics via pseudomode augmentation.**
-
-### The core tension for our use case
-
-Our plan (per `docs/plan3.md` and ADR 0008/0010) involves:
-- Representing the system density matrix as an iPEPO on the 2D surface-code lattice.
-- Augmenting with **pseudomodes** (ancillary bath modes) to capture non-Markovian shared-bath
-  effects (1/f noise, TLS).
-- The pseudomodes increase the **effective local Hilbert space dimension** at each site, which in
-  an iPEPO representation **is equivalent to increasing the effective bond dimension** D (or
-  requires mapping onto additional PEPS legs).
-
-**This paper's findings mean that adding pseudomode degrees of freedom — which is isomorphic to
-increasing the effective correlation length and entanglement in the density-matrix representation —
-may actively DESTABILIZE the iPEPO evolution**, exactly in the parameter regimes we care about
-(near-critical shared-bath-induced noise correlations).
-
-### Specific constraints the paper imposes
-
-1. **Increasing D does NOT systematically improve accuracy for iPEPO steady states.** This breaks
-   the standard tensor-network assumption (MPS/PEPS converge monotonically with D for ground states).
-   Our pseudomode augmentation strategy that increases effective D risks hitting the
-   "D=5,6 destabilize while D=3,4 converge" regime (Fig. 6d-f) — we would not know whether
-   augmentation helps or hurts without running it.
-
-2. **The instability is worst near dissipative critical points** — but a shared-bath-induced
-   dissipative phase transition (e.g., correlated dephasing driving a noise-induced transition)
-   is exactly the interesting physics. The paper shows that these are the regions where iPEPO
-   is least trustworthy.
-
-3. **The instability is in the SU time evolution, not CTM contraction.** This means even cheap,
-   low-chi environment contractions do not help — the problem is in the time-stepping itself.
-   Any plan that relies on SU time evolution must contend with this.
-
-4. **D=12 worked where D=3-6 failed (J_y=1.2, Fig. 6g-i), but D=14,15 failed again.** This
-   non-monotonic behavior means even a careful D-sweep convergence test (standard practice in
-   tensor-network methods) is unreliable — apparent convergence at D=12 could be a "spurious
-   steady state" (their term, p.8) that changes at D=14.
-
-5. **Strong dissipation (kappa >= 5.2) stabilizes iPEPO** (Figs. 5a-b). This suggests iPEPO
-   IS usable for overdamped / high-dissipation regimes. For noise models where dissipation
-   dominates over coherent coupling (e.g., pure dephasing with fast bath correlation times),
-   iPEPO may be stable. Our pseudomode shared-bath simulations would need to check whether
-   they fall in the "strong dissipation" (safe) or "near critical" (unsafe) regime.
-
-6. **The full environment truncation variant** (McKeever & Szymanska [43], ref 43 in paper) is
-   cited as improving stability. This is the most actionable mitigation: adopting FET instead of
-   SU for the iPEPO time evolution may bypass the instability, at the cost of more expensive
-   truncation.
-
-### What the paper DOES NOT settle for our use case
-
-- **Whether FET or FU iPEPO eliminates the instability** is cited but not tested here. The
-  McKeever & Szymanska result (arXiv:2012.12233, their ref 43) is the natural follow-up to read.
-- **Whether pseudomode augmentation necessarily increases effective iPEPO bond dimension** in a
-  way that triggers the instability — this depends on how pseudomodes are coupled (as ancilla
-  sites on the 2D lattice with their own physical dimension, which becomes local dimension d of
-  the iPEPO, not the bond dim D). If pseudomodes add to the PHYSICAL dimension d rather than
-  the bond dimension D, the instability documented here (which is D-specific) may not directly
-  apply. **This distinction is crucial** — the paper's instability concerns the truncation of
-  **bond indices** (entanglement between lattice sites), not the size of the **physical index**
-  (local Hilbert space). Pseudomodes as auxiliary lattice sites with enlarged local dimension
-  could bypass the bond-instability problem, at the cost of larger d² in the vectorized
-  representation.
-- **Whether iPEPO is stable for the surface-code stabilizer steady state** — our steady state
-  is the code's steady-state density matrix under noisy gates, which is NOT the same as the
-  NESS of a driven-dissipative spin model. The dissipative XYZ model has spontaneous symmetry
-  breaking and true dissipative phase transitions; the surface-code steady state may have
-  shorter correlation lengths and thus be more iPEPO-friendly.
-
-### Concrete recommendations from this paper
-
-1. **Before committing to SU-iPEPO as carrier, test stability on our target model.** Run the
-   epsilon_Lambda diagnostic (Eq. 3) for a simplified surface-code iPEPO (even d=3, nearest-neighbor
-   noise) and check for convergence at D=3,4,5,6. If the D=5,6 instability manifests
-   (Fig. 6d-f pattern), abandon SU-iPEPO for the base carrier.
-
-2. **Consider pseudomode-as-ancilla-site instead of pseudomode-as-bond-dimension.** Mapping
-   pseudomodes to enlarged local dimension on appended ancilla lattice sites avoids the bond
-   instability. Each pseudomode adds a physical Hilbert space dimension d_pseudo to the local
-   site → the vectorized PEPS physical dimension becomes (d_system * d_pseudo)^2. This is a
-   different cost scaling — larger local tensors but no increased bond cutoff.
-
-3. **Read McKeever & Szymanska (arXiv:2012.12233) as the natural follow-up** — if full-environment
-   truncation stabilizes iPEPO where SU fails, adopting FET could resolve the instability and
-   unblock the 2D carrier.
-
-4. **The adiabatic parameter sweep strategy (Sec. 2.1, Figs. 4-5) might help.** For regimes where
-   iPEPO is unstable, slowly tuning from a stable parameter regime into the target regime can
-   bypass highly entangled intermediate states. This could be used to initialize pseudomode
-   couplings gradually.
-
-5. **Do not rely on "convergence in D" as a certification strategy.** The non-monotonic D
-   behavior (D=12 works, D=14 fails) means that D-sweep convergence checks (the standard
-   tensor-network reliability test) are NOT sufficient to certify iPEPO steady states near
-   critical points. Cross-validation with an independent method (small-system exact
-   Liouvillian, cluster mean-field, process tensor) is necessary.
-
-## How to use / trust + open questions [ours]
-
-- **Trust level: HIGH for the negative result (SU-iPEPO fails near critical points), MODERATE
-  for the mechanism claim (D-related instability).** The core stability analysis (Figs. 1-6) is
-  well-executed: multiple timesteps, multiple initial conditions, multiple bond dimensions,
-  adiabatic sweeps, systematic threshold identification. The claim that "the instability is in
-  the SU not CTM" is experimentally verified (the paper states results are checked to be
-  CTM-parameter independent). However, the paper does NOT explain the ROOT CAUSE of the
-  instability — it documents what and when, not why. The failure at higher D (Fig. 6) is
-  particularly important for us but is NOT theoretically explained: is it a Trotter error
-  compound effect? A non-Hermitian SVD truncation pathology? A gauge-fixing artifact? Without
-  a mechanism, we cannot predict when it will hit our model.
-
-- **Critical open question:** Does the D-instability at J_y=1.5 (Fig. 6d-f) arise from Trotter
-  error at finite delta_t, or is it intrinsic to the SU approximation? The paper does not
-  delta_t->0 extrapolate to answer this. If Trotter-induced, then lower delta_t or higher-order
-  Trotter could help. If intrinsic to SU truncation, only FU/FET can help.
-
-- **Relation to our gauge/identifiability analysis:** The SU truncation is a local gauge
-  choice (Vidal form assumes diagonal Lambda matrices in a specific basis). The paper does not
-  discuss whether a gauge-optimized truncation (e.g., choosing different SVD bases for the bond
-  truncation) could stabilize the evolution. This is a potential research direction connecting
-  our gauge theory to iPEPO stability.
-
-- **Margin-critical note:** The Spurious steady states phrase (p.8, "spurious... at small bond
-  dimension which then change as the bond dimension increases further") is the paper's most
-  important caution for our project: **if we find a steady state at low D, we must not trust
-  it until checked against higher D, but higher D may destabilize rather than confirm**. This
-  creates a catch-22 for validation.
-
-- **Next steps:**
-  1. Read McKeever & Szymanska (2012.12233) — the full-environment-truncation mitigation.
-  2. Read Weimer, Kshetrimayum, Orus (1907.07079) — the review of simulation methods cited as
-     ref [44], which discusses variational iPEPO approaches.
-  3. Implement the epsilon_Lambda diagnostic (Eq. 3) in any iPEPO code we develop — it is the
-     essential convergence check.
-  4. Design a small-scale test: d=3 surface code with depolarizing noise on a 2x2 unit cell
-     iPEPO, sweep D=2..8, check for the Fig. 6 pattern before scaling to larger d or adding
-     pseudomodes.
+The evaluated quantities are singular-spectrum stationarity and local observables of an infinite-lattice
+steady state. The source contains no measurement sampler, conditional outcome update, reset process,
+joint sequence probability, or distance between exact and truncated outcome distributions.

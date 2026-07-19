@@ -1,98 +1,271 @@
-# Full-text review — J. Dunham & M. H. Szymańska, "Efficient Time Evolution of 2D Open-Quantum Lattice Models with Long-Range Interactions using Tensor Networks" (arXiv:2512.01781)
++++
+schema = "error_coupling_simulator.literature.note.v1"
+source_id = "arxiv:2512.01781"
+source_version = "v1"
+source_uri = "https://arxiv.org/abs/2512.01781v1"
+source_artifact = "outputs/papers/2512.01781.pdf"
+source_sha256 = "f1dc03277dc371f0852c8601ba604b8f26fa02c859e895b096b881b427fee2fd"
+title = "Efficient Time Evolution of 2D Open-Quantum Lattice Models with Long-Range Interactions using Tensor Networks"
+publication_status = "preprint"
+read_status = "complete"
+evidence_status = "persisted"
+review_scope = "full_text"
+operation_replay_status = "complete"
+audit_packet = "docs/simulator_validation/TEPEPO_2512_01781_PROJECT_FIT_AUDIT_2026-07-17.md"
+audit_packet_sha256 = "3e103b0427266be36ede00ecc6c235a0ced65b3663a10d48bd910dee93df3dfe"
+admission_status = "source_only_reviewed"
+admission_reviewer = "codex-xhigh-source-review-2026-07-17"
+admission_date = "2026-07-17"
+visually_checked_pages = [1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 16, 18, 19]
 
-> **Provenance (2026-06-30): FULL-TEXT read (精读).** PDF (arXiv:2512.01781v1, 1 Dec 2025) →
-> `outputs/papers/2512.01781.txt` (PyMuPDF, 19 pages / 2744 lines). All §/Eq/Fig/Table refs from that
-> text. Figures not pixel-extracted — figure facts = captions + numbers stated in text.
->
-> **ID/title verified.** The user brief named the target "tePEPO / 2D open-system tensor network."
-> arXiv:2512.01781 IS that paper: the title above, the method is explicitly named "time-evolving PEPO
-> (tePEPO)" (§I, ln 174-175), and it treats 2D open (Lindblad) lattice dynamics. No mismatch — no
-> substitution needed.
+[[relations]]
+predicate = "defines"
+object_id = "finite-signaling-agent-tepepo-construction"
+object_type = "method"
+object_label = "finite-signaling-agent tePEPO construction"
+fact_id = "fact.fsa-construction"
 
-## Metadata [paper]
-- **Authors / affiliation:** J. Dunham (UCL Physics & Astronomy; London Centre of Nanotechnology; Center for Theoretical Physics, Polish Academy of Sciences — corresponding `jdunham@flatironinstitute.org`) and M. H. Szymańska (UCL).
-- **Venue / status:** arXiv:2512.01781v1 [quant-ph], dated November 20, 2025 (posted 1 Dec 2025). Preprint, not yet journal-published. Data at Zenodo 10.5281/zenodo.17656737 (ref [86]).
-- **Type:** Method + numerical simulation (tensor-network algorithm development; benchmarked on an exactly-solvable dissipative Ising model + a driven-dissipative Rydberg model).
+[[relations]]
+predicate = "uses"
+object_id = "gaussian-long-range-approximation"
+object_type = "method"
+object_label = "Gaussian long-range approximation"
+fact_id = "fact.long-range-approximation"
 
-## Executive summary [paper]
-The paper constructs a **projected entangled pair operator (PEPO) representation of the open-system time-evolution operator** `e^{τ𝓛}` on an **infinite 2D square lattice** (§III, §V), calling it **tePEPO**. The density matrix is represented as a **vectorized infinite PEPO (iPEPO)** — a rank-6 tensor `A_v` of shape `(d,d,D,D,D,D)` per site, physical bra/ket indices fused to `d²` (§V.A, Eq. after ln 936, Fig. 4a). Time evolution is `n` repeated **apply-then-truncate** steps: apply the tePEPO super-operator to every tensor (bonds grow `D → Dη`), then truncate back to `D` with a new **iterative simple-update (itrSU)** scheme (§V.C, Fig. 4c). The headline capability: it represents **long-range interactions beyond nearest-neighbor** — including **diagonal (non-collinear) pairs at any distance** — by approximating a radial power-law `V(r)=r^{-α}` as a **sum of `k_max` Gaussians**, each Gaussian being a product of per-axis exponential sums that a finite-signaling-agent (FSA) generates exactly (§IV). Benchmarks: reproduces the exact solution of the dissipative long-range Ising model to abs. error `<10⁻²` with `k_max=10, D=4` (§VI.A.1, Fig. 5); and shows the dipole-dipole blockade crossover of a driven-dissipative Rydberg array at `V/γ≈6` (§VI.B, Fig. 8-9). **The evolution is Markovian/Lindblad by construction** (Eq. 1-3); there is no influence-functional or process-tensor machinery.
+[[relations]]
+predicate = "defines"
+object_id = "iterative-simple-update-truncation"
+object_type = "method"
+object_label = "iterative simple-update truncation"
+fact_id = "fact.itrsu-operation"
 
-## Method (deep) [paper]
+[[relations]]
+predicate = "measures"
+object_id = "bond-weight-convergence-indicator"
+object_type = "observable"
+object_label = "bond-weight convergence indicator"
+fact_id = "fact.itrsu-indicator"
 
-**Master equation (the object evolved), Eq. 1-3 (ln 234-262):**
-```
-dρ/dt = 𝓛(ρ) = -i[H,ρ] + 𝓓(ρ),   𝓓(ρ) = Σ_k [ L_k ρ L_k† - ½{L_k†L_k, ρ} ]
-```
-Solution = the CPTP family `e^{t𝓛} : ρ(0) ↦ ρ(t)` (Eq. 3). **This is GKSL/Lindblad — time-local, Markovian.**
+[[relations]]
+predicate = "limits"
+object_id = "rank-one-simple-update-environment"
+object_type = "limitation"
+object_label = "rank-one simple-update environment"
+fact_id = "fact.uncontrolled-environment"
++++
+# Full-text review — Dunham and Szymańska, “Efficient Time Evolution of 2D Open-Quantum Lattice Models with Long-Range Interactions using Tensor Networks”
 
-**Generic generator form the method can represent, Eq. 5 (ln 355-368):**
-```
-G = Σ_{v1,v2∈Λ} ( Σ_{k=1}^{kmax} g^{[k]}_{v1v2} ) + Σ_{v∈Λ} g^{[0]}_v
-```
-i.e. **G is a sum of at-most-2-body terms** (plus 1-body). Evolution is `e^{τG}: ρ(0)↦ρ(τ)` (Eq. 4), of which Lindblad (Eq. 3) is a special case with `G=𝓛`, `τ=Δt`.
+## Source identity [paper_fact]
+Fact ID: fact.source-identity
+Source locator: Title page and arXiv version stamp, page 1
+PDF page: 1
+Claim: The source is the arXiv:2512.01781v1 preprint by Dunham and Szymańska on tePEPO evolution of two-dimensional open quantum lattices with long-range interactions.
 
-**Size-extensive cluster expansion (WI/WII), Eq. 6 (ln 398-403):**
-```
-e^{τH} ≈ 1 + τ Σ_{(j)} H(j) + τ² Σ_{(j,k), non-overlapping} H(j)H(k) + …
-```
-Includes all higher-order terms whose supports do NOT overlap → the neglected error per site is `O(Nτ²)` and independent of system size (well-defined in the thermodynamic limit). This is the 2D generalization of the 1D **WI / WII methods** [54] and the higher-order cluster expansions [55].
+The PDF carries an arXiv v1 stamp dated 1 December 2025 and a manuscript date of 20 November
+2025. The abstract presents a projected-entangled-pair-operator construction for time evolution,
+including interactions beyond nearest neighbors and a power-law long-range application.
 
-**Finite Signaling Agent (FSA), §III.B (ln 526-643):** the 2D generalization of the 1D finite-state-machine MPO construction. Each lattice edge carries an integer "signal"; each vertex `v` has a signal tuple `(e,s,w,n)` (east/south/west/north edges). An operator-valued tensor `X̂_{eswn}` maps signal combinations → local operators (Eq. 7). The PEPO generated by `X̂_{eswn}` is the sum over all edge-signal tilings of the resulting operator products. Setting `X̂ = 0̂` for chosen signal combinations **rejects** unwanted terms; by choosing the non-zero rules ("A-type" bulk, "B-type" tail, "C-type" head, single "D-type" 1-local), the accepted terms coincide with the cluster expansion (6). Rules keep the machine on a state indefinitely to encode **long-range** interactions (§IV, ln 776-778). Prefactors `√τ / τ` per rule type (Table II) select WI vs WII. **Algorithm 1** (ln 579-605) generates WII by combining rules whose signals do not overlap (products intersecting at most once, at no extra bond cost).
+## GKSL evolution scope [paper_fact]
+Fact ID: fact.gksl-scope
+Source locator: Section II, Eqs. (1)-(3), page 3
+PDF page: 3
+Claim: The open-system application starts from a time-independent Markovian GKSL equation whose exact exponential defines a completely positive trace-preserving dynamical map.
 
-**Long-range → Gaussian expansion, §IV.A (ln 808-863):** decompose `V(x,y)=r^{-α}` (`r=√(x²+y²)`) as `V ≈ Σ_{k=1}^{kmax} t_k f_k(x,y)`, `f_k = g_{μk}(x) g_{μk}(y)`, each 1D Gaussian `g_μ(x)=e^{-μx²} ≈ Σ_i s_i λ_i^x` (finite exponential sum, per Pirvu et al. [56]). Optimization `min_{Pf} ‖V - f_fit‖` on the disc `D_{rcut}` (Eq. 12). Each `W^{[k]}(τ)=exp(τH^{[k]})` is one Suzuki-Trotter factor (Eq. 13), so `k_max` apply+truncate steps per Δt. FSA bond dim per factor: `η_h = 1+2n_{k,max}` horizontal, `η_v = 1+n_{k,max}` vertical.
+Equation (1) separates coherent Hamiltonian evolution from the dissipator in Eq. (2), and Eq. (3)
+writes the exact map as `exp(t L)`. The paper seeks a tensor-network operator representation of this
+map for two-dimensional systems beyond nearest-neighbor interactions. The exact CPTP statement
+applies to the GKSL exponential; it is not stated as a finite-truncation guarantee for the later
+tensor-network approximation.
 
-**Vectorized Liouvillian, Eq. 14 (ln 1025-1040):**
-```
-vec 𝓛 = -i(1⊗H - H^⊤⊗1) + Σ_k [ L_k*⊗L_k - ½(1⊗L_k†L_k + L_k^⊤L_k*⊗1) ]
-```
-Vectorizing **doubles** the FSA bond cost: each 2-body Hamiltonian term contributes 2 to the bond dim (ket + bra copies, Eq. C2-C4); each non-purely-local Lindblad operator contributes 3 (Eq. C5-C7). Vectorized real bond dim per Gaussian factor `η_k = (1+4n_{k,max}, 1+2n_{k,max})` (ln 916-919).
+## Generator class and size-extensive expansion [paper_fact]
+Fact ID: fact.generator-expansion
+Source locator: Section III and Eqs. (4)-(6), pages 3-4
+PDF page: 4
+Claim: The construction treats generators written as sums of at-most-two-body terms plus local terms and approximates their exponential by a size-extensive cluster expansion.
 
-**iPEPO ansatz + truncation, §V.A / V.C (ln 933-1096):** state = infinite PEPO, rank-6 `(d,d,D,D,D,D)` → fused rank-5 `(d²,D,D,D,D)`. One tePEPO application enlarges all four bonds `D→Dη`; truncate with **itrSU**: reuse the previous timestep's `Dη×D` isometries `U_α,V_α` to pre-truncate all bonds but one, standard simple-update on the remaining bond, iterate to convergence `δ^{[i]} = max_α ‖λ^{[i]}_α - λ^{[i-1]}_α‖ < ε_su` (`ε_su=10⁻⁸`, Eq. 15). This **avoids re-gauging** the enlarged `d²D⁴η⁴` network, cutting the simple-update QR from `O(d⁴D⁶η⁶)` to `O(d⁴D⁶η³)` (ln 1114-1116). Gauge fixed each timestep; **minimal canonical form** [87] gave the most accurate results (Appendix A, Fig. 12).
+Equation (5) declares the operator class. Equation (6) includes products of nonoverlapping local
+terms to all orders, so the neglected contribution is stated as `O(N tau^2)` rather than growing
+superextensively with system size. The source distinguishes `W^I`, which realizes this first-order
+expansion, from `W^II`, which also includes second-order products whose supports intersect exactly
+once.
 
-**Observables / contraction, §V.D + Appendix E (ln 1119-1137, 2696-2744):** reduced density matrices obtained by approximately contracting the infinite scalar network via **VUMPS boundary-MPS** (bond dim `χ`) for upper/lower halves + left/right transfer-matrix fixed points. **Diagonal (site-to-site diagonal) correlators are NOT compatible with VUMPS** — need CTMRG instead (ln 2740-2743).
+## Finite-signaling-agent tePEPO construction [paper_fact]
+Fact ID: fact.fsa-construction
+Source locator: Section III.B, Eq. (7), Tables I-II, and Algorithm 1, pages 5-6
+PDF page: 5
+Claim: The finite-signaling-agent tePEPO construction assigns operator-valued rules to combinations of four virtual-edge signals and rejects signal patterns that do not encode accepted cluster terms.
 
-## The MECHANISM (for implementation) [paper → ours]
-- **Object:** the vectorized 2D open-system density matrix as an **iPEPO** (`(d²,D,D,D,D)` per site) evolved by the **tePEPO** super-operator `e^{Δt·vec𝓛}` (Eq. 3, 4, 14). This is the **2D-geometry mixed-state carrier** we lack (our 1D-MPS surface-code codestate hits the `2^{2d}` bond wall).
-- **Grounded parameters (Ising benchmark, §VI.A):** `D=4-10`, `k_max=1-20` Gaussians, `n_{k,max}≤4` exponentials, `Δt=0.01-0.0125`, `ε_su=10⁻⁸`, `g_tol=10⁻⁵…10⁻¹⁰`, VUMPS `χ`. Correlation length found `ξ ≳ 2` lattice sites (ln 1797) → simple-update's rank-1 environment starts to under-capture correlations there.
-- **Where it acts:** interactions/dissipation between arbitrary lattice-site pairs at any distance & any orientation (radial power-law `r^{-α}`, `2<α<∞`), plus on-site drive & dissipation. **Off-site (2-site) dissipation is supported** (Lindblad `L_{ij}=√γ Γ̂_iΓ̂_j`, Eq. C5-C7, ln 1811-1814) — this is a genuine **correlated-dissipation** lever.
-- **Repo status:** NOT present. Our `forward/scalable/` carrier is 1D-MPS (`mps_forward.py`) + composed DEM (`composed.py`); no 2D iPEPO/PEPO. Would be new infrastructure. FSA rule tables for the **toric code** are given (Appendix B.2, Table V) — directly relevant scaffolding for a surface/stabilizer-code lattice.
+Equation (7) defines the translationally invariant PEPO from local rule tensors. The rules are grouped
+as identity, start or head, intermediate, end or tail, and local terms. The double-wrapping procedure
+and Table II provide the prefactors for the `W^II` products. Algorithm 1 constructs the resulting
+operator from the rule tensor while rejecting combinations with overlapping nonzero signals.
 
-## The OBSERVABLE / metric [paper]
-- **Local magnetization** `m_x = ⟨σ̂^x_i⟩` (Fig. 5), **connected correlators** `C^{xx}_{ij} = ⟨σ̂^x_iσ̂^x_j⟩ - ⟨σ̂^x_i⟩⟨σ̂^x_j⟩` at NN (`C12`) and NNN (`C13`) separation (Fig. 7), **purity** `Π = tr(ρ²)`, and **bond entropy** `S_α = -Σ_j [λ_α]_{jj} log[λ_α]_{jj}` (Eq. 17) as a proxy for entanglement (exact only for acyclic networks).
-- **Convergence metric** `δ^{[n]}/Δt` (Eq. 15 rescaled) tracks steady-state convergence in time (Fig. 11).
-- **Regime where informative:** bond entropy peaks flag where finite-`D` accuracy degrades; the paper shows accuracy worsens with increasing `J/γ` (more entanglement) and, for `α=3` vs `α=6`, that broader (longer) bond-entropy peaks are more damaging than sharp brief ones (ln 1306-1310).
-- **Error control is CONVERGENCE-ONLY** where no exact solution exists (`h≠0` Ising, Rydberg): the paper demonstrates agreement by showing curves stabilize as `D↑` (D=8-10 agree), NOT by a certified error bound. Only the `h=0` Ising has an exact reference (§VI.A.1).
+## Gaussian long-range approximation [paper_fact]
+Fact ID: fact.long-range-approximation
+Source locator: Section IV, Eqs. (9)-(12) and Table III, pages 6-7
+PDF page: 7
+Claim: The Gaussian long-range approximation fits a radial interaction profile on a finite lattice disc by a weighted sum of separable Gaussian functions that each admit FSA rules.
 
-## Findings + numbers [paper]
-| Result | Numbers |
-|---|---|
-| Long-range Ising vs exact (`h=0`) | abs. error `<10⁻²` for most of `tγ∈[0,10]` at `k_max=10, D=4`; `k_max<5` visibly inaccurate (Fig. 5). |
-| Accuracy vs interaction strength | bond-entropy peak rises with `J/γ∈{0.5,1,2,4}`; largest deviation from exact where peak is highest (Fig. 6). |
-| Beyond exact (`h/γ=0.5`) | converged w.r.t. `D` at `D=10` (smooth); `D≤7` unstable for `J/γ=2` (Fig. 7). |
-| Rydberg blockade crossover | high→low occupation crossover at `V/γ≈6`, `Ω/γ=2`, `Δ=-V/2γ`; correlations `C12,C13` peak, purity `Π: 0.6→1.0` (Fig. 8, 9). |
-| Long-range EASIER than short-range | short-range (`α→∞`) TEBD+SU fails to converge for `V/γ>1`; tePEPO (`α=3`) converges for all `V/γ` tested (Fig. 11) — a notable inversion. |
-| Truncation cost | itrSU cuts SU QR from `O(d⁴D⁶η⁶)` → `O(d⁴D⁶η³)`. |
-| Demonstrated max | infinite lattice (single-site unit cell), `D` up to **10**, `t` up to `tγ=20` (Fig. 9), local dim `d=2` (spin-½). |
+The parameter set in Eq. (11) contains the component weights, one-dimensional exponential weights,
+and decay factors. Equation (12) minimizes a norm of the profile error on the chosen disc. The fit
+therefore depends on the disc cutoff, number of Gaussian components, number of exponentials within
+each component, and the stated fitting tolerance; the construction does not make a generic power
+law exact at finite settings.
 
-## Limitations [paper]
-- **Markovian/Lindblad ONLY.** The evolved object is `e^{t𝓛}` for a GKSL generator (Eq. 1-3). The generator `G` is a **time-local** sum of ≤2-body terms (Eq. 5). No influence functional, no process tensor, no memory kernel — nothing carries bath memory. Non-Markovianity is nowhere in the construction.
-- **Core bottleneck = bond truncation** (ln 1789-1791). itrSU is **uncontrolled**: it assumes a rank-1 (simple-update) environment approximation and a good Vidal-gauge, "which may not always be the case." Correlation length `ξ≳2` already exceeds what bond weights capture (ln 1796-1799) → they flag full-environment (fast-full-update) or belief-propagation truncation as needed extensions.
-- **No certified error bound** off the exactly-solvable line — convergence-in-`D` only.
-- **VUMPS can't do diagonal correlators** (need CTMRG, ln 2740-2743).
-- **Trotter error `O(τ²)`** from the `k_max`-factor Suzuki-Trotter split (Eq. 13); WI/WII are only **first-order** operators (higher-order needs [55]'s arbitrary-order construction). Suzuki-Trotter over the Gaussian-sum terms caused instabilities (large cancelling coefficients) so was avoided (ln 920-925).
-- Demonstrated only for `d=2` spins, single-site unit cell (larger local Hilbert space & fermions claimed "trivial"/"straightforward" but not shown).
-- Steady-state at large `V/γ∈{8,10}` shows unstable short-time dynamics (poor trace-environment convergence), though late-time steady state still reached (Fig. 10).
+## Sequential long-range operator factors [paper_fact]
+Fact ID: fact.long-range-factors
+Source locator: Section IV.A.3, Eq. (13), page 7
+PDF page: 7
+Claim: A fitted long-range generator is evolved by a Suzuki-Trotter sequence of k_max tePEPO factors, with one state update and truncation after each factor in every timestep.
 
-## Relevance to qec_twin [ours]
-- **This IS a candidate 2D-geometry open-system carrier** — the PEPS-family mixed-state (iPEPO) representation we identified as the missing piece when 1D-MPS hit the `2^{2d}` bond wall (memory: `project-fulld-1dmps-wall-and-2dpeps`, `project-mps-codestate-unblocked`). It represents `ρ` natively on a 2D lattice with area-law-respecting bond dim `D`, and even supplies FSA rules for the **toric code** stabilizer Hamiltonian (Table V) — a direct on-ramp to a surface-code lattice geometry.
-- **BUT it is Markovian-only, and that is the decisive limitation for our stated need.** Our open frontier (memory: `project-coupling-nonmarkovian-is-the-contribution`, `project-nonmarkovian-wedge-must-be-coherence`) is precisely **non-Markovian correlated dynamics** (shared bath / TLS / 1-f, CP-divisibility breaking) as *the* contribution — the removable Markovian coupling is the baseline. tePEPO carries **no memory**: `G` is a time-local ≤2-body Lindblad generator (Eq. 5, 14). It cannot represent a process tensor / influence functional. So **this method alone does not carry our target physics.**
-- **What it CAN keep on a 2D lattice:** (i) **long-range coherent coupling** at any distance & orientation (radial `r^{-α}`, `2<α<∞`, via `k_max`-Gaussian FSA); (ii) **correlated/non-local dissipation** — 2-site Lindblad `L_{ij}=√γΓ̂_iΓ̂_j` is explicitly supported (Eq. C5-C7). Correlated *Markovian* dissipation is exactly the QMCtwin-owned / echo-removable baseline in our framing — useful as the **baseline arm**, not the wedge.
-- **What it CANNOT keep:** any bath-memory / non-Markovian correlation; CP-indivisible (coherence-revival) dynamics; the process-tensor structure. To carry our wedge one would have to **augment** the ansatz — e.g. append explicit ancilla/bath sites (a TLS or pseudomode) on the 2D lattice and evolve the *enlarged* system with a Markovian tePEPO (memory then lives in the retained bath sites), or graft a process-tensor/PEPO-influence-functional layer (not in this paper). The trade-off: adding bath sites raises local dim `d` and bond dim, and the itrSU environment approximation is already uncontrolled at `ξ≳2`.
-- **CORRECTION this forces:** the earlier "2D PEPS → d7 feasible" optimism (memory: `project-fulld-1dmps-wall-and-2dpeps`) must be qualified — a 2D PEPO carrier of this class is **Markovian by construction**; getting non-Markovian physics onto it is an *added-bath-site* problem, not free. The `2^{2d}` relief is real for the **state/geometry**, but the memory axis is orthogonal and unaddressed here.
-- **REUSE candidates if we build a 2D carrier:** the FSA rule-table recipe (Tables I, III, IV, V), the vectorized-Lindblad→FSA mapping (Appendix C, Eq. C2-C8, incl. 2-site dissipation), the itrSU truncation (Appendix D) and VUMPS/CTMRG contraction (Appendix E). Data + (implied) code at Zenodo 10.5281/zenodo.17656737.
+Each fitted radial component defines a generator `H^[k]` and an FSA operator `W^[k](tau)`. Equation
+(13) multiplies these factors and states a first-order error. The source notes that directly splitting
+large cancelling FSA terms can cause instabilities, while the sequential component construction
+costs `k_max` apply-and-truncate operations per time step.
 
-## How to use / trust + open questions [ours]
-- **Trust level:** FULL-TEXT 精读 (19 pp incl. all appendices). Figures not pixel-extracted — figure *numbers* here are from text/captions. Equations transcribed verbatim from the PyMuPDF text (Unicode operators occasionally garbled by the extractor, e.g. `∥·∥`, sub/superscripts — structure preserved).
-- **Independent-oracle-ability:** GOOD for the Markovian regime. The `h=0` long-range dissipative Ising model has a **closed-form exact solution** (§VI.A.1, Fig. 5) they benchmark against — an independent (non-tensor-network) oracle we could reuse to certify any 2D-iPEPO carrier we build. Toric-code FSA rules (Table V) give an independent stabilizer-lattice check. For non-Markovian augmentation there is **no oracle here** — we would need our own (e.g. small-system exact Lindblad on system+bath, or an analytic pseudomode solution).
-- **Open questions for implementation:** (1) local-dim / bond-dim cost of embedding enough bath sites to carry our TLS/1-f memory — is it tractable at surface-code `d`? (2) does itrSU's uncontrolled rank-1 environment survive the longer correlation lengths a shared bath induces (they already flag `ξ≳2` as marginal)? (3) is a single-site unit cell enough for a surface-code stabilizer lattice, or do we need the multi-site unit-cell VUMPS [93]? (4) diagonal-correlator limitation (VUMPS→CTMRG) matters for XZZX diagonal stabilizer structure. (5) Is our need actually *dynamics* on a 2D lattice, or *codestate + syndrome extraction* — the latter may not need the full time-evolution machinery.
-- **GT-feasibility verdict:** the method is a legitimate, benchmarkable 2D open-system carrier with an independent exact oracle in the Markovian regime — but it is **Markovian-only**, so it is at best the **baseline/geometry substrate**, and carrying our non-Markovian wedge requires an explicit added-bath augmentation the paper does not provide or bound.
+## iPEPO and vectorized Liouvillian [paper_fact]
+Fact ID: fact.ipepo-vectorization
+Source locator: Section V.A-B, Figure 4 and Eq. (14), pages 7-8
+PDF page: 8
+Claim: The density operator is represented by a rank-six iPEPO tensor with two physical legs and four D-dimensional virtual legs, then vectorized into a rank-five iPEPS-shaped tensor with physical dimension d squared.
+
+Figure 4 shows a single-site unit cell and the fusion of the two physical density-matrix legs. Equation
+(14) gives the vectorized Liouvillian with coherent and dissipative terms. Applying one tePEPO factor
+multiplies every virtual bond from `D` to `D eta`, so a truncation follows every operator application.
+
+## Vectorized nonlocal dissipators [paper_fact]
+Fact ID: fact.nonlocal-dissipator-rules
+Source locator: Appendix C, Eqs. (C5)-(C8), pages 17-18
+PDF page: 18
+Claim: A two-site Lindblad jump vectorizes into three two-body Liouville-space products, each of which can be represented by the same FSA rule machinery.
+
+Equations (C5)-(C7) give the jump term and the two anticommutator contributions. The source states
+that each non-purely-local Lindblad operator contributes three channels to the tensor-network
+operator bond dimension in this construction. Equation (C8) combines these with the two coherent
+left/right multiplication channels.
+
+## Iterative simple-update truncation [paper_fact]
+Fact ID: fact.itrsu-operation
+Source locator: Section V.C and Appendix D, pages 8-9 and 18
+PDF page: 18
+Claim: The iterative simple-update truncation reuses previous-step isometries on every non-target bond, performs a QR and truncated SVD on the remaining bond, updates the isometries and bond weight, and repeats over all bonds.
+
+Appendix D reconstructs the operation. For a target bond, isometries reduce all other enlarged legs;
+the two site tensors are QR decomposed, the central product receives a rank-`D` SVD, and
+pseudo-inverses construct new truncating isometries. The cycle can update bonds in parallel or in
+sequence and ends by applying the converged isometries to all tensor legs.
+
+## Bond-weight convergence indicator [paper_fact]
+Fact ID: fact.itrsu-indicator
+Source locator: Eq. (15), pages 8-9; Figure 11, page 13
+PDF page: 8
+Claim: The bond-weight convergence indicator is used to stop itrSU and, after division by the timestep, to plot convergence toward a steady state, but Eq. (15) is typeset as an inequality rather than an unambiguous definition.
+
+The displayed Eq. (15) places `delta^[i]` to the left of `<` and the maximum inter-iteration norm of
+the bond-weight change to the right. The surrounding prose says the iteration continues until
+`delta^[i] < epsilon_SU`, reports `epsilon_SU=10^-8`, and Figure 11 uses `delta/Delta t`. This context
+identifies the intended convergence role but does not repair the equation's definition-level
+ambiguity. No state-distance meaning is assigned to this quantity.
+
+## Rank-one simple-update environment [paper_fact]
+Fact ID: fact.uncontrolled-environment
+Source locator: Section V.C and Discussion, pages 8 and 13
+PDF page: 13
+Claim: The itrSU truncation retains a rank-one simple-update environment made from bond matrices, and the source calls this environment approximation uncontrolled.
+
+Section V.C explains that SU assumes the environment surrounding the truncated bond is accurately
+represented by the bond matrices. The Discussion says itrSU lacks the robustness of regular SU,
+requires a good Vidal-gauge approximation, and keeps the same uncontrolled environment assumption.
+The reported correlation length is a few lattice sites, motivating full-update or loop-corrected
+alternatives rather than certifying the rank-one environment.
+
+## VUMPS observable environment [paper_fact]
+Fact ID: fact.vumps-environment
+Source locator: Section V.D and Appendix E, pages 9 and 19
+PDF page: 19
+Claim: Reduced density matrices and observables are evaluated using a finite-chi VUMPS boundary MPS together with left and right transfer-matrix fixed points.
+
+The boundary MPS approximates the upper and lower infinite portions of the traced network. Appendix
+E shows how it is combined with transfer fixed points for a local density matrix and a next-nearest
+correlator. The source states that diagonally separated correlation functions are not compatible with
+this VUMPS construction and suggests CTMRG for that geometry.
+
+## Exact Ising benchmark [paper_fact]
+Fact ID: fact.exact-ising-benchmark
+Source locator: Section VI.A.1, Eq. (16) and Figures 5-6, pages 9-10
+PDF page: 9
+Claim: At zero transverse field the dissipative long-range Ising model has an exact solution used to benchmark the combined FSA, splitting, itrSU, and finite-D evolution.
+
+The benchmark uses `J/gamma=1`, `Delta t=0.01`, `epsilon_SU=10^-8`, at most 20 itrSU iterations,
+and a product initial state. Increasing `k_max` generally reduces the magnetization error, while the
+source reports that additional factors can worsen early-time accuracy because they cause more
+truncations under the uncontrolled simple-update approximation. The source reports mostly
+`10^-2`-level or smaller absolute error for `k_max=10` in the plotted history, not a universal bound.
+
+## Bond-entropy proxy [paper_fact]
+Fact ID: fact.bond-entropy-proxy
+Source locator: Eq. (17) and following paragraph, page 10
+PDF page: 10
+Claim: The entropy computed from normalized bond weights is a proxy for PEPO operator entanglement and equals a true cut entropy only for an acyclic tensor network.
+
+The simulations use this bond quantity to associate peaks with time intervals where the numerical
+magnetization departs more strongly from the exact solution. Because the square-lattice network has
+loops, the source does not identify Eq. (17) with an exact global entanglement measure for the
+iPEPO.
+
+## Nonexact bond-dimension comparison [paper_fact]
+Fact ID: fact.nonexact-bond-comparison
+Source locator: Section VI.A.2 and Figure 7, pages 10-11
+PDF page: 11
+Claim: Outside the exactly solvable regime, the source relies on bond-dimension comparisons and reports unstable low-D time regions in some parameter cases.
+
+For `h/gamma=0.5`, the paper reports visual agreement for `D>=8` at `J/gamma=0.5`, while at larger
+interaction strength some `D=6,7` histories become unstable and `D=10` is smoother in the plotted
+quantities. The text says care is required to ensure convergence with bond dimension. It supplies no
+exact error for this regime.
+
+## Rydberg steady state and dynamics [paper_fact]
+Fact ID: fact.rydberg-results
+Source locator: Eq. (18) and Figures 8-11, pages 10-13
+PDF page: 12
+Claim: The dipolar Rydberg example reports a blockade crossover and late-time steady states, while labeling parts of the stronger-interaction early-time evolution unstable or unreliable.
+
+The reported steady-state sweep uses `D=5,...,10`, `Delta t=1.25e-2`, and 2000 iterations. The paper
+places the crossover near `V/gamma=6` and observes enhanced short-range correlations. For
+`V/gamma=8,10`, it attributes poor early-time trace-environment convergence and an imaginary part
+of the occupation to unreliable dynamics, while reporting later stabilization. Figure 11 compares
+the time-rescaled local convergence quantity for the dipolar and nearest-neighbor cases; this is not
+an exact long-range solution.
+
+## Positivity preservation [literature_gap]
+Fact ID: gap.positivity-preservation
+Source locator: Sections II and V, complete representation and truncation path, pages 3-9
+PDF page: 8
+Claim: The source does not establish that the finite-D iPEPO remains positive after tePEPO application and itrSU truncation.
+Gap scope: source_local
+
+The exact GKSL exponential is CPTP, but the numerical path vectorizes the density operator,
+multiplies PEPO tensors, and applies local QR/SVD truncations. The source does not provide a
+positive parametrization, a global PSD theorem, or a negativity bound for the truncated object.
+
+## Truncation-error separation [literature_gap]
+Fact ID: gap.truncation-error-separation
+Source locator: Eqs. (11)-(15), Figures 5-7, and Discussion, pages 7-13
+PDF page: 13
+Claim: The source does not provide separate certified bounds for spatial fitting, cluster expansion, Suzuki-Trotter splitting, repeated itrSU truncation, finite D, and finite-chi observable contraction.
+Gap scope: source_local
+
+The exact Ising benchmark measures their combined effect for one solvable parameter choice. The
+nonexact examples use convergence comparisons and local diagnostics. Neither route supplies a
+general decomposition that bounds the represented density operator or every observable.
+
+## Adaptive outcome-distribution accuracy [literature_gap]
+Fact ID: gap.adaptive-outcome-accuracy
+Source locator: Complete method, appendices, and numerical results, pages 1-19
+PDF page: 13
+Claim: The source does not establish accuracy for an adaptive sequential measurement-outcome distribution generated from the truncated iPEPO.
+Gap scope: source_local
+
+The paper evolves density operators deterministically and contracts reduced observables. It contains
+no measurement instrument, outcome-conditioned normalization, feedback operation, reset, sampled
+branch history, joint outcome law, or distance between exact and truncated sequential distributions.

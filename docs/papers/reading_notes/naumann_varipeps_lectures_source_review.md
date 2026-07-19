@@ -11,47 +11,108 @@ read_status = "complete"
 evidence_status = "persisted"
 review_scope = "full_text"
 operation_replay_status = "complete"
-audit_packet = "docs/simulator_validation/TENSOR_NETWORK_CARRIER_LITERATURE_AUDIT_2026-07-16.md"
-audit_packet_sha256 = "450fbb9ce7e296661ed111b5bcc7f3acdb249716f44d8301017823e566b2f48c"
+audit_packet = "docs/simulator_validation/NAUMANN_VARIPEPS_PROJECT_FIT_AUDIT_2026-07-17.md"
+audit_packet_sha256 = "f56ec8091c10ff2bac5473f7b85116a9f250c6248d7561a5f1328492803d3aac"
 admission_status = "source_only_reviewed"
-admission_reviewer = "tn_carrier_source_round1_dual_review"
-admission_date = "2026-07-16"
-visually_checked_pages = [3, 5, 6, 10, 11, 19, 33]
+admission_reviewer = "peps_carrier_source_round2_dual_review"
+admission_date = "2026-07-17"
+visually_checked_pages = [1, 5, 9, 10, 11, 12, 16, 19, 33]
+
+[[relations]]
+predicate = "defines"
+object_id = "ctmrg-projector-truncation"
+object_type = "method"
+object_label = "CTMRG projector truncation"
+fact_id = "naumann-ctmrg-projectors"
 +++
-# Source review — Naumann et al.
+# Full-text review — Naumann et al., “An introduction to infinite projected entangled-pair state methods for variational ground state simulations using automatic differentiation”
+
+## Source identity [paper_fact]
+Fact ID: naumann-source-identity
+Source locator: Title page and publication metadata
+PDF page: 1
+Claim: Jan Naumann, Erik Lennart Weerda, Matteo Rizzi, Jens Eisert, and Philipp Schmoll authored this 2024 SciPost Physics Lecture Notes article on variational iPEPS with automatic differentiation.
+
+The version of record is SciPost Physics Lecture Notes 86 and accompanies the variPEPS software library.
 
 ## Variational iPEPS target [paper_fact]
-
-Fact ID: fact.variational-ipeps-target
-Source locator: Sec. 2, Eqs. (1)--(3)
+Fact ID: naumann-variational-target
+Source locator: Sec. 2, Eqs. (1)--(2)
 PDF page: 5
-Claim: The variational infinite projected entangled-pair-state method searches for a periodically repeated unit-cell state that minimizes the energy density of a local Hamiltonian in the thermodynamic limit.
+Claim: The method searches a periodically repeated iPEPS unit cell for a minimum of the local-Hamiltonian energy density by differentiating through an approximate CTMRG contraction.
 
-Automatic differentiation supplies gradients with respect to the unit-cell tensor coefficients.
+The iPEPS state bond dimension and the environment refinement dimension are independent numerical controls.
 
-## CTMRG environment projectors [paper_fact]
+## Finite-environment variational qualification [paper_fact]
+Fact ID: naumann-finite-environment-qualification
+Source locator: Sec. 2, final paragraph before Sec. 2.1
+PDF page: 5
+Claim: A strict variational upper-bound interpretation would require the CTMRG environment dimension `chi_E` to approach infinity, while practical calculations increase it until observables converge.
 
-Fact ID: fact.ctmrg-projectors
-Source locator: Sec. 2.2.2, Eqs. (4)--(9)
+Finite-environment convergence is therefore an empirical numerical condition in the presented workflow.
+
+## CTMRG projector environment [paper_fact]
+Fact ID: naumann-ctmrg-projectors
+Source locator: Sec. 2.2.2, Figs. 7--8 and Eqs. (4)--(6)
 PDF page: 10
-Claim: Corner-transfer-matrix renormalization constructs projectors by singular-value decomposing an approximate lattice-environment matrix and retaining a chosen environment bond dimension.
+Claim: CTMRG projector truncation singular-value decomposes an approximate lattice-environment matrix `M=rho_B rho_T` and retains the leading `chi_E` singular subspace.
 
-The retained dimension controls the approximation of the infinite-lattice environment rather than the state tensor bond itself.
+The environment matrix includes the current CTM tensors and the local iPEPS patch for the absorption direction.
 
-## CTMRG fixed-point requirement [paper_fact]
+## CTMRG projector pseudoinverse [paper_fact]
+Fact ID: naumann-ctmrg-pseudoinverse
+Source locator: Sec. 2.2.2, Eqs. (7)--(9) and Fig. 9
+PDF page: 10
+Claim: The top and bottom projectors use an inverse square root of the retained singular spectrum with a pseudoinverse tolerance, and without truncation their product assembles the identity on the enlarged bond.
 
-Fact ID: fact.ctmrg-fixed-point
-Source locator: Sec. 2.2.3, convergence discussion
+The source gives a typical inverse-square-root threshold of `10^-6`, corresponding to `10^-12` on singular values, for numerical stability.
+
+## Full and half projectors [paper_fact]
+Fact ID: naumann-full-half-projectors
+Source locator: Sec. 2.2.2, discussion after Fig. 9 and Fig. 10
 PDF page: 11
-Claim: Stable differentiation through corner-transfer-matrix renormalization requires a genuine fixed point and consistent singular-vector phase or gauge handling, not only convergence of a corner singular spectrum.
+Claim: Full projectors use the complete displayed lattice environment, while computationally cheaper half projectors contract a smaller environment and retain correlations from only one half of the network.
 
-The chapter recommends checking tensors element by element when assessing the fixed point.
+The source says half projectors are sufficient in many applications rather than proving equivalence in general.
+
+## Element-wise fixed-point requirement [paper_fact]
+Fact ID: naumann-elementwise-fixed-point
+Source locator: Sec. 2.2.3, Eq. (10)
+PDF page: 12
+Claim: Automatic differentiation through CTMRG requires element-wise convergence of the environment tensors because convergence of corner singular values alone can hide sign or phase fluctuations from SVD gauge freedom.
+
+The proposed phase convention fixes the largest entry of each left singular vector to the positive real axis, with an ordering rule for quasi-degeneracies.
+
+## Fixed-point gradient [paper_fact]
+Fact ID: naumann-fixed-point-gradient
+Source locator: Sec. 2.5, Eqs. (16)--(17)
+PDF page: 16
+Claim: At a true CTMRG fixed point, the energy gradient can be evaluated from one converged iteration and a fixed-point derivative series instead of storing every preceding CTMRG iteration.
+
+The infinite derivative series is truncated only after the resulting gradient converges to the requested numerical accuracy.
 
 ## Environment truncation heuristic [paper_fact]
-
-Fact ID: fact.environment-truncation-heuristic
-Source locator: Sec. 2.8.2, stability discussion
+Fact ID: naumann-environment-truncation-heuristic
+Source locator: Sec. 2.8.2, first paragraph
 PDF page: 19
-Claim: The norm of discarded normalized environment singular values is used as a heuristic for choosing the environment bond dimension, and an undersized environment can yield artificially low variational energies.
+Claim: The norm of discarded normalized environment singular values is used as a heuristic for deciding whether `chi_E` is too small, with `epsilon_T>10^-5` given as an example warning threshold.
 
-The chapter gives an example threshold for this ground-state optimization workflow and warns that automatic differentiation can exploit contraction inaccuracies.
+The source warns that an undersized environment can let automatic differentiation exploit CTMRG inaccuracies and produce artificially low energies.
+
+## Stochastic trajectories not treated [literature_gap]
+Fact ID: naumann-gap-stochastic-trajectories
+Source locator: Full-text scope; Secs. 2--5 and Appendices A--D
+PDF page: 33
+Claim: This source does not define stochastic pure-state trajectories, selective measurement branches, or physical outcome masses.
+Gap scope: source_local
+
+Its optimization target is a deterministic thermodynamic-limit ground-state energy.
+
+## Multi-time record bridge not treated [literature_gap]
+Fact ID: naumann-gap-record-bridge
+Source locator: Full-text scope and Sec. 5 conclusion
+PDF page: 33
+Claim: This source does not establish a bound from a discarded environment singular spectrum or CTMRG fixed point to a joint multi-time measurement-record distribution.
+Gap scope: source_local
+
+Its reported outputs are ground-state energies, gradients, contraction environments, and many-body benchmark observables.

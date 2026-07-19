@@ -1,129 +1,254 @@
-# Full-text review — Shao et al., "Complexity of tensor network simulation for noisy quantum circuits" (arXiv:2606.00474)
++++
+schema = "error_coupling_simulator.literature.note.v1"
+source_id = "arxiv:2606.00474"
+source_version = "v1"
+source_uri = "https://arxiv.org/abs/2606.00474v1"
+source_artifact = "outputs/papers/pepo_survey/2606.00474v1.pdf"
+source_sha256 = "d7722de0513b1aef061a66a43ea766492d4205674a522c72f880e0f497a237f8"
+title = "Complexity of tensor network simulation for noisy quantum circuits"
+publication_status = "preprint"
+read_status = "complete"
+evidence_status = "persisted"
+review_scope = "full_text"
+operation_replay_status = "complete"
+audit_packet = "docs/simulator_validation/SHAO_2606_00474_PROJECT_FIT_AUDIT_2026-07-17.md"
+audit_packet_sha256 = "20ac546a0ab6406553593b16edc4f41740844e2835f62b4b10cb8342c8a70274"
+admission_status = "source_only_reviewed"
+admission_reviewer = "mps_peps_source_rebuild_xhigh_2026_07_17"
+admission_date = "2026-07-17"
+visually_checked_pages = [1, 2, 3, 4, 5, 9, 10, 11, 13, 14, 15, 16, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48]
 
-> **Provenance (2026-07-03): FULL-TEXT 精读.** Fetched from arXiv HTML (2606.00474v1). May 2026 submission (v1). The paper provides rigorous bounds on operator entanglement entropy for noisy quantum circuits, establishing polynomial classical simulability thresholds. Authors: Shao, Zhao, Cheng, Liu — Tsinghua / BIMSA (Beijing).
+[[relations]]
+predicate = "defines"
+object_id = "squared-hilbert-schmidt-error-criteria"
+object_type = "concept"
+object_label = "squared Hilbert–Schmidt error criteria"
+fact_id = "shao-error-criteria"
 
-## Metadata [paper]
-- **Authors / affiliation:** Yuguo Shao, Zishuo Zhao (equal contribution, Tsinghua University), Song Cheng (BIMSA), Zhengwei Liu (Tsinghua/BIMSA).
-- **Venue / status:** arXiv:2606.00474 (cond-mat.str-el primary, quant-ph secondary), May 2026. 47 pages, 3 figures. No journal reference yet.
-- **Type:** Theoretical — rigorous complexity bounds for tensor-network simulation of noisy quantum circuits via operator entanglement entropy.
+[[relations]]
+predicate = "supports"
+object_id = "oee-schmidt-rank-bounds"
+object_type = "theorem"
+object_label = "OEE-to-Schmidt-rank bounds"
+fact_id = "shao-entropy-rank-bounds"
 
-## Executive summary [paper]
+[[relations]]
+predicate = "supports"
+object_id = "depolarizing-oee-crossover"
+object_type = "theorem"
+object_label = "depolarizing OEE crossover"
+fact_id = "shao-depolarizing-thresholds"
 
-This paper provides **rigorous proofs** bounding the **operator entanglement entropy (OEE)** of noisy quantum circuits, establishing when tensor-network simulation is provably efficient (poly(n)-bond dimension). The central diagnostic is OEE: when OEE is O(log n), the required MPO bond dimension is polynomial and simulation is efficient.
+[[relations]]
+predicate = "supports"
+object_id = "whole-trajectory-prescribed-cut-approximation"
+object_type = "theorem"
+object_label = "whole-trajectory prescribed-cut approximation"
+fact_id = "shao-whole-trajectory"
 
-**Four main theorem classes:**
+[[relations]]
+predicate = "limits"
+object_id = "cutwise-average-boundary-dimension"
+object_type = "limitation"
+object_label = "cutwise average boundary dimension"
+fact_id = "shao-pepo-cutwise-scale"
++++
+# Full-text review — Shao et al., “Complexity of tensor network simulation for noisy quantum circuits”
 
-1. **Single-qubit depolarizing noise** (geometry-independent): At fixed depth L = O(1), the **unnormalized** OEE becomes O(log n) (absolute-error simulation). At L = Θ(log n) depth, the **normalized** OEE becomes O(log n) (relative-error simulation). The Θ(log n) relative-error threshold is **optimal** — tight.
+## Source identity [paper_fact]
+Fact ID: shao-source-identity
+Source locator: Title page and arXiv version line
+PDF page: 1
+Claim: The source is Shao, Zhao, Cheng, and Liu's arXiv:2606.00474v1 preprint “Complexity of tensor network simulation for noisy quantum circuits,” posted on 30 May 2026.
 
-2. **General single-qubit noise in 1D brickwall circuits with random 2-design gates** (average case): If the noise channel's contraction coefficient c(N) < 1/3, the OEE satisfies an **area law** (O(1) bound) with high probability over random gates for poly(n) depth.
+The title page lists affiliations at Tsinghua University and the Beijing Institute of Mathematical
+Sciences and Applications. This record is pinned to the 48-page v1 artifact.
 
-3. **General single-qubit noise in 1D brickwall circuits with arbitrary gates** (worst case): If c(N) < 1/48 and N has a unique fixed point, the OEE is O(log n) for every gate choice and every depth.
+## Scientific scope [paper_fact]
+Fact ID: shao-selection-scope
+Source locator: Abstract, Introduction, and Table I
+PDF page: 1
+Claim: The source derives operator-entanglement and tensor-network rank bounds for noisy density-operator evolution under fixed product single-qubit depolarizing noise and two stronger-contraction classes of product single-qubit noise.
 
-4. **Higher-dimensional PEPO bounds** (depolarizing and general noise): The average boundary-bond dimension satisfies log χ_∂ = O(log n) — polynomial simulability in depth.
+The results distinguish absolute from relative Hilbert–Schmidt approximation, one-dimensional MPO
+statements from higher-dimensional cutwise PEPO scales, and average random-gate results from
+worst-case arbitrary-gate results.
 
-The proofs use **hypercontractivity (King's inequality)** for geometry-independent purity decay, **purity-controlled maximum-OEE theorems** to convert purity into entropy bounds, and an **auxiliary-orbit construction** that replaces the distant past with the noise fixed point.
+## Operator Schmidt entropies [paper_fact]
+Fact ID: shao-oee-definitions
+Source locator: Sec. II, Eqs. (1)–(4); Appendix A, Eqs. (A1)–(A4)
+PDF page: 2
+Claim: For an operator Schmidt decomposition `rho=sum_alpha lambda_alpha L_alpha tensor R_alpha`, the source defines unnormalized OEE as `-sum lambda_alpha^2 log_2 lambda_alpha^2` and normalized OEE by replacing each squared coefficient with `lambda_alpha^2/tr(rho^2)`.
 
-## Method (deep) [paper]
+If `t=tr(rho^2)`, the two entropies obey
+`S_tilde_OE(rho)=S_OE(rho)/t+log_2(t)`. The normalized entropy is the entanglement
+entropy of the normalized vectorized density operator.
 
-**Operator entanglement entropy (Section II, Appendix A-C):** For a bipartition A|B of an n-qubit density matrix ρ, the operator Schmidt decomposition is ρ = Σ λ_α L_α^[A] ⊗ R_α^[B]. Two entropies:
-- **Unnormalized OEE:** S_OE(ρ) = -Σ (λ_α)² log₂ (λ_α)² — governs absolute-error truncation, incorporates purity decay
-- **Normalized OEE:** S̃_OE(ρ) = -Σ p_α log₂ p_α (p_α = λ_α²/tr(ρ²)) — governs relative-error truncation
+## Squared Hilbert–Schmidt error criteria [paper_fact]
+Fact ID: shao-error-criteria
+Source locator: Appendix B, Eqs. (B2)–(B6)
+PDF page: 10
+Claim: The source's squared Hilbert–Schmidt error criteria are `||rho-rho_hat_chi||_2^2<=epsilon` for absolute accuracy and `||rho-rho_hat_chi||_2^2/||rho||_2^2<=delta` for relative accuracy, with the ordered Schmidt tail exactly equal to the squared error.
 
-They satisfy S_OE = tr(ρ²) S̃_OE - tr(ρ²) log₂ tr(ρ²). Polynomial χ requires at most logarithmic OEE — established via Eckart-Young for operator Schmidt (Lemma 3) and truncation bounds (Theorems 4-5).
+Absolute error is additive in the unnormalized operator and permits the zero-rank approximation when
+`tr(rho^2)<=epsilon`. Relative error is the fraction of the remaining Hilbert–Schmidt weight in the
+discarded tail; it is not defined as a ratio of unsquared norms.
 
-**Purity-controlled maximum-entropy theorem (Theorem 6, Appendix C):** Given bipartition dimensions D_A, D_B and purity t = tr(ρ²), the maximum possible OEE is piecewise:
+## OEE-to-Schmidt-rank bounds [paper_fact]
+Fact ID: shao-entropy-rank-bounds
+Source locator: Appendix B, Theorems 4–5 and Eqs. (B7), (B13)
+PDF page: 10
+Claim: The OEE-to-Schmidt-rank bounds give a sufficient ordered-truncation rank `R_abs<=max{1,ceil((t-epsilon)2^(S_OE/epsilon))}` for `0<epsilon<t` and `R_rel<=max{1,ceil((1-delta)2^(S_tilde_OE/delta))}` for `0<delta<1`.
 
-- For t ≤ D_min/D_max: S_OE^{max}(t) = t log₂ D_A D_B + (t - 1/D_A D_B) log₂((D_min²-1)/(t D_A D_B - 1))
-- For t ≥ D_min/D_max: S_OE^{max}(t) ≤ t log₂(D_min²/t)
+The proofs use the monotonicity of the ordered Schmidt weights and a contrapositive entropy bound.
+These are sufficient rank bounds across one bipartition, with all tolerances fixed independently of
+system size when polynomial scaling is inferred.
 
-The normalized version satisfies S̃_OE^{max}(t) ≤ log₂ D_min² (constant) for t ≥ D_min/D_max — if purity is above the threshold, the normalized OEE is uniformly bounded regardless of circuit depth.
+## Purity-controlled OEE bridge [paper_fact]
+Fact ID: shao-purity-oee-bridge
+Source locator: Appendix C, Theorem 6 and Eqs. (C15)–(C16)
+PDF page: 13
+Claim: Theorem 6 upper-bounds both unnormalized and normalized OEE by piecewise functions of subsystem dimensions and density-operator purity, thereby converting purity decay into operator-entanglement control.
 
-**Hypercontractivity (depolarizing noise, Section III):** King's inequality for single-qubit depolarizing N(σ) = (1-λ)σ + λ(I/2) gives:
+The bound has separate regimes divided by the smaller-to-larger subsystem dimension ratio. The
+source proves monotonicity and concavity properties of the resulting maximum-entropy functions in
+Theorems 7 and 8.
 
-tr(ρ_L²) ≤ 2^{-n tanh μ} where μ = -L log(1-λ)
+## Depolarizing circuit model [paper_fact]
+Fact ID: shao-depolarizing-model
+Source locator: Sec. III, Eqs. (8)–(11); Appendix D, Eqs. (D1)–(D2)
+PDF page: 2
+Claim: The depolarizing model applies the identical product channel `D_lambda^tensor n` after every unitary layer, with `D_lambda(sigma)=(1-lambda)sigma+lambda I/2` and fixed `lambda`.
 
-This is **independent of circuit geometry**, a strong result — even all-to-all connectivity doesn't change the scaling. The depth needed for tr(ρ²) ≤ 2^{-ε n} is L_0 = 𝒪(1) (any fixed ε), establishing the absolute-error threshold L_abs = 𝒪(1).
+The final state is the unconditional density operator obtained by composing these noisy layers. The
+unitaries are unrestricted for the geometry-independent entropy result; locality is added for the
+whole-trajectory construction.
 
-**Proposition 1 (whole-trajectory simulation, 1D):** For 1D local circuits with fixed λ ∈ (0,1), relative tolerance ε ∈ (0,1), and ερ_ℓ∥₂² tolerance, a sequential approximation exists where each ρ̂_ℓ has poly(n) bond dimension across any prescribed cut. Proof splits trajectory into exact initial O(log n) depth, then long-time compressed evolution where depolarizing contraction suppresses error.
+## Hypercontractive purity decay [paper_fact]
+Fact ID: shao-purity-decay
+Source locator: Appendix D, Lemma 9 and Eqs. (D3)–(D18)
+PDF page: 24
+Claim: Product-channel hypercontractivity and unitary invariance of Schatten norms give `tr(rho_L^2)<=2^(-n tanh(mu))` for pure input, where `mu=-L log(1-lambda)`.
 
-**General noise contraction coefficient (Section IV):** For a general single-qubit channel N with Pauli transfer matrix entries (canonical form):
+The proof applies the product depolarizing hypercontractivity inequality backward through the layers.
+The estimate is independent of gate geometry because every unitary preserves the required norms.
 
-c(N) = (⅓)(t_X² + t_Y² + t_Z² + D_X² + D_Y² + D_Z²) ≤ 1
+## Depolarizing OEE crossover [paper_fact]
+Fact ID: shao-depolarizing-thresholds
+Source locator: Main Theorem 1; Appendix D, Theorem 10 and Eqs. (D34)–(D55)
+PDF page: 3
+Claim: The depolarizing OEE crossover occurs after `O(1)` depth for `S_OE=O(log n)` and after `O(log n)` depth for `S_tilde_OE=O(log n)`, for fixed positive `lambda`, pure input, arbitrary intervening unitaries, and any fixed bipartition.
 
-Equality iff N is unitary. Key thresholds for 1D brickwall circuits:
-- **Average case** (2-design gates): c < 1/3 ⇒ S_OE = O(1) (Theorem 2)
-- **Worst case** (arbitrary gates + unique FP): c < 1/48 ⇒ S_OE = O(log n) (Theorem 3)
+The explicit normalized-OEE proof chooses a depth proportional to
+`(2 ln n-ln ln n)/[-2 ln(1-lambda)]`. The theorem is asymptotic in `n` for fixed noise strength.
 
-**Proof mechanism — auxiliary-orbit construction (Theorems 2-3):** Replace the distant past (layers ≤ L - m) with the noise fixed point. For 2-design gates at c < 1/3, the distance between true and auxiliary trajectories contracts exponentially in m — an area law emerges. For arbitrary gates without averaging, the Wasserstein-1 distance contraction is weaker, requiring c < 1/48 and m = O(log n).
+## Sharp relative-depth lower scale [paper_fact]
+Fact ID: shao-relative-sharpness
+Source locator: Appendix D, Proposition 3 and Eqs. (D56)–(D80)
+PDF page: 29
+Claim: A product of Bell pairs across a balanced cut, evolved only by repeated product depolarization, retains super-logarithmic normalized OEE through a logarithmic-depth initial window, so no uniform normalized-OEE crossover can occur at `o(log n)` depth.
 
-**Higher-dimensional PEPO bounds (Section V):** For a cut with a(A) boundary bonds and A-side system size n_A, S_OE = O(a(A) log n_A) under the strong contraction condition. The average boundary-bond dimension χ_∂ = 𝒪(poly(n)) is polynomial, but the paper notes this alone does not guarantee efficient PEPO contraction — a caveat.
+The construction uses identity unitary layers and computes the normalized operator-Schmidt
+distribution exactly. This proves the scale of a uniform bound, not that every input or circuit is
+hard until logarithmic depth.
 
-## Contributions (claim -> evidence -> strength) [paper]
+## Whole-trajectory prescribed-cut approximation [paper_fact]
+Fact ID: shao-whole-trajectory
+Source locator: Main Proposition 1; Appendix D, Proposition 4 and Eqs. (D81)–(D82)
+PDF page: 3
+Claim: The whole-trajectory prescribed-cut approximation states that, for a one-dimensional bounded-range local circuit from `|0><0|^tensor n` with fixed product depolarizing noise, there exists a sequence `rho_hat_l` at every depth with polynomial bond dimension across one fixed cut and `||rho_l-rho_hat_l||_2^2<=epsilon||rho_l||_2^2`.
 
-| Claim | Evidence | Strength |
-|-------|----------|----------|
-| Depolarizing noise: OEE = O(log n) at O(1) depth for absolute error, O(log n) depth for relative error (optimal) | Theorem 1, hypercontractivity purity decay + purity-controlled max-OEE bound. The Θ(log n) tightness is proven. | Theorem-grade — rigorous bounds with matching lower bound for relative-error depth. Geometry-independent. |
-| General 1D noise with c < 1/3: O(1) OEE plateau for most random 2-design gates | Theorem 2, with probability ≥ 1 - L e^{-Ω(n)} over gate choices. 2-design averaging + auxiliary-orbit construction. | Theorem-grade — probabilistic, but exponential concentration in n. Threshold c < 1/3 may not be tight. |
-| General 1D noise with c < 1/48, unique FP: O(log n) OEE for all gates | Theorem 3, auxiliary-orbit via Wasserstein-1 contraction. No averaging needed. | Theorem-grade — worst-case guarantee. Constant 1/48 likely looser than necessary. |
-| Depolarizing noise: poly(n) boundary-bond dimension for PEPO | Section V, Theorem 1 applied to higher dimensions. | Theoretical — poly(n) bond dimension proven, but PEPO contraction cost may still be exponential in general. |
-| Truncation bounds: bond dimension needed for given accuracy expressed via OEE | Theorems 4-5 (absolute and relative truncation bounds), proven via Eckart-Young + contrapositive | Theorem-grade — exact bounds. |
+The local gates in each layer are disjoint and act on at most a constant number of consecutive
+qubits. The cut and the fixed relative squared-error tolerance are chosen before the sequence is
+constructed.
 
-## Relevance to AI_QEC [ours]
+## Whole-trajectory construction [paper_fact]
+Fact ID: shao-whole-trajectory-construction
+Source locator: Appendix D, Eqs. (D84)–(D122)
+PDF page: 31
+Claim: The proof evolves exactly through an `O(log n)` initial segment and then alternates constant-length noisy blocks with best Hilbert–Schmidt rank truncation and an identity trace correction, using contraction of trace-zero errors to close an all-times induction.
 
-**Operator entanglement as a simulator cost diagnostic:**
+At block endpoints the error is kept at `mu 2^(-n/2)` in Hilbert–Schmidt norm, and intermediate
+states are obtained by exact evolution within a block. The discussion later says that a practical
+scheme with certifiable accumulated-truncation-error control across a full simulation remains missing.
 
-1. **Simulability of our noisy circuits:** The paper's bounds on OEE provide rigorous guarantees for when our MPS-based carrier (composed carrier, mps_forward.py, hypergraph_dem) should be efficient. For depolarizing noise (a rough approximation of twirled Pauli noise), the O(log n) OEE threshold at O(1) depth means even deep circuits should have efficient MPS representations of the mixed state. This is a formal justification for why our MPS approach works for Pauli-dominated noise.
+## General single-qubit contraction coefficient [paper_fact]
+Fact ID: shao-general-noise-coefficient
+Source locator: Sec. IV, Eqs. (15)–(16); Appendix E, Lemmas 11–12 and Eqs. (E1)–(E3)
+PDF page: 3
+Claim: After single-qubit pre- and post-unitary rotations, the source defines `c(N)=(t_X^2+t_Y^2+t_Z^2+D_X^2+D_Y^2+D_Z^2)/3` from the canonical Pauli-transfer parameters, with `c(N)<=1` and equality exactly for unitary channels.
 
-2. **The coherent wedge problem:** The contraction coefficient c(N) < 1/3 (average) or c(N) < 1/48 (worst-case) thresholds for efficient simulation are **not satisfied by coherent noise**. For a unitary rotation error (e.g., coherent Z-rotation), c(N) = 1 (unitary channels have c = 1). This means **coherent noise can produce OEE that grows unboundedly with depth**, even at small rotation angles. This is the rigorous formulation of our "coherent wedge" challenge: coherent errors are not efficiently simulable by tensor-network methods in the worst case, and our MPS carrier may face unbounded bond dimension growth for purely coherent mechanisms.
+The general-noise circuits apply the same channel independently to all sites after each
+nearest-neighbor brickwall layer. Smaller `c` denotes stronger average contraction of Pauli
+coefficients but is used with different additional assumptions in the two theorems.
 
-3. **Mixed coherent-incoherent regimes:** The paper does not directly treat the mixed case where noise has both coherent and incoherent components. Our regime (Paulidominate noise with a coherent admixture) falls in a gap: the incoherent part suppresses OEE growth (the contraction mechanism), while the coherent part drives OEE growth. The crossover where incoherent contraction dominates coherent growth is not characterized.
+## Average-case general-noise plateau [paper_fact]
+Fact ID: shao-average-general-noise
+Source locator: Main Theorem 2; Appendix E, Theorem 11 and Eqs. (E28)–(E38)
+PDF page: 4
+Claim: For independently drawn unitary 2-design two-qubit gates in a one-dimensional brickwall circuit and `c(N)<1/3`, unnormalized OEE is at most a constant at every layer with probability at least `1-4 L n [(1+3c)/2]^n`.
 
-4. **Absolute vs relative accuracy distinction:** The paper's separation of absolute-error simulation (OEE, captured by unnormalized S_OE) from relative-error simulation (normalized S̃_OE) is directly relevant. When our simulator targets LER (a relative quantity), the normalized OEE controls simulation fidelity. The paper shows that for depolarizing noise, relative accuracy requires O(log n) depth before the OEE bound takes effect — for shallow circuits (our typical d=3 regime with few rounds), the MPS bond dimension may still be large for relative-error simulation.
+The appendix allows any initial density state in this average-case result. The probability estimate is
+nontrivial when the displayed failure bound is below one and gives `1-L exp[-Omega(n)]` for
+sufficiently large `n`.
 
-5. **Passive detector records and OEE:** Not treated. The paper is about state/density-operator complexity, not about correlation structure in measurement records.
+## Worst-case general-noise bound [paper_fact]
+Fact ID: shao-worst-general-noise
+Source locator: Main Theorem 3; Appendix E, Theorem 13 and Eqs. (E69)–(E73)
+PDF page: 4
+Claim: For arbitrary nearest-neighbor two-qubit gate layers, a product input, and a single-qubit channel with a unique fixed point and `c(N)<1/48`, unnormalized OEE is `O(log n)` at every depth across a fixed cut.
 
-6. **Gauge/identifiability: NONE.** The paper does not address identifiability or gauge.
+For an arbitrary initial state, the same bound is established only after an `O(log n)` crossover.
+The proof replaces the distant past by an auxiliary orbit and uses a Wasserstein-1 contraction bound;
+it is an unnormalized-OEE result.
 
-## 6-criterion methodology table
+## Cutwise average boundary dimension [paper_fact]
+Fact ID: shao-pepo-cutwise-scale
+Source locator: Sec. V; Appendix F, opening paragraphs, Definition 2, and Eqs. (F1)–(F11)
+PDF page: 4
+Claim: The source defines the cutwise average boundary dimension as `chi_bar_partial(A)=R^(1/a(A))` for a target operator-Schmidt rank `R` across one prescribed PEPO cut with `a(A)` boundary edges.
 
-| Criterion | Score (1-5) | Notes |
-|-----------|-------------|-------|
-| **Soundness** | 5 | Rigorous mathematical proofs with all steps detailed (47 pages). Hypercontractivity and purity-controlled bounds are standard tools used correctly. The Eckart-Young truncation bounds (Appendix B) are exact. |
-| **Novelty** | 5 | The purity-controlled maximum-OEE theorem (Theorem 6) and the auxiliary-orbit construction with O(1)/O(log n) thresholds are new. The optimal Θ(log n) relative-error depth for depolarizing noise is a significant tightening over previous generic bounds. The 1D general-noise thresholds (c < 1/3, c < 1/48) are new. |
-| **Reproducibility** | 5 | Full proofs in appendices; all theorems are precisely stated. No numerical experiments to reproduce (analytical-only). |
-| **Experimental design** | 4 | No numerical experiments (pure theory). The bounds are clean and the dependence on c(N) is physically meaningful. Missing: numerical verification of bounds for specific circuit families to show tightness. |
-| **Statistical rigor** | 5 | For a theoretical paper, rigorous. Theorem 2 includes explicit probability bounds (exponential in n). |
-| **Scalability** | 5 | The whole point of the paper. The poly(n) simulability results are proven for their stated conditions. The PEPO caveat (Sec. V) is honestly stated. |
+This quantity records the boundary label capacity after coarse-graining the two sides. The appendix
+explicitly says it does not construct local PEPO tensors realizing the Schmidt vectors, guarantee
+simultaneous consistency across all cuts, or imply efficient contraction.
 
-## Strengths (S1-S5)
+## Higher-dimensional scaling results [paper_fact]
+Fact ID: shao-higher-dimensional-results
+Source locator: Appendix F, Propositions 5–7, Corollary 6, and Theorem 14
+PDF page: 46
+Claim: Fixed-error entropy-to-rank bounds give polynomial cutwise average boundary dimensions at every depth for product depolarizing noise at absolute and relative squared-HS accuracy, and for general product noise with a unique fixed point and `c(N)<1/48` at absolute squared-HS accuracy.
 
-- **S1 (Theorem 1):** Geometry-independent depolarizing bounds — a strong result showing that for depolarizing noise, circuit connectivity (1D, 2D, all-to-all) doesn't affect the OEE scaling. This is both surprising and practically important.
-- **S2 (Theorem 6 + Appendix C):** The purity-controlled maximum-entropy theorem is a general tool applicable beyond this paper — any setting where a noisy process produces rapid purity decay can leverage these bounds.
-- **S3 (Theorems 2-3):** The contrast between average-case (c < 1/3, O(1) OEE) and worst-case (c < 1/48, O(log n) OEE) is illuminating. For most physical noise models (random circuit instances with typical gates), the 1/3 condition gives exponentially strong guarantees.
-- **S4 (Section III, Proposition 1):** The whole-trajectory simulation construction — splitting into exact initial segment followed by compressed evolution — provides an implementable algorithm that matches the proven bounds.
-- **S5 (Appendix B, Theorems 4-5):** Clean truncation bounds connecting OEE directly to required bond dimension for a given error tolerance. These are reusable across any tensor-network simulation.
+The locality argument controls rank growth before the noise-induced crossover and the OEE bound after
+it. The general-noise theorem assumes a bounded-degree interaction graph, disjoint two-qubit gates on
+graph edges, a product input, and at most a constant times `a(A)` cut-crossing gates per layer.
 
-## Weaknesses (W1-W4)
+## Stated limitations [paper_fact]
+Fact ID: shao-stated-limitations
+Source locator: Sec. VI, caveats and future-work paragraphs
+PDF page: 5
+Claim: The source states that the contraction thresholds may not be optimal, asymptotic prefactors may be large for weak noise or strict tolerances, the analysis is restricted to single-qubit noise, and long-range interactions and coherent noise remain open.
 
-- **W1 (Section IV):** The c(N) < 1/48 threshold for worst-case general noise is very strong — physically, almost all interesting noise channels exceed it (for comparison: depolarizing with λ = 0.001 gives c ≈ 0.998). The bound is tight in the sense that the proof technique requires it, but the gap between c < 1/3 (average) and c < 1/48 (worst) suggests the worst-case bound may be far from optimal and the proof techniques may not be tight for weak noise. The paper acknowledges "thresholds may not be optimal" in Section VI.
-- **W2 (Section II):** Single-qubit noise only. The analysis does not treat multi-qubit correlated noise channels (our crosstalk regime). Correlated noise can produce OEE growth that single-qubit analysis cannot bound.
-- **W3 (Section I, VI):** Coherent noise is excluded from the simulability analysis. The contraction coefficient c(N) is defined for channels with a unique fixed point — unitary rotations (coherent errors without incoherent component) are excluded. This means the paper's simulability guarantees do not extend to our coherent wedge.
-- **W4 (Section V):** The PEPO bounds are weaker: polynomial average boundary-bond dimension does not guarantee efficient PEPO contraction. The paper honestly notes this but the practical consequence is that the main results apply cleanly only to 1D.
+It also assumes i.i.d. depolarizing noise. The discussion distinguishes its full-density-operator
+objective from few-observable tasks and says an implemented scheme that certifiably controls
+accumulated truncation errors remains to be developed.
 
-## How to use / trust + open questions [ours]
+## Source-local unsupported adaptive measurement history [literature_gap]
+Fact ID: shao-gap-adaptive-history
+Source locator: Full-text circuit definitions in Secs. III–IV and Appendices D–F
+PDF page: 1
+Claim: This source does not establish an error or bond-dimension bound for adaptive measurements, feedback, stochastic branch trajectories, or a retained classical measurement history.
+Gap scope: source_local
 
-**Trust level:** High — fully rigorous proof structure (47 pages of detailed mathematics). No empirical claims to verify. The bounds are exact under their stated conditions.
+Every modeled layer consists of a unitary circuit layer followed by a fixed product channel. No
+measurement instrument, outcome-conditioned map, reset, or classical register appears in the model.
 
-**Critical implications for our project:**
+## Source-local unsupported physical and simultaneous-all-cut certificate [literature_gap]
+Fact ID: shao-gap-global-physical-certificate
+Source locator: Proposition 4 and its proof; Appendix F opening caveat; Sec. VI
+PDF page: 31
+Claim: This source does not establish that the whole-trajectory approximants remain positive or that one constructed MPO or PEPO simultaneously realizes every cutwise rank and error bound.
+Gap scope: source_local
 
-- **Formalizes why our MPS carrier works for Pauli noise:** The O(log n) OEE bounds for depolarizing noise provide rigorous grounding for the composed carrier's efficiency in the Pauli-dominated regime. This is a theorem-level justification for our MPS-based approach.
-
-- **Formalizes why coherent noise is hard:** The impossibility of bounding OEE for unitary channels (c = 1) is the rigorous version of the coherent wedge. Any MPS-based simulation of our coupling simulator in the coherent regime (pure Lindblad coherent terms) may face unbounded bond dimension.
-
-- **Practical relevance threshold:** For depolarizing with λ = 0.001 (approx. typical CZ error), the purity decay threshold L_0 = O(1/λ) ≈ 1000 layers for absolute error, but only O(log n) ≈ 6 for n = 100 qubits for relative error. This means for d=5 surface code (n ≈ 49), the relative-error bound activates at around O(log 49) ≈ 6 rounds — which is exactly our typical gate depth regime for a round of syndrome extraction. The bounds suggest MPS simulation may be on the boundary of efficient in our target regime.
-
-**Open questions:**
-- For mixed coherent-incoherent channels (the twin's target), what is the effective contraction coefficient? Can we bound OEE growth in the presence of combined coherent rotation + incoherent noise?
-- Do the bounds extend to our non-Pauli channel models (qutrit leakage, XX+YY exchange) or only to Pauli-diagonal channels?
-- What is the numerical OEE of our actual composed carrier circuits (d=3 surface code with realistic noise budgets) — does it match the predicted logarithmic scaling?
-- Can we construct an explicit pre-threshold depth-dependent bond-dimension schedule for our MPS carrier based on the paper's bounds, improving over the fixed χ_max heuristic?
+The formal one-dimensional proposition fixes a cut, while the higher-dimensional appendix explicitly
+separates a cutwise Schmidt-rank scale from local PEPO construction. The proof restores trace with an
+identity correction but states no positivity theorem for the truncated approximant.

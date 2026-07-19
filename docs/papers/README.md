@@ -32,10 +32,12 @@ notes and syntheses remain discovery-only quarantine material and may not be cop
 record. A retrieval hit is routing information: reopen the named source object and verify the exact
 locator before using the claim.
 
-The current manifest is active and deliberately small. It contains only records that completed the
-current source-only schema and review gate. The many other notes in `reading_notes/` remain excluded
-legacy or candidate material. A non-empty RAG, KG, or concept index proves publication integrity for
-the admitted records only; it does not prove literature coverage or closure for a new claim.
+The current manifest is active and deliberately small. Ten records form the minimum load-bearing
+MPS/PEPS carrier-precision set; the Wood--Gambetta record remains as a separate project-level leakage
+baseline and is not a tensor-network precision premise. The many other notes in `reading_notes/` remain
+excluded legacy, or source-reviewed but non-load-bearing, material. A non-empty RAG, KG, or concept
+index proves publication integrity for the admitted records only; it does not prove literature coverage
+or closure for a new claim.
 
 To add an evidence record, acquire a versioned source, record its SHA-256, read the full text,
 visually inspect every load-bearing formula page, complete an operation replay, and write a note
@@ -52,15 +54,20 @@ source URLs:
 
 ```bash
 curl -L --fail https://arxiv.org/pdf/1804.09796v2 -o docs/papers/1804.09796v2.pdf
+curl -L --fail https://arxiv.org/pdf/2607.01323v1 \
+  -o docs/papers/froehlich_tensor_jump_method_2607.01323.pdf
 curl -L --fail https://arxiv.org/pdf/2501.17913v2 -o docs/papers/2501.17913v2.pdf
 curl -L --fail https://arxiv.org/pdf/1901.05824v3 -o docs/papers/1901.05824v3.pdf
 curl -L --fail https://arxiv.org/pdf/1405.3259v2 -o docs/papers/1405.3259v2.pdf
 curl -L --fail https://arxiv.org/pdf/1801.05390v2 -o docs/papers/1801.05390v2.pdf
-curl -L --fail https://arxiv.org/pdf/2107.06635v1 -o docs/papers/2107.06635v1.pdf
-curl -L --fail https://scipost.org/SciPostPhysLectNotes.86/pdf \
-  -o docs/papers/naumann_ipeps_variational_lecture_notes_2024.pdf
-curl -L --fail https://scipost.org/SciPostPhysCodeb.52/pdf \
-  -o docs/papers/rams_yastn_scipost_codebases_52.pdf
+curl -L --fail https://arxiv.org/pdf/2012.12233v1 -o docs/papers/2012.12233v1.pdf
+curl -L --fail https://arxiv.org/pdf/1412.5746v2 \
+  -o docs/papers/werner_positive_tensor_network_open_systems_1412.5746.pdf
+mkdir -p outputs/papers/pepo_survey
+curl -L --fail https://arxiv.org/pdf/2012.03095v2 \
+  -o outputs/papers/pepo_survey/2012.03095.pdf
+curl -L --fail https://arxiv.org/pdf/2507.11424v2 \
+  -o outputs/papers/pepo_survey/2507.11424.pdf
 curl -L --fail https://harvest.aps.org/v2/journals/articles/10.1103/PhysRevA.97.032306/fulltext \
   -o docs/papers/wood_gambetta_leakage_characterization_pra_97_032306.pdf
 ```

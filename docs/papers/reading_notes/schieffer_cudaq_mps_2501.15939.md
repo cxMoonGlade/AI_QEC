@@ -1,175 +1,222 @@
-# Reading note (精读): Schieffer et al., "Harnessing CUDA-Q's MPS for Tensor Network Simulations of Large-Scale Quantum Circuits" (arXiv:2501.15939)
++++
+schema = "error_coupling_simulator.literature.note.v1"
+source_id = "arxiv:2501.15939"
+source_version = "v1"
+source_uri = "https://arxiv.org/abs/2501.15939v1"
+source_artifact = "outputs/papers/2501.15939.pdf"
+source_sha256 = "37e6238b971a87f3cdc06c098076f911131f9ae3829f7bd6e7f3f6f3858f8316"
+title = "Harnessing CUDA-Q's MPS for Tensor Network Simulations of Large-Scale Quantum Circuits"
+publication_status = "preprint"
+read_status = "complete"
+evidence_status = "persisted"
+review_scope = "full_text"
+operation_replay_status = "complete"
+audit_packet = "docs/simulator_validation/SCHIEFFER_2501_15939_PROJECT_FIT_AUDIT_2026-07-17.md"
+audit_packet_sha256 = "92f24ccc7975a43bb18fa0b4b658ab64085a7a0a15eed38afde1c7578e69ce49"
+admission_status = "source_only_reviewed"
+admission_reviewer = "mps_peps_source_rebuild_xhigh_2026_07_17"
+admission_date = "2026-07-17"
+visually_checked_pages = [1, 2, 3, 4, 5, 6, 7, 8, 9]
 
-> **Provenance (2026-07-06): FULL-TEXT read (精读).** PDF → txt `outputs/papers/2501.15939.txt`
-> (10 pages). All §/Eq refs from that text. An evaluation of CUDA-Q's GPU-accelerated MPS simulator
-> (backed by cuTensorNet) on Grace Hopper hardware.
-> Adjudication target: does this paper characterize the GPU bottlenecks we will face in
-> GPU-accelerating our MPS trajectories, and does its profiling guide our kernel fusion strategy?
-> **Verdict: YES — the profiling reveals that SVD under-utilizes GPU (33% activity, <1% Tensor
-> Cores) and small data transfers (128 bytes per operation) dominate the contraction phase.
-> This directly motivates our need for operator fusion to eliminate per-element launch overhead.**
+[[relations]]
+predicate = "defines"
+object_id = "cuda-q-mps-configuration"
+object_type = "method"
+object_label = "CUDA-Q MPS configuration"
+fact_id = "schieffer-mps-controls"
 
-## Metadata [paper]
-- **Authors:** Gabin Schieffer, Stefano Markidis, Ivy Peng (KTH Royal Institute of Technology)
-- **Venue / status:** arXiv:2501.15939v1 [quant-ph], 27 Jan 2025; pre-print submitted for publication
-- **Type:** experimental evaluation / performance characterization (GPU-accelerated MPS simulation)
+[[relations]]
+predicate = "measures"
+object_id = "cuda-q-mps-runtime-scaling"
+object_type = "observable"
+object_label = "CUDA-Q MPS runtime scaling"
+fact_id = "schieffer-high-qubit-scaling"
 
-## Executive summary [paper]
-Evaluates CUDA-Q's tensor network simulators (exact TN and approximate MPS, both backed by
-cuTensorNet) on an Nvidia Grace Hopper Superchip (H100 GPU, 96 GB HBM3). Five representative
-quantum circuits are benchmarked at up to 90 qubits. Key findings:
+[[relations]]
+predicate = "measures"
+object_id = "cuda-q-mps-phase-profile"
+object_type = "observable"
+object_label = "CUDA-Q MPS phase profile"
+fact_id = "schieffer-profile-phase-share"
 
-1. **Memory scaling:** MPS memory ∼ dnχ², linear in n for fixed bond dimension χ — this is the
-   fundamental advantage over state-vector simulation (2ⁿ entries).
-2. **Runtime scaling:** MPS runtime scales as t = αn^β (power law) for high-entanglement circuits
-   (QAOA, Quantum Volume) and t = an + b (linear) for low-entanglement circuits (GHZ, QFT).
-   Both are far weaker than the exponential scaling of state-vector simulation.
-3. **SVD dominates but under-utilizes GPU:** 70% of MPS simulation time is GPU-resident SVD
-   iterations, but GPU activity averages only 33% and Tensor Core utilization is <1%.
-4. **Small transfer bottleneck:** The contraction phase (8% of time) has 60% idle GPU time
-   due to host-to-device transfers of only 128 bytes per operation.
-5. **Correctness threshold:** Default bond dimension χ_max=64 preserves the 4 most likely
-   outcomes of a 10-qubit QAOA circuit; χ_max=16 is the minimum for correctness in this case.
+[[relations]]
+predicate = "measures"
+object_id = "qaoa-top-four-set-agreement"
+object_type = "observable"
+object_label = "QAOA top-four-set agreement"
+fact_id = "schieffer-top-four-sweep"
 
-## Key equations / findings [paper]
+[[relations]]
+predicate = "limits"
+object_id = "single-instance-accuracy-test"
+object_type = "limitation"
+object_label = "single-instance accuracy test"
+fact_id = "schieffer-accuracy-boundary"
++++
+# Full-text review — Schieffer et al., “Harnessing CUDA-Q's MPS for Tensor Network Simulations of Large-Scale Quantum Circuits”
 
-### Memory requirement (§II.B)
-State vector: 2ⁿ complex values (exponential).
-MPS: dnχ² parameters, where n = number of qubits, d = local dimension (2 for qubits),
-χ = bond dimension. For fixed χ, **memory scales linearly with n**.
+## Source identity [paper_fact]
+Fact ID: schieffer-source-identity
+Source locator: Title page and arXiv version line
+PDF page: 1
+Claim: The source is Schieffer, Markidis, and Peng's arXiv:2501.15939v1 preprint “Harnessing CUDA-Q's MPS for Tensor Network Simulations of Large-Scale Quantum Circuits,” posted on 27 January 2025.
 
-Concrete numbers: H100 (96 GB) holds 33 qubits single-precision state vector. For MPS,
-60 qubits is routine (all circuits tested), 90 qubits for GHZ — all on a single GPU.
+All three authors are affiliated with KTH Royal Institute of Technology. The title page labels the
+work a pre-print submitted for publication, and this record is pinned to the ten-page v1 artifact.
 
-Circuit entanglement ratio R = N_2q / N_total (two-qubit gates / total gates):
-- Counterfeit Coin: R = 0.25 (lowest entanglement)
-- GHZ: R ≈ (n-1)/n → 1.0 (max entanglement)
-- QFT: R ≈ (n+1)/(n+5) → 0.0
-- Quantum Volume: R = 1.0 (max entanglement)
-- QAOA: R ≈ 3(n-1)/(3n+1) → 1.0
+## Scientific scope [paper_fact]
+Fact ID: schieffer-selection-scope
+Source locator: Abstract; Sec. I, contributions
+PDF page: 1
+Claim: The source evaluates CUDA-Q's GPU-backed exact tensor-network and approximate MPS circuit simulators on a Grace Hopper system, compares runtime and scalability with CUDA-Q state-vector simulation, profiles one workload, and tests a source-defined accuracy rule on one QAOA circuit.
 
-### Runtime scaling (§IV.B)
-**State vector:** exponential t ∝ e^αn (reference line for comparison)
-**MPS for low-entanglement circuits (GHZ, QFT):** linear t = a·n + b
-```
-GHZ:   t = 5.53n - 155.16  (R² = 0.99)
-QFT:   t = 2.11n - 50.82   (R² = 0.98)
-```
-**MPS for high-entanglement circuits (QAOA, QV):** power law t = α·n^β
-```
-QAOA:  t = 0.0017n^3.1644  (R² = 0.999)
-QV:    t = 0.0008n^3.5786  (R² = 0.9967)
-```
-**Both MPS scaling forms are dramatically weaker than exponential state-vector scaling.**
+The study implements five circuit families and supplies benchmark scripts. Its experiments concern
+standalone circuit sampling rather than a general theorem about MPS approximation or GPU performance.
 
-### GPU profiling results (§IV.C)
+## MPS representation and memory count [paper_fact]
+Fact ID: schieffer-mps-representation
+Source locator: Sec. II-A–B and Fig. 2
+PDF page: 2
+Claim: The source describes an exact pure-state MPS as a chain obtained by recursive SVD and reduces memory by truncating singular values to a bond dimension `chi`, giving a parameter count `d n chi^2` and linear dependence on qubit count `n` only when `chi` is fixed.
 
-#### Exact Tensor Network phase distribution
-| Phase | Time share | Description |
-|-------|-----------|-------------|
-| CPU-only | 80% | Tensor network preparation (path finding, contraction ordering) |
-| GPU + CPU | 20% | Contraction execution |
+Here `d=2` for qubits. The source states that the bond dimension is linked to circuit entanglement;
+it does not claim that `chi` stays fixed for arbitrary circuit families or depths.
 
-#### MPS phase distribution
-| Phase | Time share | Description |
-|-------|-----------|-------------|
-| GPU SVD | 70% | Singular value decomposition iterations (33% avg GPU activity) |
-| CPU-only | 22% | Tensor network preparation |
-| GPU + CPU | 8% | Contraction execution (60% idle from 128-byte H2D transfers) |
+## CUDA-Q MPS controls [paper_fact]
+Fact ID: schieffer-mps-controls
+Source locator: Sec. III-A and Table I
+PDF page: 3
+Claim: The evaluated CUDA-Q MPS configuration uses the cuTensorNet-backed `tensornet-mps` backend with default `CUDAQ_MPS_MAX_BOND=64`, absolute cutoff `10^-5`, relative cutoff `10^-5`, and the default QR SVD algorithm.
 
-Key profile finding: "the iterations of the SVD algorithm only partially utilize the GPU, as the
-average activity reported in the profiling is 33%. This might indicate that the problem is too
-small to leverage available GPU resources."
+Table I distinguishes this backend from the cuTensorNet-backed exact `tensornet` backend and the
+cuStateVec-backed `nvidia` state-vector backend. These settings fix the evaluated approximation but
+are not varied jointly in the accuracy experiment.
 
-### Tensor Core utilization (§IV.C.2)
-"Nsight Systems reports a utilization of Tensor Cores below 1% for both methods, over the whole
-execution. This is surprising, as matrix operations performed both for SVD iterations and tensor
-contractions can typically leverage Tensor Cores."
+## Circuit suite and entanglement ratio [paper_fact]
+Fact ID: schieffer-circuit-suite
+Source locator: Sec. III-B, Table II, and Fig. 3
+PDF page: 3
+Claim: The benchmark suite comprises counterfeit coin, GHZ, QFT, Quantum Volume, and QAOA circuits, and the source defines an entanglement ratio `N_2q/N_total` as a loose gate-count-based characterization rather than a measured entanglement entropy.
 
-### SVD's dual role (§IV.C.2)
-"SVD decomposition in MPS to reduce the computational cost of performing the contractions,
-induced by the simplification of the tensor network." But the SVD itself is computationally
-expensive: the MPS contraction phase (45 ms for 20-qubit QFT, 10 shots) is 5× faster than
-exact TN contraction (225 ms for same task), but SVD overhead (1.7s) dominates.
+The stated asymptotic ratio ranges from 0.25 for counterfeit coin to 1 for Quantum Volume. The QFT
+gate count depends on its input, so the plotted QFT ratio is explicitly described as a lower bound.
 
-### MPS approximation and correctness (§V)
-Bond dimension χ_max vs correctness for a 10-qubit QAOA circuit (100,000 shots):
+## Execution protocol and platform [paper_fact]
+Fact ID: schieffer-execution-protocol
+Source locator: Sec. III-D
+PDF page: 5
+Claim: Runtime experiments use `cudaq.sample` with 1,024 shots on one Grace Hopper Superchip containing a 72-core Arm CPU and a 96 GB H100 GPU, with one warm-up followed by ten measured repetitions that recreate the circuit each time.
 
-| χ_max | Correct top-4? | Notes |
-|-------|----------------|-------|
-| 64 | 4/4 | Default value; matches state-vector reference |
-| 32 | 4/4 | Full correctness preserved |
-| 16 | 4/4 | Still correct at this bond dimension |
-| 15 | 2/4 | First failure point |
-| 14 | 2/4 | Two of four top outcomes preserved |
-| 13 | 2/4 | |
-| 12 | 1/4 | Only one correct in top-4 |
-| 8 | 1/4 | Insufficient bond dimension |
+The reported runtimes therefore include the source's full sampling protocol on that software and
+hardware stack. The profiling experiment later uses a different 10-shot workload.
 
-"The most likely outcomes [...] are preserved across both methods. This is a key property, as
-quantum algorithms often provide an output as an observed state produced with a high probability."
+## Low-qubit runtime comparison [paper_fact]
+Fact ID: schieffer-low-qubit-runtime
+Source locator: Sec. IV-A and Fig. 4
+PDF page: 5
+Claim: For every configuration in which the state-vector backend fits, it runs faster than both tensor-network backends; exact TN is faster than MPS below 12 qubits, while MPS is faster than exact TN after the observed 12-to-13-qubit transition.
 
-### Cross-over point (§IV.A)
-"Comparing the two tensor network methods, we observe that exact tensor network simulation
-exhibits a lower execution time than the MPS alternative for number of qubits below 12, after
-which the MPS method exhibits a lower runtime." — The SVD overhead only pays off for larger
-systems.
+The authors suggest that SVD overhead explains the TN-to-MPS crossover and that the 12-to-13-qubit
+gap may reflect caching or an undocumented simulator behavior. These explanations are presented as
+suggestions rather than isolated measurements.
 
-## Relevance to project [ours]
-**Dimension: GPU acceleration characterization for our MPS trajectories.**
+## High-qubit empirical scaling [paper_fact]
+Fact ID: schieffer-high-qubit-scaling
+Source locator: Sec. IV-B and Fig. 5
+PDF page: 5
+Claim: The measured CUDA-Q MPS runtime scaling for `n>=35` is fit by `0.0017 n^3.1644` for QAOA and `0.0008 n^3.5786` for Quantum Volume, while QFT and GHZ are fit by `2.11 n - 50.82` and `5.53 n - 155.16`, respectively.
 
-1. **SVD under-utilization (33% GPU activity) is our primary target (§IV.C):** Our 70-90 small
-   operator calls per round are exactly the kind of "too small to leverage GPU resources" workload
-   described here. Each operator application is a small tensor contraction on modest tensors
-   (χ∼10-20, d=2). The per-operator launch overhead dominates.
+The displayed coefficients of determination are 0.999, 0.9967, 0.98, and 0.99. MPS reaches 60
+qubits for all four plotted circuits and 90 qubits for GHZ on the tested single GPU; the fits are
+empirical models of those data rather than complexity bounds.
 
-2. **The 128-byte H2D transfer bottleneck (§IV.C.2) directly motivates operator fusion:**
-   "host-to-device memory movements are performed, with small data transfers, on the order of
-   128 bytes per operation." If we fuse 70-90 operators into a single XLA kernel (as TC-NG's
-   JIT pipeline does), we eliminate 69/70 of these transfers — each of which carries a
-   ∼10-50 μs launch overhead.
+## Profiling phase shares [paper_fact]
+Fact ID: schieffer-profile-phase-share
+Source locator: Sec. IV-C.1 and Fig. 6
+PDF page: 6
+Claim: In one Nsight profile of a 20-qubit QFT circuit with 10 shots, the CUDA-Q MPS phase profile assigns 22% of runtime to a CPU-only phase, 70% to GPU SVD, and 8% to CPU+GPU contractions, while average GPU activity during the SVD phase is 33%.
 
-3. **MPS correctness threshold (§V):** For our JC shared-mode trajectories (O(10) qubits,
-   bond dimensions χ∼10-20), the paper suggests χ=16 may be sufficient for preserving the
-   most-likely outcomes. However, our requirement is finer-grained (mechanism recovery, not
-   just top-k sampling), so we should validate independently.
+The corresponding exact-TN profile assigns 80% to a CPU-only phase and 20% to a CPU+GPU
+contraction phase. The source says the MPS SVD problem may be too small to use the available GPU
+resources; it does not profile the other circuit families this way.
 
-4. **No advantage of MPS below 12 qubits (§IV.A):** Our current small-window twin (d=3 surface
-   code, n=17) straddles this boundary. MPS on GPU may not outperform state-vector simulation
-   for such small systems — the SVD overhead is not amortized. We need to benchmark both paths.
+## Contraction and transfer observations [paper_fact]
+Fact ID: schieffer-contraction-profile
+Source locator: Sec. IV-C.2 and Fig. 7
+PDF page: 7
+Claim: On the same profile, the contraction interval is 225 ms for exact TN and 45 ms for MPS; no MPS kernels run during 60% of that interval while host-to-device transfers of about 128 bytes per operation occur, and whole-execution Tensor Core utilization is below 1% for both methods.
 
-5. **Tensor Cores are irrelevant for our workload (<1% utilization):** The fusion strategy
-   should target CUDA core utilization via larger fused contractions, not Tensor Core ops.
+The authors infer that CPU processing is associated with the small transfers and suggest that this
+task may be poorly suited to GPU parallelization, but the profile does not isolate the causal cost of
+the transfers. The contraction times would grow linearly with shot count under the described method.
 
-6. **CPU path finding is significant (§IV.C):** 80% (exact TN) or 22% (MPS) of time is CPU-only
-   preparation. For our iterative trajectory sampling, this highlights the importance of caching
-   contraction paths (as in PTSBE/UPV from 2604.08467).
+## QAOA accuracy protocol [paper_fact]
+Fact ID: schieffer-qaoa-accuracy-protocol
+Source locator: Sec. V-A–B and Fig. 8
+PDF page: 7
+Claim: The accuracy study samples one 10-qubit QAOA circuit with random parameters for 100,000 shots, uses state-vector sampling as the reference, and defines the target as the identities of the four most-sampled basis states.
 
-## Limitations
-- **MPS only evaluated for sampling (cudaq.sample), not for differentiable gradients:**
-  the paper only benchmarks shot collection, not the AD/backprop we need for mechanism recovery.
-- **Single-precision only:** cuTensorNet MPS uses complex64; our twin uses complex128 for
-  accuracy. The memory and speed trade-off at double precision is not characterized.
-- **Grace Hopper specific:** results may differ on other GPU architectures (RTX 5090, H200).
-  The unified memory of Grace Hopper may affect H2D transfer characteristics.
-- **Mid-circuit measurement performance (§IV.A):** The counterfeit coin circuit (which has
-  conditional mid-circuit measurements) showed drastically worse performance (4 min TN,
-  19 min MPS for 12 qubits) — relevant for our syndrome extraction rounds which involve
-  frequent mid-circuit measurements.
-- **No performance comparison with quimb MPS:** the baseline was CUDA-Q's own state-vector
-  and exact TN backends, not quimb's MPS. Direct quimb→cuTensorNet speedup comparison is
-  not provided.
+The paper notes that the isolated random-parameter circuit has no problem-specific output meaning and
+that choosing four reference states is application-dependent. Figure 8 visually compares the two
+histograms but supplies no scalar distribution-distance statistic.
 
-## Tags
-- `[paper]` CUDA-Q MPS backed by cuTensorNet on Grace Hopper H100
-- `[paper]` MPS memory: dnχ², linear in qubit count for fixed bond dimension
-- `[paper]` MPS runtime: linear t=an+b (low-entanglement), power t=αn^β (high-entanglement)
-- `[paper]` 70% GPU SVD phase at 33% average activity — severely under-utilized
-- `[paper]` 128-byte H2D transfers dominate contraction phase (60% idle)
-- `[paper]` Tensor Core utilization <1% for MPS on evaluated workloads
-- `[paper]` χ_max=16 minimum for correct top-4 QAOA outcomes (10 qubits)
-- `[paper]` MPS beats exact TN only above 12 qubits (SVD overhead cross-over)
-- `[ours]` Directly characterizes the GPU bottleneck we face: small tensors + per-operator launch overhead
-- `[ours]` Operator fusion is the primary lever: fuse 70-90 operators → one XLA kernel → eliminate launch overhead
-- `[ours]` Our small-window twin (n=17) is near the MPS cross-over point; benchmark both SV and MPS paths
-- `[ours]` Mid-circuit measurements (syndrome extraction) drastically increase runtime — need fusion
+## Bond-cap top-four sweep [paper_fact]
+Fact ID: schieffer-top-four-sweep
+Source locator: Sec. V-B and Table III
+PDF page: 8
+Claim: The QAOA top-four-set agreement contains all four reference state identities for `chi_max=64`, `32`, and `16`, whereas every evaluated `chi_max` at or below 15 retains at most two of the four reference identities.
+
+The order within the top-four set changes even in matching columns. The source calls the lower-cap
+outputs incorrect under this chosen rule while noting that approximate simulation could still be
+useful inside a larger iterative QAOA algorithm.
+
+## Conditional-circuit runtime [paper_fact]
+Fact ID: schieffer-conditional-runtime
+Source locator: Sec. IV-A, counterfeit-coin paragraph
+PDF page: 5
+Claim: For the original 12-qubit counterfeit-coin circuit, the source reports 2.8 s for state vector, 4 min for exact TN, and 19 min for MPS and attributes the slowdown to intermediate measurements and measurement-conditioned gates.
+
+The study does not scale this circuit to larger qubit counts because of the observed runtime. The
+causal attribution is the authors' interpretation of one circuit structure rather than a controlled
+ablation of measurement and conditional operations.
+
+## Accuracy evidence boundary [paper_fact]
+Fact ID: schieffer-accuracy-boundary
+Source locator: Sec. V-A–B and Sec. VII
+PDF page: 7
+Claim: The source's single-instance accuracy test reports only sampled top-state identities for one standalone QAOA circuit and leaves evaluation inside a real-world QAOA workflow to future work.
+
+It does not report wavefunction norm error, fidelity, discarded weight, trace distance, total
+variation, Hellinger distance, KL divergence, confidence bands, or repeated-seed stability for the
+bond-cap sweep.
+
+## Performance evidence boundary [paper_fact]
+Fact ID: schieffer-performance-boundary
+Source locator: Secs. III-D, IV-C, and VII
+PDF page: 5
+Claim: The source's performance conclusions are measurements of CUDA-Q backends on one Grace Hopper platform, and the detailed GPU-utilization conclusions come from one small QFT profiling case.
+
+The work does not compare CUDA-Q MPS with another MPS library, run a kernel-fusion intervention, or
+separate the effects of numerical precision, host orchestration, circuit construction, and state
+update across platforms.
+
+## Source-local unsupported state and distribution certificate [literature_gap]
+Fact ID: schieffer-gap-state-certificate
+Source locator: Full-text scope of Sec. V and the stated future work in Sec. VII
+PDF page: 7
+Claim: This source does not establish a state-error or full sampled-distribution certificate for CUDA-Q MPS at any tested bond cap.
+Gap scope: source_local
+
+The reported top-four-set match is a discrete application-chosen observable. No theorem or measured
+standard distance connects it to the complete state or output distribution.
+
+## Source-local unsupported adaptive Record certificate [literature_gap]
+Fact ID: schieffer-gap-adaptive-record
+Source locator: Full-text scope; conditional-circuit paragraph in Sec. IV-A
+PDF page: 1
+Claim: This source does not establish accuracy or performance guarantees for a complete repeated-measurement adaptive record law.
+Gap scope: source_local
+
+One counterfeit-coin runtime includes intermediate measurements and conditional gates, but the paper
+defines no retained measurement-history object, multi-round record metric, or accuracy comparison for
+that circuit.
