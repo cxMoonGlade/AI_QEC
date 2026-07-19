@@ -69,23 +69,82 @@ The current routes are deliberately not one universal executor:
    gates remain heuristics, never production error bounds. Kraus/no-jump/jump operators remain
    uncapped because their raw norm carries physical branch probability; that probability is not a
    truncation score. Capped multi-site MCWF Hamiltonian clusters fail closed. Uncapped connected
-   three-to-five-site MCWF unitaries instead use the bounded `carrier/mps` execution-mechanics
-   helper: both dense-to-MPO decomposition and MPS/MPO compression carry an explicit zero cutoff,
-   the source is changed only after a finite unitary candidate preserves its norm, and support is
-   rejected before dense allocation above five sites, Hilbert dimension 256, or 65,536 dense
-   elements. Those ceilings are numerical-only resource guards. Both restricted MPS
-   Adapters parse the compiler-sealed schedule once, before CUDA or trajectory execution, into an
-   immutable Record layout that fixes boundaries, keys, targets, bases, per-target reset flags,
-   global slices, and detector/observable XOR columns. Trajectories fill outcome bits only; they
-   cannot discover or mutate the Record schema. QT exact and sampled routes support all declared
-   measurement boundaries and enforce the frozen width. MCWF grouped measurement/reset applies the
-   reset mask per target, while its dense level comparator independently reconstructs that rule.
-   The comparator preserves every finite positive Born branch, skips only exact structural zero,
-   normalizes every finite positive post-measurement reset trace, and fails closed on negative or
-   non-finite branch mass and nonpositive or non-finite reset trace.
-   MCWF pre-readout `level_records`/counts/probabilities and `jump_family_counts` are hidden
-   unraveling diagnostics under `evaluator_only_diagnostics`; they are not emitted binary Records or
-   downstream estimator inputs. Caller-declared `local_dims`, `initial_levels`, and
+    three-to-five-site MCWF unitaries instead use the bounded `carrier/mps` execution-mechanics
+    helper: both dense-to-MPO decomposition and MPS/MPO compression carry an explicit zero cutoff,
+    the source is changed only after a finite unitary candidate preserves its norm, and support is
+    rejected before dense allocation above five sites, Hilbert dimension 256, or 65,536 dense
+    elements. Those ceilings are numerical-only resource guards. Strang MCWF evolution records its
+    two Hamiltonian half-passes separately and in order as `hamiltonian_pass_index=0,1`; both carry
+    the scheduled half-step duration and must be present in the authenticated occurrence ledger.
+    Both restricted MPS
+    Adapters parse the compiler-sealed schedule once, before CUDA or trajectory execution, into an
+    immutable Record layout that fixes boundaries, keys, targets, bases, per-target reset flags,
+    global slices, and detector/observable XOR columns. Trajectories fill outcome bits only; they
+    cannot discover or mutate the Record schema. QT exact and sampled routes support all declared
+    measurement boundaries and enforce the frozen width. MCWF grouped measurement/reset applies the
+    reset mask per target. Its public `measurement_keys`, `measurement_targets`,
+    `measurement_bases`, and `reset_after` lists are equal-length and schedule-ordered one per Record
+    column; `measurement_basis` is exactly `none`, `X`, `Z`, or `mixed_pauli`. X measurement rotates
+    into Z for carrier sampling and rotates a non-reset conditioned state back; X reset prepares
+    `|+>`, while Z reset prepares `|0>`. The direct child, Carrier, auto-router, and certifier each
+    rebind those fields to the sealed schedule, so a reordered and rehashed payload is rejected.
+    The auto-router also requires exact Carrier/state/Record/direct-summary field sets, binds caller
+    options, initial levels, local Hilbert dimensions, declared-basis readout policy, sampling seed,
+    state machine, policy v6, and transitive direct
+    v7 schema/hash, and accepts only a sorted unique normalized empirical histogram with canonical
+    blocked summaries. Evaluator-only field families are rejected recursively at the public seam.
+    Before the dense comparator may authorize restricted execution, it compares every present
+    production Hamiltonian/collapse term against the isolated hand-typed NumPy/Pauli definitions in
+    `certify/mcwf_operator_reference.py`. The frozen inventory covers 51 Hamiltonian and seven
+    collapse families, requires the declared support arity and local levels, preserves exact padded
+    structural zeros, and uses `NUMERICAL_ZERO` only for the final floating matrix difference.
+    Missing, unknown, non-finite, wrong-shape, or mismatched definitions make certification
+    unavailable and reject the run, including when the chosen initial state and Record would be
+    insensitive to the damaged operator. The dense joint-L oracle itself consumes those isolated
+    reference matrices; only the carrier-under-test consumes production builders/grouping.
+    `CORR_RELAX` is routed as the declared two-site collective collapse on both sides of the channel
+    comparison. This closes the software self-reference seam but remains implementation-definition
+    evidence, not source closure or hardware calibration for every physical family.
+    The execution Adapter now compiles each production Hamiltonian and collapse tensor once, before
+    mass-residual evaluation or trajectories, and constructs every connected Hamiltonian group gate from
+    those same frozen term tensors. The first-order mass preflight, no-jump/jump competition, and both
+    Strang Hamiltonian passes consume that immutable artifact set; no later production-builder call may
+    redefine the executed dynamics. Before execution, the certifier independently reconstructs every
+    frozen term, connected-component partition, group support/order, and group gate using its hand-typed
+    NumPy definitions plus SciPy `expm`. Declared structural-zero entries must remain exactly zero;
+    per-term floating differences use `NUMERICAL_ZERO`, while cross-backend group-gate comparison uses
+    `1000 * NUMERICAL_ZERO` to cover the measured Torch-CUDA/SciPy matrix-exponential floor. The
+    `mcwf_dynamics_artifact_reference_certification.v1` packet binds complete substep/term/group counts,
+    local dimensions, microstep/order policy, Carrier-program and artifact hashes, and five current
+    source hashes: reference operator, certifier, carrier operator, transitive ideal-control generator,
+    and transitive selection-family owner. It also requires a post-execution artifact-integrity check.
+    The certifier recomputes the canonical artifact
+    hash from the matrices and metadata it actually inspected; a caller-supplied but unrelated SHA-256 is a
+    failed packet. Restricted policy acceptance requires the packet to be current and passing. Carrier and
+    auto seams rebuild the artifact authority from sealed inputs. In addition, an accepted seeded auto route
+    independently replays the public direct MCWF call and requires its direct hash, canonical Record summary,
+    and restricted policy to match exactly. This replay is an integrity measure, not a scalability claim.
+    `CORR_RELAX` support currently begins only when that family is already present in the internal sealed
+    Carrier program; there is no public source/schedule compiler lowering for it yet. The current literature
+    source-closure reset is still OPEN. Neither the isolated formula code nor the frozen-artifact gate closes
+    that literature gap, establishes hardware calibration, or promotes this slice to production/scalable use.
+    The dense comparator independently uses declared-basis projectors and reset instruments rather
+    than the carrier rotation helper. It preserves every finite positive Born branch, skips only
+    exact structural zero,
+    normalizes every finite positive post-measurement reset trace, and fails closed on negative or
+    non-finite branch mass and nonpositive or non-finite reset trace.
+    MCWF pre-readout `level_records`/counts/probabilities and `jump_family_counts` are hidden
+    unraveling diagnostics under `evaluator_only_diagnostics.v2`; they are not emitted binary Records
+    or downstream estimator inputs. Their registered semantics are declared-basis local measurement
+    eigenlabels: X columns use `0=|+>,1=|->`, Z columns use computational local levels, and leaked
+    labels `>=2` remain explicit. Certification compares both those hidden labels and the emitted
+    binary Record under
+    `measurement_basis_level_and_emitted_binary_record_populations`: the reported value is the
+    maximum of the two TVs and acceptance requires both gates. The binary oracle applies a
+    certifier-local hand-typed readout kernel to the dense label law, so corrupting the production
+    level-to-bit mapping is verdict-driving even when the hidden-label distribution is unchanged.
+    This is not a claim that X labels are computational-level populations or that the complete QEC
+    Record is faithful. Caller-declared `local_dims`, `initial_levels`, and
    `leaked_readout_b` remain configuration, not evaluator truth. `certify/axis1_mps.py` consumes the
    immutable execution evidence and owns dense References, metrics, and final restricted acceptance.
    Reset substeps carrying evolution and evolution-bearing substeps without finite positive duration
@@ -106,8 +165,10 @@ The current routes are deliberately not one universal executor:
    counters are authenticated observations from the producing run, not an independent second
    measurement.
    These are execution/schema guarantees, not a canonical Record backend or a Record-faithfulness
-   upgrade. The direct QT/MPS and MCWF/MPS execution manifests are v6; QT bond sweep, seed sweep,
-   evidence bundle, and resource probe are v4. Carrier execution and auto-routed execution are v3.
+    upgrade. The direct QT/MPS manifest is v6 and direct MCWF/MPS is v7; QT bond sweep, seed sweep,
+    evidence bundle, and resource probe are v4. Carrier execution and auto-routed execution are v4,
+    the routing decision remains v3, the MCWF restricted-acceptance policy is v6, and the public frozen
+    dynamics-artifact reference-certification packet is v1.
    No earlier
    direct-execution or aggregate compatibility fallback is retained. A completed true-over-cap run
    with no registered independent Record oracle remains diagnostic execution
@@ -116,10 +177,33 @@ The current routes are deliberately not one universal executor:
    that run into certification.
    External comparisons remain role-scoped. Aer checks its own finite-circuit MPS against an
    independent hand-written dense state; YASTN checks a product-MPS raw MCWF candidate-mass family;
-   Quimb's public leg checks wiring against the repository's actual-split adapter while NumPy owns
-   the independent state math. None is a QEC Record-law, trajectory-law, PEPS, or restricted-
-   acceptance oracle. Canonical service acceptance opts into the isolated Aer and YASTN subprocess
-   runs rather than executing only their helper tests.
+   isolated CPU QuTiP checks one frozen two-qubit T1 fixture with ordered X/Z measurement/reset
+   boundaries against public GPU direct and Carrier MCWF Record histograms under Bonferroni
+   two-sample TV gates. In addition to the joint Record comparisons, directed X-after binary
+   marginals must pass; the fixture fixes survival to `s=0.25`, so the load-bearing
+   `sqrt(s) -> s` coherence-rate mutation lies outside the registered simultaneous radius and must
+   fail. That QuTiP fixture also requires real jumps, independently verifies X reset to `|+>` and Z
+   reset to `|0>`, and includes a verdict-driving final-Z-bit corruption. Its worker binds the
+   pristine QuTiP commit/tree, installed-distribution content identity, Python/NumPy/SciPy versions,
+   explicit MCWF integrator controls, worker/protocol hashes, and canonical report hash. The v2 worker
+   shape is recursively exact-field checked and its semantic invariants are recomputed. Strict JSON
+   parsing rejects duplicate/non-finite values and coercible non-integer Record bits/counts; a separate
+   transport envelope binds the immutable worker payload plus its construction-time raw-byte hash/size
+   and process outcome, and requires those bytes to decode to that payload. The direct worker launch
+   strips every inherited `CONDA_*`/`_CE_*` marker plus CUDA-toolkit, virtual-environment, and
+   dynamic-library-path markers; the worker rejects leakage and records the fixed marker set's absence.
+   Worker and outer targets first invalidate and directory-`fsync` any stale file, then file-`fsync`,
+   replace, and directory-`fsync` the completed artifact; a failed post-replace durability step removes
+   the destination before propagating the error. The service
+   checkpoint separately binds the external clone HEAD/tree plus the installed NumPy/SciPy/QuTiP
+   trees. The nested worker directly uses the isolated environment's Python and remains in the
+   supervisor-owned process group, so outer cancellation cannot strand a private session. Quimb's
+   public leg checks wiring against the repository's actual-split adapter while NumPy owns the
+   independent state math. These comparisons do not establish a complete QEC Record law,
+   trajectory-by-trajectory coupling, qutrit/leakage behavior, PEPS faithfulness, scalability, or
+   production readiness, and none is itself the restricted-acceptance oracle. Canonical service
+   acceptance opts into the isolated Aer, YASTN, and QuTiP subprocess runs rather than executing
+   only their helper tests.
    The restricted-MPS performance instrument is engineering-only. It binds every production owner
    by file hash and requires each workload's declared public outcome. In particular, the lossy QT
    cap-one fixture must remain `rejected`, and the over-cap MCWF fixture must remain `unavailable`;

@@ -10,6 +10,7 @@ production QT/MPS carrier, and no path silently replaces over-cap rows with a
 dense channel or pairwise fallback.
 """
 
+import copy
 import hashlib
 import json
 import math
@@ -26,6 +27,7 @@ from ..carrier.mps.controls import (
     normalize_mps_max_bond,
     normalize_optional_mps_index,
 )
+from ..numerics import NUMERICAL_ZERO
 from .analog_schedule import SubstepSchedule
 from .axis1_carrier_program import (
     AXIS1_CARRIER_DEFAULT_BACKEND_CONTRACT,
@@ -41,8 +43,10 @@ from .axis1_record_evidence import (
     axis1_measurement_record_evidence_manifest,
 )
 from .axis1_record_layout import (
+    _require_exact_binary_record_matrix,
     _validate_axis1_projected_record_payload,
     axis1_record_layout_from_schedule,
+    project_axis1_xor_records,
 )
 from .axis1_state_evidence import (
     AXIS1_STATE_MAX_EXACT_QUBITS,
@@ -56,7 +60,7 @@ from .axis1_qutip_cuquantum_probe import (
 )
 
 
-AXIS1_CARRIER_EXECUTION_SCHEMA = "error_coupling_simulator.frontend.carrier_execution.v3"
+AXIS1_CARRIER_EXECUTION_SCHEMA = "error_coupling_simulator.frontend.carrier_execution.v4"
 AXIS1_CARRIER_EXECUTION_REPRESENTABILITY = (
     "axis1_carrier_execution_dense_jointL_probe_no_scalable_overcap"
 )
@@ -81,12 +85,12 @@ AXIS1_CARRIER_MCWF_MPS_EXECUTION_BACKEND_CONTRACT = (
 )
 AXIS1_CARRIER_AUTO_BACKEND_CONTRACT = "auto"
 AXIS1_CARRIER_AUTO_EXECUTION_SCHEMA = (
-    "error_coupling_simulator.frontend.carrier_auto_routed_execution.v3"
+    "error_coupling_simulator.frontend.carrier_auto_routed_execution.v4"
 )
 _RESTRICTED_POLICY_SCHEMAS = {
     "mcwf": (
         "error_coupling_simulator.frontend."
-        "mcwf_mps_restricted_acceptance_policy.v5"
+        "mcwf_mps_restricted_acceptance_policy.v6"
     ),
     "qt": (
         "error_coupling_simulator.frontend."
@@ -96,7 +100,7 @@ _RESTRICTED_POLICY_SCHEMAS = {
 _RESTRICTED_EXECUTION_SCHEMAS = {
     "mcwf": (
         "error_coupling_simulator.frontend."
-        "mcwf_mps_state_record_execution.v6"
+        "mcwf_mps_state_record_execution.v7"
     ),
     "qt": (
         "error_coupling_simulator.frontend."
@@ -109,6 +113,389 @@ _MCWF_MEASUREMENT_SAMPLING_POLICY = (
     "sequential_conditional_single_site_level_xz_v1"
 )
 _MCWF_RECORD_SUPPORT_POLICY = "observed_empirical_outcomes_only"
+_MCWF_MEASUREMENT_POLICY_NAME = (
+    "declared_basis_eigenlabel_sample_then_binary_record"
+)
+_MCWF_MEASUREMENT_BIT_MAPPING = (
+    "eigenlabel_0_to_bit_0_eigenlabel_1_to_bit_1_"
+    "eigenlabel_ge_2_to_bit_1_with_probability_leaked_readout_b"
+)
+_MCWF_MEASUREMENT_BASIS_SEMANTICS = (
+    "measurement_bases and reset_after are schedule-ordered one-per-Record-column; "
+    "X measurement rotates into Z, projects, then rotates back unless reset prepares |+>"
+)
+_MCWF_JOINT_LEVEL_BINARY_COMPARISON_OBJECT = (
+    "measurement_basis_level_and_emitted_binary_record_populations"
+)
+_MCWF_DIRECT_REPRESENTABILITY = (
+    "axis1_mcwf_mps_fixed_microstep_local_dims_state_record"
+)
+_MCWF_DIRECT_CHILD_FIELDS = frozenset(
+    {
+        "schema",
+        "source_kind",
+        "source_hash",
+        "schedule_representability",
+        "representability",
+        "backend_contract",
+        "gpu_required",
+        "device",
+        "carrier_program",
+        "local_hilbert_space",
+        "max_bond",
+        "worst_cut_discarded_weight_gate",
+        "total_discarded_weight_gate",
+        "microstep_count",
+        "mass_residual_budget",
+        "finite_step_order",
+        "trajectory_count",
+        "rng_seed",
+        "initial_levels",
+        "leaked_readout_b",
+        "execution_status",
+        "certification_status",
+        "diagnostic_only",
+        "claims_mcwf_mps_backend_execution",
+        "claims_production_scalable_backend",
+        "claims_exact_joint_lindblad_generator",
+        "claims_dense_channel_evidence",
+        "claims_dem_decoder_semantics",
+        "claims_axis2_source_timeline",
+        "scored_quantity_policy",
+        "approximation_book",
+        "epistemic_classes",
+        "verdict",
+        "passed",
+        "mcwf_mps_backend_executed",
+        "blocked_reason",
+        "blocked_substeps",
+        "mps_execution",
+        "dynamics_artifact_reference_certification",
+        "restricted_acceptance_policy",
+        "scope",
+        "content_hash",
+    }
+)
+_MCWF_CARRIER_CHILD_FIELDS = frozenset(
+    {
+        "schema",
+        "source_kind",
+        "source_hash",
+        "schedule_representability",
+        "representability",
+        "execution_backend_contract",
+        "gpu_required",
+        "device",
+        "execution_backend_options",
+        "execution_status",
+        "certification_status",
+        "diagnostic_only",
+        "verdict",
+        "passed",
+        "blocked_reason",
+        "dense_probe_executed",
+        "qt_mps_backend_executed",
+        "mcwf_mps_backend_executed",
+        "qutip_cuquantum_probe_executed",
+        "carrier_program",
+        "local_hilbert_space",
+        "state_execution",
+        "record_execution",
+        "mcwf_mps_execution",
+        "dynamics_artifact_reference_certification",
+        "restricted_acceptance_policy",
+        "claims_mcwf_mps_backend_execution",
+        "claims_qt_mps_backend_execution",
+        "claims_qutip_cuquantum_execution",
+        "claims_production_scalable_backend",
+        "claims_scalable_backend_completed",
+        "claims_exact_joint_lindblad_generator",
+        "claims_dense_channel_evidence",
+        "claims_dem_decoder_semantics",
+        "claims_axis2_source_timeline",
+        "scored_quantity_policy",
+        "epistemic_classes",
+        "scope",
+        "content_hash",
+    }
+)
+_MCWF_CARRIER_STATE_EXECUTION_FIELDS = frozenset(
+    {
+        "executed",
+        "reason",
+        "evidence_schema",
+        "evidence_content_hash",
+        "representability",
+        "mps_library",
+        "array_backend",
+        "unraveling_policy",
+        "initial_levels",
+        "finite_step_policy",
+        "mps_truncation_ledger",
+    }
+)
+_MCWF_CARRIER_RECORD_EXECUTION_FIELDS = frozenset(
+    {
+        "executed",
+        "reason",
+        "measurement_keys",
+        "measurement_targets",
+        "measurement_bases",
+        "reset_after",
+        "measurement_basis",
+        "measurement_basis_semantics",
+        "multilevel_measurement_policy",
+        "measurement_records",
+        "record_counts",
+        "record_probabilities",
+        "detector_records",
+        "logical_observable_records",
+        "trajectory_sampling",
+        "jump_sampling",
+        "claims_b8_artifact",
+        "claims_decoder_integration",
+    }
+)
+_MCWF_CARRIER_EXECUTION_SUMMARY_FIELDS = frozenset(
+    {
+        "schema",
+        "content_hash",
+        "representability",
+        "backend_contract",
+        "execution_status",
+        "certification_status",
+        "diagnostic_only",
+        "passed",
+        "mcwf_mps_backend_executed",
+        "claims_exact_joint_lindblad_generator",
+        "claims_dense_channel_evidence",
+        "claims_production_scalable_backend",
+        "dynamics_artifact_reference_certification",
+    }
+)
+_MCWF_TRAJECTORY_SAMPLING_FIELDS = frozenset(
+    {
+        "mode",
+        "trajectory_count",
+        "rng_seed",
+        "rng_seed_required_for_acceptance",
+        "rng_seed_was_explicit",
+        "rng_seed_default_policy",
+        "rng_backend",
+        "measurement_sampling_policy",
+        "record_support_policy",
+        "zero_frequency_records_emitted",
+        "probability_semantics",
+        "single_trajectory_density_claim",
+        "comparison_outcome_is_metric",
+    }
+)
+_MCWF_FINITE_STEP_POLICY_FIELDS = frozenset(
+    {
+        "name",
+        "order",
+        "microstep_count",
+        "microstep_dt_policy",
+        "hamiltonian_grouping_policy",
+        "exact_summed_lindbladian_claim",
+        "comparison_outcome_is_metric",
+    }
+)
+_MCWF_UNCAPPED_TRUNCATION_LEDGER_FIELDS = frozenset(
+    {
+        "explicit_truncation_requested",
+        "exact_bond_dimension_sufficient",
+        "exact_bond_policy",
+        "accepted_as_exact_bond_representation",
+        "discarded_weight_ledger_complete",
+        "discarded_weight_sum",
+        "worst_cut_discarded_weight",
+        "path_aggregated_local_discarded_fraction_sum",
+        "path_aggregated_actual_discarded_weight_raw_sum",
+        "path_aggregated_unitary_truncation_mass_loss_sum",
+        "aggregation",
+        "n_truncating_ops",
+        "max_observed_bond",
+        "ledger_scope",
+        "epistemic_class",
+    }
+)
+_MCWF_CAPPED_TRUNCATION_LEDGER_FIELDS = frozenset(
+    {
+        "explicit_truncation_requested",
+        "max_bond",
+        "exact_bond_dimension_sufficient",
+        "exact_bond_policy",
+        "accepted_as_exact_bond_representation",
+        "discarded_weight_ledger_complete",
+        "ledger_method",
+        "actual_discarded_weight_raw_sum",
+        "actual_discarded_weight_fraction_sum",
+        "worst_actual_discarded_weight_fraction",
+        "actual_split_count",
+        "unitary_truncation_mass_loss_sum",
+        "worst_unitary_truncation_mass_loss",
+        "path_aggregated_local_discarded_fraction_sum",
+        "path_aggregated_actual_discarded_weight_raw_sum",
+        "path_aggregated_unitary_truncation_mass_loss_sum",
+        "discarded_weight_sum",
+        "worst_cut_discarded_weight",
+        "discarded_weight_units",
+        "compatibility_aliases",
+        "not_a_global_error_bound",
+        "aggregation",
+        "n_truncating_ops",
+        "n_tracked_two_site_ops",
+        "max_observed_bond",
+        "truncation_events",
+        "ledger_scope",
+        "epistemic_class",
+    }
+)
+_MCWF_BLOCKED_POLICY_FIELDS = frozenset(
+    {
+        "schema",
+        "policy_role",
+        "execution_status",
+        "certification_status",
+        "diagnostic_only",
+        "accepted_for_restricted_execution",
+        "accepted_for_sampled_execution_evidence",
+        "accepted_for_exact_dense_probability_evidence",
+        "accepted_for_production_scalable_backend",
+        "blocked_reason",
+        "dynamics_artifact_reference_certification",
+        "trajectory",
+        "production_blockers",
+        "comparison_outcome_is_metric",
+        "epistemic_class",
+    }
+)
+_MCWF_COMPLETED_POLICY_FIELDS = frozenset(
+    {
+        "schema",
+        "policy_role",
+        "execution_status",
+        "certification_status",
+        "diagnostic_only",
+        "accepted_for_restricted_execution",
+        "accepted_for_sampled_execution_evidence",
+        "accepted_for_exact_dense_probability_evidence",
+        "accepted_for_production_scalable_backend",
+        "accepted_as_restricted_overcap_execution",
+        "blocked_reason",
+        "dynamics_artifact_reference_certification",
+        "gross_strict_gate_split",
+        "dense_jointL_record_certification",
+        "trajectory",
+        "finite_step",
+        "mps_truncation",
+        "probability",
+        "production_blockers",
+        "scored_quantity_policy",
+        "comparison_outcome_is_metric",
+        "epistemic_class",
+    }
+)
+_MCWF_POLICY_GROSS_STRICT_FIELDS = frozenset(
+    {
+        "gross_gate_role",
+        "strict_gate_role",
+        "dense_passed_gross",
+        "dense_passed_strict",
+        "comparison_outcome_is_metric",
+        "epistemic_class",
+    }
+)
+_MCWF_POLICY_DENSE_CERTIFICATION_FIELDS = frozenset(
+    {
+        "executed",
+        "passed",
+        "passed_gross",
+        "status",
+        "comparison_object",
+        "metric",
+        "metric_convention",
+        "value",
+        "component_values",
+        "gate",
+        "gross_gate",
+        "choi_trace_distance",
+        "effective_gate_including_sampling_ci",
+        "gross_effective_gate_including_sampling_ci",
+        "gross_gate_ceiling",
+        "sampling_finite_shot_halfwidth",
+        "sampling_support_size",
+        "sampling_ci_method",
+        "sampling_confidence",
+        "trajectory_count",
+        "dense_evidence_schema",
+        "dense_evidence_content_hash",
+        "oracle",
+        "oracle_role",
+        "oracle_independent_of_carrier_grouping",
+        "readout_model_independent",
+        "comparison_outcome_is_metric",
+        "metric_epistemic_class",
+        "gate_epistemic_class",
+        "reason",
+    }
+)
+_MCWF_POLICY_TRAJECTORY_FIELDS = frozenset(
+    {
+        "mode",
+        "trajectory_count",
+        "rng_seed",
+        "rng_seed_required_for_acceptance",
+        "rng_seed_was_explicit",
+        "accepted_as_empirical_record_evidence",
+        "single_trajectory_density_claim",
+        "comparison_outcome_is_metric",
+        "epistemic_class",
+    }
+)
+_MCWF_POLICY_FINITE_STEP_FIELDS = frozenset(
+    {
+        "exact_summed_lindbladian_claim",
+        "accepted_as_error_bound",
+        "comparison_outcome_is_metric",
+        "epistemic_class",
+    }
+)
+_MCWF_POLICY_TRUNCATION_FIELDS = frozenset(
+    {
+        "explicit_truncation_requested",
+        "exact_bond_dimension_sufficient",
+        "exact_bond_policy",
+        "accepted_as_exact_bond_representation",
+        "discarded_weight_ledger_complete",
+        "discarded_weight_sum",
+        "worst_cut_discarded_weight",
+        "truncation_detected",
+        "observed_lossless_finite_bond_execution",
+        "gate",
+        "candidate_gate_complete",
+        "accepted_as_finite_bond_candidate",
+        "accepted_as_production_error_bound",
+        "comparison_outcome_is_metric",
+        "epistemic_class",
+    }
+)
+_MCWF_POLICY_PROBABILITY_FIELDS = frozenset(
+    {
+        "normalization_invariant",
+        "normalization_invariant_is_finite_nonnegative_real",
+        "normalization_invariant_gate",
+        "role",
+        "runtime_candidate_mass_residual",
+        "runtime_candidate_mass_residual_budget",
+        "runtime_candidate_mass_residual_is_finite_nonnegative",
+        "runtime_candidate_mass_residual_within_budget",
+        "runtime_candidate_mass_residual_required_for_restricted_acceptance",
+        "comparison_outcome_is_metric",
+        "epistemic_class",
+    }
+)
 _QT_EXACT_TRAJECTORY_MODE = "exact_branch_enumeration"
 _QT_SAMPLED_TRAJECTORY_MODE = "sampled_product_channel_trajectories"
 # Conservative fraction of FREE VRAM the dense record probe's PROJECTED PEAK is allowed to occupy
@@ -442,6 +829,7 @@ def _axis1_auto_routed_execution_manifest(
         if raw_options
         else {}
     )
+    canonical_options = copy.deepcopy(options)
     dev = _require_cuda_device(device)
     program = axis1_carrier_program_manifest(schedule)
     chosen, decision = _select_dense_or_mcwf(schedule, dev, program)
@@ -466,7 +854,9 @@ def _axis1_auto_routed_execution_manifest(
         device=dev,
         instrument_spec=instrument_spec,
         execution_backend_contract=chosen,
-        execution_backend_options=options if routes_to_mcwf else None,
+        execution_backend_options=(
+            copy.deepcopy(canonical_options) if routes_to_mcwf else None
+        ),
     )
     inner_passed = _require_manifest_bool(
         inner, "passed", context="auto-routed Carrier execution"
@@ -484,6 +874,9 @@ def _axis1_auto_routed_execution_manifest(
         schedule=schedule,
         chosen_backend_contract=chosen,
         expected_device=dev,
+        expected_execution_backend_options=(
+            canonical_options if routes_to_mcwf else None
+        ),
     )
     payload: dict[str, Any] = {
         "schema": AXIS1_CARRIER_AUTO_EXECUTION_SCHEMA,
@@ -498,6 +891,13 @@ def _axis1_auto_routed_execution_manifest(
         "passed": inner_passed,
         "blocked_reason": inner.get("blocked_reason"),
         "execution": inner,
+        "dynamics_artifact_reference_certification": (
+            copy.deepcopy(
+                inner.get("dynamics_artifact_reference_certification")
+            )
+            if routes_to_mcwf
+            else None
+        ),
         "scored_quantity_policy": (
             "VRAM-aware backend router; no new scored quantity; the delegated "
             "backend keeps its own representability and evidence"
@@ -515,6 +915,7 @@ def _validate_auto_routed_carrier_child(
     schedule: SubstepSchedule,
     chosen_backend_contract: str,
     expected_device: str,
+    expected_execution_backend_options: dict[str, Any] | None,
 ) -> None:
     """Authenticate the delegated Carrier envelope against the router request."""
 
@@ -564,9 +965,27 @@ def _validate_auto_routed_carrier_child(
         raise ValueError("auto-routed Carrier child gpu_required must be true")
 
     if chosen_backend_contract == AXIS1_CARRIER_MCWF_MPS_EXECUTION_BACKEND_CONTRACT:
+        if expected_execution_backend_options is None:
+            raise ValueError(
+                "auto-routed MCWF Carrier request options must be registered"
+            )
         trusted_program = axis1_carrier_program_manifest(
             schedule,
             backend_contract=chosen_backend_contract,
+        )
+        expected_mcwf = _mcwf_mps_expected_options(
+            expected_execution_backend_options,
+            num_sites=int(schedule.num_qubits),
+        )
+        _validate_auto_routed_mcwf_summary(
+            child,
+            schedule=schedule,
+            expected_execution_backend_options=(
+                expected_execution_backend_options
+            ),
+            trusted_program=trusted_program,
+            expected=expected_mcwf,
+            expected_device=expected_device,
         )
         expected_program = _restricted_mps_program_summary(trusted_program)
         route_false_claims = (
@@ -576,6 +995,11 @@ def _validate_auto_routed_carrier_child(
             "claims_qutip_cuquantum_execution",
         )
         optional_route_false_claims: tuple[str, ...] = ()
+        _validate_auto_routed_mcwf_record_execution(
+            child,
+            schedule=schedule,
+            expected_execution=expected_mcwf,
+        )
     else:
         trusted_program = axis1_carrier_program_manifest(schedule)
         expected_program = _carrier_program_summary(trusted_program)
@@ -622,6 +1046,1148 @@ def _validate_auto_routed_carrier_child(
             raise ValueError(f"auto-routed Carrier child {field} must be false")
 
 
+def _reject_auto_routed_evaluator_truth(
+    value: Any,
+    *,
+    path: str = "auto-routed Carrier child",
+) -> None:
+    """Reject evaluator-only field families anywhere in an emitted child."""
+
+    if isinstance(value, dict):
+        for key, child in value.items():
+            if not isinstance(key, str):
+                raise TypeError(f"{path} keys must be text")
+            if key.startswith("evaluator_only") or key.startswith("level_record"):
+                raise ValueError(
+                    f"{path}.{key} exposes evaluator-only Record truth"
+                )
+            _reject_auto_routed_evaluator_truth(child, path=f"{path}.{key}")
+    elif isinstance(value, list):
+        for index, child in enumerate(value):
+            _reject_auto_routed_evaluator_truth(
+                child,
+                path=f"{path}[{index}]",
+            )
+
+
+def _require_exact_summary_fields(
+    payload: dict[str, Any],
+    expected_fields: frozenset[str],
+    *,
+    context: str,
+) -> None:
+    actual_fields = set(payload)
+    if actual_fields != set(expected_fields):
+        missing = sorted(set(expected_fields) - actual_fields)
+        extra = sorted(actual_fields - set(expected_fields))
+        raise ValueError(
+            f"{context} fields must be exact; missing={missing}, extra={extra}"
+        )
+
+
+def _expected_mcwf_local_hilbert_space(local_dims: list[int]) -> dict[str, Any]:
+    dims = [int(dim) for dim in local_dims]
+    dimension_classes = {dim if dim <= 4 else 5 for dim in dims}
+    return {
+        "local_dims": dims,
+        "num_sites": len(dims),
+        "hilbert_dim": int(math.prod(dims)),
+        "site_order_policy": "identity_schedule_qubit_order_v1",
+        "local_dims_source": (
+            "caller_backend_config_or_default_qubit_dims_not_evaluator_truth"
+        ),
+        "supports_qubit_sites": 2 in dimension_classes,
+        "supports_qutrit_sites": 3 in dimension_classes,
+        "supports_ququart_sites": 4 in dimension_classes,
+        "supports_mixed_local_dimensions": len(set(dims)) > 1,
+        "dimension_validation_epistemic_class": "a",
+        "modeling_choice_epistemic_class": "c",
+    }
+
+
+def _mcwf_carrier_record_execution_summary(
+    direct: dict[str, Any],
+    execution: dict[str, Any],
+    *,
+    executed: bool,
+) -> dict[str, Any]:
+    """Build the one canonical public Record summary for a direct MCWF child."""
+
+    record_executed = bool(executed and execution.get("measurement_keys"))
+    return {
+        "executed": record_executed,
+        "reason": (
+            None
+            if record_executed
+            else (
+                direct.get("blocked_reason")
+                if not executed
+                else "schedule_has_no_measurement_substep"
+            )
+        ),
+        "measurement_keys": list(execution.get("measurement_keys", ())),
+        "measurement_targets": list(
+            execution.get("measurement_targets", ())
+        ),
+        "measurement_bases": list(execution.get("measurement_bases", ())),
+        "reset_after": list(execution.get("reset_after", ())),
+        "measurement_basis": execution.get("measurement_basis"),
+        "measurement_basis_semantics": execution.get(
+            "measurement_basis_semantics"
+        ),
+        "multilevel_measurement_policy": dict(
+            execution.get("multilevel_measurement_policy", {})
+        ),
+        "measurement_records": list(execution.get("measurement_records", ())),
+        "record_counts": list(execution.get("record_counts", ())),
+        "record_probabilities": list(execution.get("record_probabilities", ())),
+        "detector_records": list(execution.get("detector_records", ())),
+        "logical_observable_records": list(
+            execution.get("logical_observable_records", ())
+        ),
+        "trajectory_sampling": dict(execution.get("trajectory_sampling", {})),
+        "jump_sampling": dict(execution.get("jump_sampling", {})),
+        "claims_b8_artifact": (
+            _require_manifest_bool(
+                execution,
+                "claims_b8_artifact",
+                context="MCWF/MPS child mps_execution",
+            )
+            if executed
+            else False
+        ),
+        "claims_decoder_integration": (
+            _require_manifest_bool(
+                execution,
+                "claims_decoder_integration",
+                context="MCWF/MPS child mps_execution",
+            )
+            if executed
+            else False
+        ),
+    }
+
+
+def _trusted_mcwf_artifact_authority(
+    program: dict[str, Any],
+    *,
+    expected: dict[str, Any],
+    device: Any,
+) -> tuple[dict[str, Any], str | None]:
+    """Rebuild and recertify artifacts from sealed inputs, never child claims."""
+
+    from .axis1_mcwf_mps_execution import (
+        _compile_mcwf_dynamics_artifacts,
+        _first_order_mass_residual_blocks,
+        _mcwf_dynamics_artifacts_content_hash,
+        _unsupported_substeps,
+    )
+    from ..certify.axis1_mps import (
+        mcwf_dynamics_artifact_reference_certification,
+    )
+
+    dims = tuple(int(dim) for dim in expected["local_dims"])
+    if expected["max_bond"] is not None and any(dim != 2 for dim in dims):
+        reason = "mcwf_mps_multilevel_finite_bond_ledger_not_implemented"
+        packet = mcwf_dynamics_artifact_reference_certification(
+            program,
+            dynamics_artifacts=None,
+            dynamics_artifact_content_hash=None,
+            local_dims=dims,
+            microstep_count=expected["microstep_count"],
+            finite_step_order=expected["finite_step_order"],
+            post_execution_integrity_verified=False,
+            not_executed_reason=reason,
+        )
+        return packet, reason
+    unsupported = _unsupported_substeps(program, local_dims=dims)
+    if unsupported:
+        reason = str(unsupported[0]["reason"])
+        packet = mcwf_dynamics_artifact_reference_certification(
+            program,
+            dynamics_artifacts=None,
+            dynamics_artifact_content_hash=None,
+            local_dims=dims,
+            microstep_count=expected["microstep_count"],
+            finite_step_order=expected["finite_step_order"],
+            post_execution_integrity_verified=False,
+            not_executed_reason=reason,
+        )
+        return packet, reason
+    try:
+        dynamics_artifacts = _compile_mcwf_dynamics_artifacts(
+            program,
+            local_dims=dims,
+            device=device,
+            microstep_count=expected["microstep_count"],
+            finite_step_order=expected["finite_step_order"],
+        )
+    except Exception as exc:
+        reason = (
+            "mcwf_dynamics_artifact_compile_unavailable:"
+            f"{type(exc).__name__}"
+        )
+        packet = mcwf_dynamics_artifact_reference_certification(
+            program,
+            dynamics_artifacts=None,
+            dynamics_artifact_content_hash=None,
+            local_dims=dims,
+            microstep_count=expected["microstep_count"],
+            finite_step_order=expected["finite_step_order"],
+            post_execution_integrity_verified=False,
+            not_executed_reason=reason,
+        )
+        return packet, reason
+    artifact_hash = _mcwf_dynamics_artifacts_content_hash(
+        program,
+        dynamics_artifacts,
+        local_dims=dims,
+        microstep_count=expected["microstep_count"],
+        finite_step_order=expected["finite_step_order"],
+    )
+    pre_execution_packet = mcwf_dynamics_artifact_reference_certification(
+        program,
+        dynamics_artifacts=dynamics_artifacts,
+        dynamics_artifact_content_hash=artifact_hash,
+        local_dims=dims,
+        microstep_count=expected["microstep_count"],
+        finite_step_order=expected["finite_step_order"],
+        post_execution_integrity_verified=False,
+    )
+    if pre_execution_packet["passed"] is not True:
+        return pre_execution_packet, str(pre_execution_packet["reason"])
+    if expected["mass_residual_budget"] is not None:
+        residual_blocks = _first_order_mass_residual_blocks(
+            program,
+            local_dims=dims,
+            microstep_count=expected["microstep_count"],
+            device=device,
+            budget=expected["mass_residual_budget"],
+            dynamics_artifacts=dynamics_artifacts,
+        )
+        if residual_blocks:
+            return pre_execution_packet, str(residual_blocks[0]["reason"])
+    completed_packet = mcwf_dynamics_artifact_reference_certification(
+        program,
+        dynamics_artifacts=dynamics_artifacts,
+        dynamics_artifact_content_hash=artifact_hash,
+        local_dims=dims,
+        microstep_count=expected["microstep_count"],
+        finite_step_order=expected["finite_step_order"],
+        post_execution_integrity_verified=True,
+    )
+    return completed_packet, None
+
+
+def _trusted_mcwf_blocked_reason(
+    program: dict[str, Any],
+    *,
+    expected: dict[str, Any],
+    device: Any,
+) -> str | None:
+    """Compatibility wrapper for callers that only need the trusted blocker."""
+
+    _, reason = _trusted_mcwf_artifact_authority(
+        program,
+        expected=expected,
+        device=device,
+    )
+    return reason
+
+
+def _trusted_seeded_mcwf_direct_authority(
+    schedule: SubstepSchedule,
+    *,
+    execution_backend_options: dict[str, Any],
+    device: Any,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Independently replay a seeded direct child and derive its public Record."""
+
+    from .axis1_mcwf_mps_execution import (
+        axis1_mcwf_mps_state_record_execution_manifest,
+    )
+
+    direct = axis1_mcwf_mps_state_record_execution_manifest(
+        schedule,
+        device=device,
+        **copy.deepcopy(execution_backend_options),
+    )
+    _validate_child_content_hash(direct, context="trusted seeded direct MCWF child")
+    executed = _require_manifest_bool(
+        direct,
+        "mcwf_mps_backend_executed",
+        context="trusted seeded direct MCWF child",
+    )
+    raw_execution = direct.get("mps_execution")
+    if executed and not isinstance(raw_execution, dict):
+        raise TypeError("trusted seeded direct MCWF execution must be a mapping")
+    if not executed and raw_execution is not None:
+        raise ValueError("trusted blocked direct MCWF execution must be None")
+    execution = raw_execution or {}
+    return direct, _mcwf_carrier_record_execution_summary(
+        direct,
+        execution,
+        executed=executed,
+    )
+
+
+def _validate_auto_routed_mcwf_summary(
+    child: dict[str, Any],
+    *,
+    schedule: SubstepSchedule,
+    expected_execution_backend_options: dict[str, Any],
+    trusted_program: dict[str, Any],
+    expected: dict[str, Any],
+    expected_device: Any,
+) -> None:
+    """Authenticate MCWF Carrier state, policy, and request provenance."""
+
+    _require_exact_summary_fields(
+        child,
+        _MCWF_CARRIER_CHILD_FIELDS,
+        context="auto-routed MCWF Carrier child",
+    )
+    _reject_auto_routed_evaluator_truth(child)
+
+    actual_options = child.get("execution_backend_options")
+    if type(actual_options) is not dict:
+        raise TypeError(
+            "auto-routed MCWF Carrier child execution_backend_options must be an exact mapping"
+        )
+    if _stable_payload_hash({"options": actual_options}) != _stable_payload_hash(
+        {"options": _jsonable(expected_execution_backend_options)}
+    ):
+        raise ValueError(
+            "auto-routed MCWF Carrier child execution_backend_options must match the caller request"
+        )
+    passed = _require_manifest_bool(
+        child,
+        "passed",
+        context="auto-routed MCWF Carrier child",
+    )
+    verdict = _require_manifest_text(
+        child,
+        "verdict",
+        context="auto-routed MCWF Carrier child",
+    )
+    backend_executed = _require_manifest_bool(
+        child,
+        "mcwf_mps_backend_executed",
+        context="auto-routed MCWF Carrier child",
+    )
+    claimed_execution = _require_manifest_bool(
+        child,
+        "claims_mcwf_mps_backend_execution",
+        context="auto-routed MCWF Carrier child",
+    )
+    if claimed_execution is not backend_executed:
+        raise ValueError(
+            "auto-routed MCWF Carrier execution claim must equal backend state"
+        )
+    trusted_artifact_certification, trusted_blocked_reason = (
+        _trusted_mcwf_artifact_authority(
+            trusted_program,
+            expected=expected,
+            device=expected_device,
+        )
+    )
+    artifact_certification = child.get(
+        "dynamics_artifact_reference_certification"
+    )
+    if not isinstance(artifact_certification, dict):
+        raise TypeError(
+            "auto-routed MCWF Carrier artifact certification must be a mapping"
+        )
+    if _stable_payload_hash(
+        {"certification": artifact_certification}
+    ) != _stable_payload_hash(
+        {"certification": trusted_artifact_certification}
+    ):
+        raise ValueError(
+            "auto-routed MCWF Carrier artifact certification must match sealed-input authority"
+        )
+    if backend_executed and trusted_blocked_reason is not None:
+        raise ValueError(
+            "auto-routed MCWF Carrier executed despite a sealed-input blocker"
+        )
+    execution_status = _require_manifest_text(
+        child,
+        "execution_status",
+        context="auto-routed MCWF Carrier child",
+    )
+    certification_status = _require_manifest_text(
+        child,
+        "certification_status",
+        context="auto-routed MCWF Carrier child",
+    )
+    diagnostic_only = _require_manifest_bool(
+        child,
+        "diagnostic_only",
+        context="auto-routed MCWF Carrier child",
+    )
+    _validate_restricted_child_state_machine(
+        passed=passed,
+        child_verdict=verdict,
+        backend_executed=backend_executed,
+        execution_status=execution_status,
+        certification_status=certification_status,
+        diagnostic_only=diagnostic_only,
+        blocked_reason=child.get("blocked_reason"),
+        context="auto-routed MCWF Carrier",
+    )
+
+    policy = child.get("restricted_acceptance_policy")
+    if not isinstance(policy, dict):
+        raise TypeError(
+            "auto-routed MCWF Carrier restricted_acceptance_policy must be a mapping"
+        )
+    accepted = _require_manifest_bool(
+        policy,
+        "accepted_for_restricted_execution",
+        context="auto-routed MCWF Carrier restricted acceptance policy",
+    )
+    if accepted is not passed:
+        raise ValueError(
+            "auto-routed MCWF Carrier passed must equal restricted acceptance"
+        )
+    policy_artifact_certification = policy.get(
+        "dynamics_artifact_reference_certification"
+    )
+    if not isinstance(policy_artifact_certification, dict):
+        raise TypeError(
+            "auto-routed MCWF Carrier policy artifact certification must be a mapping"
+        )
+    if _stable_payload_hash(
+        {"certification": policy_artifact_certification}
+    ) != _stable_payload_hash(
+        {"certification": trusted_artifact_certification}
+    ):
+        raise ValueError(
+            "auto-routed MCWF Carrier policy artifact certification must match authority"
+        )
+    _validate_restricted_policy_state(
+        policy,
+        execution_status=execution_status,
+        certification_status=certification_status,
+        diagnostic_only=diagnostic_only,
+        blocked_reason=child.get("blocked_reason"),
+        context="auto-routed MCWF Carrier",
+        route_kind="mcwf",
+    )
+    if not backend_executed:
+        from .axis1_mcwf_mps_execution import _blocked_acceptance_policy
+
+        if trusted_blocked_reason is None:
+            raise ValueError(
+                "auto-routed MCWF Carrier reported blocked without a trusted "
+                "preflight blocker"
+            )
+        if child.get("blocked_reason") != trusted_blocked_reason:
+            raise ValueError(
+                "auto-routed MCWF Carrier blocked_reason must match trusted "
+                "preflight"
+            )
+        canonical_blocked_policy = _blocked_acceptance_policy(
+            blocked_reason=trusted_blocked_reason,
+            rng_seed=expected["rng_seed"],
+            trajectory_count=expected["trajectory_count"],
+            dynamics_artifact_reference_certification=(
+                trusted_artifact_certification
+            ),
+        )
+        if _stable_payload_hash({"policy": policy}) != _stable_payload_hash(
+            {"policy": canonical_blocked_policy}
+        ):
+            raise ValueError(
+                "auto-routed blocked MCWF Carrier policy must be canonical"
+            )
+
+    local_hilbert_space = child.get("local_hilbert_space")
+    if not isinstance(local_hilbert_space, dict):
+        raise TypeError(
+            "auto-routed MCWF Carrier local_hilbert_space must be a mapping"
+        )
+    expected_hilbert_space = _expected_mcwf_local_hilbert_space(
+        expected["local_dims"]
+    )
+    if _stable_payload_hash({"local_hilbert_space": local_hilbert_space}) != (
+        _stable_payload_hash({"local_hilbert_space": expected_hilbert_space})
+    ):
+        raise ValueError(
+            "auto-routed MCWF Carrier local_hilbert_space must match caller local_dims"
+        )
+
+    state = child.get("state_execution")
+    summary = child.get("mcwf_mps_execution")
+    if not isinstance(state, dict) or not isinstance(summary, dict):
+        raise TypeError(
+            "auto-routed MCWF Carrier state and execution summaries must be mappings"
+        )
+    _require_exact_summary_fields(
+        state,
+        _MCWF_CARRIER_STATE_EXECUTION_FIELDS,
+        context="auto-routed MCWF Carrier state_execution",
+    )
+    _require_exact_summary_fields(
+        summary,
+        _MCWF_CARRIER_EXECUTION_SUMMARY_FIELDS,
+        context="auto-routed MCWF Carrier mcwf_mps_execution",
+    )
+    summary_artifact_certification = summary.get(
+        "dynamics_artifact_reference_certification"
+    )
+    if not isinstance(summary_artifact_certification, dict):
+        raise TypeError(
+            "auto-routed MCWF direct summary artifact certification must be a mapping"
+        )
+    if _stable_payload_hash(
+        {"certification": summary_artifact_certification}
+    ) != _stable_payload_hash(
+        {"certification": trusted_artifact_certification}
+    ):
+        raise ValueError(
+            "auto-routed MCWF direct summary artifact certification must match authority"
+        )
+
+    direct_schema = _require_manifest_text(
+        summary,
+        "schema",
+        context="auto-routed MCWF Carrier direct summary",
+    )
+    if direct_schema != _RESTRICTED_EXECUTION_SCHEMAS["mcwf"]:
+        raise ValueError("auto-routed MCWF Carrier direct schema is not registered")
+    if state.get("evidence_schema") != direct_schema:
+        raise ValueError(
+            "auto-routed MCWF Carrier state evidence schema must match direct summary"
+        )
+    direct_hash = _require_manifest_text(
+        summary,
+        "content_hash",
+        context="auto-routed MCWF Carrier direct summary",
+    )
+    if (
+        len(direct_hash) != 64
+        or any(char not in "0123456789abcdef" for char in direct_hash)
+        or state.get("evidence_content_hash") != direct_hash
+    ):
+        raise ValueError(
+            "auto-routed MCWF Carrier direct evidence hashes must be registered and equal"
+        )
+    if (
+        summary.get("representability") != _MCWF_DIRECT_REPRESENTABILITY
+        or state.get("representability") != _MCWF_DIRECT_REPRESENTABILITY
+        or summary.get("backend_contract")
+        != AXIS1_CARRIER_MCWF_MPS_EXECUTION_BACKEND_CONTRACT
+    ):
+        raise ValueError(
+            "auto-routed MCWF Carrier direct identity is not registered"
+        )
+    for field, expected_value in (
+        ("execution_status", execution_status),
+        ("certification_status", certification_status),
+        ("diagnostic_only", diagnostic_only),
+        ("passed", passed),
+        ("mcwf_mps_backend_executed", backend_executed),
+    ):
+        actual = summary.get(field)
+        if actual != expected_value or type(actual) is not type(expected_value):
+            raise ValueError(
+                f"auto-routed MCWF Carrier direct summary {field} must match Carrier state"
+            )
+    for field in (
+        "claims_exact_joint_lindblad_generator",
+        "claims_dense_channel_evidence",
+        "claims_production_scalable_backend",
+    ):
+        if _require_manifest_bool(
+            summary,
+            field,
+            context="auto-routed MCWF Carrier direct summary",
+        ):
+            raise ValueError(
+                f"auto-routed MCWF Carrier direct summary {field} must be false"
+            )
+    state_executed = _require_manifest_bool(
+        state,
+        "executed",
+        context="auto-routed MCWF Carrier state_execution",
+    )
+    if state_executed is not backend_executed:
+        raise ValueError(
+            "auto-routed MCWF Carrier state execution must match backend state"
+        )
+    expected_reason = None if backend_executed else child.get("blocked_reason")
+    if state.get("reason") != expected_reason:
+        raise ValueError(
+            "auto-routed MCWF Carrier state reason must match backend state"
+        )
+    state_initial_levels = state.get("initial_levels")
+    if (
+        type(state_initial_levels) is not list
+        or state_initial_levels != expected["initial_levels"]
+        or any(type(level) is not int for level in state_initial_levels)
+    ):
+        raise ValueError(
+            "auto-routed MCWF Carrier state initial_levels must match caller request"
+        )
+
+    if backend_executed:
+        expected_static_state = {
+            "mps_library": "quimb.tensor.MatrixProductState",
+            "array_backend": "torch_cuda_complex128",
+            "unraveling_policy": "fixed_microstep_first_order_quantum_jump_mcwf",
+        }
+        for field, expected_value in expected_static_state.items():
+            if state.get(field) != expected_value:
+                raise ValueError(
+                    f"auto-routed MCWF Carrier state {field} is not registered"
+                )
+        record_execution = child.get("record_execution")
+        if not isinstance(record_execution, dict):
+            raise TypeError(
+                "auto-routed MCWF Carrier record_execution must be a mapping"
+            )
+        actual_measurement_policy = record_execution.get(
+            "multilevel_measurement_policy"
+        )
+        if not isinstance(actual_measurement_policy, dict):
+            raise TypeError(
+                "auto-routed MCWF Carrier measurement policy must be a mapping"
+            )
+        pseudo_execution = {
+            "trajectory_sampling": record_execution.get("trajectory_sampling"),
+            "finite_step_policy": state.get("finite_step_policy"),
+            "mps_truncation_ledger": state.get("mps_truncation_ledger"),
+            "multilevel_measurement_policy": actual_measurement_policy,
+            "initial_levels": state_initial_levels,
+            "local_dims": local_hilbert_space.get("local_dims"),
+        }
+        _validate_mcwf_mps_child_execution_options(
+            pseudo_execution,
+            policy=policy,
+            expected=expected,
+        )
+        _validate_auto_routed_mcwf_policy_evidence(
+            policy=policy,
+            record_execution=record_execution,
+            ledger=state.get("mps_truncation_ledger"),
+            expected=expected,
+        )
+    else:
+        for field in ("mps_library", "array_backend", "unraveling_policy"):
+            if state.get(field) is not None:
+                raise ValueError(
+                    f"auto-routed blocked MCWF Carrier state {field} must be None"
+                )
+        if state.get("finite_step_policy") != {} or state.get(
+            "mps_truncation_ledger"
+        ) != {}:
+            raise ValueError(
+                "auto-routed blocked MCWF Carrier state controls must be empty"
+            )
+
+    if passed:
+        if expected["rng_seed"] is None:
+            raise ValueError(
+                "accepted auto-routed MCWF evidence requires a seeded direct execution"
+            )
+        trusted_direct, trusted_record_execution = (
+            _trusted_seeded_mcwf_direct_authority(
+                schedule,
+                execution_backend_options=expected_execution_backend_options,
+                device=expected_device,
+            )
+        )
+        if (
+            trusted_direct.get("passed") is not True
+            or trusted_direct.get("content_hash") != direct_hash
+        ):
+            raise ValueError(
+                "auto-routed MCWF summary must match the seeded direct MCWF execution"
+            )
+        actual_record_execution = child.get("record_execution")
+        if not isinstance(actual_record_execution, dict):
+            raise TypeError(
+                "auto-routed MCWF Carrier record_execution must be a mapping"
+            )
+        if _stable_payload_hash(
+            {"record_execution": actual_record_execution}
+        ) != _stable_payload_hash(
+            {"record_execution": trusted_record_execution}
+        ):
+            raise ValueError(
+                "auto-routed MCWF Record summary must match the seeded direct MCWF execution"
+            )
+        trusted_policy = trusted_direct.get("restricted_acceptance_policy")
+        if not isinstance(trusted_policy, dict) or _stable_payload_hash(
+            {"policy": policy}
+        ) != _stable_payload_hash({"policy": trusted_policy}):
+            raise ValueError(
+                "auto-routed MCWF policy must match the seeded direct MCWF execution"
+            )
+
+
+def _validate_auto_routed_mcwf_policy_evidence(
+    *,
+    policy: dict[str, Any],
+    record_execution: dict[str, Any],
+    ledger: Any,
+    expected: dict[str, Any],
+) -> None:
+    """Cross-bind runtime probability/truncation evidence to public policy."""
+
+    for field, expected_fields in (
+        ("gross_strict_gate_split", _MCWF_POLICY_GROSS_STRICT_FIELDS),
+        (
+            "dense_jointL_record_certification",
+            _MCWF_POLICY_DENSE_CERTIFICATION_FIELDS,
+        ),
+        ("trajectory", _MCWF_POLICY_TRAJECTORY_FIELDS),
+        ("finite_step", _MCWF_POLICY_FINITE_STEP_FIELDS),
+        ("mps_truncation", _MCWF_POLICY_TRUNCATION_FIELDS),
+        ("probability", _MCWF_POLICY_PROBABILITY_FIELDS),
+    ):
+        nested = policy.get(field)
+        if not isinstance(nested, dict):
+            raise TypeError(
+                f"auto-routed MCWF Carrier policy {field} must be a mapping"
+            )
+        _require_exact_summary_fields(
+            nested,
+            expected_fields,
+            context=f"auto-routed MCWF Carrier policy {field}",
+        )
+
+    dense_certification = policy["dense_jointL_record_certification"]
+    component_values = dense_certification.get("component_values")
+    if dense_certification.get("comparison_object") == (
+        _MCWF_JOINT_LEVEL_BINARY_COMPARISON_OBJECT
+    ):
+        expected_component_fields = {
+            "declared_basis_eigenlabel_tv",
+            "emitted_binary_record_tv",
+        }
+        if not isinstance(component_values, dict):
+            raise TypeError(
+                "auto-routed joint MCWF certification component_values must be a mapping"
+            )
+        if set(component_values) != expected_component_fields:
+            raise ValueError(
+                "auto-routed joint MCWF certification component_values fields "
+                "must be exact"
+            )
+        normalized_components: list[float] = []
+        for name in sorted(expected_component_fields):
+            value = component_values[name]
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, Real)
+                or not math.isfinite(float(value))
+                or float(value) < 0.0
+                or float(value) > 1.0
+            ):
+                raise ValueError(
+                    "auto-routed joint MCWF certification component TV must lie in [0, 1]"
+                )
+            normalized_components.append(float(value))
+        aggregate_value = dense_certification.get("value")
+        if (
+            isinstance(aggregate_value, bool)
+            or not isinstance(aggregate_value, Real)
+            or abs(float(aggregate_value) - max(normalized_components))
+            > NUMERICAL_ZERO
+        ):
+            raise ValueError(
+                "auto-routed joint MCWF certification value must equal the "
+                "maximum component TV"
+            )
+    elif component_values is not None:
+        raise ValueError(
+            "auto-routed non-joint MCWF certification cannot carry component_values"
+        )
+
+    probability = policy.get("probability")
+    jump_sampling = record_execution.get("jump_sampling")
+    if not isinstance(probability, dict) or not isinstance(jump_sampling, dict):
+        raise TypeError(
+            "auto-routed MCWF Carrier probability and jump policies must be mappings"
+        )
+    runtime_residual = jump_sampling.get("probability_mass_residual_max")
+    if (
+        isinstance(runtime_residual, bool)
+        or not isinstance(runtime_residual, Real)
+        or not math.isfinite(float(runtime_residual))
+        or float(runtime_residual) < 0.0
+    ):
+        raise ValueError(
+            "auto-routed MCWF Carrier runtime mass residual must be finite and nonnegative"
+        )
+    residual_value = float(runtime_residual)
+    residual_budget = expected["mass_residual_budget"]
+    expected_within_budget = (
+        None
+        if residual_budget is None
+        else residual_value <= float(residual_budget)
+    )
+    probability_mirrors = (
+        ("runtime_candidate_mass_residual", residual_value),
+        ("runtime_candidate_mass_residual_budget", residual_budget),
+        ("runtime_candidate_mass_residual_is_finite_nonnegative", True),
+        ("runtime_candidate_mass_residual_within_budget", expected_within_budget),
+        ("runtime_candidate_mass_residual_required_for_restricted_acceptance", True),
+        ("comparison_outcome_is_metric", False),
+    )
+    for field, expected_value in probability_mirrors:
+        actual = probability.get(field)
+        if actual != expected_value or type(actual) is not type(expected_value):
+            raise ValueError(
+                f"auto-routed MCWF Carrier probability policy {field} is not request-bound"
+            )
+
+    truncation = policy.get("mps_truncation")
+    if not isinstance(truncation, dict) or not isinstance(ledger, dict):
+        raise TypeError(
+            "auto-routed MCWF Carrier truncation policy and ledger must be mappings"
+        )
+    from ..certify.axis1_mps import _mcwf_truncation_gate_result
+
+    expected_gate = _mcwf_truncation_gate_result(
+        ledger,
+        worst_cut_discarded_weight_gate=expected[
+            "worst_cut_discarded_weight_gate"
+        ],
+        total_discarded_weight_gate=expected["total_discarded_weight_gate"],
+    )
+    actual_gate = truncation.get("gate")
+    if not isinstance(actual_gate, dict) or _stable_payload_hash(
+        {"gate": actual_gate}
+    ) != _stable_payload_hash({"gate": expected_gate}):
+        raise ValueError(
+            "auto-routed MCWF Carrier truncation gate must match ledger and caller gates"
+        )
+    for policy_field, ledger_field in (
+        ("explicit_truncation_requested", "explicit_truncation_requested"),
+        ("discarded_weight_sum", "discarded_weight_sum"),
+        ("worst_cut_discarded_weight", "worst_cut_discarded_weight"),
+    ):
+        policy_value = truncation.get(policy_field)
+        ledger_value = ledger.get(ledger_field)
+        if policy_value != ledger_value or type(policy_value) is not type(
+            ledger_value
+        ):
+            raise ValueError(
+                f"auto-routed MCWF Carrier truncation {policy_field} must match ledger"
+            )
+    observed_total = expected_gate["observed_total_discarded_weight"]
+    expected_truncation_detected = bool(
+        observed_total is not None and observed_total > 0.0
+    )
+    actual_truncation_detected = _require_manifest_bool(
+        truncation,
+        "truncation_detected",
+        context="auto-routed MCWF Carrier truncation policy",
+    )
+    if actual_truncation_detected is not expected_truncation_detected:
+        raise ValueError(
+            "auto-routed MCWF Carrier truncation_detected must match canonical "
+            "discarded-weight evidence"
+        )
+    for field in (
+        "accepted_as_production_error_bound",
+        "comparison_outcome_is_metric",
+    ):
+        if _require_manifest_bool(
+            truncation,
+            field,
+            context="auto-routed MCWF Carrier truncation policy",
+        ):
+            raise ValueError(
+                f"auto-routed MCWF Carrier truncation policy {field} must be false"
+            )
+    if expected["max_bond"] is None:
+        if (
+            ledger.get("n_truncating_ops") != 0
+            or ledger.get("discarded_weight_sum") != 0.0
+            or ledger.get("worst_cut_discarded_weight") != 0.0
+            or expected_truncation_detected
+        ):
+            raise ValueError(
+                "auto-routed uncapped MCWF Carrier cannot report truncation loss"
+            )
+
+
+def _validate_auto_routed_mcwf_record_execution(
+    child: dict[str, Any],
+    *,
+    schedule: SubstepSchedule,
+    expected_execution: dict[str, Any],
+) -> None:
+    """Rebind a completed MCWF Carrier summary to the sealed Record layout."""
+
+    backend_executed = _require_manifest_bool(
+        child,
+        "mcwf_mps_backend_executed",
+        context="auto-routed Carrier child",
+    )
+    record_execution = child.get("record_execution")
+    if not isinstance(record_execution, dict):
+        raise TypeError(
+            "auto-routed MCWF Carrier child record_execution must be a mapping"
+        )
+    _require_exact_summary_fields(
+        record_execution,
+        _MCWF_CARRIER_RECORD_EXECUTION_FIELDS,
+        context="auto-routed MCWF Carrier record_execution",
+    )
+    record_executed = _require_manifest_bool(
+        record_execution,
+        "executed",
+        context="auto-routed MCWF Carrier child record_execution",
+    )
+    if not backend_executed:
+        expected_blocked_record = {
+            "executed": False,
+            "reason": child.get("blocked_reason"),
+            "measurement_keys": [],
+            "measurement_targets": [],
+            "measurement_bases": [],
+            "reset_after": [],
+            "measurement_basis": None,
+            "measurement_basis_semantics": None,
+            "multilevel_measurement_policy": {},
+            "measurement_records": [],
+            "record_counts": [],
+            "record_probabilities": [],
+            "detector_records": [],
+            "logical_observable_records": [],
+            "trajectory_sampling": {},
+            "jump_sampling": {},
+            "claims_b8_artifact": False,
+            "claims_decoder_integration": False,
+        }
+        if _stable_payload_hash(
+            {"record_execution": record_execution}
+        ) != _stable_payload_hash(
+            {"record_execution": expected_blocked_record}
+        ):
+            raise ValueError(
+                "auto-routed blocked MCWF Carrier Record summary must be canonical"
+            )
+        return
+
+    layout = axis1_record_layout_from_schedule(schedule)
+    if record_executed is not bool(layout.measurement_width):
+        raise ValueError(
+            "auto-routed MCWF Carrier child Record execution disagrees with the sealed layout"
+        )
+    expected_reason = None if record_executed else "schedule_has_no_measurement_substep"
+    if record_execution.get("reason") != expected_reason:
+        raise ValueError(
+            "auto-routed MCWF Carrier child Record reason disagrees with execution state"
+        )
+    for field in ("claims_b8_artifact", "claims_decoder_integration"):
+        if _require_manifest_bool(
+            record_execution,
+            field,
+            context="auto-routed MCWF Carrier child record_execution",
+        ):
+            raise ValueError(
+                f"auto-routed MCWF Carrier child record_execution {field} must be false"
+            )
+    expected_metadata = {
+        "measurement_keys": list(layout.measurement_keys),
+        "measurement_targets": list(layout.measurement_targets),
+        "measurement_bases": list(layout.measurement_bases),
+        "reset_after": list(layout.reset_after),
+    }
+    for field, expected in expected_metadata.items():
+        actual = record_execution.get(field)
+        if type(actual) is not list or len(actual) != len(expected):
+            raise ValueError(
+                f"auto-routed MCWF Carrier child {field} must match the sealed Record layout"
+            )
+        if any(
+            type(actual_item) is not type(expected_item)
+            or actual_item != expected_item
+            for actual_item, expected_item in zip(actual, expected, strict=True)
+        ):
+            raise ValueError(
+                f"auto-routed MCWF Carrier child {field} must match the sealed Record layout"
+            )
+
+    bases = expected_metadata["measurement_bases"]
+    expected_basis_summary = (
+        "none"
+        if not bases
+        else (
+            "X"
+            if all(basis == "X" for basis in bases)
+            else (
+                "Z"
+                if all(basis == "Z" for basis in bases)
+                else "mixed_pauli"
+            )
+        )
+    )
+    if record_execution.get("measurement_basis") != expected_basis_summary:
+        raise ValueError(
+            "auto-routed MCWF Carrier child measurement_basis disagrees with the sealed layout"
+        )
+    if record_execution.get("measurement_basis_semantics") != (
+        _MCWF_MEASUREMENT_BASIS_SEMANTICS
+    ):
+        raise ValueError(
+            "auto-routed MCWF Carrier child measurement_basis_semantics is not registered"
+        )
+    measurement_policy = record_execution.get("multilevel_measurement_policy")
+    if not isinstance(measurement_policy, dict):
+        raise TypeError(
+            "auto-routed MCWF Carrier child multilevel_measurement_policy must be a mapping"
+        )
+    expected_measurement_policy = {
+        "name": _MCWF_MEASUREMENT_POLICY_NAME,
+        "bit_mapping": _MCWF_MEASUREMENT_BIT_MAPPING,
+        "leaked_readout_b": expected_execution["leaked_readout_b"],
+        "comparison_outcome_is_metric": False,
+        "epistemic_class": "c",
+    }
+    if _stable_payload_hash({"policy": measurement_policy}) != _stable_payload_hash(
+        {"policy": expected_measurement_policy}
+    ):
+        raise ValueError(
+            "auto-routed MCWF Carrier child measurement policy is not canonical"
+        )
+
+    records = _require_exact_binary_record_matrix(
+        record_execution.get("measurement_records"),
+        field="measurement_records",
+        context="auto-routed MCWF Carrier child",
+    )
+    record_tuples = [tuple(row) for row in records]
+    if record_tuples != sorted(record_tuples) or len(record_tuples) != len(
+        set(record_tuples)
+    ):
+        raise ValueError(
+            "auto-routed MCWF Carrier child measurement_records must be sorted and unique"
+        )
+    projected = project_axis1_xor_records(layout, records)
+    expected_projections = {
+        "detector_records": [list(row) for row in projected.detector_records],
+        "logical_observable_records": [
+            list(row) for row in projected.observable_records
+        ],
+    }
+    for field, expected in expected_projections.items():
+        actual = _require_exact_binary_record_matrix(
+            record_execution.get(field),
+            field=field,
+            context="auto-routed MCWF Carrier child",
+        )
+        if actual != expected:
+            raise ValueError(
+                f"auto-routed MCWF Carrier child {field} must match the sealed Record projection"
+            )
+
+    counts = record_execution.get("record_counts")
+    probabilities = record_execution.get("record_probabilities")
+    sampling = record_execution.get("trajectory_sampling")
+    if type(counts) is not list or type(probabilities) is not list:
+        raise TypeError(
+            "auto-routed MCWF Carrier child Record counts and probabilities must be exact lists"
+        )
+    if not isinstance(sampling, dict):
+        raise TypeError(
+            "auto-routed MCWF Carrier child trajectory_sampling must be a mapping"
+        )
+    trajectory_count = sampling.get("trajectory_count")
+    if type(trajectory_count) is not int or trajectory_count <= 0:
+        raise ValueError(
+            "auto-routed MCWF Carrier child trajectory_count must be a positive exact integer"
+        )
+    if trajectory_count != expected_execution["trajectory_count"]:
+        raise ValueError(
+            "auto-routed MCWF Carrier child trajectory_count must match caller request"
+        )
+    if not (len(records) == len(counts) == len(probabilities)):
+        raise ValueError(
+            "auto-routed MCWF Carrier child records, counts, and probabilities must align"
+        )
+    for index, (count, probability) in enumerate(
+        zip(counts, probabilities, strict=True)
+    ):
+        if type(count) is not int or count <= 0:
+            raise ValueError(
+                f"auto-routed MCWF Carrier child record_counts[{index}] must be positive"
+            )
+        if (
+            isinstance(probability, bool)
+            or not isinstance(probability, Real)
+            or not math.isfinite(float(probability))
+            or float(probability) < 0.0
+        ):
+            raise ValueError(
+                f"auto-routed MCWF Carrier child record_probabilities[{index}] is invalid"
+            )
+        expected_probability = float(count) / float(trajectory_count)
+        if abs(float(probability) - expected_probability) > NUMERICAL_ZERO:
+            raise ValueError(
+                "auto-routed MCWF Carrier child Record probabilities must equal counts / trajectories"
+            )
+    if sum(counts) != trajectory_count:
+        raise ValueError(
+            "auto-routed MCWF Carrier child record_counts must sum to trajectory_count"
+        )
+    if abs(math.fsum(float(value) for value in probabilities) - 1.0) > NUMERICAL_ZERO:
+        raise ValueError(
+            "auto-routed MCWF Carrier child record probabilities must sum to one"
+        )
+
+    jump_sampling = record_execution.get("jump_sampling")
+    if not isinstance(jump_sampling, dict):
+        raise TypeError(
+            "auto-routed MCWF Carrier child jump_sampling must be a mapping"
+        )
+    if set(jump_sampling) != {
+        "max_jumps_per_microstep",
+        "probability_mass_residual_max",
+        "probability_mass_residual_mean",
+        "probability_mass_residual_gate_role",
+        "epistemic_class",
+    }:
+        raise ValueError(
+            "auto-routed MCWF Carrier child jump_sampling fields are not canonical"
+        )
+    if jump_sampling.get("max_jumps_per_microstep") != 1:
+        raise ValueError(
+            "auto-routed MCWF Carrier child max_jumps_per_microstep must equal one"
+        )
+    residual_max = jump_sampling.get("probability_mass_residual_max")
+    residual_mean = jump_sampling.get("probability_mass_residual_mean")
+    for field, value in (
+        ("probability_mass_residual_max", residual_max),
+        ("probability_mass_residual_mean", residual_mean),
+    ):
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, Real)
+            or not math.isfinite(float(value))
+            or float(value) < 0.0
+        ):
+            raise ValueError(
+                f"auto-routed MCWF Carrier child {field} must be finite and nonnegative"
+            )
+    if float(residual_mean) > float(residual_max) + NUMERICAL_ZERO:
+        raise ValueError(
+            "auto-routed MCWF Carrier child residual mean cannot exceed residual max"
+        )
+    if jump_sampling.get("probability_mass_residual_gate_role") != (
+        "diagnostic_runtime_crosscheck_of_preflight_mass_residual_gate"
+    ) or jump_sampling.get("epistemic_class") != "c":
+        raise ValueError(
+            "auto-routed MCWF Carrier child jump_sampling semantics are not registered"
+        )
+
+
 def _axis1_mcwf_mps_execution_manifest(
     schedule: SubstepSchedule,
     *,
@@ -653,6 +2219,7 @@ def _axis1_mcwf_mps_execution_manifest(
     )
     from .axis1_mcwf_mps_execution import (
         AXIS1_MCWF_MPS_EXECUTION_REPRESENTABILITY,
+        _blocked_acceptance_policy,
         axis1_mcwf_mps_state_record_execution_manifest,
     )
 
@@ -662,6 +2229,11 @@ def _axis1_mcwf_mps_execution_manifest(
         **options,
     )
     _validate_child_content_hash(mcwf_mps, context="MCWF/MPS child")
+    _require_exact_summary_fields(
+        mcwf_mps,
+        _MCWF_DIRECT_CHILD_FIELDS,
+        context="MCWF/MPS direct child",
+    )
     if mcwf_mps.get("source_kind") != schedule.source_kind:
         raise ValueError("MCWF/MPS child source_kind must match the requested schedule")
     if mcwf_mps.get("source_hash") != schedule.source_hash:
@@ -690,7 +2262,8 @@ def _axis1_mcwf_mps_execution_manifest(
         mcwf_mps,
         expected=expected,
     )
-    execution = mcwf_mps.get("mps_execution") or {}
+    raw_execution = mcwf_mps.get("mps_execution")
+    execution = raw_execution or {}
     passed = _require_manifest_bool(mcwf_mps, "passed", context="MCWF/MPS execution")
     child_verdict = _require_manifest_text(
         mcwf_mps, "verdict", context="MCWF/MPS execution"
@@ -718,6 +2291,32 @@ def _axis1_mcwf_mps_execution_manifest(
         raise ValueError(
             "MCWF/MPS backend execution claim must equal actual backend state"
         )
+    trusted_artifact_certification, trusted_blocked_reason = (
+        _trusted_mcwf_artifact_authority(
+            program,
+            expected=expected,
+            device=dev,
+        )
+    )
+    artifact_certification = mcwf_mps.get(
+        "dynamics_artifact_reference_certification"
+    )
+    if not isinstance(artifact_certification, dict):
+        raise TypeError(
+            "MCWF/MPS dynamics artifact reference certification must be a mapping"
+        )
+    if _stable_payload_hash(
+        {"certification": artifact_certification}
+    ) != _stable_payload_hash(
+        {"certification": trusted_artifact_certification}
+    ):
+        raise ValueError(
+            "MCWF/MPS artifact certification must match sealed-input authority"
+        )
+    if executed and trusted_blocked_reason is not None:
+        raise ValueError(
+            "MCWF/MPS child executed despite a sealed-input preflight blocker"
+        )
     for field in (
         "claims_production_scalable_backend",
         "claims_exact_joint_lindblad_generator",
@@ -742,6 +2341,21 @@ def _axis1_mcwf_mps_execution_manifest(
     if passed is not accepted:
         raise ValueError(
             "MCWF/MPS execution passed must equal accepted_for_restricted_execution"
+        )
+    policy_artifact_certification = acceptance.get(
+        "dynamics_artifact_reference_certification"
+    )
+    if not isinstance(policy_artifact_certification, dict):
+        raise TypeError(
+            "MCWF/MPS policy artifact certification must be a mapping"
+        )
+    if _stable_payload_hash(
+        {"certification": policy_artifact_certification}
+    ) != _stable_payload_hash(
+        {"certification": trusted_artifact_certification}
+    ):
+        raise ValueError(
+            "MCWF/MPS policy artifact certification must match sealed-input authority"
         )
     execution_status = _require_manifest_text(
         mcwf_mps, "execution_status", context="MCWF/MPS execution"
@@ -771,9 +2385,50 @@ def _axis1_mcwf_mps_execution_manifest(
         context="MCWF/MPS",
         route_kind="mcwf",
     )
+    if not executed:
+        if raw_execution is not None:
+            raise ValueError(
+                "MCWF/MPS blocked child mps_execution must be canonical None"
+            )
+        if execution_status != "blocked":
+            raise ValueError(
+                "MCWF/MPS non-executed child must be a canonical blocked child"
+            )
+        expected_blocked_reason = trusted_blocked_reason
+        if expected_blocked_reason is None:
+            raise ValueError(
+                "MCWF/MPS child reported blocked without a trusted preflight blocker"
+            )
+        if mcwf_mps.get("blocked_reason") != expected_blocked_reason:
+            raise ValueError(
+                "MCWF/MPS child blocked_reason must match trusted preflight"
+            )
+        canonical_blocked_policy = _blocked_acceptance_policy(
+            blocked_reason=expected_blocked_reason,
+            rng_seed=expected["rng_seed"],
+            trajectory_count=expected["trajectory_count"],
+            dynamics_artifact_reference_certification=(
+                trusted_artifact_certification
+            ),
+        )
+        if _stable_payload_hash(
+            {"policy": acceptance}
+        ) != _stable_payload_hash(
+            {"policy": canonical_blocked_policy}
+        ):
+            raise ValueError(
+                "MCWF/MPS blocked child restricted_acceptance_policy must be canonical"
+            )
     if executed:
         if not isinstance(execution, dict):
             raise TypeError("MCWF/MPS child mps_execution must be a mapping")
+        for field in ("claims_b8_artifact", "claims_decoder_integration"):
+            if _require_manifest_bool(
+                execution,
+                field,
+                context="MCWF/MPS child mps_execution",
+            ):
+                raise ValueError(f"MCWF/MPS child mps_execution {field} must be false")
         sampling = execution.get("trajectory_sampling")
         if not isinstance(sampling, dict):
             raise TypeError(
@@ -793,6 +2448,44 @@ def _axis1_mcwf_mps_execution_manifest(
             policy=acceptance,
             expected=expected,
         )
+        record_layout = axis1_record_layout_from_schedule(schedule)
+        expected_record_metadata = {
+            "measurement_keys": list(record_layout.measurement_keys),
+            "measurement_targets": list(record_layout.measurement_targets),
+            "measurement_bases": list(record_layout.measurement_bases),
+            "reset_after": list(record_layout.reset_after),
+        }
+        for field, expected_value in expected_record_metadata.items():
+            actual_value = execution.get(field)
+            if type(actual_value) is not list or actual_value != expected_value:
+                raise ValueError(
+                    f"MCWF/MPS child {field} must match the sealed schedule Record layout"
+                )
+        bases = expected_record_metadata["measurement_bases"]
+        expected_basis_summary = (
+            "none"
+            if not bases
+            else (
+                "X"
+                if all(basis == "X" for basis in bases)
+                else (
+                    "Z"
+                    if all(basis == "Z" for basis in bases)
+                    else "mixed_pauli"
+                )
+            )
+        )
+        if execution.get("measurement_basis") != expected_basis_summary:
+            raise ValueError(
+                "MCWF/MPS child measurement_basis must summarize the sealed layout"
+            )
+        if execution.get("measurement_basis_semantics") != (
+            "measurement_bases and reset_after are schedule-ordered one-per-Record-column; "
+            "X measurement rotates into Z, projects, then rotates back unless reset prepares |+>"
+        ):
+            raise ValueError(
+                "MCWF/MPS child measurement_basis_semantics is not registered"
+            )
         from ..certify.axis1_mps import (
             _validate_metric_family_execution_payload,
             dense_jointL_record_certification,
@@ -807,7 +2500,7 @@ def _axis1_mcwf_mps_execution_manifest(
             program=program,
         )
         _validate_axis1_projected_record_payload(
-            axis1_record_layout_from_schedule(schedule),
+            record_layout,
             execution,
             context="MCWF/MPS child",
         )
@@ -840,6 +2533,9 @@ def _axis1_mcwf_mps_execution_manifest(
                 expected["worst_cut_discarded_weight_gate"]
             ),
             total_discarded_weight_gate=expected["total_discarded_weight_gate"],
+            dynamics_artifact_reference_certification=(
+                trusted_artifact_certification
+            ),
         )
         if _stable_payload_hash({"policy": acceptance}) != _stable_payload_hash(
             {"policy": canonical_acceptance}
@@ -849,7 +2545,6 @@ def _axis1_mcwf_mps_execution_manifest(
                 "canonical restricted acceptance policy independently recomputed "
                 "from the requested schedule, options, execution, and dense metric"
             )
-    record_executed = bool(executed and execution.get("measurement_keys"))
     payload: dict[str, Any] = {
         "schema": AXIS1_CARRIER_EXECUTION_SCHEMA,
         "source_kind": schedule.source_kind,
@@ -883,35 +2578,15 @@ def _axis1_mcwf_mps_execution_manifest(
             "mps_library": execution.get("mps_library"),
             "array_backend": execution.get("array_backend"),
             "unraveling_policy": execution.get("unraveling_policy"),
+            "initial_levels": list(mcwf_mps.get("initial_levels", ())),
             "finite_step_policy": dict(execution.get("finite_step_policy", {})),
             "mps_truncation_ledger": dict(execution.get("mps_truncation_ledger", {})),
         },
-        "record_execution": {
-            "executed": record_executed,
-            "reason": (
-                None
-                if record_executed
-                else (
-                    mcwf_mps.get("blocked_reason")
-                    if not executed
-                    else "schedule_has_no_measurement_substep"
-                )
-            ),
-            "measurement_keys": list(execution.get("measurement_keys", ())),
-            "measurement_records": list(execution.get("measurement_records", ())),
-            "record_counts": list(execution.get("record_counts", ())),
-            "record_probabilities": list(execution.get("record_probabilities", ())),
-            "detector_records": list(execution.get("detector_records", ())),
-            "logical_observable_records": list(
-                execution.get("logical_observable_records", ())
-            ),
-            "trajectory_sampling": dict(execution.get("trajectory_sampling", {})),
-            "jump_sampling": dict(execution.get("jump_sampling", {})),
-            "claims_b8_artifact": bool(execution.get("claims_b8_artifact", False)),
-            "claims_decoder_integration": bool(
-                execution.get("claims_decoder_integration", False)
-            ),
-        },
+        "record_execution": _mcwf_carrier_record_execution_summary(
+            mcwf_mps,
+            execution,
+            executed=executed,
+        ),
         "mcwf_mps_execution": {
             "schema": mcwf_mps.get("schema"),
             "content_hash": mcwf_mps.get("content_hash"),
@@ -937,7 +2612,13 @@ def _axis1_mcwf_mps_execution_manifest(
                 "claims_production_scalable_backend",
                 context="MCWF/MPS execution",
             ),
+            "dynamics_artifact_reference_certification": dict(
+                trusted_artifact_certification
+            ),
         },
+        "dynamics_artifact_reference_certification": dict(
+            trusted_artifact_certification
+        ),
         "restricted_acceptance_policy": dict(
             mcwf_mps.get("restricted_acceptance_policy", {})
         ),
@@ -1230,22 +2911,28 @@ def _validate_mcwf_mps_execution_options(options: dict[str, Any]) -> dict[str, A
         joined = ", ".join(unknown)
         raise ValueError(f"unsupported MCWF/MPS execution options: {joined}")
     out = dict(options)
-    if "local_dims" in out and out["local_dims"] is not None:
-        out["local_dims"] = list(
-            normalize_mps_index_sequence(
-                out["local_dims"],
-                name="local_dims",
-                minimum=2,
+    if "local_dims" in out:
+        if out["local_dims"] is None:
+            out.pop("local_dims")
+        else:
+            out["local_dims"] = list(
+                normalize_mps_index_sequence(
+                    out["local_dims"],
+                    name="local_dims",
+                    minimum=2,
+                )
             )
-        )
-    if "initial_levels" in out and out["initial_levels"] is not None:
-        out["initial_levels"] = list(
-            normalize_mps_index_sequence(
-                out["initial_levels"],
-                name="initial_levels",
-                minimum=0,
+    if "initial_levels" in out:
+        if out["initial_levels"] is None:
+            out.pop("initial_levels")
+        else:
+            out["initial_levels"] = list(
+                normalize_mps_index_sequence(
+                    out["initial_levels"],
+                    name="initial_levels",
+                    minimum=0,
+                )
             )
-        )
     if "leaked_readout_b" in out:
         out["leaked_readout_b"] = normalize_mps_finite_real(
             out["leaked_readout_b"],
@@ -1345,6 +3032,11 @@ def _validate_mcwf_mps_child_execution_options(
     sampling = execution.get("trajectory_sampling")
     if not isinstance(sampling, dict):
         raise TypeError("MCWF/MPS child trajectory_sampling must be a mapping")
+    _require_exact_summary_fields(
+        sampling,
+        _MCWF_TRAJECTORY_SAMPLING_FIELDS,
+        context="MCWF/MPS child trajectory_sampling",
+    )
     expected_seed = 0 if expected["rng_seed"] is None else expected["rng_seed"]
     mirrors = (
         (sampling, "trajectory_count", expected["trajectory_count"], "trajectory_sampling"),
@@ -1377,6 +3069,11 @@ def _validate_mcwf_mps_child_execution_options(
     finite_step = execution.get("finite_step_policy")
     if not isinstance(finite_step, dict):
         raise TypeError("MCWF/MPS child finite_step_policy must be a mapping")
+    _require_exact_summary_fields(
+        finite_step,
+        _MCWF_FINITE_STEP_POLICY_FIELDS,
+        context="MCWF/MPS child finite_step_policy",
+    )
     mirrors += (
         (finite_step, "order", expected["finite_step_order"], "finite_step_policy"),
         (
@@ -1389,6 +3086,16 @@ def _validate_mcwf_mps_child_execution_options(
     ledger = execution.get("mps_truncation_ledger")
     if not isinstance(ledger, dict):
         raise TypeError("MCWF/MPS child mps_truncation_ledger must be a mapping")
+    expected_ledger_fields = _MCWF_CAPPED_TRUNCATION_LEDGER_FIELDS
+    if expected["max_bond"] is None:
+        expected_ledger_fields = _MCWF_UNCAPPED_TRUNCATION_LEDGER_FIELDS
+        if any(int(dim) != 2 for dim in expected["local_dims"]):
+            expected_ledger_fields = expected_ledger_fields | {"local_dims"}
+    _require_exact_summary_fields(
+        ledger,
+        frozenset(expected_ledger_fields),
+        context="MCWF/MPS child mps_truncation_ledger",
+    )
     explicit_truncation = _require_manifest_bool(
         ledger,
         "explicit_truncation_requested",
@@ -1414,6 +3121,18 @@ def _validate_mcwf_mps_child_execution_options(
             "MCWF/MPS child multilevel_measurement_policy must be a mapping"
         )
     mirrors += (
+        (
+            measurement_policy,
+            "name",
+            _MCWF_MEASUREMENT_POLICY_NAME,
+            "multilevel_measurement_policy",
+        ),
+        (
+            measurement_policy,
+            "bit_mapping",
+            _MCWF_MEASUREMENT_BIT_MAPPING,
+            "multilevel_measurement_policy",
+        ),
         (
             measurement_policy,
             "leaked_readout_b",
@@ -1794,6 +3513,20 @@ def _validate_restricted_policy_state(
     if route_kind is not None:
         if route_kind not in _RESTRICTED_POLICY_SCHEMAS:
             raise ValueError(f"{context} restricted policy route kind is invalid")
+        if route_kind == "mcwf":
+            if execution_status == "completed":
+                expected_policy_fields = _MCWF_COMPLETED_POLICY_FIELDS
+            elif execution_status == "blocked":
+                expected_policy_fields = _MCWF_BLOCKED_POLICY_FIELDS
+            else:
+                raise ValueError(
+                    f"{context} MCWF restricted policy execution status is invalid"
+                )
+            _require_exact_summary_fields(
+                policy,
+                expected_policy_fields,
+                context=f"{context} restricted acceptance policy",
+            )
         schema = _require_manifest_text(
             policy,
             "schema",

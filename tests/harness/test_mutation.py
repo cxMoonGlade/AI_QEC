@@ -1084,7 +1084,11 @@ def test_restricted_mps_suite_loads_exact_disjoint_cpu_gpu_shards() -> None:
         set(batch["registry_doc"]["reconcile_modules"])
         for batch in plan["batches"]
     ]
-    assert all(len(modules) == 1 for modules in batch_modules[1:])
+    assert [len(modules) for modules in batch_modules[1:]] == [1, 1, 1, 1, 2]
+    assert batch_modules[-1] == {
+        "src/error_coupling_simulator/certify/axis1_mps.py",
+        "src/error_coupling_simulator/certify/mcwf_operator_reference.py",
+    }
     assert all(
         left.isdisjoint(right)
         for index, left in enumerate(batch_modules)

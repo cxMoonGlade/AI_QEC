@@ -25,9 +25,10 @@ Service acceptance uses three non-overlapping resource lanes:
   concurrency is never inherited.
 
 The default environment is `ecs`. Tests for an explicitly isolated optional runtime use the
-per-file environment override declared in the service catalog. The two external MPS adapters also
-declare their nested `ecs-baseline-aer` and `ecs-baseline-yastn` environments. Every acceptance child
-removes `PYTHONPATH` and disables user-site imports. Checkpoint policy binds the resolved Conda
+per-file environment override declared in the service catalog. The external comparison adapters
+declare their nested `ecs-baseline-aer`, `ecs-baseline-yastn`, and `ecs-baseline-qutip`
+environments. Every acceptance child removes `PYTHONPATH` and disables user-site imports. Checkpoint
+policy binds the resolved Conda
 executable and path-bound Conda/pip metadata for all direct and nested environments.
 
 The stable acceptance checkpoint is bound to the repository input snapshot, lane-major semantic
@@ -49,15 +50,40 @@ one-fact locators and checked pages, empty-corpus refusal, project-inference inj
 corpora, and corrupted RAG/KG text, claims, counts, hashes, IDs, relationships, statistics, and
 endpoints. Trusted build/query paths have no artifact-verification bypass.
 
-`test_external_aer_mps_comparison.py` and
-`test_external_yastn_mcwf_mass_comparison.py` protect repository-owned neutral adapters for isolated,
-external baselines. Both run in isolated environments. YASTN is source/commit-bound to its pristine
-clone. Aer records installed-wheel provenance and separately verifies a pristine reference clone,
-but does not claim wheel-to-clone identity. Aer checks independent dense/unitary state evolution and
-finite-bond damage; YASTN checks the frozen product-MPS MCWF candidate-mass arithmetic and an
-omitted-jump falsifier. Canonical service acceptance supplies exact file-local opt-in flags, so both
-test files run their isolated external subprocess rather than only helper contracts. Neither
-external library is a QEC Record-law or restricted-acceptance oracle.
+`test_external_aer_mps_comparison.py`, `test_external_yastn_mcwf_mass_comparison.py`, and
+`test_external_qutip_mcwf_xz_comparison.py` protect repository-owned neutral adapters for isolated,
+external baselines. All three run in isolated environments. YASTN is source/commit-bound to its
+pristine clone. QuTiP binds pristine commit/tree metadata, checks selected installed solver sources
+against that clone, and records the full installed-distribution identity; this is not a claim that
+the entire installed tree is reproducibly rebuilt from the clone. Aer records installed-wheel
+provenance and separately verifies a pristine
+reference clone, but does not claim wheel-to-clone identity. Aer checks independent dense/unitary
+state evolution and finite-bond damage; YASTN checks the frozen product-MPS MCWF candidate-mass
+arithmetic and an omitted-jump falsifier. QuTiP runs actual continuous-time CPU MCWF trajectories for
+a frozen two-qubit T1 fixture, independently samples ordered X/Z projectors and reset instruments,
+and compares its label/binary histograms with public GPU direct and Carrier MCWF under a conservative
+six-way Bonferroni allocation: three joint Record views and three directed X-after marginals. The
+fixture fixes survival to `s=0.25`; both the deterministic final-Z-bit corruption and the
+`sqrt(s) -> s` X-coherence mutation must exceed their registered radius and force failure. The
+retained v2 worker report binds its pristine source commit/tree, installed-distribution content hash,
+Python/NumPy/SciPy versions, explicit QuTiP integrator controls, worker/protocol hashes, observed
+state/probability dtypes, and canonical content hash. The project side recursively validates its exact
+shape and recomputes the fixture, runtime, solver, histogram, reset, statistical, and verdict
+invariants. Strict JSON and raw-type checks reject duplicate/non-finite values and coercible Record
+bits/counts, while an immutable transport envelope separately binds stdout/stderr/return code and a
+construction-time raw JSON byte identity that must decode to the embedded payload. The launch strips
+all `CONDA_*`/`_CE_*` and loader/toolkit/venv markers, with worker-side rejection of leakage. Both CLI targets invalidate stale
+output before computation and use file-plus-directory `fsync` publication; a failed post-replace
+directory sync removes the destination. The service snapshot includes all three pristine external clones, so clone drift
+or same-tree HEAD drift invalidates a resumable checkpoint before admission. Its runtime identity also
+hashes every installed NumPy/SciPy/QuTiP file in `ecs-baseline-qutip`, so package-tree drift cannot
+reuse an old PASS. The nested worker inherits the comparator's supervisor-owned process group rather
+than creating a private session. Canonical service acceptance
+supplies exact file-local opt-in flags, so all three test files run their isolated external
+subprocess rather than only helper contracts. The QuTiP fixture is finite-sample and covers only two
+qubits and two measurement boundaries; none of these external libraries establishes a complete QEC
+Record law, qutrit/leakage semantics, scalable execution, production readiness, or the internal
+restricted-acceptance verdict.
 `test_mps_three_leg_comparator.py` separately checks repository actual splits and Quimb public
 wiring against independent dense NumPy state math; the Quimb leg is not an independent scientific
 oracle.
@@ -95,12 +121,14 @@ missing test files, duplicate units, stale qualified names, unclassified public 
 unsupported exemption. JSON registries are configuration, not measured test records; measured
 results must be regenerated from the current checkout.
 
-`restricted_mps_coverage_targets.json` reconciles twelve modules and registers 51 canonical units:
-48 public units plus three private Record-payload authentication helpers. Every unit has 100%
+`restricted_mps_coverage_targets.json` reconciles thirteen modules and registers 56 canonical units:
+53 public units plus three private Record-payload authentication helpers. Every unit has 100%
 statement and branch coverage with no exemptions. The authoritative
 mutation topology is `restricted_mps_mutation_suite.json`: seven CPU-only mechanics/schema modules
-run through stock mutmut with exactly four workers and CUDA hidden, then five ordered, single-module
-GPU execution/certification shards run one after another. Every GPU shard has `jobs=4`, acquires
+run through stock mutmut with exactly four workers and CUDA hidden, then five ordered GPU
+execution/certification shards run one after another. The first four GPU shards own one module each;
+GPU05 owns both evaluator certification and its isolated NumPy operator-reference module. Every GPU
+shard has `jobs=4`, acquires
 one lease, runs four concurrent fresh clean-control replicas for admission, and then uses fixed waves
 of at most four fresh pytest processes on that pinned device. GPU shards never overlap; worker
 overlap is confined to one shard and one wave. The generated mutant/support tree has all write bits
@@ -108,7 +136,7 @@ removed for the worker phase and its exact modes are restored afterward; any wri
 symlink violation fails the batch. If an abrupt process or host exit leaves that real symlink-free
 tree read-only, the next startup makes only its directories owner-deletable and removes the whole
 disposable tree before regeneration; a root/internal symlink or surviving path fails closed.
-The two module sets are disjoint and their exact union is the coverage registry. Run the complete
+All six batch module sets are pairwise disjoint and their exact union is the coverage registry. Run the complete
 gate as:
 
 ```bash
@@ -207,16 +235,58 @@ parsing, the hand-written LSB-first Record domain and XOR projection, every sche
 and a static prohibition on late key/target registration inside the two MPS executors. It also
 directly registers and corrupts `_validate_axis1_projected_record_payload`,
 `_require_exact_text_list`, and `_require_exact_binary_record_matrix`; these are the three named
-private authentication units in the 51-unit registry.
+private authentication units in the 56-unit registry.
 `test_mps_phase3_record_layout.py` is the GPU behavior gate for MPS-004/005/012/013. It requires each
 Adapter to parse the sealed layout exactly once, exercises QT two-boundary Records, MCWF grouped
-per-target reset masks, sampled-reset metadata, and the two structured MCWF evolution blockers.
+per-target reset masks, the public mixed-X/Z ordered keys/targets/bases/reset contract, the X-reset
+`|+>` law across a later measurement boundary, sampled-reset metadata, and the two structured MCWF
+evolution blockers.
 
 `test_mps_mcwf_measurement_semantics.py` protects conditioned X/Z state evolution, sparse sampled
-support, and the independently reconstructed dense level oracle. Its hand-typed excitation channel
-forces a positive Born branch below `NUMERICAL_ZERO`; scale-invariant reset tests require every
-finite positive reset trace to normalize, while zero and non-finite trace corruptions must fail.
-These are structural-probability and oracle-integrity checks, not tolerance or calibration claims.
+support, and the independently reconstructed dense declared-basis projector oracle. Its standalone
+RX/MX law requires exact structural-zero support without dropping a separately hand-typed physical
+Born branch below `NUMERICAL_ZERO`; scale-invariant reset tests require every finite positive reset
+trace to normalize, while zero and non-finite trace corruptions must fail. The zero-frequency firewall
+also proves it reaches the intended positive-count rule after all ordered metadata is valid. These are
+structural-probability and oracle-integrity checks, not tolerance or calibration claims.
+
+`test_mcwf_operator_reference.py` exhaustively compares all 51 production Hamiltonian and seven
+collapse families with a certifier-local NumPy/Pauli inventory, verifies exact multilevel
+structural-zero padding, rejects unknown/wrong-arity terms, statically prohibits production/Torch/
+Stim imports in the reference module, and exercises the joint `CORR_RELAX` oracle/carrier-window
+route. That family is covered only after it is already present in an internal sealed Carrier program;
+no public source/schedule compiler lowering currently emits it. The literature source-closure reset
+remains OPEN, so this is implementation-definition evidence only.
+`test_axis1_mcwf_dense_certification.py` additionally requires production term builders to be called
+once, group gates to be derived from those exact frozen tensors, and the mass preflight and trajectory
+to consume the same artifact inventory. It independently reconstructs connected grouping and group
+gates with SciPy `expm`, checks exact structural zeros, fires stateful-builder TOCTOU and
+state-insensitive wrong-grouping corruptions, and authenticates the public v1 packet's complete
+substep/term/group coverage, program/artifact hashes, the reference/certifier/carrier-operator sources,
+the transitive ideal-control-generator and selection-family sources, and post-execution integrity.
+The packet tests require the certifier to recompute the canonical artifact hash from the inspected
+matrices and metadata; an unrelated but well-formed digest is rejected.
+It also includes zero-builder falsifiers for Hamiltonian and
+collapse sources, including outcome-insensitive `CTRL_Z` and dark-state `T2`, plus an identity
+substituted for the Torch X-basis rotation and a damaged production level-to-bit mapping. The last
+case covers qubit Z and multilevel X/Z leakage with readout `b=0`:
+the declared-basis label TV can remain zero while the emitted-binary TV forces rejection. The dense
+reference must reject all of them. `test_mps_actual_split_helper.py` additionally binds a
+public five-qubit Strang execution to ordered half-pass indices `[0, 1]`, half-step durations, and
+complete occurrence aggregation. `test_mps_phase6_evaluator_metric_binding.py` rejects reordered
+bases/reset masks before policy or dense certification even when the multiset is unchanged.
+`test_mps_carrier_child_authentication.py` rejects reordered-and-rehashed direct and auto-routed
+Record summaries, rechecks Record width/count/probability and XOR projections, verifies honest
+ordered measurement/readout-policy forwarding, requires sorted unique normalized histograms and canonical blocked summaries,
+binds caller options/state/policy/direct-v7 provenance through the auto-router, and rejects unknown
+or evaluator-only fields recursively at every public Carrier summary seam, including both component
+values of the joint label/binary certification. It also recomputes the frozen-dynamics authority from
+sealed inputs and, for accepted seeded evidence, independently replays direct MCWF and exact-binds its
+hash, Record summary, and policy. A self-consistent alternate histogram is therefore rejected even when
+its shape, counts, probabilities, policy, and outer hashes are internally valid. The file also exercises
+a real public auto-routed MCWF child with ordered X/Z measurements. Together with the direct and Carrier tests, this establishes public X/Z
+availability for the restricted MCWF slice; it does not establish production scalability or a complete
+QEC Record backend.
 
 `test_mps_phase4a_probability_and_norm.py` is the CPU Phase-4A gate for MPS-006/007/011. It checks
 Decimal-reconstructed tiny T1/T2 probabilities, exact structural zero versus positive-subnormal
@@ -231,9 +301,12 @@ contracts, MCWF dense certification, Carrier auto-routing, and legal index-proto
 The hostile behavior matrix is GREEN in its focused checks. No static pytest count is authoritative:
 the measured result must be regenerated from the current checkout and its exact command/report.
 
-The most recent measured restricted-MPS coverage gate is GREEN at 51/51 canonical units, each with
-statement and branch coverage 1.0. It must be regenerated after any relevant source, test, registry,
-or contract change. Coverage remains structural evidence only; the corruption falsifiers,
+The restricted-MPS coverage gate registers 56 canonical units and requires every unit to reach statement
+and branch coverage 1.0 with no exemption. The release-retained clean-HEAD log path is
+`outputs/simulator_validation/logs/mcwf_restricted_mps_coverage_clean_head_20260719.log`; a PASS there is
+current only when generated after the final commit, and any later relevant source, test, registry, or
+contract change makes it stale. The gate intentionally does not publish a static pytest count. Coverage
+remains structural evidence only; the corruption falsifiers,
 independent dense references, external comparisons, and mutation gate remain separate requirements.
 
 ## Test disciplines

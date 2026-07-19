@@ -76,7 +76,7 @@ from ..carrier.mps.truncation import (
     build_mps_truncation_ledger,
 )
 AXIS1_MCWF_MPS_EXECUTION_SCHEMA = (
-    "error_coupling_simulator.frontend.mcwf_mps_state_record_execution.v6"
+    "error_coupling_simulator.frontend.mcwf_mps_state_record_execution.v7"
 )
 AXIS1_MCWF_MPS_EXECUTION_REPRESENTABILITY = (
     "axis1_mcwf_mps_fixed_microstep_local_dims_state_record"
@@ -87,7 +87,7 @@ _FINITE_STEP_ORDER_STRANG = "strang_second_order"
 _FINITE_STEP_ORDERS = (_FINITE_STEP_ORDER_FIRST, _FINITE_STEP_ORDER_STRANG)
 _RESTRICTED_ACCEPTANCE_POLICY_SCHEMA = (
     "error_coupling_simulator.frontend."
-    "mcwf_mps_restricted_acceptance_policy.v5"
+    "mcwf_mps_restricted_acceptance_policy.v6"
 )
 _RESTRICTED_ACCEPTANCE_POLICY_ROLE = (
     "restricted_execution_acceptance_not_metric"
@@ -103,8 +103,20 @@ _TWO_SITE_CONDITIONAL_PHASE_FAMILIES = frozenset(
     {"LEAK_COND_PHASE_LEFT2_RIGHTZ", "LEAK_COND_PHASE_LEFTZ_RIGHT2"}
 )
 _LEAKAGE_COLLAPSE_FAMILIES = frozenset({"LEAK_SEEP_21", "LEAK_HEAT_12"})
+_ONE_SITE_COLLAPSE_FAMILIES = frozenset(
+    {"T1", "T1_UP", "T2", "RD"}
+) | _LEAKAGE_COLLAPSE_FAMILIES
 _EVALUATOR_ONLY_DIAGNOSTICS_SCHEMA = (
-    "error_coupling_simulator.frontend.mcwf_mps_evaluator_only_diagnostics.v1"
+    "error_coupling_simulator.frontend.mcwf_mps_evaluator_only_diagnostics.v2"
+)
+_LEVEL_RECORD_SEMANTICS = (
+    "schedule-ordered local measurement eigenlabel tuples: "
+    "X columns use 0=|+>,1=|-> and preserve leaked level labels >=2; "
+    "Z columns use computational local levels"
+)
+_MCWF_MEASUREMENT_BASIS_SEMANTICS = (
+    "measurement_bases and reset_after are schedule-ordered one-per-Record-column; "
+    "X measurement rotates into Z, projects, then rotates back unless reset prepares |+>"
 )
 
 
@@ -334,20 +346,44 @@ def axis1_mcwf_mps_state_record_execution_manifest(
             "production_backend_status": "a",
         },
     }
+    from ..certify.axis1_mps import (
+        mcwf_dynamics_artifact_reference_certification,
+    )
+
+    def _unexecuted_artifact_certification(reason: str) -> dict[str, Any]:
+        return mcwf_dynamics_artifact_reference_certification(
+            program,
+            dynamics_artifacts=None,
+            dynamics_artifact_content_hash=None,
+            local_dims=dims,
+            microstep_count=int(microstep_count),
+            finite_step_order=step_order,
+            post_execution_integrity_verified=False,
+            not_executed_reason=reason,
+        )
+
     if max_bond is not None and any(dim != 2 for dim in dims):
+        blocked_reason = (
+            "mcwf_mps_multilevel_finite_bond_ledger_not_implemented"
+        )
+        artifact_certification = _unexecuted_artifact_certification(
+            blocked_reason
+        )
         payload = {
             **base,
             "verdict": "fail",
             "passed": False,
             "execution_status": "blocked",
             "mcwf_mps_backend_executed": False,
-            "blocked_reason": "mcwf_mps_multilevel_finite_bond_ledger_not_implemented",
+            "blocked_reason": blocked_reason,
             "blocked_substeps": [],
             "mps_execution": None,
+            "dynamics_artifact_reference_certification": artifact_certification,
             "restricted_acceptance_policy": _blocked_acceptance_policy(
-                blocked_reason="mcwf_mps_multilevel_finite_bond_ledger_not_implemented",
+                blocked_reason=blocked_reason,
                 rng_seed=rng_seed,
                 trajectory_count=int(trajectory_count),
+                dynamics_artifact_reference_certification=artifact_certification,
             ),
             "scope": (
                 "MCWF/MPS multilevel execution currently supports no-explicit-"
@@ -360,23 +396,127 @@ def axis1_mcwf_mps_state_record_execution_manifest(
         return payload
     unsupported = _unsupported_substeps(program, local_dims=dims)
     if unsupported:
+        blocked_reason = str(unsupported[0]["reason"])
+        artifact_certification = _unexecuted_artifact_certification(
+            blocked_reason
+        )
         payload = {
             **base,
             "verdict": "fail",
             "passed": False,
             "execution_status": "blocked",
             "mcwf_mps_backend_executed": False,
-            "blocked_reason": unsupported[0]["reason"],
+            "blocked_reason": blocked_reason,
             "blocked_substeps": unsupported,
             "mps_execution": None,
+            "dynamics_artifact_reference_certification": artifact_certification,
             "restricted_acceptance_policy": _blocked_acceptance_policy(
-                blocked_reason=unsupported[0]["reason"],
+                blocked_reason=blocked_reason,
                 rng_seed=rng_seed,
                 trajectory_count=int(trajectory_count),
+                dynamics_artifact_reference_certification=artifact_certification,
             ),
             "scope": (
                 "fixed-microstep MCWF/MPS execution failed closed for unsupported "
                 "terms or record boundaries"
+            ),
+        }
+        payload["content_hash"] = _stable_payload_hash(payload)
+        return payload
+
+    try:
+        dynamics_artifacts = _compile_mcwf_dynamics_artifacts(
+            program,
+            local_dims=dims,
+            device=dev,
+            microstep_count=int(microstep_count),
+            finite_step_order=step_order,
+        )
+    except Exception as exc:
+        blocked_reason = (
+            "mcwf_dynamics_artifact_compile_unavailable:"
+            f"{type(exc).__name__}"
+        )
+        artifact_certification = _unexecuted_artifact_certification(
+            blocked_reason
+        )
+        payload = {
+            **base,
+            "verdict": "fail",
+            "passed": False,
+            "execution_status": "blocked",
+            "mcwf_mps_backend_executed": False,
+            "blocked_reason": blocked_reason,
+            "blocked_substeps": [],
+            "mps_execution": None,
+            "dynamics_artifact_reference_certification": artifact_certification,
+            "restricted_acceptance_policy": _blocked_acceptance_policy(
+                blocked_reason=blocked_reason,
+                rng_seed=rng_seed,
+                trajectory_count=int(trajectory_count),
+                dynamics_artifact_reference_certification=artifact_certification,
+            ),
+            "scope": (
+                "fixed-microstep MCWF/MPS execution failed closed while "
+                "freezing the dynamics artifacts"
+            ),
+        }
+        payload["content_hash"] = _stable_payload_hash(payload)
+        return payload
+
+    dynamics_artifact_content_hash = _mcwf_dynamics_artifacts_content_hash(
+        program,
+        dynamics_artifacts,
+        local_dims=dims,
+        microstep_count=int(microstep_count),
+        finite_step_order=step_order,
+    )
+    artifact_certification = mcwf_dynamics_artifact_reference_certification(
+        program,
+        dynamics_artifacts=dynamics_artifacts,
+        dynamics_artifact_content_hash=dynamics_artifact_content_hash,
+        local_dims=dims,
+        microstep_count=int(microstep_count),
+        finite_step_order=step_order,
+        post_execution_integrity_verified=False,
+    )
+    artifact_failure = (
+        None
+        if artifact_certification["passed"] is True
+        else str(artifact_certification["reason"])
+    )
+    if (
+        artifact_failure is None
+        and _mcwf_dynamics_artifacts_content_hash(
+            program,
+            dynamics_artifacts,
+            local_dims=dims,
+            microstep_count=int(microstep_count),
+            finite_step_order=step_order,
+        )
+        != dynamics_artifact_content_hash
+    ):
+        artifact_failure = "mcwf_dynamics_artifact_integrity_mismatch:reference_validation"
+    if artifact_failure is not None:
+        payload = {
+            **base,
+            "verdict": "fail",
+            "passed": False,
+            "execution_status": "blocked",
+            "mcwf_mps_backend_executed": False,
+            "blocked_reason": artifact_failure,
+            "blocked_substeps": [],
+            "mps_execution": None,
+            "dynamics_artifact_reference_certification": artifact_certification,
+            "restricted_acceptance_policy": _blocked_acceptance_policy(
+                blocked_reason=artifact_failure,
+                rng_seed=rng_seed,
+                trajectory_count=int(trajectory_count),
+                dynamics_artifact_reference_certification=artifact_certification,
+            ),
+            "scope": (
+                "fixed-microstep MCWF/MPS execution failed closed because the "
+                "frozen dynamics artifacts disagreed with the independent reference"
             ),
         }
         payload["content_hash"] = _stable_payload_hash(payload)
@@ -389,6 +529,7 @@ def axis1_mcwf_mps_state_record_execution_manifest(
             microstep_count=int(microstep_count),
             device=dev,
             budget=float(mass_residual_budget),
+            dynamics_artifacts=dynamics_artifacts,
         )
         if residual_blocks:
             payload = {
@@ -400,10 +541,16 @@ def axis1_mcwf_mps_state_record_execution_manifest(
                 "blocked_reason": residual_blocks[0]["reason"],
                 "blocked_substeps": residual_blocks,
                 "mps_execution": None,
+                "dynamics_artifact_reference_certification": (
+                    artifact_certification
+                ),
                 "restricted_acceptance_policy": _blocked_acceptance_policy(
                     blocked_reason=residual_blocks[0]["reason"],
                     rng_seed=rng_seed,
                     trajectory_count=int(trajectory_count),
+                    dynamics_artifact_reference_certification=(
+                        artifact_certification
+                    ),
                 ),
                 "scope": (
                     "fixed-microstep MCWF/MPS execution failed closed: the first-order no-jump "
@@ -427,6 +574,50 @@ def axis1_mcwf_mps_state_record_execution_manifest(
         local_dims=dims,
         initial_levels=levels,
         leaked_readout_b=readout_b,
+        dynamics_artifacts=dynamics_artifacts,
+    )
+    if (
+        _mcwf_dynamics_artifacts_content_hash(
+            program,
+            dynamics_artifacts,
+            local_dims=dims,
+            microstep_count=int(microstep_count),
+            finite_step_order=step_order,
+        )
+        != dynamics_artifact_content_hash
+    ):
+        blocked_reason = "mcwf_dynamics_artifact_integrity_mismatch:execution"
+        payload = {
+            **base,
+            "verdict": "fail",
+            "passed": False,
+            "execution_status": "blocked",
+            "mcwf_mps_backend_executed": False,
+            "blocked_reason": blocked_reason,
+            "blocked_substeps": [],
+            "mps_execution": None,
+            "dynamics_artifact_reference_certification": artifact_certification,
+            "restricted_acceptance_policy": _blocked_acceptance_policy(
+                blocked_reason=blocked_reason,
+                rng_seed=rng_seed,
+                trajectory_count=int(trajectory_count),
+                dynamics_artifact_reference_certification=artifact_certification,
+            ),
+            "scope": (
+                "fixed-microstep MCWF/MPS execution failed closed because a "
+                "certified frozen dynamics artifact changed during execution"
+            ),
+        }
+        payload["content_hash"] = _stable_payload_hash(payload)
+        return payload
+    artifact_certification = mcwf_dynamics_artifact_reference_certification(
+        program,
+        dynamics_artifacts=dynamics_artifacts,
+        dynamics_artifact_content_hash=dynamics_artifact_content_hash,
+        local_dims=dims,
+        microstep_count=int(microstep_count),
+        finite_step_order=step_order,
+        post_execution_integrity_verified=True,
     )
     from ..certify.axis1_mps import (
         dense_jointL_record_certification,
@@ -460,13 +651,18 @@ def axis1_mcwf_mps_state_record_execution_manifest(
         mass_residual_budget=mass_residual_budget,
         worst_cut_discarded_weight_gate=worst_cut_discarded_weight_gate,
         total_discarded_weight_gate=total_discarded_weight_gate,
+        dynamics_artifact_reference_certification=artifact_certification,
     )
     (
         passed,
         certification_status,
         diagnostic_only,
         blocked_reason,
-    ) = _validate_completed_acceptance_policy(acceptance, execution=execution)
+    ) = _validate_completed_acceptance_policy(
+        acceptance,
+        execution=execution,
+        dynamics_artifact_reference_certification=artifact_certification,
+    )
     payload = {
         **base,
         "verdict": "pass" if passed else "fail",
@@ -479,6 +675,7 @@ def axis1_mcwf_mps_state_record_execution_manifest(
         "blocked_reason": blocked_reason,
         "blocked_substeps": [],
         "mps_execution": execution,
+        "dynamics_artifact_reference_certification": artifact_certification,
         "restricted_acceptance_policy": acceptance,
         "scope": (
             "fixed-microstep MCWF/MPS state/record execution for qubit or "
@@ -504,6 +701,7 @@ def _execute_sampled_mcwf_program(
     local_dims: tuple[int, ...],
     initial_levels: tuple[int, ...],
     leaked_readout_b: float,
+    dynamics_artifacts: tuple[dict[str, Any], ...],
 ) -> dict[str, Any]:
     import quimb.tensor as qtn
 
@@ -545,12 +743,23 @@ def _execute_sampled_mcwf_program(
     max_observed_bond = max_mps_bond((initial,))
     measurement_keys = list(record_layout.measurement_keys)
     measurement_targets = list(record_layout.measurement_targets)
+    measurement_bases = list(record_layout.measurement_bases)
+    measurement_reset_after = list(record_layout.reset_after)
+    if not measurement_bases:
+        measurement_basis = "none"
+    elif all(basis == "X" for basis in measurement_bases):
+        measurement_basis = "X"
+    elif all(basis == "Z" for basis in measurement_bases):
+        measurement_basis = "Z"
+    else:
+        measurement_basis = "mixed_pauli"
 
     for trajectory_index in range(ntraj):
         bits: tuple[int, ...] = ()
         levels: tuple[int, ...] = ()
         state = initial.copy()
         for substep_index, substep in enumerate(program["program"]["substeps"]):
+            dynamics_artifact = dynamics_artifacts[substep_index]
             jump_count = 0
             if str(substep["substep_kind"]) == "reset":
                 state = _sample_reset_for_operations_multilevel(
@@ -578,6 +787,7 @@ def _execute_sampled_mcwf_program(
                         branch_bits=bits,
                         local_dims=local_dims,
                         trajectory_index=trajectory_index,
+                        dynamics_artifact=dynamics_artifact,
                     )
                     microstep_mass_residuals.append(
                         float(record["probability_mass_residual"])
@@ -724,16 +934,22 @@ def _execute_sampled_mcwf_program(
         },
         "exact_joint_generator_claim": False,
         "exact_summed_lindbladian_claim": False,
-        "measurement_basis": "Z",
+        "measurement_basis": measurement_basis,
+        "measurement_basis_semantics": _MCWF_MEASUREMENT_BASIS_SEMANTICS,
         "multilevel_measurement_policy": {
-            "name": "computational_level_sample_then_binary_record",
-            "bit_mapping": "level_0_to_bit_0_level_1_to_bit_1_level_ge_2_to_bit_1_with_leaked_readout_b",
+            "name": "declared_basis_eigenlabel_sample_then_binary_record",
+            "bit_mapping": (
+                "eigenlabel_0_to_bit_0_eigenlabel_1_to_bit_1_"
+                "eigenlabel_ge_2_to_bit_1_with_probability_leaked_readout_b"
+            ),
             "leaked_readout_b": float(leaked_readout_b),
             "comparison_outcome_is_metric": False,
             "epistemic_class": "c",
         },
         "measurement_keys": measurement_keys,
         "measurement_targets": measurement_targets,
+        "measurement_bases": measurement_bases,
+        "reset_after": measurement_reset_after,
         "measurement_records": [list(record) for record in records],
         "record_counts": record_counts,
         "record_probabilities": probabilities,
@@ -742,6 +958,7 @@ def _execute_sampled_mcwf_program(
             "visibility": (
                 "evaluator_only_not_emitted_record_or_downstream_estimator_input"
             ),
+            "level_record_semantics": _LEVEL_RECORD_SEMANTICS,
             "level_records": [list(record) for record in level_records],
             "level_record_counts": level_record_counts,
             "level_record_probabilities": level_record_probabilities,
@@ -795,6 +1012,7 @@ def _mcwf_microstep(
     branch_bits: tuple[int, ...],
     local_dims: tuple[int, ...],
     trajectory_index: int | None = None,
+    dynamics_artifact: dict[str, Any] | None = None,
 ) -> tuple[Any, dict[str, Any]]:
     state = mps.copy()
     if finite_step_order == _FINITE_STEP_ORDER_STRANG:
@@ -812,6 +1030,11 @@ def _mcwf_microstep(
             local_dims=local_dims,
             hamiltonian_pass_index=0,
             trajectory_index=trajectory_index,
+            hamiltonian_groups=(
+                None
+                if dynamics_artifact is None
+                else dynamics_artifact["hamiltonian_groups"]
+            ),
         )
         state, record = _sample_joint_jump_or_nojump(
             state,
@@ -820,6 +1043,11 @@ def _mcwf_microstep(
             device=device,
             generator=generator,
             local_dims=local_dims,
+            collapse_records=(
+                None
+                if dynamics_artifact is None
+                else dynamics_artifact["collapse_terms"]
+            ),
         )
         _apply_hamiltonian_terms_multilevel(
             state,
@@ -835,6 +1063,11 @@ def _mcwf_microstep(
             local_dims=local_dims,
             hamiltonian_pass_index=1,
             trajectory_index=trajectory_index,
+            hamiltonian_groups=(
+                None
+                if dynamics_artifact is None
+                else dynamics_artifact["hamiltonian_groups"]
+            ),
         )
         return state, record
     _apply_hamiltonian_terms_multilevel(
@@ -851,6 +1084,11 @@ def _mcwf_microstep(
         local_dims=local_dims,
         hamiltonian_pass_index=0,
         trajectory_index=trajectory_index,
+        hamiltonian_groups=(
+            None
+            if dynamics_artifact is None
+            else dynamics_artifact["hamiltonian_groups"]
+        ),
     )
     return _sample_joint_jump_or_nojump(
         state,
@@ -859,6 +1097,11 @@ def _mcwf_microstep(
         device=device,
         generator=generator,
         local_dims=local_dims,
+        collapse_records=(
+            None
+            if dynamics_artifact is None
+            else dynamics_artifact["collapse_terms"]
+        ),
     )
 
 
@@ -877,6 +1120,7 @@ def _apply_hamiltonian_terms_multilevel(
     local_dims: tuple[int, ...],
     hamiltonian_pass_index: int = 0,
     trajectory_index: int | None = None,
+    hamiltonian_groups: Sequence[dict[str, Any]] | None = None,
 ) -> None:
     dt = float(dt_ns)
     all_qubit_dims = all(dim == 2 for dim in local_dims)
@@ -915,12 +1159,16 @@ def _apply_hamiltonian_terms_multilevel(
                 support=cluster_support,
                 local_dims=local_dims,
             )
-    groups = list(
-        _hamiltonian_group_gates(
-            substep,
-            dt_ns=dt,
-            local_dims=local_dims,
-            device=device,
+    groups = (
+        list(hamiltonian_groups)
+        if hamiltonian_groups is not None
+        else list(
+            _hamiltonian_group_gates(
+                substep,
+                dt_ns=dt,
+                local_dims=local_dims,
+                device=device,
+            )
         )
     )
     for group in groups:
@@ -1149,12 +1397,255 @@ def _lift_hamiltonian_to_cluster(
     return full
 
 
+def _hamiltonian_term_records(
+    substep: dict[str, Any],
+    *,
+    local_dims: tuple[int, ...],
+    device: str,
+) -> tuple[dict[str, Any], ...]:
+    """Build each production Hamiltonian exactly once for a sealed substep."""
+
+    out: list[dict[str, Any]] = []
+    for term_index, term in enumerate(substep.get("terms", ())):
+        if str(term["kind"]) != "hamiltonian":
+            continue
+        support = tuple(int(q) for q in term["support"])
+        out.append(
+            {
+                "term_index": int(term_index),
+                "support": support,
+                "hamiltonian": _hamiltonian_matrix_for_term(
+                    term,
+                    support=support,
+                    local_dims=local_dims,
+                    device=device,
+                ),
+                "family": str(term["operator_family"]).upper(),
+            }
+        )
+    return tuple(out)
+
+
+def _collapse_term_records(
+    substep: dict[str, Any],
+    *,
+    local_dims: tuple[int, ...],
+    device: str,
+) -> tuple[dict[str, Any], ...]:
+    """Build each production collapse operator exactly once for a sealed substep."""
+
+    out: list[dict[str, Any]] = []
+    for term_index, term in enumerate(substep.get("terms", ())):
+        if str(term["kind"]) != "collapse":
+            continue
+        support = tuple(int(q) for q in term["support"])
+        if len(support) == 1:
+            operator = _collapse_operator(
+                term,
+                local_dim=local_dims[support[0]],
+                device=device,
+            )
+        elif len(support) == 2:
+            operator = _joint_collapse_operator(
+                term,
+                support,
+                local_dims=local_dims,
+                device=device,
+            )
+        else:
+            raise ValueError(
+                "MCWF collapse artifacts require one- or two-site support, "
+                f"got {support!r}"
+            )
+        out.append(
+            {
+                "term_index": int(term_index),
+                "support": support,
+                "operator": operator,
+                "family": str(term["operator_family"]).upper(),
+                "coefficient": float(term["coefficient"]),
+            }
+        )
+    return tuple(out)
+
+
+def _compile_mcwf_dynamics_artifacts(
+    program: dict[str, Any],
+    *,
+    local_dims: tuple[int, ...],
+    device: str,
+    microstep_count: int,
+    finite_step_order: str,
+) -> tuple[dict[str, Any], ...]:
+    """Freeze the exact operators and gates that every trajectory will consume."""
+
+    step_order = _normalize_finite_step_order(finite_step_order)
+    out: list[dict[str, Any]] = []
+    for substep_index, substep in enumerate(program["program"]["substeps"]):
+        hamiltonian_terms = tuple(
+            {
+                **record,
+                "hamiltonian": record["hamiltonian"].detach().clone(),
+            }
+            for record in _hamiltonian_term_records(
+                substep,
+                local_dims=local_dims,
+                device=device,
+            )
+        )
+        collapse_terms = tuple(
+            {
+                **record,
+                "operator": record["operator"].detach().clone(),
+            }
+            for record in _collapse_term_records(
+                substep,
+                local_dims=local_dims,
+                device=device,
+            )
+        )
+        if hamiltonian_terms:
+            microstep_dt_ns = float(substep["dt_ns"]) / float(microstep_count)
+            hamiltonian_dt_ns = (
+                0.5 * microstep_dt_ns
+                if step_order == _FINITE_STEP_ORDER_STRANG
+                else microstep_dt_ns
+            )
+            hamiltonian_groups = tuple(
+                {
+                    **record,
+                    "gate": record["gate"].detach().clone(),
+                }
+                for record in _hamiltonian_group_gates(
+                    substep,
+                    dt_ns=hamiltonian_dt_ns,
+                    local_dims=local_dims,
+                    device=device,
+                    term_records=hamiltonian_terms,
+                )
+            )
+        else:
+            microstep_dt_ns = (
+                0.0
+                if substep.get("dt_ns") is None
+                else float(substep["dt_ns"]) / float(microstep_count)
+            )
+            hamiltonian_dt_ns = 0.0
+            hamiltonian_groups = ()
+        out.append(
+            {
+                "substep_index": int(substep_index),
+                "substep_id": str(substep["substep_id"]),
+                "microstep_dt_ns": float(microstep_dt_ns),
+                "hamiltonian_dt_ns": float(hamiltonian_dt_ns),
+                "hamiltonian_terms": hamiltonian_terms,
+                "hamiltonian_groups": hamiltonian_groups,
+                "collapse_terms": collapse_terms,
+            }
+        )
+    return tuple(out)
+
+
+def _mcwf_dynamics_artifacts_content_hash(
+    program: dict[str, Any],
+    dynamics_artifacts: Sequence[dict[str, Any]],
+    *,
+    local_dims: tuple[int, ...],
+    microstep_count: int,
+    finite_step_order: str,
+) -> str:
+    """Hash canonical metadata and raw complex matrices for mutation detection."""
+
+    digest = hashlib.sha256()
+    digest.update(
+        json.dumps(
+            {
+                "carrier_program_content_hash": program.get("content_hash"),
+                "local_dims": list(local_dims),
+                "microstep_count": int(microstep_count),
+                "finite_step_order": str(finite_step_order),
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    )
+
+    def _update_matrix(label: str, value: torch.Tensor) -> None:
+        array = np.ascontiguousarray(
+            value.detach().cpu().numpy(),
+            dtype=np.complex128,
+        )
+        digest.update(label.encode("utf-8"))
+        digest.update(str(array.shape).encode("ascii"))
+        digest.update(array.tobytes(order="C"))
+
+    for artifact in dynamics_artifacts:
+        digest.update(
+            json.dumps(
+                {
+                    "substep_index": artifact["substep_index"],
+                    "substep_id": artifact["substep_id"],
+                    "microstep_dt_ns": artifact["microstep_dt_ns"],
+                    "hamiltonian_dt_ns": artifact["hamiltonian_dt_ns"],
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode("utf-8")
+        )
+        for record in artifact["hamiltonian_terms"]:
+            digest.update(
+                json.dumps(
+                    {
+                        "kind": "hamiltonian",
+                        "term_index": record["term_index"],
+                        "support": list(record["support"]),
+                        "family": record["family"],
+                    },
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ).encode("utf-8")
+            )
+            _update_matrix("hamiltonian", record["hamiltonian"])
+        for record in artifact["collapse_terms"]:
+            digest.update(
+                json.dumps(
+                    {
+                        "kind": "collapse",
+                        "term_index": record["term_index"],
+                        "support": list(record["support"]),
+                        "family": record["family"],
+                        "coefficient": record["coefficient"],
+                    },
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ).encode("utf-8")
+            )
+            _update_matrix("collapse", record["operator"])
+        for record in artifact["hamiltonian_groups"]:
+            digest.update(
+                json.dumps(
+                    {
+                        "kind": "hamiltonian_group",
+                        "support": list(record["support"]),
+                        "term_index": record["term_index"],
+                        "term": record["term"],
+                    },
+                    sort_keys=True,
+                    separators=(",", ":"),
+                    allow_nan=False,
+                ).encode("utf-8")
+            )
+            _update_matrix("hamiltonian_group", record["gate"])
+    return digest.hexdigest()
+
+
 def _hamiltonian_group_gates(
     substep: dict[str, Any],
     *,
     dt_ns: float,
     local_dims: tuple[int, ...],
     device: str,
+    term_records: Sequence[dict[str, Any]] | None = None,
 ) -> tuple[dict[str, Any], ...]:
     """Connected-cluster joint exponentiation.
 
@@ -1171,35 +1662,24 @@ def _hamiltonian_group_gates(
     cross-terms ``[H_i, H_j]`` that the previous exact-support grouping dropped
     (Lie-Trotter), per the Axis-1 joint-generator requirement (Jaschke 1804.09796 App.A).
     """
-    term_records: list[dict[str, Any]] = []
-    for term_index, term in enumerate(substep.get("terms", ())):
-        if str(term["kind"]) != "hamiltonian":
-            continue
-        support = tuple(int(q) for q in term["support"])
-        hamiltonian = _hamiltonian_matrix_for_term(
-            term,
-            support=support,
+    records = (
+        tuple(term_records)
+        if term_records is not None
+        else _hamiltonian_term_records(
+            substep,
             local_dims=local_dims,
             device=device,
         )
-        term_records.append(
-            {
-                "term_index": int(term_index),
-                "support": support,
-                "hamiltonian": hamiltonian,
-                "family": str(term["operator_family"]).upper(),
-            }
-        )
-
-    if not term_records:
+    )
+    if not records:
         return ()
 
-    supports = [rec["support"] for rec in term_records]
+    supports = [rec["support"] for rec in records]
     clusters = _connected_support_clusters(supports)
 
     out: list[dict[str, Any]] = []
     for member_idx_list in clusters:
-        members = [term_records[i] for i in member_idx_list]
+        members = [records[i] for i in member_idx_list]
 
         cluster_qubits: set[int] = set()
         for rec in members:
@@ -1745,13 +2225,21 @@ def _sample_joint_jump_or_nojump(
     device: str,
     generator: torch.Generator,
     local_dims: tuple[int, ...],
+    collapse_records: Sequence[dict[str, Any]] | None = None,
 ) -> tuple[Any, dict[str, Any]]:
-    collapse_terms = [
-        term
-        for term in substep.get("terms", ())
-        if str(term["kind"]) == "collapse" and abs(float(term.get("coefficient", 0.0))) > 0.0
-    ]
-    if not collapse_terms:
+    records = (
+        tuple(collapse_records)
+        if collapse_records is not None
+        else _collapse_term_records(
+            substep,
+            local_dims=local_dims,
+            device=device,
+        )
+    )
+    active_records = tuple(
+        record for record in records if abs(float(record["coefficient"])) > 0.0
+    )
+    if not active_records:
         return (
             mps,
             {
@@ -1766,24 +2254,26 @@ def _sample_joint_jump_or_nojump(
     families: list[str] = []
 
     nojump = mps.copy()
-    for term in collapse_terms:
-        support = tuple(int(q) for q in term["support"])
+    for record in active_records:
+        support = tuple(int(q) for q in record["support"])
+        collapse = record["operator"]
+        ident = torch.eye(
+            int(collapse.shape[0]),
+            dtype=torch.complex128,
+            device=device,
+        )
+        nojump_kraus = ident - 0.5 * float(dt_ns) * (
+            collapse.conj().transpose(-1, -2) @ collapse
+        )
         if len(support) == 1:
             nojump.gate_(
-                _nojump_first_order_kraus(
-                    term,
-                    dt_ns,
-                    local_dim=local_dims[support[0]],
-                    device=device,
-                ),
+                nojump_kraus,
                 where=support[0],
                 contract=True,
             )
         else:  # two-site joint collapse: apply on the joint support
             nojump.gate_(
-                _joint_nojump_first_order_kraus(
-                    term, dt_ns, support, local_dims=local_dims, device=device
-                ),
+                nojump_kraus,
                 where=support,
                 contract="auto-mps",
                 max_bond=None,
@@ -1794,20 +2284,18 @@ def _sample_joint_jump_or_nojump(
     probabilities.append(float(p0))
     families.append("NO_JUMP")
 
-    for term in collapse_terms:
-        support = tuple(int(q) for q in term["support"])
+    for record in active_records:
+        support = tuple(int(q) for q in record["support"])
         jump = mps.copy()
         if len(support) == 1:
             jump.gate_(
-                (float(dt_ns) ** 0.5)
-                * _collapse_operator(term, local_dim=local_dims[support[0]], device=device),
+                (float(dt_ns) ** 0.5) * record["operator"],
                 where=support[0],
                 contract=True,
             )
         else:  # two-site joint collapse
             jump.gate_(
-                (float(dt_ns) ** 0.5)
-                * _joint_collapse_operator(term, support, local_dims=local_dims, device=device),
+                (float(dt_ns) ** 0.5) * record["operator"],
                 where=support,
                 contract="auto-mps",
                 max_bond=None,
@@ -1816,7 +2304,7 @@ def _sample_joint_jump_or_nojump(
         p = mps_norm_squared(jump)
         candidates.append(jump)
         probabilities.append(float(p))
-        families.append(str(term["operator_family"]).upper())
+        families.append(str(record["family"]).upper())
     mass = validate_raw_probability_mass(
         probabilities,
         name="MCWF first-order jump candidates",
@@ -2360,6 +2848,7 @@ def _first_order_mass_residual_blocks(
     microstep_count: int,
     device: str,
     budget: float,
+    dynamics_artifacts: Sequence[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     """Deterministic preflight against a grossly non-CPTP first-order MCWF step.
 
@@ -2369,28 +2858,34 @@ def _first_order_mass_residual_blocks(
     per-operator norms can be summed on each operator's own small support). When that bound exceeds
     ``budget`` the requested ``microstep_count`` is too coarse; return a blocked-substep entry that
     reports the minimum ``microstep_count`` that resolves it. Empty when every MCWF substep is within
-    budget. The same operator builders the sampler uses are called here, so the bound matches the
-    execution path exactly.
+    budget. The canonical route consumes the same precomputed collapse tensors
+    as the sampler, so this bound and the trajectories cannot diverge through a
+    second builder call.
     """
     out: list[dict[str, Any]] = []
     m = int(microstep_count)
     for substep_index, substep in enumerate(program["program"]["substeps"]):
-        collapse_terms = [
-            term
-            for term in substep.get("terms", ())
-            if str(term["kind"]) == "collapse" and abs(float(term.get("coefficient", 0.0))) > 0.0
-        ]
-        if not collapse_terms:
+        records = (
+            tuple(dynamics_artifacts[substep_index]["collapse_terms"])
+            if dynamics_artifacts is not None
+            else _collapse_term_records(
+                substep,
+                local_dims=local_dims,
+                device=device,
+            )
+        )
+        active_records = tuple(
+            record
+            for record in records
+            if abs(float(record["coefficient"])) > 0.0
+        )
+        if not active_records:
             continue
         dt_sub = float(substep["dt_ns"])
         dt_micro = dt_sub / float(m)
         norm_sum = 0.0
-        for term in collapse_terms:
-            support = tuple(int(q) for q in term["support"])
-            if len(support) == 1:
-                c = _collapse_operator(term, local_dim=local_dims[support[0]], device=device)
-            else:
-                c = _joint_collapse_operator(term, support, local_dims=local_dims, device=device)
+        for record in active_records:
+            c = record["operator"]
             cdc = c.conj().transpose(-1, -2) @ c
             norm_sum += float(torch.linalg.eigvalsh(cdc).max().real)
         if norm_sum <= 0.0:
@@ -2497,6 +2992,18 @@ def _unsupported_substeps(
                 break
             if (
                 term_kind == "collapse"
+                and family in _ONE_SITE_COLLAPSE_FAMILIES
+                and len(support) != 1
+            ):
+                out.append(
+                    _unsupported(
+                        substep,
+                        f"one_site_collapse_requires_one_site_support:{family}",
+                    )
+                )
+                break
+            if (
+                term_kind == "collapse"
                 and family in TWO_SITE_COLLAPSE_FAMILIES
                 and len(support) != 2
             ):
@@ -2559,6 +3066,7 @@ def _blocked_acceptance_policy(
     blocked_reason: str,
     rng_seed: int | None,
     trajectory_count: int,
+    dynamics_artifact_reference_certification: dict[str, Any],
 ) -> dict[str, Any]:
     return {
         "schema": _RESTRICTED_ACCEPTANCE_POLICY_SCHEMA,
@@ -2571,6 +3079,9 @@ def _blocked_acceptance_policy(
         "accepted_for_exact_dense_probability_evidence": False,
         "accepted_for_production_scalable_backend": False,
         "blocked_reason": str(blocked_reason),
+        "dynamics_artifact_reference_certification": dict(
+            dynamics_artifact_reference_certification
+        ),
         "trajectory": {
             "mode": "sampled_fixed_microstep_mcwf_trajectories",
             "trajectory_count": int(trajectory_count),
@@ -2721,6 +3232,7 @@ def _validate_completed_acceptance_policy(
     policy: dict[str, Any],
     *,
     execution: dict[str, Any],
+    dynamics_artifact_reference_certification: dict[str, Any],
 ) -> tuple[bool, str, bool, str | None]:
     trajectory = policy.get("trajectory")
     if not isinstance(trajectory, dict):
@@ -2747,6 +3259,21 @@ def _validate_completed_acceptance_policy(
         value = policy[field]
         if value != expected:
             raise ValueError(f"{field} must equal {expected!r}")
+    policy_artifact_certification = policy.get(
+        "dynamics_artifact_reference_certification"
+    )
+    if not isinstance(policy_artifact_certification, dict):
+        raise TypeError(
+            "direct MCWF policy artifact certification must be a mapping"
+        )
+    if _stable_payload_hash(
+        {"certification": policy_artifact_certification}
+    ) != _stable_payload_hash(
+        {"certification": dynamics_artifact_reference_certification}
+    ):
+        raise ValueError(
+            "direct MCWF policy artifact certification must match execution authority"
+        )
 
     accepted = _require_exact_bool_field(
         policy,

@@ -6,6 +6,7 @@ import ast
 import json
 from pathlib import Path
 import signal
+import subprocess
 from types import MappingProxyType, SimpleNamespace
 
 import pytest
@@ -133,6 +134,37 @@ def test_environment_metadata_identity_binds_conda_pip_and_import_hooks(
     assert first["metadata_sha256"] != changed["metadata_sha256"]
 
 
+def test_environment_metadata_identity_binds_selected_installed_package_tree(
+    tmp_path: Path,
+) -> None:
+    prefix = tmp_path / "envs" / "ecs-baseline-qutip"
+    conda_meta = prefix / "conda-meta"
+    package = prefix / "lib" / "python3.12" / "site-packages" / "qutip"
+    conda_meta.mkdir(parents=True)
+    package.mkdir(parents=True)
+    (conda_meta / "history").write_text("create qutip\n", encoding="utf-8")
+    source = package / "solver.py"
+    source.write_text("version-one\n", encoding="utf-8")
+
+    first = acceptance._environment_metadata_identity(
+        prefix,
+        package_trees=("qutip",),
+    )
+    source.write_text("version-two\n", encoding="utf-8")
+    changed = acceptance._environment_metadata_identity(
+        prefix,
+        package_trees=("qutip",),
+    )
+
+    assert first["content_package_trees"] == ["qutip"]
+    assert changed != first
+    assert acceptance._RUNTIME_CONTENT_PACKAGE_TREES["ecs-baseline-qutip"] == (
+        "numpy",
+        "scipy",
+        "qutip",
+    )
+
+
 def test_environment_prefix_resolution_fails_closed_on_missing_or_ambiguous_name(
     tmp_path: Path,
 ) -> None:
@@ -170,6 +202,74 @@ def test_acceptance_snapshot_binds_the_authoritative_core_environment_lock(
 
     before = acceptance._acceptance_input_snapshot()
     lock.write_text("version-two\n", encoding="utf-8")
+
+    assert acceptance._acceptance_input_snapshot() != before
+
+
+def test_acceptance_snapshot_binds_the_qutip_baseline_clone(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    relative = "external/baselines/qutip"
+    assert relative in acceptance._SNAPSHOT_DIRECTORY_INPUTS
+    baseline = tmp_path / relative
+    baseline.mkdir(parents=True)
+    source = baseline / "qutip" / "solver" / "mcsolve.py"
+    source.parent.mkdir(parents=True)
+    source.write_text("version-one\n", encoding="utf-8")
+    monkeypatch.setattr(acceptance, "REPO", tmp_path)
+    monkeypatch.setattr(
+        acceptance,
+        "_SNAPSHOT_DIRECTORY_INPUTS",
+        (relative,),
+    )
+    monkeypatch.setattr(acceptance, "_SNAPSHOT_FILE_INPUTS", ())
+    monkeypatch.setattr(acceptance, "_SNAPSHOT_GIT_REPOSITORY_INPUTS", ())
+
+    before = acceptance._acceptance_input_snapshot()
+    source.write_text("version-two\n", encoding="utf-8")
+
+    assert acceptance._acceptance_input_snapshot() != before
+
+
+def test_acceptance_snapshot_binds_external_baseline_git_head(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    relative = "external/baselines/qutip"
+    baseline = tmp_path / relative
+    baseline.mkdir(parents=True)
+    subprocess.run(["git", "init", "-q", str(baseline)], check=True)
+    source = baseline / "solver.py"
+    source.write_text("same-tree\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(baseline), "add", "solver.py"], check=True)
+    commit = [
+        "git",
+        "-C",
+        str(baseline),
+        "-c",
+        "user.name=Acceptance Test",
+        "-c",
+        "user.email=acceptance@example.invalid",
+        "commit",
+        "-q",
+    ]
+    subprocess.run([*commit, "-m", "initial"], check=True)
+    monkeypatch.setattr(acceptance, "REPO", tmp_path)
+    monkeypatch.setattr(
+        acceptance,
+        "_SNAPSHOT_DIRECTORY_INPUTS",
+        (relative,),
+    )
+    monkeypatch.setattr(acceptance, "_SNAPSHOT_FILE_INPUTS", ())
+    monkeypatch.setattr(
+        acceptance,
+        "_SNAPSHOT_GIT_REPOSITORY_INPUTS",
+        (relative,),
+    )
+
+    before = acceptance._acceptance_input_snapshot()
+    subprocess.run([*commit, "--allow-empty", "-m", "same tree new head"], check=True)
 
     assert acceptance._acceptance_input_snapshot() != before
 
@@ -302,6 +402,7 @@ def test_current_catalog_binds_every_direct_and_nested_runtime_environment() -> 
         "aiqec",
         "ecs",
         "ecs-baseline-aer",
+        "ecs-baseline-qutip",
         "ecs-baseline-yastn",
     )
 
@@ -311,6 +412,12 @@ def test_current_catalog_routes_cuda_transitive_mps_gate_to_gpu_serial() -> None
     by_file = {task.test_file: task for task in plan}
 
     assert by_file["tests/test_mps_qt_transitive_semantics.py"].lane == "gpu_serial"
+    qutip_task = by_file["tests/test_external_qutip_mcwf_xz_comparison.py"]
+    assert qutip_task.lane == "gpu_serial"
+    assert qutip_task.process_environment == (
+        ("ECS_RUN_QUTIP_MCWF_XZ_COMPARISON", "1"),
+    )
+    assert qutip_task.nested_environments == ("ecs-baseline-qutip",)
 
 
 def test_acceptance_plan_rejects_non_acceptance_process_environment_path() -> None:
@@ -325,7 +432,11 @@ def test_acceptance_plan_rejects_non_acceptance_process_environment_path() -> No
 
 @pytest.mark.parametrize(
     "name",
-    ["ECS_RUN_AER_MPS_COMPARISON", "ECS_RUN_YASTN_MPS_COMPARISON"],
+    [
+        "ECS_RUN_AER_MPS_COMPARISON",
+        "ECS_RUN_QUTIP_MCWF_XZ_COMPARISON",
+        "ECS_RUN_YASTN_MPS_COMPARISON",
+    ],
 )
 def test_acceptance_plan_allows_external_mps_baseline_run_flags(
     name: str,

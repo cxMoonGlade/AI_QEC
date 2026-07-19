@@ -15,6 +15,10 @@ from typing import Any
 import numpy as np
 import pytest
 
+from tests._support.mcwf_artifact_certification import (
+    passing_mcwf_artifact_certification,
+)
+
 
 _EVENT_FIELDS = {
     "support",
@@ -1122,18 +1126,34 @@ def _mcwf_sampled_record_execution(
         "jump_sampling": {
             "probability_mass_residual_max": runtime_mass_residual
         },
-        "evaluator_only_diagnostics": {
+        "finite_step_policy": {
+            "microstep_count": 1,
+            "order": "first_order",
+        },
+          "evaluator_only_diagnostics": {
             "schema": (
                 "error_coupling_simulator.frontend."
-                "mcwf_mps_evaluator_only_diagnostics.v1"
+                "mcwf_mps_evaluator_only_diagnostics.v2"
             ),
             "visibility": (
                 "evaluator_only_not_emitted_record_or_downstream_estimator_input"
             ),
+            "level_record_semantics": (
+                "schedule-ordered local measurement eigenlabel tuples: "
+                "X columns use 0=|+>,1=|-> and preserve leaked level labels >=2; "
+                "Z columns use computational local levels"
+            ),
             "level_records": [],
-        },
+          },
         "measurement_keys": ["m0"],
         "measurement_targets": [0],
+        "measurement_bases": ["Z"],
+        "reset_after": [False],
+        "measurement_basis": "Z",
+        "measurement_basis_semantics": (
+            "measurement_bases and reset_after are schedule-ordered one-per-Record-column; "
+            "X measurement rotates into Z, projects, then rotates back unless reset prepares |+>"
+        ),
         "measurement_records": [[0]],
         "record_counts": [trajectory_count],
         "record_probabilities": [1.0],
@@ -1197,6 +1217,24 @@ def _mcwf_sampled_record_certification(
         "gate_epistemic_class": "c",
         "epistemic_class": "a/c",
     }
+
+
+def _mcwf_restricted_acceptance_policy(**kwargs):
+    from error_coupling_simulator.certify.axis1_mps import (
+        restricted_acceptance_policy,
+    )
+
+    program = kwargs["program"]
+    execution = kwargs["execution"]
+    kwargs["dynamics_artifact_reference_certification"] = (
+        passing_mcwf_artifact_certification(
+            program,
+            local_dims=kwargs["declared_local_dims"],
+            microstep_count=execution["finite_step_policy"]["microstep_count"],
+            finite_step_order=execution["finite_step_policy"]["order"],
+        )
+    )
+    return restricted_acceptance_policy(**kwargs)
 
 
 def _synthetic_complete_finite_bond_ledger(*, discarded: float) -> dict[str, Any]:
@@ -1278,8 +1316,8 @@ def test_mcwf_finite_bond_acceptance_consumes_the_authenticated_ledger() -> None
         "trajectory_count": 2,
         "mass_residual_budget": 0.1,
     }
-    ungated = restricted_acceptance_policy(**common)
-    gated = restricted_acceptance_policy(
+    ungated = _mcwf_restricted_acceptance_policy(**common)
+    gated = _mcwf_restricted_acceptance_policy(
         **common,
         worst_cut_discarded_weight_gate=0.2,
         total_discarded_weight_gate=0.2,
@@ -1299,7 +1337,7 @@ def test_mcwf_runtime_mass_residual_blocks_restricted_acceptance() -> None:
         restricted_acceptance_policy,
     )
 
-    policy = restricted_acceptance_policy(
+    policy = _mcwf_restricted_acceptance_policy(
         execution=_mcwf_sampled_record_execution(
             _synthetic_complete_finite_bond_ledger(discarded=0.0),
             trajectory_count=2,
@@ -1535,7 +1573,7 @@ def test_zero_two_site_occurrence_inventory_is_vacuously_complete(
             restricted_acceptance_policy,
         )
 
-        acceptance = restricted_acceptance_policy(
+        acceptance = _mcwf_restricted_acceptance_policy(
             execution=_mcwf_sampled_record_execution(
                 ledger,
                 trajectory_count=3,
@@ -1635,7 +1673,7 @@ def test_truncation_aggregation_fails_closed_when_whole_strang_pass_is_missing(
             restricted_acceptance_policy,
         )
 
-        acceptance = restricted_acceptance_policy(
+        acceptance = _mcwf_restricted_acceptance_policy(
             execution=_mcwf_sampled_record_execution(
                 ledger,
                 trajectory_count=2,
@@ -2105,3 +2143,64 @@ def test_mcwf_public_manifest_wires_real_finite_bond_split_events() -> None:
     assert aggregation["coverage_failures"] == []
     assert aggregation["context_complete"] is True
     assert aggregation["not_a_global_error_bound"] is True
+
+
+def test_mcwf_public_strang_manifest_orders_both_half_step_split_events() -> None:
+    import torch
+
+    if not torch.cuda.is_available():
+        pytest.skip("MCWF public execution manifest is CUDA-only")
+
+    from error_coupling_simulator.frontend import (
+        CircuitBuilder,
+        axis1_mcwf_mps_state_record_execution_manifest,
+        circuit_ir_to_substep_schedule,
+    )
+
+    builder = CircuitBuilder(num_qubits=5)
+    builder.h(0)
+    builder.cx((0, 4))
+    builder.measure((0, 4), key=("m0", "m4"))
+    schedule = circuit_ir_to_substep_schedule(builder.build())
+    two_qubit_step = next(
+        substep for substep in schedule.substeps if substep.kind == "two_qubit_gate"
+    )
+    assert two_qubit_step.dt_ns_nominal is not None
+    half_step_dt_ns = 0.5 * float(two_qubit_step.dt_ns_nominal)
+
+    manifest = axis1_mcwf_mps_state_record_execution_manifest(
+        schedule,
+        max_bond=1,
+        worst_cut_discarded_weight_gate=1.0,
+        total_discarded_weight_gate=1.0,
+        finite_step_order="strang_second_order",
+        trajectory_count=1,
+        rng_seed=123,
+    )
+
+    assert manifest["execution_status"] == "completed"
+    assert manifest["finite_step_order"] == "strang_second_order"
+    execution = manifest["mps_execution"]
+    assert execution is not None
+    assert execution["finite_step_policy"]["order"] == "strang_second_order"
+
+    ledger = execution["mps_truncation_ledger"]
+    assert ledger["discarded_weight_ledger_complete"] is True
+    assert ledger["n_tracked_two_site_ops"] == 2
+    events = ledger["truncation_events"]
+    assert [event["hamiltonian_pass_index"] for event in events] == [0, 1]
+    assert [event["dt_ns_effective"] for event in events] == pytest.approx(
+        [half_step_dt_ns, half_step_dt_ns]
+    )
+    assert all(event["trajectory_index"] == 0 for event in events)
+    assert all(event["support"] == [0, 4] for event in events)
+
+    aggregation = ledger["aggregation"]
+    assert aggregation["mode"] == "sampled_trajectory_mean"
+    assert aggregation["trajectory_count"] == 1
+    assert aggregation["observed_context_count"] == 1
+    assert aggregation["expected_gate_occurrence_count"] == 2
+    assert aggregation["observed_gate_occurrence_count"] == 2
+    assert aggregation["complete_gate_occurrence_count"] == 2
+    assert aggregation["coverage_failures"] == []
+    assert aggregation["context_complete"] is True

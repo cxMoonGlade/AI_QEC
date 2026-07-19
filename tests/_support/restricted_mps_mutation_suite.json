@@ -2,8 +2,8 @@
   "schema": "error_coupling_simulator.harness.mutation_suite.v1",
   "_comment": [
     "Authoritative restricted-MPS mutation suite.",
-    "The CPU batch is parallel across four isolated mutmut children; five ordered single-module GPU shards run one after another, each with up to four fresh pytest workers on one leased GPU.",
-    "All six batch module sets must be pairwise disjoint and their exact union must equal the coverage registry's twelve reconciled modules."
+    "The CPU batch is parallel across four isolated mutmut children; five ordered GPU shards run one after another, each with up to four fresh pytest workers on one leased GPU. Four GPU shards own one module each; the certification shard owns its two isolated reference/certification modules together.",
+    "All six batch module sets must be pairwise disjoint and their exact union must equal the coverage registry's thirteen reconciled modules."
   ],
   "contract": "docs/SIMULATOR.md",
   "coverage_registry": "restricted_mps_coverage_targets.json",

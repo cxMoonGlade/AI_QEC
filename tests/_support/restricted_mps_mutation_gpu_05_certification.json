@@ -1,7 +1,7 @@
 {
   "schema": "error_coupling_simulator.harness.mutation_batch.v1",
   "_comment": [
-    "GPU-serial mutation shard 5/5 for restricted-MPS certification.",
+    "GPU-serial mutation shard 5/5 for restricted-MPS certification and its isolated MCWF operator reference.",
     "Exactly one GPU is leased; up to four fresh pytest workers may share it, while the outer suite runs all five shards sequentially.",
     "Raw-source AST/text ownership scanners remain service/release gates but are intentionally excluded here: a mutmut trampoline contains every generated candidate at once, so these scanners cannot identify the active mutant."
   ],
@@ -25,6 +25,7 @@
     "tests/test_mps_qt_aggregate_deep_auth.py",
     "tests/test_mps_carrier_child_authentication.py",
     "tests/test_mps_mcwf_measurement_semantics.py",
+    "tests/test_mcwf_operator_reference.py",
     "tests/test_axis1_mcwf_dense_certification.py",
     "tests/test_simulator_axis1_schedule.py",
     "tests/test_collective_decay_finite_step_guard.py"
@@ -38,7 +39,8 @@
     "scripts/mps_three_leg_comparator.py"
   ],
   "reconcile_modules": [
-    "src/error_coupling_simulator/certify/axis1_mps.py"
+    "src/error_coupling_simulator/certify/axis1_mps.py",
+    "src/error_coupling_simulator/certify/mcwf_operator_reference.py"
   ],
   "harness": {
     "mutation_gate": {

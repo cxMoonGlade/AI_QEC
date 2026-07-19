@@ -2,7 +2,7 @@
   "_comment": [
     "Strict coverage registry for the current restricted MPS verification surface.",
     "Every canonical public unit must meet 100% statement and branch coverage; do not lower targets or add exemptions to manufacture green.",
-    "certify/axis1_mps.py owns dense references, metrics, and restricted acceptance for this route.",
+    "certify/axis1_mps.py owns dense references, frozen-artifact certification, metrics, and restricted acceptance; certify/mcwf_operator_reference.py owns the isolated hand-typed MCWF operator formulas.",
     "The authoritative mutation topology is tests/_support/restricted_mps_mutation_suite.json: CPU-parallel mechanics plus GPU-serial execution and certification."
   ],
   "contract": "docs/SIMULATOR.md",
@@ -28,6 +28,7 @@
     "tests/test_mps_qt_aggregate_deep_auth.py",
     "tests/test_mps_carrier_child_authentication.py",
     "tests/test_mps_mcwf_measurement_semantics.py",
+    "tests/test_mcwf_operator_reference.py",
     "tests/test_axis1_mcwf_dense_certification.py",
     "tests/test_simulator_axis1_schedule.py",
     "tests/test_collective_decay_finite_step_guard.py"
@@ -50,7 +51,8 @@
     "src/error_coupling_simulator/frontend/axis1_qt_mps_execution.py",
     "src/error_coupling_simulator/frontend/axis1_carrier_execution.py",
     "src/error_coupling_simulator/frontend/axis1_carrier_program.py",
-    "src/error_coupling_simulator/certify/axis1_mps.py"
+    "src/error_coupling_simulator/certify/axis1_mps.py",
+    "src/error_coupling_simulator/certify/mcwf_operator_reference.py"
   ],
   "out_of_scope": {},
   "canonical_units": [
@@ -104,7 +106,12 @@
     "axis1_reset_basis",
     "axis1_carrier_substep_summary",
     "dense_jointL_record_certification",
-    "restricted_acceptance_policy"
+    "restricted_acceptance_policy",
+    "mcwf_dynamics_artifact_reference_certification",
+    "validate_mcwf_dynamics_artifact_reference_certification",
+    "reference_hamiltonian_matrix_for_term",
+    "reference_collapse_operator_for_term",
+    "reference_structural_zero_mask_for_term"
   ],
   "units": [
     {
@@ -512,6 +519,46 @@
       "module": "src/error_coupling_simulator/certify/axis1_mps.py",
       "unit": "restricted_acceptance_policy",
       "qualname": "restricted_acceptance_policy",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "mcwf_mps_certification",
+      "module": "src/error_coupling_simulator/certify/axis1_mps.py",
+      "unit": "mcwf_dynamics_artifact_reference_certification",
+      "qualname": "mcwf_dynamics_artifact_reference_certification",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "mcwf_mps_certification",
+      "module": "src/error_coupling_simulator/certify/axis1_mps.py",
+      "unit": "validate_mcwf_dynamics_artifact_reference_certification",
+      "qualname": "validate_mcwf_dynamics_artifact_reference_certification",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "mcwf_operator_reference",
+      "module": "src/error_coupling_simulator/certify/mcwf_operator_reference.py",
+      "unit": "reference_hamiltonian_matrix_for_term",
+      "qualname": "reference_hamiltonian_matrix_for_term",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "mcwf_operator_reference",
+      "module": "src/error_coupling_simulator/certify/mcwf_operator_reference.py",
+      "unit": "reference_collapse_operator_for_term",
+      "qualname": "reference_collapse_operator_for_term",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "mcwf_operator_reference",
+      "module": "src/error_coupling_simulator/certify/mcwf_operator_reference.py",
+      "unit": "reference_structural_zero_mask_for_term",
+      "qualname": "reference_structural_zero_mask_for_term",
       "target": {"statement": 1.0, "branch": 1.0},
       "exemptions": []
     }

@@ -2,11 +2,12 @@ from __future__ import annotations
 
 """Evaluator-side certification for restricted MCWF/MPS execution evidence.
 
-The reference route assembles each substep from its Hamiltonian and collapse
-terms with :func:`carrier.joint_lindbladian.assemble_substep_channel`; it does
-not reuse the carrier's Hamiltonian grouping. Depending on the available
+The reference route builds every Hamiltonian and collapse matrix from isolated,
+hand-typed NumPy/Pauli definitions and assembles each substep with
+:func:`carrier.joint_lindbladian.assemble_substep_channel`; it reuses neither
+the carrier's term builders nor its Hamiltonian grouping. Depending on the available
 output, the comparison uses process infidelity, Choi trace distance, record
-total variation, or level-population total variation.
+total variation, or declared-basis measurement-eigenlabel total variation.
 
 The restricted and exact-evidence verdicts use separate project gates because
 a one-microstep quantum-jump execution has a declared finite-step error. A
@@ -20,9 +21,12 @@ The dense joint-Lindbladian reference is CUDA-only, so claim-bearing
 certification executes on CUDA.
 """
 
+import hashlib
+import json
 import math
 import operator
 from numbers import Real
+from pathlib import Path
 from typing import Any
 
 from ..carrier.mps.controls import (
@@ -31,6 +35,11 @@ from ..carrier.mps.controls import (
     normalize_optional_mps_nonnegative_real,
 )
 from ..numerics import NUMERICAL_ZERO
+from .mcwf_operator_reference import (
+    reference_collapse_operator_for_term,
+    reference_hamiltonian_matrix_for_term,
+    reference_structural_zero_mask_for_term,
+)
 
 # Module-default tolerances. Epistemic class (c): heuristic certification gates /
 # tripwires ONLY (go/no-go), never a premise, definition, derivation, or error bound.
@@ -43,6 +52,51 @@ from ..numerics import NUMERICAL_ZERO
 # gates restricted acceptance. Anti-circular: the JOINT oracle is the reference; the carrier
 # channel is the object under test.
 _PROCESS_INFIDELITY_GATE = 1.0e-6
+# Torch CUDA ``matrix_exp`` and SciPy CPU ``expm`` can disagree at ~1.8e-10
+# for an otherwise identical diagonal ZZ gate.  Group-gate validation therefore
+# uses a cross-backend multiple of the shared numerical constant.  Term matrices
+# still use NUMERICAL_ZERO directly, and structural zeros remain exact.
+_MCWF_GROUP_GATE_REFERENCE_TOLERANCE = 1000.0 * NUMERICAL_ZERO
+MCWF_DYNAMICS_ARTIFACT_REFERENCE_CERTIFICATION_SCHEMA = (
+    "error_coupling_simulator.certify."
+    "mcwf_dynamics_artifact_reference_certification.v1"
+)
+_MCWF_DYNAMICS_ARTIFACT_REFERENCE_CERTIFICATION_FIELDS = frozenset(
+    {
+        "schema",
+        "executed",
+        "passed",
+        "status",
+        "reason",
+        "dynamics_artifact_content_hash",
+        "carrier_program_content_hash",
+        "local_dims",
+        "microstep_count",
+        "finite_step_order",
+        "substep_count",
+        "hamiltonian_term_count",
+        "hamiltonian_group_count",
+        "collapse_term_count",
+        "all_substeps_covered",
+        "all_terms_covered",
+        "all_groups_covered",
+        "reference_oracle",
+        "reference_operator_source_sha256",
+        "reference_certification_source_sha256",
+        "carrier_operator_source_sha256",
+        "carrier_control_generator_source_sha256",
+        "carrier_selection_source_sha256",
+        "reference_independent_of_carrier_operator_builders",
+        "artifacts_bound_before_execution",
+        "post_execution_integrity_verified",
+        "structural_zero_policy",
+        "operator_reference_tolerance",
+        "group_gate_reference_tolerance",
+        "comparison_outcome_is_metric",
+        "epistemic_class",
+        "content_hash",
+    }
+)
 # CHANNEL GROSS gate tau_gross (restricted-acceptance gate, process infidelity 1-F_e).
 # Epistemic class (c): the realized first-order channel finite-step
 # error at ``microstep_count=1`` is at most a few times ``1e-2`` in the current
@@ -53,10 +107,10 @@ _PROCESS_INFIDELITY_GATE = 1.0e-6
 # wrong-generator FAILS. A go/no-go tripwire ONLY -- never a premise, derivation, definition,
 # or error bound.
 _GROSS_GATE = 1.0e-1
-# RECORD/LEVEL GROSS gate tau_gross_records (restricted-acceptance gate, TV distance).
+# RECORD/EIGENLABEL GROSS gate tau_gross_records (restricted-acceptance gate, TV distance).
 # Epistemic class (c) -- justified separately from the channel gate because a single
 # first-order MCWF microstep can replace a partial Lindblad decay with a FULL deterministic
-# jump, so the worst-correct LEVEL-population TV vs the exact joint-L oracle at m=1 is larger
+# jump, so the worst-correct declared-basis eigenlabel TV vs the exact joint-L oracle at m=1 is larger
 # than the channel 1-F_e: across the leakage fixtures it is <= ~0.14 (the seepage full-jump
 # vs exact partial-decay over dt*gamma=2 gives TV = 1 - e^{-dt*gamma}/... = 0.135), while a
 # no-op leaves the population at the initial level (TV = 1) and a wrong-generator splits it
@@ -105,13 +159,48 @@ _RECORD_EVIDENCE_SCHEMA = (
 )
 _LEVEL_EVIDENCE_SCHEMA = (
     "error_coupling_simulator.carrier.joint_lindbladian."
-    "assemble_substep_channel:level_populations"
+    "assemble_substep_channel:measurement_basis_level_populations.v2"
 )
 _RECORD_SAMPLING_CI_METHOD = (
     "per_bin_two_sided_hoeffding_capped_at_gross_tv_ceiling"
 )
+_JOINT_LEVEL_BINARY_SAMPLING_CI_METHOD = (
+    "bonferroni_two_component_per_bin_two_sided_hoeffding_"
+    "capped_at_gross_tv_ceiling"
+)
+_JOINT_LEVEL_BINARY_COMPARISON_OBJECT = (
+    "measurement_basis_level_and_emitted_binary_record_populations"
+)
+_JOINT_LEVEL_BINARY_METRIC = "maximum_component_total_variation_distance"
+_JOINT_LEVEL_BINARY_METRIC_CONVENTION = (
+    "max(TV_label, TV_binary), with each TV = 1/2 * sum_i |p_i - q_i|; "
+    "joint pass is the logical AND of the declared-basis eigenlabel and "
+    "emitted binary Record TV gates"
+)
+_DENSE_BINARY_READOUT_MAX_SUPPORT = 4096
 _EVALUATOR_ONLY_DIAGNOSTICS_SCHEMA = (
-    "error_coupling_simulator.frontend.mcwf_mps_evaluator_only_diagnostics.v1"
+    "error_coupling_simulator.frontend.mcwf_mps_evaluator_only_diagnostics.v2"
+)
+_LEVEL_RECORD_SEMANTICS = (
+    "schedule-ordered local measurement eigenlabel tuples: "
+    "X columns use 0=|+>,1=|-> and preserve leaked level labels >=2; "
+    "Z columns use computational local levels"
+)
+_MULTILEVEL_MEASUREMENT_POLICY_FIELDS = frozenset(
+    {
+        "name",
+        "bit_mapping",
+        "leaked_readout_b",
+        "comparison_outcome_is_metric",
+        "epistemic_class",
+    }
+)
+_MULTILEVEL_MEASUREMENT_POLICY_NAME = (
+    "declared_basis_eigenlabel_sample_then_binary_record"
+)
+_MULTILEVEL_MEASUREMENT_BIT_MAPPING = (
+    "eigenlabel_0_to_bit_0_eigenlabel_1_to_bit_1_"
+    "eigenlabel_ge_2_to_bit_1_with_probability_leaked_readout_b"
 )
 _MCWF_METRIC_IDENTITIES = {
     "within_substep_window_channel": (
@@ -138,17 +227,14 @@ _MCWF_METRIC_IDENTITIES = {
         ),
         False,
     ),
-    "level_record_populations": (
-        "total_variation_distance",
-        (
-            "TV = 1/2 * sum_i |p_i - q_i| "
-            "(joint-L level populations vs empirical level-record frequencies)"
-        ),
+    _JOINT_LEVEL_BINARY_COMPARISON_OBJECT: (
+        _JOINT_LEVEL_BINARY_METRIC,
+        _JOINT_LEVEL_BINARY_METRIC_CONVENTION,
         (
             "error_coupling_simulator.carrier.joint_lindbladian."
             "assemble_substep_channel"
         ),
-        True,
+        False,
     ),
 }
 
@@ -179,7 +265,7 @@ def dense_jointL_record_certification(
 
       1. over-cap (``requires_scalable_backend``)        -> executed: False (honest).
       2. LEVEL records present (leakage qudit outcomes)  -> ``_certify_level_path``
-         (readout-independent level-population reference).
+         (readout-independent declared-basis eigenlabel reference).
       3. qubit measurement records present               -> ``_certify_record_path``.
       4. no records (Hamiltonian + collapse substep)     -> ``_certify_channel_path``.
 
@@ -288,7 +374,7 @@ def dense_jointL_record_certification(
 
     # --- (2) level-record path (leakage qudit outcomes). -------------------------- #
     # Routed BEFORE the qubit-record path: leakage schedules carry BOTH measurement_keys
-    # and level_records, but the readout-INDEPENDENT level-population comparison is the
+    # and level_records, but the readout-independent declared-basis eigenlabel comparison is the
     # faithful (and the only oracle-backed) check for a qudit run.
     if has_level_records:
         if not sampled:
@@ -367,8 +453,70 @@ def dense_jointL_record_certification(
 
 
 # --------------------------------------------------------------------------- #
-# LEVEL-record certification path.                                             #
+# Declared-basis eigenlabel-record certification path.                         #
 # --------------------------------------------------------------------------- #
+def _dense_binary_record_distribution_from_levels(
+    level_distribution: dict[tuple[int, ...], float],
+    *,
+    leaked_readout_b: float,
+) -> dict[tuple[int, ...], float]:
+    """Apply a hand-typed readout kernel to the independent dense label law."""
+
+    b = _normalize_unit_interval_metric(
+        leaked_readout_b,
+        name="leaked_readout_b",
+    )
+    binary_distribution: dict[tuple[int, ...], float] = {}
+    for level_record, record_probability in level_distribution.items():
+        partial: dict[tuple[int, ...], float] = {(): float(record_probability)}
+        for column, raw_level in enumerate(level_record):
+            if type(raw_level) is not int or raw_level < 0:
+                raise ValueError(
+                    f"dense level record column {column} must be a nonnegative exact integer"
+                )
+            if raw_level == 0:
+                readout_choices = ((0, 1.0),)
+            elif raw_level == 1:
+                readout_choices = ((1, 1.0),)
+            else:
+                readout_choices = ((0, 1.0 - b), (1, b))
+            next_partial: dict[tuple[int, ...], float] = {}
+            for prefix, prefix_probability in partial.items():
+                for bit, conditional_probability in readout_choices:
+                    if conditional_probability == 0.0:
+                        continue
+                    outcome = prefix + (bit,)
+                    branch_probability = (
+                        float(prefix_probability) * float(conditional_probability)
+                    )
+                    next_partial[outcome] = math.fsum(
+                        (
+                            next_partial.get(outcome, 0.0),
+                            branch_probability,
+                        )
+                    )
+            if len(next_partial) > _DENSE_BINARY_READOUT_MAX_SUPPORT:
+                raise _ChannelNotDenseCheckable(
+                    "dense_binary_readout_support_exceeds_registered_cap"
+                )
+            partial = next_partial
+        for binary_record, probability in partial.items():
+            binary_distribution[binary_record] = math.fsum(
+                (
+                    binary_distribution.get(binary_record, 0.0),
+                    probability,
+                )
+            )
+        if len(binary_distribution) > _DENSE_BINARY_READOUT_MAX_SUPPORT:
+            raise _ChannelNotDenseCheckable(
+                "dense_binary_readout_support_exceeds_registered_cap"
+            )
+    return _normalize_probability_mapping(
+        binary_distribution,
+        name="oracle_binary_record_distribution",
+    )
+
+
 def _certify_level_path(
     schedule: Any,
     execution: dict[str, Any],
@@ -382,21 +530,22 @@ def _certify_level_path(
     sampled: bool,
     trajectory_count: int,
 ) -> dict[str, Any]:
-    """Readout-INDEPENDENT LEVEL-record cert: carrier level-record frequencies vs the
-    INDEPENDENT dense joint-L LEVEL-POPULATION oracle, scored by TV = 1/2 ||p-q||_1
+    """Readout-independent declared-basis eigenlabel certification.
+
+    Compare carrier evaluator-only local measurement-eigenlabel frequencies with the
+    independent dense joint-L declared-basis projector oracle, scored by TV = 1/2 ||p-q||_1
     (+ a Hoeffding finite-shot CI for the sampled MCWF path).
 
     The oracle (``_dense_jointL_level_distribution``) evolves ``rho0`` (the initial level
     product state) through the program: each dynamics substep advances ``rho`` by the
     DESIGNATED INDEPENDENT ORACLE ``assemble_substep_channel(H_list, c_list, dt)`` on the
     connected window (sum-all -> one ``expm(L dt)`` -- NEVER the carrier's grouping); each
-    reset substep applies the projective-reset channel; each measurement substep reads the
-    LEVEL-basis DIAGONAL (populations) at its targets and splits ``rho`` into level-
-    conditioned branches, accumulating the joint distribution over the recorded level-tuples
-    EXACTLY as the carrier records them. Comparing LEVEL POPULATIONS needs no readout model;
-    a no-op leaves ``rho0`` => populations stay at the initial level => caught.
+    reset substep applies the declared-basis reset channel; each measurement substep applies
+    the declared X/Z projectors and accumulates their local eigenlabels. X labels 0/1 mean
+    |+>/|->, Z labels retain computational local-level meaning, and leaked labels >=2 remain
+    explicit. This comparison needs no readout model; a no-op remains detectable.
 
-    The level-population reference is always built through
+    The declared-basis eigenlabel reference is always built through
     ``_dense_jointL_level_distribution``.
     """
     carrier_level_records = [
@@ -449,6 +598,33 @@ def _certify_level_path(
                     "trajectory_sampling.trajectory_count"
                 )
 
+    _validate_sampled_binary_record_payload(
+        execution,
+        trajectory_count=trajectory_count,
+    )
+    carrier_binary_records = [
+        tuple(record)
+        for record in _normalize_record_matrix(
+            execution.get("measurement_records", ()),
+            name="measurement_records",
+            bit_only=True,
+        )
+    ]
+    carrier_binary_probabilities = _normalize_probability_vector(
+        execution.get("record_probabilities", ()),
+        name="record_probabilities",
+    )
+    carrier_binary_dist = _normalize_probability_mapping(
+        dict(
+            zip(
+                carrier_binary_records,
+                carrier_binary_probabilities,
+                strict=True,
+            )
+        ),
+        name="carrier_binary_record_distribution",
+    )
+
     measurement_keys = execution.get("measurement_keys", ())
     if not isinstance(measurement_keys, (list, tuple)):
         raise TypeError("measurement_keys must be a list or tuple")
@@ -458,12 +634,17 @@ def _certify_level_path(
         measurement_keys=measurement_keys,
     )
 
+    leaked_readout_b = _certifier_leaked_readout_probability(execution)
     try:
         oracle_dist = _dense_jointL_level_distribution(
             schedule,
             execution,
             device=device,
             dense_channel_max_dim=int(dense_channel_max_dim),
+        )
+        oracle_binary_dist = _dense_binary_record_distribution_from_levels(
+            oracle_dist,
+            leaked_readout_b=leaked_readout_b,
         )
     except _ChannelNotDenseCheckable as exc:
         return {
@@ -502,7 +683,12 @@ def _certify_level_path(
     )
     oracle_schema = _LEVEL_EVIDENCE_SCHEMA
 
-    tv = _total_variation_distance_dict(carrier_dist, oracle_dist)
+    level_tv = _total_variation_distance_dict(carrier_dist, oracle_dist)
+    binary_tv = _total_variation_distance_dict(
+        carrier_binary_dist,
+        oracle_binary_dist,
+    )
+    tv = max(level_tv, binary_tv)
 
     # Finite-shot CI for the sampled carrier path: a per-bin Hoeffding two-sided half-width
     # sqrt( ln(2/alpha) / (2 N) ) at confidence (1 - alpha); TV over K bins inflates by
@@ -512,10 +698,17 @@ def _certify_level_path(
     if sampled and trajectory_count > 0:
         import math
 
-        n_bins = len(set(carrier_dist) | set(oracle_dist))
-        alpha = max(1.0e-12, 1.0 - float(record_sampling_confidence))
-        per_bin = math.sqrt(math.log(2.0 / alpha) / (2.0 * float(trajectory_count)))
-        sampling_halfwidth = float(0.5 * n_bins * per_bin)
+        level_n_bins = len(set(carrier_dist) | set(oracle_dist))
+        binary_n_bins = len(
+            set(carrier_binary_dist) | set(oracle_binary_dist)
+        )
+        n_bins = max(level_n_bins, binary_n_bins)
+        sampling_halfwidth = _joint_level_binary_sampling_tv_halfwidth(
+            sampled=True,
+            support_size=n_bins,
+            trajectory_count=trajectory_count,
+            confidence=record_sampling_confidence,
+        )
 
     # The STRICT TV tripwire is not CI-loosened. This level path is sampled-only:
     # passing it remains a numerical diagnostic and cannot create exact-dense
@@ -534,17 +727,24 @@ def _certify_level_path(
         # restricted acceptance and ``passed`` for the exact-dense evidence flag.
         "passed": passed_strict,
         "passed_gross": passed_gross,
-        "comparison_object": "level_record_populations",
+        "comparison_object": _JOINT_LEVEL_BINARY_COMPARISON_OBJECT,
         "oracle": (
             "error_coupling_simulator.carrier.joint_lindbladian."
             "assemble_substep_channel"
         ),
-        "oracle_role": "level_basis_diagonal_populations_of_jointL_channel_on_initial_level_state",
+        "oracle_role": (
+            "declared_basis_eigenlabel_probabilities_of_jointL_channel_plus_"
+            "certifier_local_eigenlabel_to_binary_readout_marginalization"
+        ),
         "oracle_independent_of_carrier_grouping": True,
-        "readout_model_independent": True,
-        "metric": "total_variation_distance",
-        "metric_convention": "TV = 1/2 * sum_i |p_i - q_i| (joint-L level populations vs empirical level-record frequencies)",
+        "readout_model_independent": False,
+        "metric": _JOINT_LEVEL_BINARY_METRIC,
+        "metric_convention": _JOINT_LEVEL_BINARY_METRIC_CONVENTION,
         "value": float(tv),
+        "component_values": {
+            "declared_basis_eigenlabel_tv": float(level_tv),
+            "emitted_binary_record_tv": float(binary_tv),
+        },
         "gate": float(record_tv_gate),
         "gross_gate": float(gross_gate),
         "gross_gate_ceiling": float(_GROSS_RECORD_TV_CEILING),
@@ -552,7 +752,7 @@ def _certify_level_path(
         "sampling_support_size": int(n_bins),
         "effective_gate_including_sampling_ci": strict_effective_gate,
         "gross_effective_gate_including_sampling_ci": float(gross_effective_gate),
-        "sampling_ci_method": _RECORD_SAMPLING_CI_METHOD,
+        "sampling_ci_method": _JOINT_LEVEL_BINARY_SAMPLING_CI_METHOD,
         "sampling_confidence": float(record_sampling_confidence),
         "trajectory_count": int(trajectory_count),
         "dense_evidence_schema": oracle_schema,
@@ -853,6 +1053,7 @@ def restricted_acceptance_policy(
     mass_residual_budget: float | None,
     worst_cut_discarded_weight_gate: float | None = None,
     total_discarded_weight_gate: float | None = None,
+    dynamics_artifact_reference_certification: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Apply the gross/strict dense-reference acceptance policy.
 
@@ -932,6 +1133,47 @@ def restricted_acceptance_policy(
         program["requires_scalable_backend"],
         name="requires_scalable_backend",
     )
+    if dynamics_artifact_reference_certification is None:
+        artifact_reference_ready = False
+        artifact_reference_status = "missing"
+    else:
+        if declared_local_dims is None:
+            raw_artifact_dims = execution.get("local_dims")
+        else:
+            raw_artifact_dims = declared_local_dims
+        if not isinstance(raw_artifact_dims, (list, tuple)) or any(
+            type(dim) is not int or dim < 2 for dim in raw_artifact_dims
+        ):
+            raise ValueError(
+                "declared_local_dims must be exact integers >= 2 for artifact certification"
+            )
+        finite_step_policy = execution.get("finite_step_policy")
+        if not isinstance(finite_step_policy, dict):
+            raise TypeError(
+                "finite_step_policy must be a mapping for artifact certification"
+            )
+        artifact_microstep_count = _normalize_positive_index(
+            finite_step_policy["microstep_count"],
+            name="finite_step_policy.microstep_count",
+        )
+        artifact_finite_step_order = _require_nonempty_text_field(
+            finite_step_policy,
+            "order",
+        )
+        artifact_reference_ready = (
+            validate_mcwf_dynamics_artifact_reference_certification(
+                dynamics_artifact_reference_certification,
+                program=program,
+                local_dims=tuple(int(dim) for dim in raw_artifact_dims),
+                microstep_count=artifact_microstep_count,
+                finite_step_order=artifact_finite_step_order,
+            )
+        )
+        artifact_reference_status = str(
+            dynamics_artifact_reference_certification["status"]
+        )
+        if artifact_reference_status == "passed" and not artifact_reference_ready:
+            artifact_reference_status = "post_execution_integrity_not_verified"
 
     dense_executed = _require_exact_bool(
         certification["executed"], name="executed"
@@ -1032,10 +1274,56 @@ def restricted_acceptance_policy(
             raise ValueError(
                 "certification.readout_model_independent must be true for level records"
             )
+        if (
+            certification_comparison_object
+            == _JOINT_LEVEL_BINARY_COMPARISON_OBJECT
+            and certification_readout_independent is not False
+        ):
+            raise ValueError(
+                "joint level/binary certification must declare readout-model dependence"
+            )
         certification_value = _normalize_unit_interval_metric(
             certification["value"],
             name="certification.value",
         )
+        raw_component_values = certification.get("component_values")
+        if (
+            certification_comparison_object
+            == _JOINT_LEVEL_BINARY_COMPARISON_OBJECT
+        ):
+            if not isinstance(raw_component_values, dict):
+                raise TypeError(
+                    "joint level/binary certification requires component_values"
+                )
+            expected_component_names = {
+                "declared_basis_eigenlabel_tv",
+                "emitted_binary_record_tv",
+            }
+            if set(raw_component_values) != expected_component_names:
+                raise ValueError(
+                    "joint level/binary certification component_values fields "
+                    "must be exact"
+                )
+            certification_component_values = {
+                name: _normalize_unit_interval_metric(
+                    raw_component_values[name],
+                    name=f"certification.component_values.{name}",
+                )
+                for name in sorted(expected_component_names)
+            }
+            if abs(
+                certification_value
+                - max(certification_component_values.values())
+            ) > NUMERICAL_ZERO:
+                raise ValueError(
+                    "joint certification value must equal the maximum component TV"
+                )
+        else:
+            if raw_component_values is not None:
+                raise ValueError(
+                    "non-joint certification cannot carry component_values"
+                )
+            certification_component_values = None
         certification_gate = _normalize_required_nonnegative_real(
             certification["gate"],
             name="certification.gate",
@@ -1075,6 +1363,11 @@ def restricted_acceptance_policy(
             certification,
             "value",
         )
+        if certification.get("component_values") is not None:
+            raise ValueError(
+                "non-metric certification cannot carry component_values"
+            )
+        certification_component_values = None
         certification_gate = _normalize_optional_metric_field(
             certification,
             "gate",
@@ -1188,8 +1481,16 @@ def restricted_acceptance_policy(
                 raise ValueError("Record certification requires a sampling halfwidth")
             if certification_sampling_support_size is None:
                 raise ValueError("Record certification requires a sampling support size")
-            if certification_sampling_method != _RECORD_SAMPLING_CI_METHOD:
-                raise ValueError("Record certification sampling method is not registered")
+            expected_sampling_method = (
+                _JOINT_LEVEL_BINARY_SAMPLING_CI_METHOD
+                if certification_comparison_object
+                == _JOINT_LEVEL_BINARY_COMPARISON_OBJECT
+                else _RECORD_SAMPLING_CI_METHOD
+            )
+            if certification_sampling_method != expected_sampling_method:
+                raise ValueError(
+                    "Record certification sampling method is not registered"
+                )
             if certification_sampling_confidence is None:
                 raise ValueError("Record certification requires sampling confidence")
             if certification_sampling_confidence > _RECORD_SAMPLING_CONFIDENCE:
@@ -1215,12 +1516,23 @@ def restricted_acceptance_policy(
                 raise ValueError(
                     "Record certification sampling support size does not match the execution"
                 )
-            expected_halfwidth = _sampling_tv_halfwidth(
-                sampled=sampled,
-                support_size=certification_sampling_support_size,
-                trajectory_count=normalized_trajectory_count,
-                confidence=certification_sampling_confidence,
-            )
+            if (
+                certification_comparison_object
+                == _JOINT_LEVEL_BINARY_COMPARISON_OBJECT
+            ):
+                expected_halfwidth = _joint_level_binary_sampling_tv_halfwidth(
+                    sampled=sampled,
+                    support_size=certification_sampling_support_size,
+                    trajectory_count=normalized_trajectory_count,
+                    confidence=certification_sampling_confidence,
+                )
+            else:
+                expected_halfwidth = _sampling_tv_halfwidth(
+                    sampled=sampled,
+                    support_size=certification_sampling_support_size,
+                    trajectory_count=normalized_trajectory_count,
+                    confidence=certification_sampling_confidence,
+                )
             if abs(certification_sampling_halfwidth - expected_halfwidth) > NUMERICAL_ZERO:
                 raise ValueError(
                     "Record certification sampling halfwidth does not match its declared inputs"
@@ -1291,7 +1603,8 @@ def restricted_acceptance_policy(
     # already enforced inside the cert.
     sampled_evidence_seed_ok = bool(seed_explicit or not sampled)
     accepted = bool(
-        normalization_invariant_ok
+        artifact_reference_ready
+        and normalization_invariant_ok
         and runtime_mass_residual_within_budget
         and dense_evidence_gross
         and sampled_evidence_seed_ok
@@ -1388,7 +1701,15 @@ def restricted_acceptance_policy(
         accepted = False
 
     blockers: list[str] = []
-    if not normalization_invariant_valid:
+    if not artifact_reference_ready:
+        blockers.append(
+            "dynamics_artifact_reference_certification:"
+            f"{artifact_reference_status}"
+        )
+    if not artifact_reference_ready:
+        certification_status = "rejected"
+        diagnostic_only = False
+    elif not normalization_invariant_valid:
         blockers.append("normalization_invariant_invalid")
     elif not normalization_invariant_ok:
         blockers.append("normalization_invariant_exceeds_gate")
@@ -1453,7 +1774,7 @@ def restricted_acceptance_policy(
         diagnostic_only = False
 
     return {
-        "schema": "error_coupling_simulator.frontend.mcwf_mps_restricted_acceptance_policy.v5",
+        "schema": "error_coupling_simulator.frontend.mcwf_mps_restricted_acceptance_policy.v6",
         "policy_role": "restricted_execution_acceptance_not_metric",
         "execution_status": "completed",
         "certification_status": certification_status,
@@ -1470,6 +1791,11 @@ def restricted_acceptance_policy(
         "accepted_for_production_scalable_backend": False,
         "accepted_as_restricted_overcap_execution": False,
         "blocked_reason": None if accepted else (blockers[0] if blockers else None),
+        "dynamics_artifact_reference_certification": (
+            None
+            if dynamics_artifact_reference_certification is None
+            else dict(dynamics_artifact_reference_certification)
+        ),
         "gross_strict_gate_split": {
             "gross_gate_role": (
                 "restricted_acceptance_gate_catches_gross_disagreement_"
@@ -1490,6 +1816,7 @@ def restricted_acceptance_policy(
             "metric": certification_metric,
             "metric_convention": certification_metric_convention,
             "value": certification_value,
+            "component_values": certification_component_values,
             "gate": certification_gate,
             "gross_gate": certification_gross_gate,
             "choi_trace_distance": certification_choi_trace_distance,
@@ -2035,12 +2362,16 @@ def _evaluator_only_diagnostics(execution: dict[str, Any]) -> dict[str, Any]:
         "evaluator_only_not_emitted_record_or_downstream_estimator_input"
     ):
         raise ValueError("evaluator_only_diagnostics visibility is not registered")
+    if raw.get("level_record_semantics") != _LEVEL_RECORD_SEMANTICS:
+        raise ValueError(
+            "evaluator_only_diagnostics level_record_semantics is not registered"
+        )
     return raw
 
 
 def _carrier_program_measurement_layout(
     program: dict[str, Any] | None,
-) -> tuple[list[str], list[int], int] | None:
+) -> tuple[list[str], list[int], list[str], list[bool], int] | None:
     """Return compiler-sealed measurement layout and site count when available."""
 
     if program is None:
@@ -2062,6 +2393,8 @@ def _carrier_program_measurement_layout(
 
     expected_keys: list[str] = []
     expected_targets: list[int] = []
+    expected_bases: list[str] = []
+    expected_reset_after: list[bool] = []
     for substep_index, substep in enumerate(substeps):
         if not isinstance(substep, dict):
             raise TypeError(
@@ -2101,6 +2434,18 @@ def _carrier_program_measurement_layout(
                 raise ValueError(
                     "carrier-program measurement keys must match targets"
                 )
+            raw_basis = operation_record.get("basis", "Z")
+            if not isinstance(raw_basis, str) or raw_basis not in {"X", "Z"}:
+                raise ValueError(
+                    "carrier-program MCWF measurement basis must be canonical X or Z"
+                )
+            raw_reset_after = operation_record.get(
+                "reset_after_measurement", False
+            )
+            if type(raw_reset_after) is not bool:
+                raise TypeError(
+                    "carrier-program measurement reset_after_measurement must be bool"
+                )
             for target_index, target in enumerate(targets):
                 if target >= num_qubits:
                     raise ValueError(
@@ -2109,7 +2454,51 @@ def _carrier_program_measurement_layout(
                     )
             expected_keys.extend(keys)
             expected_targets.extend(targets)
-    return expected_keys, expected_targets, num_qubits
+            expected_bases.extend([raw_basis] * len(targets))
+            expected_reset_after.extend([raw_reset_after] * len(targets))
+    return (
+        expected_keys,
+        expected_targets,
+        expected_bases,
+        expected_reset_after,
+        num_qubits,
+    )
+
+
+def _certifier_leaked_readout_probability(execution: dict[str, Any]) -> float:
+    """Validate the public readout policy without importing carrier helpers."""
+
+    policy = execution.get("multilevel_measurement_policy")
+    if not isinstance(policy, dict):
+        raise TypeError("multilevel_measurement_policy must be a mapping")
+    if set(policy) != set(_MULTILEVEL_MEASUREMENT_POLICY_FIELDS):
+        missing = sorted(set(_MULTILEVEL_MEASUREMENT_POLICY_FIELDS) - set(policy))
+        extra = sorted(set(policy) - set(_MULTILEVEL_MEASUREMENT_POLICY_FIELDS))
+        raise ValueError(
+            "multilevel_measurement_policy fields must be exact; "
+            f"missing={missing}, extra={extra}"
+        )
+    if policy.get("name") != _MULTILEVEL_MEASUREMENT_POLICY_NAME:
+        raise ValueError("multilevel_measurement_policy name is not registered")
+    if policy.get("bit_mapping") != _MULTILEVEL_MEASUREMENT_BIT_MAPPING:
+        raise ValueError(
+            "multilevel_measurement_policy bit_mapping is not registered"
+        )
+    if _require_exact_bool(
+        policy.get("comparison_outcome_is_metric"),
+        name="multilevel_measurement_policy.comparison_outcome_is_metric",
+    ):
+        raise ValueError(
+            "multilevel_measurement_policy cannot claim a metric outcome"
+        )
+    if policy.get("epistemic_class") != "c":
+        raise ValueError(
+            "multilevel_measurement_policy epistemic_class is not registered"
+        )
+    return _normalize_unit_interval_metric(
+        policy.get("leaked_readout_b"),
+        name="multilevel_measurement_policy.leaked_readout_b",
+    )
 
 
 def _validate_mcwf_measurement_metric_binding(
@@ -2123,6 +2512,19 @@ def _validate_mcwf_measurement_metric_binding(
     """Bind measurement layout/dimensions and prevent metric-family downgrade."""
 
     program_layout = _carrier_program_measurement_layout(program)
+    required_metadata = {
+        "measurement_targets",
+        "measurement_bases",
+        "reset_after",
+        "measurement_basis",
+        "measurement_basis_semantics",
+    }
+    missing_metadata = required_metadata - set(execution)
+    if missing_metadata:
+        raise ValueError(
+            "MCWF execution ordered measurement metadata is missing: "
+            f"{sorted(missing_metadata)}"
+        )
     measurement_targets_raw = execution.get("measurement_targets", ())
     if not isinstance(measurement_targets_raw, (list, tuple)):
         raise TypeError("measurement_targets must be a list or tuple")
@@ -2137,9 +2539,58 @@ def _validate_mcwf_measurement_metric_binding(
         raise ValueError(
             "measurement_keys length must match measurement_targets"
         )
+    measurement_bases_raw = execution["measurement_bases"]
+    if not isinstance(measurement_bases_raw, (list, tuple)):
+        raise TypeError("measurement_bases must be a list or tuple")
+    measurement_bases: list[str] = []
+    for index, value in enumerate(measurement_bases_raw):
+        if not isinstance(value, str):
+            raise TypeError(f"measurement_bases[{index}] must be text")
+        if value not in {"X", "Z"}:
+            raise ValueError(f"measurement_bases[{index}] must be canonical X or Z")
+        measurement_bases.append(value)
+    reset_after_raw = execution["reset_after"]
+    if not isinstance(reset_after_raw, (list, tuple)):
+        raise TypeError("reset_after must be a list or tuple")
+    reset_after: list[bool] = []
+    for index, value in enumerate(reset_after_raw):
+        if type(value) is not bool:
+            raise TypeError(f"reset_after[{index}] must be bool")
+        reset_after.append(value)
+    if not (
+        len(measurement_keys)
+        == len(measurement_targets)
+        == len(measurement_bases)
+        == len(reset_after)
+    ):
+        raise ValueError(
+            "measurement keys, targets, bases, and reset_after must have equal lengths"
+        )
+    if not measurement_bases:
+        expected_basis_summary = "none"
+    elif all(basis == "X" for basis in measurement_bases):
+        expected_basis_summary = "X"
+    elif all(basis == "Z" for basis in measurement_bases):
+        expected_basis_summary = "Z"
+    else:
+        expected_basis_summary = "mixed_pauli"
+    if execution["measurement_basis"] != expected_basis_summary:
+        raise ValueError("measurement_basis summary disagrees with ordered bases")
+    expected_basis_semantics = (
+        "measurement_bases and reset_after are schedule-ordered one-per-Record-column; "
+        "X measurement rotates into Z, projects, then rotates back unless reset prepares |+>"
+    )
+    if execution["measurement_basis_semantics"] != expected_basis_semantics:
+        raise ValueError("measurement_basis_semantics is not registered")
     program_num_qubits: int | None = None
     if program_layout is not None:
-        expected_keys, expected_targets, program_num_qubits = program_layout
+        (
+            expected_keys,
+            expected_targets,
+            expected_bases,
+            expected_reset_after,
+            program_num_qubits,
+        ) = program_layout
         if measurement_keys != expected_keys:
             raise ValueError(
                 "execution measurement keys must match carrier program"
@@ -2147,6 +2598,14 @@ def _validate_mcwf_measurement_metric_binding(
         if measurement_targets != expected_targets:
             raise ValueError(
                 "execution measurement targets must match carrier program"
+            )
+        if measurement_bases != expected_bases:
+            raise ValueError(
+                "execution measurement bases must match carrier program"
+            )
+        if reset_after != expected_reset_after:
+            raise ValueError(
+                "execution measurement reset_after must match carrier program"
             )
     if not measurement_keys:
         return
@@ -2286,8 +2745,9 @@ def _validate_metric_family_execution_payload(
         declared_local_dims=declared_local_dims,
         program=program,
     )
+    binary_record_support_size = 0
     if sampled and measurement_keys:
-        _validate_sampled_binary_record_payload(
+        binary_record_support_size = _validate_sampled_binary_record_payload(
             execution,
             trajectory_count=trajectory_count,
         )
@@ -2300,6 +2760,7 @@ def _validate_metric_family_execution_payload(
             raise ValueError(
                 "exact level-record probability payload is not registered for MCWF"
             )
+        _certifier_leaked_readout_probability(execution)
         level_records = _normalize_record_matrix(
             level_records_raw,
             name="level_records",
@@ -2340,8 +2801,8 @@ def _validate_metric_family_execution_payload(
             measurement_keys=measurement_keys,
         )
         return (
-            "level_record_populations",
-            len(level_records),
+            _JOINT_LEVEL_BINARY_COMPARISON_OBJECT,
+            max(len(level_records), binary_record_support_size),
             support_upper_bound,
         )
 
@@ -2497,6 +2958,34 @@ def _sampling_tv_halfwidth(
         return 0.0
     alpha = max(1.0e-12, 1.0 - float(confidence))
     per_bin = math.sqrt(math.log(2.0 / alpha) / (2.0 * float(trajectory_count)))
+    return float(0.5 * int(support_size) * per_bin)
+
+
+def _joint_level_binary_sampling_tv_halfwidth(
+    *,
+    sampled: bool,
+    support_size: int,
+    trajectory_count: int,
+    confidence: float,
+) -> float:
+    """Family-wise TV allowance for two histograms without independence."""
+
+    if not sampled:
+        return 0.0
+    if type(support_size) is not int or support_size <= 0:
+        raise ValueError("joint sampling support_size must be a positive integer")
+    if type(trajectory_count) is not int or trajectory_count <= 0:
+        raise ValueError(
+            "joint sampling trajectory_count must be a positive integer"
+        )
+    alpha_total = max(1.0e-12, 1.0 - float(confidence))
+    # Bonferroni over two component TVs and at most support_size bins per
+    # component. No statistical independence between the two histograms is
+    # assumed or required.
+    per_bin = math.sqrt(
+        math.log(4.0 * float(support_size) / alpha_total)
+        / (2.0 * float(trajectory_count))
+    )
     return float(0.5 * int(support_size) * per_bin)
 
 
@@ -2707,6 +3196,785 @@ class _ChannelNotDenseCheckable(Exception):
     "passed")."""
 
 
+def _mcwf_artifact_numpy(value: Any):
+    import numpy as np
+
+    try:
+        array = value.detach().cpu().numpy()
+    except (AttributeError, RuntimeError, TypeError, ValueError) as exc:
+        raise TypeError("MCWF dynamics artifact must be a tensor-like matrix") from exc
+    return np.asarray(array, dtype=np.complex128)
+
+
+def _mcwf_mixed_radix_levels(index: int, dims: tuple[int, ...]) -> tuple[int, ...]:
+    levels = [0] * len(dims)
+    remaining = int(index)
+    for position in range(len(dims) - 1, -1, -1):
+        levels[position] = remaining % int(dims[position])
+        remaining //= int(dims[position])
+    return tuple(levels)
+
+
+def _mcwf_mixed_radix_index(levels: tuple[int, ...], dims: tuple[int, ...]) -> int:
+    index = 0
+    for level, dim in zip(levels, dims, strict=True):
+        index = index * int(dim) + int(level)
+    return int(index)
+
+
+def _mcwf_reference_lift_to_cluster(
+    operator_matrix: Any,
+    *,
+    term_support: tuple[int, ...],
+    cluster_support: tuple[int, ...],
+    local_dims: tuple[int, ...],
+):
+    """Independently lift a term matrix without production embedding helpers."""
+
+    import numpy as np
+
+    cluster_dims = tuple(int(local_dims[q]) for q in cluster_support)
+    term_dims = tuple(int(local_dims[q]) for q in term_support)
+    term_positions = tuple(cluster_support.index(q) for q in term_support)
+    untouched_positions = tuple(
+        position
+        for position in range(len(cluster_support))
+        if position not in term_positions
+    )
+    cluster_dim = math.prod(cluster_dims)
+    source = np.asarray(operator_matrix, dtype=np.complex128)
+    if source.shape != (math.prod(term_dims), math.prod(term_dims)):
+        raise ValueError("reference term shape does not match declared support dimensions")
+    out = np.zeros((cluster_dim, cluster_dim), dtype=np.complex128)
+    cluster_levels = tuple(
+        _mcwf_mixed_radix_levels(index, cluster_dims)
+        for index in range(cluster_dim)
+    )
+    for row, row_levels in enumerate(cluster_levels):
+        term_row = _mcwf_mixed_radix_index(
+            tuple(row_levels[position] for position in term_positions),
+            term_dims,
+        )
+        for column, column_levels in enumerate(cluster_levels):
+            if any(
+                row_levels[position] != column_levels[position]
+                for position in untouched_positions
+            ):
+                continue
+            term_column = _mcwf_mixed_radix_index(
+                tuple(column_levels[position] for position in term_positions),
+                term_dims,
+            )
+            out[row, column] = source[term_row, term_column]
+    return out
+
+
+def _mcwf_reference_hamiltonian_groups(
+    term_records: tuple[dict[str, Any], ...],
+    *,
+    local_dims: tuple[int, ...],
+    dt_ns: float,
+    substep_id: str,
+) -> tuple[dict[str, Any], ...]:
+    """Independently compose connected-cluster reference unitaries."""
+
+    import numpy as np
+    from scipy.linalg import expm
+
+    remaining = set(range(len(term_records)))
+    clusters: list[list[int]] = []
+    for start in range(len(term_records)):
+        if start not in remaining:
+            continue
+        remaining.remove(start)
+        members: list[int] = []
+        frontier = [start]
+        while frontier:
+            member = frontier.pop(0)
+            members.append(member)
+            support = set(term_records[member]["support"])
+            connected = sorted(
+                candidate
+                for candidate in remaining
+                if support.intersection(term_records[candidate]["support"])
+            )
+            for candidate in connected:
+                remaining.remove(candidate)
+                frontier.append(candidate)
+        clusters.append(sorted(members))
+
+    out: list[dict[str, Any]] = []
+    for member_indices in clusters:
+        members = tuple(term_records[index] for index in member_indices)
+        cluster_support = tuple(
+            sorted({site for record in members for site in record["support"]})
+        )
+        cluster_dim = math.prod(int(local_dims[q]) for q in cluster_support)
+        h_cluster = np.zeros((cluster_dim, cluster_dim), dtype=np.complex128)
+        for record in members:
+            h_cluster = h_cluster + _mcwf_reference_lift_to_cluster(
+                record["reference"],
+                term_support=record["support"],
+                cluster_support=cluster_support,
+                local_dims=local_dims,
+            )
+        h_cluster = 0.5 * (h_cluster + h_cluster.conj().T)
+        term_indices = tuple(record["term_index"] for record in members)
+        families = tuple(record["family"] for record in members)
+        member_supports = tuple(record["support"] for record in members)
+        out.append(
+            {
+                "support": cluster_support,
+                "term_index": min(term_indices),
+                "term": {
+                    "kind": "hamiltonian",
+                    "support": list(cluster_support),
+                    "operator_family": (
+                        "H_CLUSTER[" + "+".join(families) + "]"
+                    ),
+                    "coefficient": None,
+                    "coefficient_source": (
+                        "connected_support_cluster_hamiltonian_sum"
+                    ),
+                    "provenance": {
+                        "substep_id": str(substep_id),
+                        "families": list(families),
+                        "term_indices": list(term_indices),
+                        "member_supports": [
+                            list(support) for support in member_supports
+                        ],
+                        "cluster_support": list(cluster_support),
+                        "grouping_policy": (
+                            "connected_support_cluster_summed_before_matrix_exp"
+                        ),
+                    },
+                    "epistemic_class": "a/c",
+                },
+                "gate": expm((-1.0j * float(dt_ns)) * h_cluster),
+            }
+        )
+    return tuple(out)
+
+
+def _mcwf_sha256_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _mcwf_reference_source_hashes() -> dict[str, str]:
+    package_root = Path(__file__).resolve().parents[1]
+    return {
+        "reference_operator_source_sha256": _mcwf_sha256_file(
+            Path(__file__).with_name("mcwf_operator_reference.py")
+        ),
+        "reference_certification_source_sha256": _mcwf_sha256_file(
+            Path(__file__)
+        ),
+        "carrier_operator_source_sha256": _mcwf_sha256_file(
+            package_root / "frontend" / "axis1_mcwf_mps_execution.py"
+        ),
+        "carrier_control_generator_source_sha256": _mcwf_sha256_file(
+            package_root / "frontend" / "axis1_ideal_controls.py"
+        ),
+        "carrier_selection_source_sha256": _mcwf_sha256_file(
+            package_root / "frontend" / "axis1_selection.py"
+        ),
+    }
+
+
+def _mcwf_reference_dynamics_artifacts_content_hash(
+    program: dict[str, Any],
+    dynamics_artifacts: tuple[dict[str, Any], ...],
+    *,
+    local_dims: tuple[int, ...],
+    microstep_count: int,
+    finite_step_order: str,
+) -> str:
+    """Independently hash the exact metadata and matrices certified below."""
+
+    import numpy as np
+
+    digest = hashlib.sha256()
+    digest.update(
+        json.dumps(
+            {
+                "carrier_program_content_hash": program.get("content_hash"),
+                "local_dims": list(local_dims),
+                "microstep_count": int(microstep_count),
+                "finite_step_order": str(finite_step_order),
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    )
+
+    def _update_matrix(label: str, value: Any) -> None:
+        array = np.ascontiguousarray(
+            _mcwf_artifact_numpy(value),
+            dtype=np.complex128,
+        )
+        digest.update(label.encode("utf-8"))
+        digest.update(str(array.shape).encode("ascii"))
+        digest.update(array.tobytes(order="C"))
+
+    for artifact in dynamics_artifacts:
+        digest.update(
+            json.dumps(
+                {
+                    "substep_index": artifact["substep_index"],
+                    "substep_id": artifact["substep_id"],
+                    "microstep_dt_ns": artifact["microstep_dt_ns"],
+                    "hamiltonian_dt_ns": artifact["hamiltonian_dt_ns"],
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode("utf-8")
+        )
+        for record in artifact["hamiltonian_terms"]:
+            digest.update(
+                json.dumps(
+                    {
+                        "kind": "hamiltonian",
+                        "term_index": record["term_index"],
+                        "support": list(record["support"]),
+                        "family": record["family"],
+                    },
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ).encode("utf-8")
+            )
+            _update_matrix("hamiltonian", record["hamiltonian"])
+        for record in artifact["collapse_terms"]:
+            digest.update(
+                json.dumps(
+                    {
+                        "kind": "collapse",
+                        "term_index": record["term_index"],
+                        "support": list(record["support"]),
+                        "family": record["family"],
+                        "coefficient": record["coefficient"],
+                    },
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ).encode("utf-8")
+            )
+            _update_matrix("collapse", record["operator"])
+        for record in artifact["hamiltonian_groups"]:
+            digest.update(
+                json.dumps(
+                    {
+                        "kind": "hamiltonian_group",
+                        "support": list(record["support"]),
+                        "term_index": record["term_index"],
+                        "term": record["term"],
+                    },
+                    sort_keys=True,
+                    separators=(",", ":"),
+                    allow_nan=False,
+                ).encode("utf-8")
+            )
+            _update_matrix("hamiltonian_group", record["gate"])
+    return digest.hexdigest()
+
+
+def _mcwf_reference_packet_content_hash(payload: dict[str, Any]) -> str:
+    canonical = dict(payload)
+    canonical.pop("content_hash", None)
+    return hashlib.sha256(
+        json.dumps(
+            canonical,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=True,
+            allow_nan=False,
+        ).encode("utf-8")
+    ).hexdigest()
+
+
+def _mcwf_declared_dynamics_counts(
+    program: dict[str, Any],
+) -> tuple[int, int, int]:
+    raw_program = program.get("program")
+    if raw_program is None:
+        return 0, 0, 0
+    if not isinstance(raw_program, dict):
+        raise TypeError("carrier program payload must be a mapping")
+    substeps = raw_program.get("substeps")
+    if not isinstance(substeps, (list, tuple)):
+        raise TypeError("carrier program substeps must be a sequence")
+    hamiltonian_count = 0
+    collapse_count = 0
+    for substep in substeps:
+        if not isinstance(substep, dict):
+            raise TypeError("carrier program substep must be a mapping")
+        for term in substep.get("terms", ()):
+            kind = str(term.get("kind", ""))
+            if kind == "hamiltonian":
+                hamiltonian_count += 1
+            elif kind == "collapse":
+                collapse_count += 1
+    return len(substeps), hamiltonian_count, collapse_count
+
+
+def mcwf_dynamics_artifact_reference_certification(
+    program: dict[str, Any],
+    *,
+    dynamics_artifacts: tuple[dict[str, Any], ...] | None,
+    dynamics_artifact_content_hash: str | None,
+    local_dims: tuple[int, ...],
+    microstep_count: int,
+    finite_step_order: str,
+    post_execution_integrity_verified: bool,
+    not_executed_reason: str | None = None,
+) -> dict[str, Any]:
+    """Build the public, source-bound certification of frozen runtime artifacts."""
+
+    substep_count, hamiltonian_count, collapse_count = (
+        _mcwf_declared_dynamics_counts(program)
+    )
+    executed = dynamics_artifacts is not None
+    if executed:
+        failure = _mcwf_dynamics_artifact_reference_failure(
+            program,
+            dynamics_artifacts=dynamics_artifacts,
+            local_dims=local_dims,
+            microstep_count=microstep_count,
+            finite_step_order=finite_step_order,
+        )
+        reason = failure
+        group_count = sum(
+            len(artifact.get("hamiltonian_groups", ()))
+            for artifact in dynamics_artifacts
+            if isinstance(artifact, dict)
+        )
+    else:
+        reason = str(not_executed_reason or "reference_validation_not_executed")
+        group_count = 0
+    if executed:
+        supplied_artifact_hash = str(dynamics_artifact_content_hash or "")
+        if len(supplied_artifact_hash) != 64 or any(
+            char not in "0123456789abcdef" for char in supplied_artifact_hash
+        ):
+            raise ValueError(
+                "executed artifact certification requires a sha256 content hash"
+            )
+        artifact_hash = supplied_artifact_hash
+        if reason is None:
+            try:
+                artifact_hash = _mcwf_reference_dynamics_artifacts_content_hash(
+                    program,
+                    dynamics_artifacts,
+                    local_dims=local_dims,
+                    microstep_count=microstep_count,
+                    finite_step_order=finite_step_order,
+                )
+            except Exception as exc:
+                reason = (
+                    "mcwf_dynamics_artifact_content_hash_unavailable:"
+                    f"{type(exc).__name__}"
+                )
+            else:
+                if supplied_artifact_hash != artifact_hash:
+                    reason = "mcwf_dynamics_artifact_content_hash_mismatch"
+    else:
+        if dynamics_artifact_content_hash is not None:
+            raise ValueError(
+                "non-executed artifact certification cannot carry an artifact hash"
+            )
+        artifact_hash = None
+    passed = bool(executed and reason is None)
+    post_integrity = bool(post_execution_integrity_verified)
+    if post_integrity and not passed:
+        raise ValueError(
+            "post-execution artifact integrity cannot pass before reference validation"
+        )
+    payload: dict[str, Any] = {
+        "schema": MCWF_DYNAMICS_ARTIFACT_REFERENCE_CERTIFICATION_SCHEMA,
+        "executed": bool(executed),
+        "passed": passed,
+        "status": (
+            "passed" if passed else "failed" if executed else "not_evaluated"
+        ),
+        "reason": reason,
+        "dynamics_artifact_content_hash": artifact_hash,
+        "carrier_program_content_hash": str(program.get("content_hash", "")),
+        "local_dims": [int(dim) for dim in local_dims],
+        "microstep_count": int(microstep_count),
+        "finite_step_order": str(finite_step_order),
+        "substep_count": int(substep_count),
+        "hamiltonian_term_count": int(hamiltonian_count),
+        "hamiltonian_group_count": int(group_count),
+        "collapse_term_count": int(collapse_count),
+        "all_substeps_covered": passed,
+        "all_terms_covered": passed,
+        "all_groups_covered": passed,
+        "reference_oracle": (
+            "certifier_local_hand_typed_numpy_operators_and_scipy_group_expm"
+        ),
+        **_mcwf_reference_source_hashes(),
+        "reference_independent_of_carrier_operator_builders": True,
+        "artifacts_bound_before_execution": passed,
+        "post_execution_integrity_verified": post_integrity,
+        "structural_zero_policy": (
+            "reference_declared_structural_zeros_must_be_exact_zero"
+        ),
+        "operator_reference_tolerance": float(NUMERICAL_ZERO),
+        "group_gate_reference_tolerance": float(
+            _MCWF_GROUP_GATE_REFERENCE_TOLERANCE
+        ),
+        "comparison_outcome_is_metric": False,
+        "epistemic_class": "a/c",
+    }
+    payload["content_hash"] = _mcwf_reference_packet_content_hash(payload)
+    return payload
+
+
+def validate_mcwf_dynamics_artifact_reference_certification(
+    certification: dict[str, Any],
+    *,
+    program: dict[str, Any],
+    local_dims: tuple[int, ...],
+    microstep_count: int,
+    finite_step_order: str,
+) -> bool:
+    """Validate a packet and return whether it is ready for restricted acceptance."""
+
+    if not isinstance(certification, dict):
+        raise TypeError("dynamics artifact reference certification must be a mapping")
+    if set(certification) != set(
+        _MCWF_DYNAMICS_ARTIFACT_REFERENCE_CERTIFICATION_FIELDS
+    ):
+        raise ValueError(
+            "dynamics artifact reference certification fields must be exact"
+        )
+    if certification["schema"] != (
+        MCWF_DYNAMICS_ARTIFACT_REFERENCE_CERTIFICATION_SCHEMA
+    ):
+        raise ValueError("dynamics artifact reference certification schema is stale")
+    if certification["content_hash"] != _mcwf_reference_packet_content_hash(
+        certification
+    ):
+        raise ValueError(
+            "dynamics artifact reference certification content hash is invalid"
+        )
+    executed = certification["executed"]
+    passed = certification["passed"]
+    post_integrity = certification["post_execution_integrity_verified"]
+    for field, value in (
+        ("executed", executed),
+        ("passed", passed),
+        ("all_substeps_covered", certification["all_substeps_covered"]),
+        ("all_terms_covered", certification["all_terms_covered"]),
+        ("all_groups_covered", certification["all_groups_covered"]),
+        (
+            "reference_independent_of_carrier_operator_builders",
+            certification["reference_independent_of_carrier_operator_builders"],
+        ),
+        (
+            "artifacts_bound_before_execution",
+            certification["artifacts_bound_before_execution"],
+        ),
+        ("post_execution_integrity_verified", post_integrity),
+        ("comparison_outcome_is_metric", certification["comparison_outcome_is_metric"]),
+    ):
+        if type(value) is not bool:
+            raise TypeError(f"dynamics artifact certification {field} must be bool")
+    expected_status = (
+        "passed" if passed else "failed" if executed else "not_evaluated"
+    )
+    if certification["status"] != expected_status:
+        raise ValueError("dynamics artifact certification status is inconsistent")
+    reason = certification["reason"]
+    if passed:
+        if not executed or reason is not None:
+            raise ValueError("passing artifact certification state is inconsistent")
+    elif not isinstance(reason, str) or not reason:
+        raise ValueError("non-passing artifact certification requires a reason")
+    artifact_hash = certification["dynamics_artifact_content_hash"]
+    if executed:
+        if not isinstance(artifact_hash, str) or len(artifact_hash) != 64 or any(
+            char not in "0123456789abcdef" for char in artifact_hash
+        ):
+            raise ValueError("executed artifact certification hash is invalid")
+    elif artifact_hash is not None:
+        raise ValueError("non-executed artifact certification hash must be None")
+    program_hash = str(program.get("content_hash", ""))
+    if len(program_hash) != 64 or any(
+        char not in "0123456789abcdef" for char in program_hash
+    ):
+        raise ValueError("carrier program content hash must be sha256")
+    if certification["carrier_program_content_hash"] != program_hash:
+        raise ValueError("artifact certification carrier program hash is stale")
+    if certification["local_dims"] != [int(dim) for dim in local_dims]:
+        raise ValueError("artifact certification local_dims are stale")
+    if certification["microstep_count"] != int(microstep_count):
+        raise ValueError("artifact certification microstep_count is stale")
+    if certification["finite_step_order"] != str(finite_step_order):
+        raise ValueError("artifact certification finite_step_order is stale")
+    substep_count, hamiltonian_count, collapse_count = (
+        _mcwf_declared_dynamics_counts(program)
+    )
+    for field, expected in (
+        ("substep_count", substep_count),
+        ("hamiltonian_term_count", hamiltonian_count),
+        ("collapse_term_count", collapse_count),
+    ):
+        actual = certification[field]
+        if type(actual) is not int or actual != int(expected):
+            raise ValueError(f"artifact certification {field} is stale")
+    group_count = certification["hamiltonian_group_count"]
+    if type(group_count) is not int or group_count < 0:
+        raise ValueError("artifact certification group count is invalid")
+    expected_static = {
+        "reference_oracle": (
+            "certifier_local_hand_typed_numpy_operators_and_scipy_group_expm"
+        ),
+        **_mcwf_reference_source_hashes(),
+        "reference_independent_of_carrier_operator_builders": True,
+        "structural_zero_policy": (
+            "reference_declared_structural_zeros_must_be_exact_zero"
+        ),
+        "operator_reference_tolerance": float(NUMERICAL_ZERO),
+        "group_gate_reference_tolerance": float(
+            _MCWF_GROUP_GATE_REFERENCE_TOLERANCE
+        ),
+        "comparison_outcome_is_metric": False,
+        "epistemic_class": "a/c",
+    }
+    for field, expected in expected_static.items():
+        if certification[field] != expected or type(certification[field]) is not type(
+            expected
+        ):
+            raise ValueError(f"artifact certification {field} is not current")
+    coverage_ready = all(
+        certification[field]
+        for field in (
+            "all_substeps_covered",
+            "all_terms_covered",
+            "all_groups_covered",
+            "reference_independent_of_carrier_operator_builders",
+            "artifacts_bound_before_execution",
+        )
+    )
+    if passed != bool(coverage_ready):
+        raise ValueError("artifact certification coverage state is inconsistent")
+    if post_integrity and not passed:
+        raise ValueError("post-execution integrity cannot pass a failed reference")
+    return bool(passed and coverage_ready and post_integrity)
+
+
+def _mcwf_dynamics_artifact_reference_failure(
+    program: dict[str, Any],
+    *,
+    dynamics_artifacts: tuple[dict[str, Any], ...],
+    local_dims: tuple[int, ...],
+    microstep_count: int,
+    finite_step_order: str,
+) -> str | None:
+    """Validate the exact frozen artifacts before any trajectory consumes them."""
+
+    import numpy as np
+
+    substeps = program.get("program", {}).get("substeps")
+    if not isinstance(substeps, (list, tuple)):
+        return "mcwf_dynamics_artifact_unavailable:carrier_program_substeps"
+    if not isinstance(dynamics_artifacts, (list, tuple)):
+        return "mcwf_dynamics_artifact_unavailable:artifact_sequence"
+    if len(dynamics_artifacts) != len(substeps):
+        return "mcwf_dynamics_artifact_coverage_mismatch:substeps"
+    if type(microstep_count) is not int or microstep_count < 1:
+        return "mcwf_dynamics_artifact_unavailable:microstep_count"
+    if finite_step_order not in {"first_order", "strang_second_order"}:
+        return "mcwf_dynamics_artifact_unavailable:finite_step_order"
+
+    for substep_index, (substep, artifact) in enumerate(
+        zip(substeps, dynamics_artifacts, strict=True)
+    ):
+        if not isinstance(artifact, dict):
+            return "mcwf_dynamics_artifact_unavailable:substep_artifact"
+        substep_id = str(substep.get("substep_id", ""))
+        if artifact.get("substep_index") != substep_index:
+            return f"mcwf_dynamics_artifact_metadata_mismatch:substep_index:{substep_id}"
+        if artifact.get("substep_id") != substep_id:
+            return f"mcwf_dynamics_artifact_metadata_mismatch:substep_id:{substep_id}"
+
+        expected_microstep_dt = (
+            0.0
+            if substep.get("dt_ns") is None
+            else float(substep["dt_ns"]) / float(microstep_count)
+        )
+        hamiltonian_terms = tuple(
+            (term_index, term)
+            for term_index, term in enumerate(substep.get("terms", ()))
+            if str(term.get("kind", "")) == "hamiltonian"
+        )
+        expected_hamiltonian_dt = (
+            0.5 * expected_microstep_dt
+            if hamiltonian_terms and finite_step_order == "strang_second_order"
+            else expected_microstep_dt if hamiltonian_terms else 0.0
+        )
+        if artifact.get("microstep_dt_ns") != expected_microstep_dt:
+            return f"mcwf_dynamics_artifact_metadata_mismatch:microstep_dt:{substep_id}"
+        if artifact.get("hamiltonian_dt_ns") != expected_hamiltonian_dt:
+            return f"mcwf_dynamics_artifact_metadata_mismatch:hamiltonian_dt:{substep_id}"
+
+        actual_hamiltonian_records = artifact.get("hamiltonian_terms")
+        if not isinstance(actual_hamiltonian_records, (list, tuple)):
+            return f"mcwf_dynamics_artifact_unavailable:hamiltonian_terms:{substep_id}"
+        if len(actual_hamiltonian_records) != len(hamiltonian_terms):
+            return f"mcwf_dynamics_artifact_coverage_mismatch:hamiltonian:{substep_id}"
+        reference_hamiltonian_records: list[dict[str, Any]] = []
+        for (term_index, term), record in zip(
+            hamiltonian_terms,
+            actual_hamiltonian_records,
+            strict=True,
+        ):
+            family = str(term.get("operator_family", "")).upper()
+            support = tuple(int(q) for q in term.get("support", ()))
+            if not isinstance(record, dict):
+                return f"mcwf_dynamics_artifact_unavailable:hamiltonian_record:{family}"
+            if (
+                record.get("term_index") != term_index
+                or tuple(record.get("support", ())) != support
+                or record.get("family") != family
+            ):
+                return f"mcwf_dynamics_artifact_metadata_mismatch:hamiltonian:{family}"
+            try:
+                actual = _mcwf_artifact_numpy(record.get("hamiltonian"))
+                expected = reference_hamiltonian_matrix_for_term(
+                    term,
+                    support=support,
+                    local_dims=local_dims,
+                )
+                structural_zero_mask = reference_structural_zero_mask_for_term(
+                    term,
+                    support=support,
+                    local_dims=local_dims,
+                )
+            except Exception as exc:
+                return (
+                    f"mcwf_dynamics_artifact_unavailable:hamiltonian:{family}:"
+                    f"{type(exc).__name__}"
+                )
+            if actual.shape != expected.shape:
+                return f"mcwf_dynamics_artifact_shape_mismatch:hamiltonian:{family}"
+            if not np.all(np.isfinite(actual)) or not np.all(np.isfinite(expected)):
+                return f"mcwf_dynamics_artifact_nonfinite:hamiltonian:{family}"
+            if np.any(actual[structural_zero_mask] != 0.0):
+                return (
+                    "mcwf_dynamics_artifact_structural_zero_mismatch:"
+                    f"hamiltonian:{family}"
+                )
+            if float(np.max(np.abs(actual - expected), initial=0.0)) > NUMERICAL_ZERO:
+                return f"mcwf_dynamics_artifact_operator_mismatch:hamiltonian:{family}"
+            reference_hamiltonian_records.append(
+                {
+                    "term_index": int(term_index),
+                    "support": support,
+                    "family": family,
+                    "reference": expected,
+                }
+            )
+
+        collapse_terms = tuple(
+            (term_index, term)
+            for term_index, term in enumerate(substep.get("terms", ()))
+            if str(term.get("kind", "")) == "collapse"
+        )
+        actual_collapse_records = artifact.get("collapse_terms")
+        if not isinstance(actual_collapse_records, (list, tuple)):
+            return f"mcwf_dynamics_artifact_unavailable:collapse_terms:{substep_id}"
+        if len(actual_collapse_records) != len(collapse_terms):
+            return f"mcwf_dynamics_artifact_coverage_mismatch:collapse:{substep_id}"
+        for (term_index, term), record in zip(
+            collapse_terms,
+            actual_collapse_records,
+            strict=True,
+        ):
+            family = str(term.get("operator_family", "")).upper()
+            support = tuple(int(q) for q in term.get("support", ()))
+            if not isinstance(record, dict):
+                return f"mcwf_dynamics_artifact_unavailable:collapse_record:{family}"
+            if (
+                record.get("term_index") != term_index
+                or tuple(record.get("support", ())) != support
+                or record.get("family") != family
+                or record.get("coefficient") != float(term["coefficient"])
+            ):
+                return f"mcwf_dynamics_artifact_metadata_mismatch:collapse:{family}"
+            try:
+                actual = _mcwf_artifact_numpy(record.get("operator"))
+                expected = reference_collapse_operator_for_term(
+                    term,
+                    support=support,
+                    local_dims=local_dims,
+                )
+                structural_zero_mask = reference_structural_zero_mask_for_term(
+                    term,
+                    support=support,
+                    local_dims=local_dims,
+                )
+            except Exception as exc:
+                return (
+                    f"mcwf_dynamics_artifact_unavailable:collapse:{family}:"
+                    f"{type(exc).__name__}"
+                )
+            if actual.shape != expected.shape:
+                return f"mcwf_dynamics_artifact_shape_mismatch:collapse:{family}"
+            if not np.all(np.isfinite(actual)) or not np.all(np.isfinite(expected)):
+                return f"mcwf_dynamics_artifact_nonfinite:collapse:{family}"
+            if np.any(actual[structural_zero_mask] != 0.0):
+                return f"mcwf_dynamics_artifact_structural_zero_mismatch:collapse:{family}"
+            if float(np.max(np.abs(actual - expected), initial=0.0)) > NUMERICAL_ZERO:
+                return f"mcwf_dynamics_artifact_operator_mismatch:collapse:{family}"
+
+        actual_groups = artifact.get("hamiltonian_groups")
+        if not isinstance(actual_groups, (list, tuple)):
+            return f"mcwf_dynamics_artifact_unavailable:hamiltonian_groups:{substep_id}"
+        try:
+            expected_groups = _mcwf_reference_hamiltonian_groups(
+                tuple(reference_hamiltonian_records),
+                local_dims=local_dims,
+                dt_ns=expected_hamiltonian_dt,
+                substep_id=substep_id,
+            )
+        except Exception as exc:
+            return (
+                f"mcwf_dynamics_artifact_unavailable:hamiltonian_groups:{substep_id}:"
+                f"{type(exc).__name__}"
+            )
+        if len(actual_groups) != len(expected_groups):
+            return f"mcwf_dynamics_artifact_group_coverage_mismatch:{substep_id}"
+        for actual_group, expected_group in zip(actual_groups, expected_groups, strict=True):
+            if not isinstance(actual_group, dict):
+                return f"mcwf_dynamics_artifact_unavailable:hamiltonian_group:{substep_id}"
+            if (
+                set(actual_group) != {"support", "gate", "term_index", "term"}
+                or tuple(actual_group.get("support", ()))
+                != expected_group["support"]
+                or actual_group.get("term_index") != expected_group["term_index"]
+                or actual_group.get("term") != expected_group["term"]
+            ):
+                return f"mcwf_dynamics_artifact_group_metadata_mismatch:{substep_id}"
+            try:
+                actual_gate = _mcwf_artifact_numpy(actual_group.get("gate"))
+            except Exception as exc:
+                return (
+                    f"mcwf_dynamics_artifact_unavailable:hamiltonian_group:{substep_id}:"
+                    f"{type(exc).__name__}"
+                )
+            expected_gate = expected_group["gate"]
+            if actual_gate.shape != expected_gate.shape:
+                return f"mcwf_dynamics_artifact_group_shape_mismatch:{substep_id}"
+            if not np.all(np.isfinite(actual_gate)) or not np.all(np.isfinite(expected_gate)):
+                return f"mcwf_dynamics_artifact_group_nonfinite:{substep_id}"
+            if (
+                float(np.max(np.abs(actual_gate - expected_gate), initial=0.0))
+                > _MCWF_GROUP_GATE_REFERENCE_TOLERANCE
+            ):
+                return f"mcwf_dynamics_artifact_group_mismatch:{substep_id}"
+    return None
+
+
 def _build_carrier_channel_window(
     schedule: Any,
     execution: dict[str, Any],
@@ -2719,10 +3987,11 @@ def _build_carrier_channel_window(
     connected-cluster joint-Hamiltonian gate) AND the INDEPENDENT oracle Kraus
     ``assemble_substep_channel(H_list, c_list, dt)`` for the ONE channel-checkable substep.
 
-    Reuses the carrier's OWN term->operator builders so the cert checks the carrier's actual
-    dynamics, but the ORACLE is the sum-all joint ``expm(L dt)`` -- NEVER the carrier's
-    grouping. Raises ``_ChannelNotDenseCheckable`` when the schedule is not a single small
-    Hamiltonian+collapse substep.
+    The carrier superoperator uses the production grouping and term builders, while the
+    oracle operators come from certifier-local hand-typed NumPy definitions before the
+    sum-all joint ``expm(L dt)``. Thus neither the operator source nor the grouping is shared
+    across the comparison. Raises ``_ChannelNotDenseCheckable`` when the schedule is not a
+    single small Hamiltonian+collapse substep.
 
     This path requires CUDA because it calls ``assemble_substep_channel`` and
     the carrier's torch helpers.
@@ -2797,7 +4066,7 @@ def _build_carrier_channel_window(
 def _make_lift_fn(window_qubits, local_dims, dim):
     """Return a closure that lifts a |op_support|-site operator to the window via kron with
     identities, then permutes legs into window order (mirrors the carrier's own lift logic).
-    Shared by the channel-window builder AND the level-population oracle."""
+    Shared by the channel-window builder and declared-basis eigenlabel oracle."""
     import numpy as np
 
     def _lift(op_small, op_support):
@@ -2827,25 +4096,16 @@ def _make_lift_fn(window_qubits, local_dims, dim):
 def _window_oracle_operators(
     substep, window_qubits, local_dims, dt_ns, lift_fn, *, device: str
 ):
-    """Build the INDEPENDENT oracle ``(H_list, c_list)`` on the window for one dynamics
-    substep from the per-term PHYSICS DEFINITIONS — ``_hamiltonian_matrix_for_term`` per
-    Hamiltonian term, ``_collapse_operator`` per collapse term — each lifted to the window.
-    The oracle sum-alls these into ONE ``expm(L dt)`` (``assemble_substep_channel``).
+    """Build the independent ``(H_list, c_list)`` for one dynamics window.
 
-    ANTI-CIRCULAR (FAITHFULNESS rule I): the oracle is built from the per-term operators,
-    NOT from ``_hamiltonian_group_gates`` (the carrier's GROUPING, which is the object under
-    test). A wrong / no-op / mis-grouped carrier Hamiltonian is therefore CAUGHT — the
-    earlier ``H_cluster = (i/dt) logm(carrier gate)`` form derived the oracle FROM the
-    carrier's own gates, so a broken grouping would have produced a matching broken oracle
-    (a false pass). ``_hamiltonian_matrix_for_term`` is the per-term builder, independently
-    certified correct vs hand-typed literature references (round-2 cert 2/6); only the
-    GROUPING is under test here, not the per-term physics."""
+    Every small operator comes from the certifier-local hand-typed NumPy
+    definitions in :mod:`mcwf_operator_reference`.  This path imports neither
+    the production term builders nor the carrier grouping helpers.  It therefore
+    fails differently when either production operator construction or grouping
+    is corrupted, before ``assemble_substep_channel`` supplies the independent
+    grouping/propagation reference.
+    """
     import torch
-
-    from ..frontend.axis1_mcwf_mps_execution import (
-        _collapse_operator,
-        _hamiltonian_matrix_for_term,
-    )
 
     H_list = []
     c_list = []
@@ -2853,15 +4113,21 @@ def _window_oracle_operators(
         kind = str(term["kind"])
         if kind == "hamiltonian":
             support = tuple(int(q) for q in term["support"])
-            H_small = _hamiltonian_matrix_for_term(
-                term, support=support, local_dims=local_dims, device=device
+            H_small = reference_hamiltonian_matrix_for_term(
+                term,
+                support=support,
+                local_dims=tuple(int(d) for d in local_dims),
             )
-            H_full = lift_fn(H_small.detach().cpu().numpy(), support)
+            H_full = lift_fn(H_small, support)
             H_list.append(torch.as_tensor(H_full, dtype=torch.complex128, device=device))
         elif kind == "collapse" and abs(float(term.get("coefficient", 0.0))) > 0.0:
             tsupport = tuple(int(q) for q in term["support"])
-            c_small = _collapse_operator(term, local_dim=local_dims[tsupport[0]], device=device)
-            c_full = lift_fn(c_small.detach().cpu().numpy(), tsupport)
+            c_small = reference_collapse_operator_for_term(
+                term,
+                support=tsupport,
+                local_dims=tuple(int(d) for d in local_dims),
+            )
+            c_full = lift_fn(c_small, tsupport)
             c_list.append(torch.as_tensor(c_full, dtype=torch.complex128, device=device))
     return H_list, c_list
 
@@ -2882,6 +4148,7 @@ def _carrier_first_order_window_superop(
     from ..frontend.axis1_mcwf_mps_execution import (
         _collapse_operator,
         _hamiltonian_group_gates,
+        _joint_collapse_operator,
     )
 
     # Hamiltonian: product of the connected-cluster joint gates (they act on disjoint
@@ -2904,7 +4171,23 @@ def _carrier_first_order_window_superop(
         if abs(float(term.get("coefficient", 0.0))) <= 0.0:
             continue
         tsupport = tuple(int(q) for q in term["support"])
-        c_small = _collapse_operator(term, local_dim=local_dims[tsupport[0]], device=device)
+        if len(tsupport) == 1:
+            c_small = _collapse_operator(
+                term,
+                local_dim=local_dims[tsupport[0]],
+                device=device,
+            )
+        elif len(tsupport) == 2:
+            c_small = _joint_collapse_operator(
+                term,
+                tsupport,
+                local_dims=local_dims,
+                device=device,
+            )
+        else:
+            raise _ChannelNotDenseCheckable(
+                "carrier_window_collapse_support_must_be_one_or_two_sites"
+            )
         c_full = lift_fn(c_small.detach().cpu().numpy(), tsupport)
         jump_ops.append(c_full)
         sum_cdc = sum_cdc + c_full.conj().T @ c_full
@@ -2923,7 +4206,7 @@ def _carrier_first_order_window_superop(
 
 
 # --------------------------------------------------------------------------- #
-# Dense joint-L level-population reference.                                    #
+# Dense joint-L declared-basis eigenlabel reference.                           #
 # --------------------------------------------------------------------------- #
 def _dense_jointL_level_distribution(
     schedule: Any,
@@ -2932,11 +4215,14 @@ def _dense_jointL_level_distribution(
     device: str,
     dense_channel_max_dim: int = _DENSE_CHANNEL_MAX_DIM,
 ) -> dict[tuple[int, ...], float]:
-    """The readout-INDEPENDENT LEVEL-population oracle: the distribution over recorded
-    level-tuples obtained by evolving the initial level state through the program with the
+    """The readout-independent declared-basis eigenlabel oracle.
+
+    It returns the distribution over recorded local eigenlabel tuples obtained by evolving
+    the initial level state through the program with the
     DESIGNATED INDEPENDENT ORACLE ``assemble_substep_channel`` per dynamics substep, applying
-    resets, and reading the level-basis DIAGONAL (populations) at each measurement substep's
-    targets -- EXACTLY the sites + order the carrier records.
+    resets, and applying the declared X/Z projectors at each measurement substep's targets --
+    exactly the sites and order the carrier records. X labels 0/1 mean |+>/|->; Z labels are
+    computational local levels; leaked labels >=2 remain explicit in either basis.
 
     Returns ``{tuple(levels): probability}`` over the joint sequence of measured levels (one
     entry per measurement substep target, concatenated in substep order). A no-op leaves the
@@ -3006,8 +4292,8 @@ def _dense_jointL_level_distribution(
     for substep in program["program"]["substeps"]:
         kind = str(substep.get("substep_kind"))
         if kind == "reset":
-            # Projective reset to |0> per target (the carrier samples a level then resets to
-            # the reset target vector |0>); as a channel this maps rho -> |0><0| on the site.
+            # Hand-typed Pauli reset channel: trace out the measured local level and
+            # prepare the +1 eigenstate of the declared reset basis.
             new_branches = []
             for rho, prefix, w in branches:
                 rho_new = rho
@@ -3017,14 +4303,27 @@ def _dense_jointL_level_distribution(
                         continue
                     for target in op.get("targets", ()):
                         site = int(target)
-                        # reset to |0>: P0 rho P0 + sum_{l>0} |0><l| rho |l><0| ; equivalently
-                        # trace out the site and re-prepare |0>. We implement the standard
-                        # reset channel sum_l |0><l| rho |l><0| at the site.
                         dim_s = int(local_dims[site])
+                        target_vector = np.zeros(dim_s, dtype=np.complex128)
+                        if basis == "Z":
+                            target_vector[0] = 1.0
+                        elif basis == "X":
+                            inv = 1.0 / np.sqrt(2.0)
+                            target_vector[0] = inv
+                            target_vector[1] = inv
+                        elif basis == "Y":
+                            inv = 1.0 / np.sqrt(2.0)
+                            target_vector[0] = inv
+                            target_vector[1] = 1.0j * inv
+                        else:
+                            raise _ChannelNotDenseCheckable(
+                                "level_oracle_reset_supports_pauli_basis_only"
+                            )
                         acc_rho = np.zeros((full_dim, full_dim), dtype=np.complex128)
                         for level in range(dim_s):
-                            K = np.zeros((dim_s, dim_s), dtype=np.complex128)
-                            K[0, level] = 1.0
+                            from_vector = np.zeros(dim_s, dtype=np.complex128)
+                            from_vector[level] = 1.0
+                            K = np.outer(target_vector, from_vector.conj())
                             Kf = lift_fn(K, (site,))
                             acc_rho = acc_rho + Kf @ rho_new @ Kf.conj().T
                         rho_new = acc_rho
@@ -3064,26 +4363,22 @@ def _dense_jointL_level_distribution(
                         "level_oracle_measurement_supports_x_or_z_basis_only"
                     )
                 dim_s = int(local_dims[target])
-                Hf = None
                 if target_basis == "X":
-                    # Independent numpy H = (1/sqrt2)[[1,1],[1,-1]] on the {|0>,|1>} block,
-                    # identity on leaked levels: rotate the X-target into the Z eigenbasis
-                    # before the Z-level projection below. Non-reset branches rotate the
-                    # conditioned state back before later substeps consume it.
-                    Hloc = np.eye(dim_s, dtype=np.complex128)
                     inv = 1.0 / np.sqrt(2.0)
-                    Hloc[0, 0] = inv
-                    Hloc[0, 1] = inv
-                    Hloc[1, 0] = inv
-                    Hloc[1, 1] = -inv
-                    Hf = lift_fn(Hloc, (int(target),))
-                    branches = [
-                        (Hf @ rho @ Hf.conj().T, prefix, w) for rho, prefix, w in branches
-                    ]
                 next_branches = []
                 for rho, prefix, w in branches:
                     for level in range(dim_s):
-                        P = _single_site_projector_full(target, level)
+                        if target_basis == "X" and level < 2:
+                            eigenvector = np.zeros(dim_s, dtype=np.complex128)
+                            eigenvector[0] = inv
+                            eigenvector[1] = inv if level == 0 else -inv
+                            local_projector = np.outer(
+                                eigenvector,
+                                eigenvector.conj(),
+                            )
+                            P = lift_fn(local_projector, (int(target),))
+                        else:
+                            P = _single_site_projector_full(target, level)
                         rho_cond = P @ rho @ P.conj().T
                         branch_trace = np.trace(rho_cond)
                         p_level = float(branch_trace.real)
@@ -3104,8 +4399,7 @@ def _dense_jointL_level_distribution(
                                 "level oracle conditioned measurement state must be finite"
                             )
                         if reset_after:
-                            # The projection branch is in the rotated frame for X.
-                            # Re-prepare the reset target in the original frame:
+                            # Re-prepare the +1 eigenstate of the declared basis:
                             # |0> for Z and |+> for X.
                             target_vector = np.zeros(dim_s, dtype=np.complex128)
                             if target_basis == "Z":
@@ -3113,8 +4407,13 @@ def _dense_jointL_level_distribution(
                             else:
                                 target_vector[0] = inv
                                 target_vector[1] = inv
-                            from_vector = np.zeros(dim_s, dtype=np.complex128)
-                            from_vector[int(level)] = 1.0
+                            if target_basis == "X" and level < 2:
+                                from_vector = np.zeros(dim_s, dtype=np.complex128)
+                                from_vector[0] = inv
+                                from_vector[1] = inv if level == 0 else -inv
+                            else:
+                                from_vector = np.zeros(dim_s, dtype=np.complex128)
+                                from_vector[int(level)] = 1.0
                             Kr = np.outer(target_vector, from_vector.conj())
                             Krf = lift_fn(Kr, (int(target),))
                             rho_norm = Krf @ rho_norm @ Krf.conj().T
@@ -3134,8 +4433,6 @@ def _dense_jointL_level_distribution(
                                 raise ValueError(
                                     "level oracle normalized reset state must be finite"
                                 )
-                        elif Hf is not None:
-                            rho_norm = Hf @ rho_norm @ Hf.conj().T
                         next_branches.append(
                             (rho_norm, prefix + (int(level),), float(w * p_level))
                         )
@@ -3206,6 +4503,9 @@ def _dynamics_window_qubits(substep: dict[str, Any]) -> tuple[int, ...]:
 
 
 __all__ = [
+    "MCWF_DYNAMICS_ARTIFACT_REFERENCE_CERTIFICATION_SCHEMA",
     "dense_jointL_record_certification",
+    "mcwf_dynamics_artifact_reference_certification",
     "restricted_acceptance_policy",
+    "validate_mcwf_dynamics_artifact_reference_certification",
 ]

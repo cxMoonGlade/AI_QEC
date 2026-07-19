@@ -14,6 +14,10 @@ from typing import Any
 
 import pytest
 
+from tests._support.mcwf_artifact_certification import (
+    passing_mcwf_artifact_certification,
+)
+
 
 def _rehash_manifest(payload: dict[str, Any]) -> None:
     without_hash = dict(payload)
@@ -26,6 +30,38 @@ def _rehash_manifest(payload: dict[str, Any]) -> None:
         allow_nan=False,
     ).encode("utf-8")
     payload["content_hash"] = hashlib.sha256(encoded).hexdigest()
+
+
+def _mcwf_ordered_measurement_metadata(
+    bases: tuple[str, ...] = ("Z",),
+    *,
+    reset_after: tuple[bool, ...] | None = None,
+) -> dict[str, Any]:
+    ordered_bases = list(bases)
+    ordered_reset = (
+        [False] * len(ordered_bases)
+        if reset_after is None
+        else list(reset_after)
+    )
+    if len(ordered_reset) != len(ordered_bases):
+        raise ValueError("test fixture reset mask must match its ordered bases")
+    if not ordered_bases:
+        summary = "none"
+    elif all(basis == "X" for basis in ordered_bases):
+        summary = "X"
+    elif all(basis == "Z" for basis in ordered_bases):
+        summary = "Z"
+    else:
+        summary = "mixed_pauli"
+    return {
+        "measurement_bases": ordered_bases,
+        "reset_after": ordered_reset,
+        "measurement_basis": summary,
+        "measurement_basis_semantics": (
+            "measurement_bases and reset_after are schedule-ordered one-per-Record-column; "
+            "X measurement rotates into Z, projects, then rotates back unless reset prepares |+>"
+        ),
+    }
 
 
 class _CudaReached(RuntimeError):
@@ -239,6 +275,43 @@ def _mcwf_metric_certification(**overrides: Any) -> dict[str, Any]:
         "dense_evidence_content_hash": "a" * 64,
     }
     certification.update(overrides)
+    if certification["comparison_object"] == (
+        "measurement_basis_level_and_emitted_binary_record_populations"
+    ):
+        if "metric" not in overrides:
+            certification["metric"] = (
+                "maximum_component_total_variation_distance"
+            )
+        if "component_values" not in overrides:
+            certification["component_values"] = {
+                "declared_basis_eigenlabel_tv": certification["value"],
+                "emitted_binary_record_tv": certification["value"],
+            }
+        if "readout_model_independent" not in overrides:
+            certification["readout_model_independent"] = False
+        if "sampling_ci_method" not in overrides:
+            certification["sampling_ci_method"] = (
+                "bonferroni_two_component_per_bin_two_sided_hoeffding_"
+                "capped_at_gross_tv_ceiling"
+            )
+        if "sampling_finite_shot_halfwidth" not in overrides:
+            support_size = int(certification["sampling_support_size"])
+            trajectory_count = int(certification["trajectory_count"])
+            alpha = 1.0 - float(certification["sampling_confidence"])
+            certification["sampling_finite_shot_halfwidth"] = (
+                0.5
+                * support_size
+                * math.sqrt(
+                    math.log(4.0 * support_size / alpha)
+                    / (2.0 * trajectory_count)
+                )
+            )
+        if "gross_effective_gate_including_sampling_ci" not in overrides:
+            certification["gross_effective_gate_including_sampling_ci"] = min(
+                certification["gross_gate"]
+                + certification["sampling_finite_shot_halfwidth"],
+                certification["gross_gate_ceiling"],
+            )
     if "metric_convention" not in overrides:
         certification["metric_convention"] = {
             "within_substep_window_channel": (
@@ -249,9 +322,10 @@ def _mcwf_metric_certification(**overrides: Any) -> dict[str, Any]:
                 "TV = 1/2 * sum_i |p_i - q_i| "
                 "(Born vs empirical record frequencies)"
             ),
-            "level_record_populations": (
-                "TV = 1/2 * sum_i |p_i - q_i| "
-                "(joint-L level populations vs empirical level-record frequencies)"
+            "measurement_basis_level_and_emitted_binary_record_populations": (
+                "max(TV_label, TV_binary), with each TV = 1/2 * sum_i "
+                "|p_i - q_i|; joint pass is the logical AND of the "
+                "declared-basis eigenlabel and emitted binary Record TV gates"
             ),
         }[certification["comparison_object"]]
     return certification
@@ -285,13 +359,18 @@ def _mcwf_channel_certification(**overrides: Any) -> dict[str, Any]:
 
 def _mcwf_evaluator_only_diagnostics(**overrides: Any) -> dict[str, Any]:
     diagnostics = {
-        "schema": (
-            "error_coupling_simulator.frontend."
-            "mcwf_mps_evaluator_only_diagnostics.v1"
-        ),
-        "visibility": (
-            "evaluator_only_not_emitted_record_or_downstream_estimator_input"
-        ),
+              "schema": (
+                  "error_coupling_simulator.frontend."
+                  "mcwf_mps_evaluator_only_diagnostics.v2"
+              ),
+              "visibility": (
+                  "evaluator_only_not_emitted_record_or_downstream_estimator_input"
+              ),
+              "level_record_semantics": (
+                  "schedule-ordered local measurement eigenlabel tuples: "
+                  "X columns use 0=|+>,1=|-> and preserve leaked level labels >=2; "
+                  "Z columns use computational local levels"
+              ),
         "level_records": [],
         "level_record_counts": [],
         "level_record_probabilities": [],
@@ -638,6 +717,7 @@ def _mcwf_policy(
     worst_cut_discarded_weight_gate: Any = None,
     total_discarded_weight_gate: Any = None,
     execution_overrides: dict[str, Any] | None = None,
+    artifact_certification_overrides: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     from error_coupling_simulator.certify.axis1_mps import (
         restricted_acceptance_policy,
@@ -652,27 +732,89 @@ def _mcwf_policy(
         "jump_sampling": {
             "probability_mass_residual_max": runtime_mass_residual
         },
+        "finite_step_policy": {
+            "microstep_count": 1,
+            "order": "first_order",
+        },
         "evaluator_only_diagnostics": _mcwf_evaluator_only_diagnostics(),
         "measurement_keys": ["m0"],
         "measurement_targets": [0],
+        **_mcwf_ordered_measurement_metadata(),
         "measurement_records": [[0]],
         "record_counts": [trajectory_count],
         "record_probabilities": [1.0],
+        "multilevel_measurement_policy": {
+            "name": "declared_basis_eigenlabel_sample_then_binary_record",
+            "bit_mapping": (
+                "eigenlabel_0_to_bit_0_eigenlabel_1_to_bit_1_"
+                "eigenlabel_ge_2_to_bit_1_with_probability_leaked_readout_b"
+            ),
+            "leaked_readout_b": 1.0,
+            "comparison_outcome_is_metric": False,
+            "epistemic_class": "c",
+        },
         "local_dims": [2],
         "mps_truncation_ledger": _ledger() if ledger is None else ledger,
     }
-    execution.update(execution_overrides or {})
+    overrides = execution_overrides or {}
+    execution.update(overrides)
+    raw_keys = execution.get("measurement_keys")
+    if "measurement_keys" in overrides and isinstance(raw_keys, (list, tuple)):
+        if "measurement_targets" not in overrides:
+            execution["measurement_targets"] = [0 for _key in raw_keys]
+        default_metadata = _mcwf_ordered_measurement_metadata(
+            tuple("Z" for _key in raw_keys)
+        )
+        for field, value in default_metadata.items():
+            if field not in overrides:
+                execution[field] = value
+    program = {"requires_scalable_backend": requires_scalable_backend}
+    artifact_certification = passing_mcwf_artifact_certification(
+        program,
+        local_dims=list(execution["local_dims"]),
+    )
+    if artifact_certification_overrides:
+        import error_coupling_simulator.certify.axis1_mps as certification_module
+
+        artifact_certification.update(artifact_certification_overrides)
+        artifact_certification["content_hash"] = (
+            certification_module._mcwf_reference_packet_content_hash(
+                artifact_certification
+            )
+        )
     return restricted_acceptance_policy(
         execution=execution,
         certification=certification or _mcwf_metric_certification(),
-        program={"requires_scalable_backend": requires_scalable_backend},
+        program=program,
         declared_local_dims=list(execution["local_dims"]),
         rng_seed=rng_seed,
         trajectory_count=trajectory_count,
         mass_residual_budget=mass_residual_budget,
         worst_cut_discarded_weight_gate=worst_cut_discarded_weight_gate,
         total_discarded_weight_gate=total_discarded_weight_gate,
+        dynamics_artifact_reference_certification=artifact_certification,
     )
+
+
+def test_mcwf_policy_requires_post_execution_artifact_integrity() -> None:
+    policy = _mcwf_policy(
+        artifact_certification_overrides={
+            "post_execution_integrity_verified": False,
+        }
+    )
+
+    assert policy["accepted_for_restricted_execution"] is False
+    assert policy["blocked_reason"] == (
+        "dynamics_artifact_reference_certification:"
+        "post_execution_integrity_not_verified"
+    )
+
+
+def test_mcwf_policy_rejects_incomplete_artifact_reference_coverage() -> None:
+    with pytest.raises(ValueError, match="coverage state is inconsistent"):
+        _mcwf_policy(
+            artifact_certification_overrides={"all_terms_covered": False}
+        )
 
 
 @pytest.mark.parametrize(
@@ -1355,7 +1497,7 @@ def test_auto_router_fails_toward_mcwf_on_invalid_free_vram(
     assert "invalid_available_vram_bytes" in decision["route_reasons"]
 
 
-def test_auto_routed_carrier_envelope_uses_v2_schema(
+def test_auto_routed_carrier_envelope_uses_v4_schema(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     import error_coupling_simulator.frontend.axis1_carrier_execution as carrier
@@ -1375,18 +1517,18 @@ def test_auto_routed_carrier_envelope_uses_v2_schema(
     )
 
     assert manifest["schema"] == (
-        "error_coupling_simulator.frontend.carrier_auto_routed_execution.v3"
+        "error_coupling_simulator.frontend.carrier_auto_routed_execution.v4"
     )
 
 
-def test_mcwf_completed_and_blocked_acceptance_policies_use_v5_schema(
+def test_mcwf_completed_and_blocked_acceptance_policies_use_v6_schema(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     import error_coupling_simulator.frontend.axis1_mcwf_mps_execution as mcwf_execution
 
     expected_schema = (
         "error_coupling_simulator.frontend."
-        "mcwf_mps_restricted_acceptance_policy.v5"
+        "mcwf_mps_restricted_acceptance_policy.v6"
     )
     completed_policy = _mcwf_policy()
 
@@ -1449,10 +1591,18 @@ def _run_direct_mcwf_with_policy(
         "dense_jointL_record_certification",
         lambda *_args, **_kwargs: {"fixture": "certification"},
     )
+    def _policy_stub(**kwargs):
+        returned = copy.deepcopy(policy)
+        returned.setdefault(
+            "dynamics_artifact_reference_certification",
+            kwargs["dynamics_artifact_reference_certification"],
+        )
+        return returned
+
     monkeypatch.setattr(
         dense,
         "restricted_acceptance_policy",
-        lambda **_kwargs: policy,
+        _policy_stub,
     )
 
     return mcwf.axis1_mcwf_mps_state_record_execution_manifest(
@@ -1495,7 +1645,7 @@ def _completed_direct_mcwf_policy(**overrides: Any) -> dict[str, Any]:
     policy = {
         "schema": (
             "error_coupling_simulator.frontend."
-            "mcwf_mps_restricted_acceptance_policy.v5"
+            "mcwf_mps_restricted_acceptance_policy.v6"
         ),
         "policy_role": "restricted_execution_acceptance_not_metric",
         "execution_status": "completed",
@@ -2056,11 +2206,11 @@ def _carrier_route_policy(
     mode: str,
 ) -> dict[str, Any]:
     exact = mode == "exact_branch_enumeration"
-    return {
+    policy = {
         "schema": (
             "error_coupling_simulator.frontend."
             + (
-                "mcwf_mps_restricted_acceptance_policy.v5"
+                "mcwf_mps_restricted_acceptance_policy.v6"
                 if route_kind == "mcwf"
                 else "qt_mps_restricted_acceptance_policy.v2"
             )
@@ -2076,6 +2226,23 @@ def _carrier_route_policy(
         "accepted_for_production_scalable_backend": False,
         "trajectory": {"mode": mode},
     }
+    if route_kind == "mcwf":
+        policy.update(
+            {
+                "accepted_as_restricted_overcap_execution": False,
+                "gross_strict_gate_split": {},
+                "dense_jointL_record_certification": {},
+                "finite_step": {},
+                "mps_truncation": {},
+                "probability": {},
+                "dynamics_artifact_reference_certification": {},
+                "production_blockers": [],
+                "scored_quantity_policy": "fixture policy identity only",
+                "comparison_outcome_is_metric": False,
+                "epistemic_class": "a/c",
+            }
+        )
+    return policy
 
 
 @pytest.mark.parametrize(
@@ -2452,6 +2619,7 @@ def test_mcwf_dense_record_certification_rejects_invalid_probability_distributio
                 ),
                 "measurement_keys": ["m0"],
                 "measurement_targets": [0],
+                **_mcwf_ordered_measurement_metadata(),
                 "measurement_records": [[0]],
                 "record_counts": [2],
                 "record_probabilities": carrier_probabilities,
@@ -2696,6 +2864,7 @@ def test_mcwf_dense_level_certification_rejects_record_count_length_mismatch(
                 ),
                 "measurement_keys": ["m0"],
                 "measurement_targets": [0],
+                **_mcwf_ordered_measurement_metadata(),
                 "local_dims": [2],
             },
             {"requires_scalable_backend": False},
@@ -2742,6 +2911,7 @@ def test_mcwf_dense_level_certification_rejects_invalid_counts(
                 ),
                 "measurement_keys": ["m0"],
                 "measurement_targets": [0],
+                **_mcwf_ordered_measurement_metadata(),
                 "local_dims": [2],
             },
             {"requires_scalable_backend": False},
@@ -2797,6 +2967,7 @@ def test_mcwf_dense_level_certification_rejects_invalid_oracle_distribution(
                 ),
                 "measurement_keys": ["m0"],
                 "measurement_targets": [0],
+                **_mcwf_ordered_measurement_metadata(),
                 "local_dims": [2],
             },
             {"requires_scalable_backend": False},
@@ -2840,6 +3011,7 @@ def test_mcwf_sampled_record_certification_binds_counts_to_probabilities(
                 ),
                 "measurement_keys": ["m0"],
                 "measurement_targets": [0],
+                **_mcwf_ordered_measurement_metadata(),
                 "measurement_records": [[0], [1]],
                 "record_counts": [1, 1],
                 "record_probabilities": [0.9, 0.1],
@@ -2881,6 +3053,7 @@ def test_mcwf_record_gross_tv_gate_controls_record_certification(
             "evaluator_only_diagnostics": _mcwf_evaluator_only_diagnostics(),
             "measurement_keys": ["m0"],
             "measurement_targets": [0],
+            **_mcwf_ordered_measurement_metadata(),
             "measurement_records": [[0], [1]],
             "record_counts": [8_500, 1_500],
             "record_probabilities": [0.85, 0.15],
@@ -2924,6 +3097,7 @@ def test_mcwf_sampled_level_certification_binds_counts_to_trajectory_count(
                 ),
                 "measurement_keys": ["m0"],
                 "measurement_targets": [0],
+                **_mcwf_ordered_measurement_metadata(),
                 "local_dims": [2],
             },
             {"requires_scalable_backend": False},
@@ -2974,6 +3148,8 @@ def test_mcwf_dense_channel_certification_rejects_invalid_metric_postcondition(
                     _mcwf_evaluator_only_diagnostics()
                 ),
                 "measurement_keys": [],
+                "measurement_targets": [],
+                **_mcwf_ordered_measurement_metadata(()),
             },
             {"requires_scalable_backend": False},
         )
@@ -3369,6 +3545,7 @@ def test_mcwf_record_certification_requires_registered_oracle_provenance(
                 ),
                 "measurement_keys": ["m0"],
                 "measurement_targets": [0],
+                **_mcwf_ordered_measurement_metadata(),
                 "measurement_records": [[0]],
                 "record_counts": [1],
                 "record_probabilities": [1.0],
@@ -3441,6 +3618,7 @@ def test_mcwf_dense_record_certification_rejects_boolean_outcomes(
                 ),
                 "measurement_keys": ["m0"],
                 "measurement_targets": [0],
+                **_mcwf_ordered_measurement_metadata(),
                 "measurement_records": [[False]],
                 "record_counts": [1],
                 "record_probabilities": [1.0],
@@ -3477,6 +3655,7 @@ def test_mcwf_dense_level_certification_rejects_float_outcomes(
                 ),
                 "measurement_keys": ["m0"],
                 "measurement_targets": [0],
+                **_mcwf_ordered_measurement_metadata(),
                 "local_dims": [3],
             },
             {"requires_scalable_backend": False},
@@ -3735,6 +3914,7 @@ def test_mcwf_exact_level_certification_fails_closed_without_probability_payload
             ),
             "measurement_keys": ["m0"],
             "measurement_targets": [0],
+            **_mcwf_ordered_measurement_metadata(),
             "local_dims": [3],
         },
         {"requires_scalable_backend": False},
@@ -3777,6 +3957,7 @@ def test_mcwf_exact_record_certification_fails_closed_without_probability_payloa
             "evaluator_only_diagnostics": _mcwf_evaluator_only_diagnostics(),
             "measurement_keys": ["m0"],
             "measurement_targets": [0],
+            **_mcwf_ordered_measurement_metadata(),
             "measurement_records": [[0]],
             "record_probabilities": [1.0],
             "local_dims": [2],
@@ -3799,21 +3980,23 @@ def test_mcwf_level_support_bound_counts_repeated_measurement_targets() -> None:
     trajectory_count = 4
     support_size = 4
     sampling_halfwidth = 0.5 * support_size * math.sqrt(
-        math.log(200.0) / (2.0 * trajectory_count)
+        math.log(4.0 * support_size / 0.01) / (2.0 * trajectory_count)
     )
     certification = _mcwf_metric_certification(
-        comparison_object="level_record_populations",
+        comparison_object=(
+            "measurement_basis_level_and_emitted_binary_record_populations"
+        ),
         oracle=(
             "error_coupling_simulator.carrier.joint_lindbladian."
             "assemble_substep_channel"
         ),
-        readout_model_independent=True,
+        readout_model_independent=False,
         sampling_support_size=support_size,
         sampling_finite_shot_halfwidth=sampling_halfwidth,
         trajectory_count=trajectory_count,
         dense_evidence_schema=(
             "error_coupling_simulator.carrier.joint_lindbladian."
-            "assemble_substep_channel:level_populations"
+            "assemble_substep_channel:measurement_basis_level_populations.v2"
         ),
         dense_evidence_content_hash=None,
     )
@@ -3866,6 +4049,7 @@ def test_mcwf_level_certification_rejects_outcome_outside_target_dimension(
                 ),
                 "measurement_keys": ["m0"],
                 "measurement_targets": [0],
+                **_mcwf_ordered_measurement_metadata(),
                 "local_dims": [3],
             },
             {"requires_scalable_backend": False},
@@ -3900,6 +4084,7 @@ def test_mcwf_level_certification_rejects_oracle_outcome_outside_target_dimensio
                 ),
                 "measurement_keys": ["m0"],
                 "measurement_targets": [0],
+                **_mcwf_ordered_measurement_metadata(),
                 "local_dims": [3],
             },
             {"requires_scalable_backend": False},
@@ -3942,6 +4127,7 @@ def test_mcwf_level_certification_rejects_invalid_layout_indices(
         ),
         "measurement_keys": ["m0"],
         "measurement_targets": [0],
+        **_mcwf_ordered_measurement_metadata(),
         "local_dims": [3],
     }
     execution.update(payload_overrides)
@@ -4063,6 +4249,7 @@ def test_mcwf_channel_policy_rejects_noncanonical_no_measurement_residue(
         "evaluator_only_diagnostics": _mcwf_evaluator_only_diagnostics(),
         "measurement_keys": [],
         "measurement_targets": [],
+        **_mcwf_ordered_measurement_metadata(()),
         "measurement_records": [[]],
         "record_counts": [2],
         "record_probabilities": [1.0],
@@ -5162,6 +5349,7 @@ def test_mcwf_dense_builder_rejects_unseeded_sampled_record_before_oracle() -> N
             "evaluator_only_diagnostics": _mcwf_evaluator_only_diagnostics(),
             "measurement_keys": ["m0"],
             "measurement_targets": [0],
+            **_mcwf_ordered_measurement_metadata(),
             "local_dims": [2],
         },
         {"requires_scalable_backend": False},
@@ -5422,15 +5610,17 @@ def _mcwf_level_policy_fixture(
     **certification_overrides: Any,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     certification = _mcwf_metric_certification(
-        comparison_object="level_record_populations",
+        comparison_object=(
+            "measurement_basis_level_and_emitted_binary_record_populations"
+        ),
         oracle=(
             "error_coupling_simulator.carrier.joint_lindbladian."
             "assemble_substep_channel"
         ),
-        readout_model_independent=True,
+        readout_model_independent=False,
         dense_evidence_schema=(
             "error_coupling_simulator.carrier.joint_lindbladian."
-            "assemble_substep_channel:level_populations"
+            "assemble_substep_channel:measurement_basis_level_populations.v2"
         ),
         dense_evidence_content_hash=None,
     )
@@ -5452,8 +5642,8 @@ def _mcwf_level_policy_fixture(
     "certification_overrides",
     [
         pytest.param(
-            {"readout_model_independent": False},
-            id="readout_not_independent",
+            {"readout_model_independent": True},
+            id="joint_falsely_claims_readout_independence",
         ),
         pytest.param(
             {"dense_evidence_schema": "forged.level.schema"},
@@ -5571,6 +5761,7 @@ def test_mcwf_dense_builder_rejects_unseeded_sampled_level_before_oracle() -> No
             ),
             "measurement_keys": ["m0"],
             "measurement_targets": [0],
+            **_mcwf_ordered_measurement_metadata(),
             "local_dims": [3],
         },
         {"requires_scalable_backend": False},

@@ -99,12 +99,20 @@ those contracts. No local state or truncation metric alone establishes record eq
 - Google d3 circuit/geometry/schedule files are caller inputs, not package data or noise calibration.
 - PyMatching is an optional downstream decoder dependency.
 - CUDA-Q is an isolated plugin workload executed in a separate environment and process.
-- Aer and YASTN MPS baselines execute in isolated environments. YASTN is source/commit-bound to its
-  pristine clone. Aer records the installed wheel provenance and separately verifies a pristine
-  reference clone, but does not claim wheel-to-clone identity. Aer is a finite-circuit
-  state/truncation comparator; YASTN is a product-MPS raw candidate-mass comparator. Quimb's
-  three-leg comparison is wiring evidence against the same dependency. None is a QEC Record-law,
-  trajectory-law, or restricted-acceptance oracle.
+- Aer, YASTN, and QuTiP comparison legs execute in isolated environments. YASTN is source/commit-bound
+  to its pristine clone. QuTiP binds pristine commit/tree metadata, checks selected installed solver
+  sources against that clone, and records the complete installed-distribution content identity; it
+  does not claim a reproducible full installed-tree build from the clone. Aer records the installed
+  wheel provenance and separately
+  verifies a pristine reference clone, but does not claim wheel-to-clone identity. Aer is a
+  finite-circuit state/truncation comparator; YASTN is a product-MPS raw candidate-mass comparator;
+  QuTiP is a fixed two-qubit continuous-time MCWF X/Z measurement/reset comparator with joint-Record
+  and directed X-after statistical gates. Its exact-field v2 worker artifact remains immutable inside
+  a transport envelope; the project side recomputes its semantic gates, rejects duplicate/non-finite
+  JSON, sanitizes inherited environment markers, and uses stale-safe file-plus-directory-`fsync`
+  publication. Quimb's three-leg comparison is wiring evidence against
+  the same dependency. None establishes a complete QEC Record law, trajectory-by-trajectory
+  equivalence, qutrit/leakage behavior, scalability, or the restricted-acceptance verdict.
 - Explicit serialized channel files are derived caches, not automatically scientific data.
 - Distribution artifacts include only the current package and shipped documentation inventory.
 

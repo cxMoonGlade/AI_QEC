@@ -317,14 +317,59 @@ Current slice:
   `CTRL_*`/`ZZ`/leakage Hamiltonians are not sequentialized. Collapse
   terms still compete jointly per microstep as jump candidates from the same
   compiler-generated substep; Hamiltonian-vs-collapse splitting is a finite-step
-  MCWF approximation, not exact dense joint-L channel evidence. Measurement records are
-  accumulated across all measurement substeps, and multilevel `MR*` reset maps
-  the measured local level back to the requested computational reset state. The
+  MCWF approximation, not exact dense joint-L channel evidence. Under
+  `strang_second_order`, the two Hamiltonian half-passes are separately and
+  schedule-ordered as `hamiltonian_pass_index=0,1`, both with half-step duration;
+  the truncation occurrence ledger fails closed if either pass is absent. Measurement records are
+  accumulated across all measurement substeps. Public `measurement_keys`,
+  `measurement_targets`, `measurement_bases`, and `reset_after` are equal-length,
+  schedule-ordered lists with one entry per Record column; `measurement_basis` is one of
+  `none`, `X`, `Z`, or `mixed_pauli`. X sampling rotates into Z and rotates a non-reset
+  conditioned state back. Measurement reset prepares the declared basis's positive
+  eigenstate (`|+>` for X and `|0>` for Z), including multilevel `MR*` boundaries. The
   manifest requires explicit CUDA RNG provenance for accepted sampled evidence,
   records jump/no-jump diagnostics, multilevel readout policy, and MPS
   truncation ledgers. Pre-readout multilevel level records and jump-family counts are stored only
-  under `evaluator_only_diagnostics`; they are not emitted binary Records or downstream estimator
-  inputs. Caller-declared local dimensions, initial levels, and readout mapping remain configuration.
+  under `evaluator_only_diagnostics.v2`; they are not emitted binary Records or downstream estimator
+  inputs. Its registered level-label semantics are basis-aware: X columns use `0=|+>,1=|->`, Z
+  columns use computational local levels, and leaked labels `>=2` remain explicit. The associated
+  comparison object is `measurement_basis_level_and_emitted_binary_record_populations`: restricted
+  acceptance requires both the hidden declared-basis label TV and the emitted binary Record TV to
+  pass, and reports their maximum. Certification obtains the binary reference from a certifier-local
+  hand-typed leaked-readout marginal rather than the production label-to-bit sampler. Caller-declared
+  local dimensions, initial levels, and readout mapping remain configuration.
+  Before that metric can authorize a run, certification compares every present production
+  Hamiltonian/collapse matrix with `certify/mcwf_operator_reference.py`, an isolated hand-typed
+  NumPy/Pauli inventory covering all 51 Hamiltonian and seven collapse families. It checks exact
+  support arity, declared local levels, finite shape, and a final max-absolute difference no larger
+  than `NUMERICAL_ZERO`; the reference constructs structural-zero padding exactly. Unknown or
+  mismatched terms reject even when the selected state/measurement is insensitive to the operator.
+  The dense joint-L oracle consumes these certifier-local matrices, while the realized carrier map
+  consumes production grouping/builders. Two-site `CORR_RELAX` uses the joint collapse builder on the
+  carrier side and the full-dimension collective-lowering formula on the reference side. This is a
+  software implementation-definition guard, not mechanism literature closure or calibration.
+  The Adapter freezes the realized dynamics before either the first-order mass preflight or any
+  trajectory: each production Hamiltonian/collapse builder is called once, connected group gates are
+  constructed from those same term tensors, and no-jump/jump candidates plus both Strang passes consume
+  the resulting immutable artifact set. Certification independently reconstructs every term, connected
+  group partition/support/order, and group gate from the isolated NumPy formulas and SciPy `expm`.
+  Reference-declared structural zeros must be exact; term comparisons use `NUMERICAL_ZERO`, while
+  group-gate comparison uses `1000 * NUMERICAL_ZERO` for the measured Torch-CUDA/SciPy exponential
+  floor. The public `mcwf_dynamics_artifact_reference_certification.v1` packet binds complete
+  substep/term/group coverage, local dimensions, microstep/order controls, Carrier-program/frozen-artifact
+  hashes, current reference/certifier/carrier source hashes, and post-execution artifact integrity. The
+  certifier recomputes the canonical artifact hash from the exact matrices and metadata it inspected, so a
+  merely well-formed caller digest cannot authorize the packet. Restricted acceptance requires that packet
+  to validate and pass. Carrier and auto routing independently rebuild the artifact authority from the
+  sealed program and caller controls. For an accepted seeded auto route, the outer seam also replays the
+  public direct MCWF call and exact-compares its direct hash, canonical Record summary, and restricted
+  policy. This deliberate replay closes the transitive Record-binding seam but increases runtime and is not
+  production-scalability evidence.
+
+  `CORR_RELAX` is executable only when already encoded in the internal sealed Carrier program. No public
+  source/schedule compiler lowering currently emits it. The literature source-closure reset remains OPEN,
+  so the operator and frozen-artifact checks remain software gates rather than physical-source closure,
+  hardware calibration, full-Record faithfulness, or production/scalability evidence.
   Restricted acceptance also requires a finite declared
   `mass_residual_budget`, a finite nonnegative runtime candidate-mass residual
   within that budget, and an executed independent dense certification that
@@ -448,7 +493,16 @@ Current slice:
   frozen boundary width before it is added to the observed-outcome histogram.
 
   MCWF grouped measurement substeps apply reset independently for each target according
-  to the frozen mask; the dense level comparator reconstructs that operation/reset rule
+  to the frozen mask. The direct MCWF child, Carrier, and certifier independently require
+  exact schedule order for keys, targets, X/Z bases, and reset flags; the Carrier forwards
+  those four lists plus the registered basis summary/semantics and declared-basis multilevel
+  readout policy; its state summary also carries the authenticated initial levels. The auto-router repeats the
+  schedule binding, Record-width/count/probability checks, and detector/logical projection
+  reconstruction on the rehashed Carrier child. It requires exact public child/state/Record/direct
+  summary field sets; binds the caller options, local Hilbert dimensions, seed, state machine,
+  policy v6, and transitive direct-v7 schema/hash; requires sorted unique normalized empirical
+  histograms and canonical blocked summaries; and recursively rejects evaluator-only field
+  families at that public seam. The dense comparator reconstructs X/Z projectors and reset instruments
   independently instead of importing the MPS helper. QT sampled reset metadata is
   `boundary_only_no_generator_evolution` with
   `sampled_pauli_reset_internal_outcome_no_record`, and it carries no product-formula
@@ -489,13 +543,14 @@ Current slice:
   against the nested policy. The nested `blocked_reason` must match the child,
   production-scalable acceptance must remain false, and exact/sampled sub-acceptance
   cannot be true when restricted acceptance is false. Contradictory child state
-  is rejected rather than summarized.
+  is rejected rather than summarized. For MCWF, reordered bases/reset flags remain invalid
+  even when their multiset is unchanged and every affected envelope is rehashed.
   `accepted_for_production_scalable_backend` remains false in every state.
 
   Current restricted-MPS schema identities are part of this contract:
 
-  - `error_coupling_simulator.frontend.carrier_execution.v3`
-  - `error_coupling_simulator.frontend.carrier_auto_routed_execution.v3`
+  - `error_coupling_simulator.frontend.carrier_execution.v4`
+  - `error_coupling_simulator.frontend.carrier_auto_routed_execution.v4`
   - `error_coupling_simulator.frontend.carrier_auto_routing_decision.v3`
   - `error_coupling_simulator.frontend.axis1_schedule_record_layout.v1`
   - `error_coupling_simulator.frontend.qt_mps_restricted_execution.v6`
@@ -505,10 +560,12 @@ Current slice:
   - `error_coupling_simulator.frontend.qt_mps_resource_probe.v4`
   - `error_coupling_simulator.frontend.qt_mps_restricted_acceptance_policy.v2`
   - `error_coupling_simulator.frontend.qt_mps_record_materialization_preflight.v2`
-  - `error_coupling_simulator.frontend.mcwf_mps_state_record_execution.v6`
-  - `error_coupling_simulator.frontend.mcwf_mps_restricted_acceptance_policy.v5`
+  - `error_coupling_simulator.frontend.mcwf_mps_state_record_execution.v7`
+  - `error_coupling_simulator.frontend.mcwf_mps_evaluator_only_diagnostics.v2`
+  - `error_coupling_simulator.frontend.mcwf_mps_restricted_acceptance_policy.v6`
+  - `error_coupling_simulator.certify.mcwf_dynamics_artifact_reference_certification.v1`
 
-  The normal and blocked MCWF policies use the same v5 policy schema. The direct QT and MCWF
+  The normal and blocked MCWF policies use the same v6 policy schema. The direct QT and MCWF
   execution schemas changed from v2 to v3 when the Phase-3 Record layout, reset, and
   metadata behavior changed, then from v3 to v4 when the Phase-4 probability,
   configuration/route-support, and exact-bond semantics changed. The MCWF direct
@@ -522,7 +579,12 @@ Current slice:
   when exact-shape transitive authentication and current sampled-support semantics became binding.
   Direct MCWF changed from v5 to v6 and Carrier wrapper/auto execution changed to v3 when child
   state, evaluator-only diagnostics, and final verdict fields became transitively authenticated;
-  the Record-materialization preflight changed from v1 to v2. There is no earlier
+  direct MCWF then changed from v6 to v7 and Carrier wrapper/auto execution from v3 to v4 when
+  ordered X/Z bases and reset masks became public, transitively authenticated Record identity.
+  Evaluator-only diagnostics changed from v1 to v2 and the MCWF policy from v5 to v6 because
+  the canonical comparison now names declared-basis eigenlabels instead of misclassifying X
+  outcomes as computational-level populations; this is a policy-payload change, not a child-only
+  schema bump. The Record-materialization preflight changed from v1 to v2. There is no earlier
   direct-execution or aggregate compatibility fallback. Acceptance-policy schemas do
   not change merely because their execution children change. Schema/content-hash changes are
   intentional consequences of the stricter interface, Record, probability, routing,

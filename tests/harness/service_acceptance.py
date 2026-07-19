@@ -72,6 +72,17 @@ _SNAPSHOT_DIRECTORY_INPUTS = (
     "configs",
     "external/baselines/qiskit-aer",
     "external/baselines/yastn",
+    "external/baselines/qutip",
+)
+_SNAPSHOT_GIT_REPOSITORY_INPUTS = (
+    "external/baselines/qiskit-aer",
+    "external/baselines/yastn",
+    "external/baselines/qutip",
+)
+_RUNTIME_CONTENT_PACKAGE_TREES = MappingProxyType(
+    {
+        "ecs-baseline-qutip": ("numpy", "scipy", "qutip"),
+    }
 )
 _SNAPSHOT_FILE_INPUTS = (
     "AGENTS.md",
@@ -106,6 +117,7 @@ _SNAPSHOT_EXCLUDED_PARTS = frozenset(
 _ALLOWED_PROCESS_ENVIRONMENT = frozenset(
     {
         "ECS_RUN_AER_MPS_COMPARISON",
+        "ECS_RUN_QUTIP_MCWF_XZ_COMPARISON",
         "ECS_RUN_YASTN_MPS_COMPARISON",
         "PYTORCH_ALLOC_CONF",
     }
@@ -393,7 +405,11 @@ def _sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _environment_metadata_identity(prefix: Path) -> dict[str, object]:
+def _environment_metadata_identity(
+    prefix: Path,
+    *,
+    package_trees: tuple[str, ...] = (),
+) -> dict[str, object]:
     """Hash package records and import hooks without importing the environment."""
 
     resolved_prefix = prefix.resolve(strict=True)
@@ -420,6 +436,17 @@ def _environment_metadata_identity(prefix: Path) -> dict[str, object]:
                 for path in entry.rglob("*"):
                     if path.is_symlink() or path.is_file():
                         add(path)
+        for package_name in package_trees:
+            package_root = site_packages / package_name
+            if not package_root.is_dir():
+                raise RuntimeError(
+                    f"selected installed package tree is missing: {package_root}"
+                )
+            for path in package_root.rglob("*"):
+                if path.suffix == ".pyc":
+                    continue
+                if path.is_symlink() or path.is_file():
+                    add(path)
     if not entries:
         raise RuntimeError(f"Conda environment has no metadata files: {resolved_prefix}")
 
@@ -446,6 +473,7 @@ def _environment_metadata_identity(prefix: Path) -> dict[str, object]:
         "metadata_sha256": digest.hexdigest(),
         "metadata_file_count": len(entries),
         "metadata_bytes": total_bytes,
+        "content_package_trees": sorted(package_trees),
     }
 
 
@@ -525,7 +553,10 @@ def _runtime_environment_identity(
             "sha256": _sha256_file(conda_path),
         },
         "environments": {
-            name: _environment_metadata_identity(prefixes[name])
+            name: _environment_metadata_identity(
+                prefixes[name],
+                package_trees=_RUNTIME_CONTENT_PACKAGE_TREES.get(name, ()),
+            )
             for name in names
         },
     }
@@ -572,6 +603,45 @@ def _acceptance_input_snapshot() -> str:
         digest.update(relative)
         digest.update(len(payload).to_bytes(8, "big"))
         digest.update(payload)
+    for relative_text in _SNAPSHOT_GIT_REPOSITORY_INPUTS:
+        repository = (REPO / relative_text).resolve()
+        if not repository.exists():
+            continue
+        try:
+            repository.relative_to(root)
+        except ValueError as exc:
+            raise ValueError(
+                f"acceptance git snapshot input escapes repository: {repository}"
+            ) from exc
+        completed = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(repository),
+                "rev-parse",
+                "HEAD",
+                "HEAD^{tree}",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        revisions = completed.stdout.splitlines()
+        if len(revisions) != 2 or any(len(value) != 40 for value in revisions):
+            raise RuntimeError(
+                f"invalid external baseline git identity: {relative_text}"
+            )
+        identity = json.dumps(
+            {
+                "path": relative_text,
+                "head": revisions[0],
+                "tree": revisions[1],
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        digest.update(len(identity).to_bytes(8, "big"))
+        digest.update(identity)
     return digest.hexdigest()
 
 

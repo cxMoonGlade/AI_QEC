@@ -1989,7 +1989,7 @@ def test_axis1_mcwf_mps_execution_runs_qubit_fixed_microstep_record_fixture():
     )
 
     assert manifest["schema"] == (
-        "error_coupling_simulator.frontend.mcwf_mps_state_record_execution.v6"
+        "error_coupling_simulator.frontend.mcwf_mps_state_record_execution.v7"
     )
     assert manifest["backend_contract"] == AXIS1_MCWF_MPS_EXECUTION_BACKEND_CONTRACT
     assert manifest["verdict"] == "pass"
@@ -2033,7 +2033,7 @@ def test_axis1_mcwf_mps_execution_preserves_qutrit_level_record_without_projecti
     )
 
     assert manifest["schema"] == (
-        "error_coupling_simulator.frontend.mcwf_mps_state_record_execution.v6"
+        "error_coupling_simulator.frontend.mcwf_mps_state_record_execution.v7"
     )
     assert manifest["verdict"] == "pass"
     assert manifest["passed"] is True
@@ -2052,7 +2052,7 @@ def test_axis1_mcwf_mps_execution_preserves_qutrit_level_record_without_projecti
     assert execution["record_probabilities"] == [1.0]
     evaluator_diagnostics = execution["evaluator_only_diagnostics"]
     assert evaluator_diagnostics["schema"] == (
-        "error_coupling_simulator.frontend.mcwf_mps_evaluator_only_diagnostics.v1"
+        "error_coupling_simulator.frontend.mcwf_mps_evaluator_only_diagnostics.v2"
     )
     assert evaluator_diagnostics["visibility"] == (
         "evaluator_only_not_emitted_record_or_downstream_estimator_input"
@@ -2282,7 +2282,7 @@ def test_axis1_carrier_execution_mcwf_mps_backend_runs_qubit_fixture():
         },
     )
 
-    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v3"
+    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v4"
     assert execution["execution_backend_contract"] == "mcwf_mps_state_record"
     assert execution["representability"] == (
         AXIS1_CARRIER_MCWF_MPS_EXECUTION_REPRESENTABILITY
@@ -2322,7 +2322,7 @@ def test_axis1_carrier_execution_mcwf_mps_mixed_local_dims_runs_without_dense_fa
         },
     )
 
-    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v3"
+    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v4"
     assert execution["execution_backend_contract"] == "mcwf_mps_state_record"
     assert execution["representability"] == (
         AXIS1_CARRIER_MCWF_MPS_EXECUTION_REPRESENTABILITY
@@ -2375,7 +2375,7 @@ def test_axis1_carrier_execution_mcwf_mps_multilevel_finite_bond_fails_closed():
         },
     )
 
-    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v3"
+    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v4"
     assert execution["execution_backend_contract"] == "mcwf_mps_state_record"
     assert execution["verdict"] == "fail"
     assert execution["passed"] is False
@@ -3140,7 +3140,7 @@ def test_axis1_carrier_execution_probe_consumes_program_and_matches_jointL_state
     record = axis1_measurement_record_evidence_manifest(schedule)
     execution = axis1_carrier_execution_manifest(schedule)
 
-    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v3"
+    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v4"
     assert execution["verdict"] == "pass"
     assert execution["passed"] is True
     assert execution["execution_backend_contract"] == "dense_jointL_probe"
@@ -3189,7 +3189,7 @@ def test_axis1_carrier_execution_probe_fails_closed_on_over_cap_static_route():
 
     execution = axis1_carrier_execution_manifest(schedule)
 
-    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v3"
+    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v4"
     assert execution["verdict"] == "fail"
     assert execution["passed"] is False
     assert execution["execution_backend_contract"] == "dense_jointL_probe"
@@ -3217,7 +3217,7 @@ def test_axis1_carrier_execution_qutip_backend_executes_over_cap_static_idle():
         ),
     )
 
-    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v3"
+    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v4"
     assert execution["verdict"] == "pass"
     assert execution["passed"] is True
     assert execution["execution_backend_contract"] == (
@@ -3370,7 +3370,7 @@ def test_axis1_carrier_execution_qt_mps_backend_records_over_cap_h_readout():
         ),
     )
 
-    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v3"
+    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v4"
     assert execution["execution_status"] == "completed"
     assert execution["certification_status"] == "unavailable"
     assert execution["diagnostic_only"] is True

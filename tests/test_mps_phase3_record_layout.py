@@ -207,6 +207,80 @@ def test_mps005_mcwf_merged_measurement_applies_each_operation_reset_mask(
     assert evaluator["level_record_counts"] == [5]
 
 
+def test_mps005_mcwf_public_payload_preserves_ordered_xz_basis_and_reset_law():
+    """The public Record columns retain X/Z and reset identity in schedule order."""
+
+    builder = _zero_noise_builder(2)
+    builder.h(0)
+    builder.tick()
+    builder.measure(0, key="mx_before", basis="X", reset=True)
+    builder.measure(1, key="mz_before", basis="Z", reset=False)
+    builder.tick()
+    builder.measure(0, key="mx_after", basis="X")
+    builder.measure(1, key="mz_after", basis="Z")
+    schedule = circuit_ir_to_substep_schedule(builder.build())
+
+    manifest = axis1_mcwf_mps_state_record_execution_manifest(
+        schedule,
+        trajectory_count=5,
+        rng_seed=5007,
+    )
+
+    assert manifest["schema"] == (
+        "error_coupling_simulator.frontend.mcwf_mps_state_record_execution.v7"
+    )
+    assert manifest["verdict"] == "pass"
+    execution = manifest["mps_execution"]
+    assert execution["measurement_keys"] == [
+        "mx_before",
+        "mz_before",
+        "mx_after",
+        "mz_after",
+    ]
+    assert execution["measurement_targets"] == [0, 1, 0, 1]
+    assert execution["measurement_bases"] == ["X", "Z", "X", "Z"]
+    assert execution["reset_after"] == [True, False, False, False]
+    assert execution["measurement_basis"] == "mixed_pauli"
+    assert execution["measurement_basis_semantics"] == (
+        "measurement_bases and reset_after are schedule-ordered one-per-Record-column; "
+        "X measurement rotates into Z, projects, then rotates back unless reset prepares |+>"
+    )
+
+    # Hand-written law: |+>|0> -> (MX,MZ)=(0,0); X-reset prepares |+>, so the
+    # later (MX,MZ) pair is again (0,0). No implementation helper computes it.
+    assert execution["measurement_records"] == [[0, 0, 0, 0]]
+    assert execution["record_counts"] == [5]
+    assert execution["record_probabilities"] == [1.0]
+    measurement_policy = execution["multilevel_measurement_policy"]
+    assert measurement_policy["name"] == (
+        "declared_basis_eigenlabel_sample_then_binary_record"
+    )
+    assert measurement_policy["bit_mapping"] == (
+        "eigenlabel_0_to_bit_0_eigenlabel_1_to_bit_1_"
+        "eigenlabel_ge_2_to_bit_1_with_probability_leaked_readout_b"
+    )
+    evaluator = execution["evaluator_only_diagnostics"]
+    assert evaluator["schema"] == (
+        "error_coupling_simulator.frontend."
+        "mcwf_mps_evaluator_only_diagnostics.v2"
+    )
+    assert evaluator["level_record_semantics"] == (
+        "schedule-ordered local measurement eigenlabel tuples: "
+        "X columns use 0=|+>,1=|-> and preserve leaked level labels >=2; "
+        "Z columns use computational local levels"
+    )
+    assert evaluator["level_records"] == [[0, 0, 0, 0]]
+    assert evaluator["level_record_counts"] == [5]
+    acceptance = manifest["restricted_acceptance_policy"]
+    assert acceptance["schema"] == (
+        "error_coupling_simulator.frontend."
+        "mcwf_mps_restricted_acceptance_policy.v6"
+    )
+    assert acceptance["dense_jointL_record_certification"][
+        "comparison_object"
+    ] == "measurement_basis_level_and_emitted_binary_record_populations"
+
+
 def test_mps012_qt_sampled_reset_row_is_labeled_as_sampled_boundary_only():
     """A sampled reset is not a product-formula dynamics substep."""
 

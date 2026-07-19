@@ -387,7 +387,10 @@ def test_sampled_mcwf_emits_only_sorted_observed_support(
     )
     monkeypatch.setattr(mcwf, "_substep_has_mcwf_terms", lambda _step: False)
 
-    def sample(state, **_kwargs):
+    def sample(state, **kwargs):
+        assert kwargs["targets"] == targets
+        assert kwargs["bases"] == ("Z",) * width
+        assert kwargs["reset_after"] == (False,) * width
         levels, bits = next(observed_records)
         return levels, bits, state
 
@@ -432,6 +435,17 @@ def test_sampled_mcwf_emits_only_sorted_observed_support(
         local_dims=(2,) * width,
         initial_levels=(0,) * width,
         leaked_readout_b=0.5,
+        dynamics_artifacts=(
+            {
+                "substep_index": 0,
+                "substep_id": "measurement-0",
+                "microstep_dt_ns": 0.0,
+                "hamiltonian_dt_ns": 0.0,
+                "hamiltonian_terms": (),
+                "hamiltonian_groups": (),
+                "collapse_terms": (),
+            },
+        ),
     )
 
     assert execution["measurement_records"] == [
@@ -486,6 +500,36 @@ def test_dense_level_oracle_applies_x_measurement_reset_in_original_frame() -> N
     )
 
 
+def test_dense_level_oracle_standalone_rx_prepares_plus_state() -> None:
+    """Hand-written RX law: reset prepares |+>, so a later MX bit is zero."""
+
+    import stim
+
+    from error_coupling_simulator.certify.axis1_mps import (
+        _dense_jointL_level_distribution,
+    )
+    from error_coupling_simulator.frontend import stim_circuit_to_substep_schedule
+
+    schedule = stim_circuit_to_substep_schedule(
+        stim.Circuit(
+            """
+            RX 0
+            TICK
+            MX 0
+            """
+        )
+    )
+
+    distribution = _dense_jointL_level_distribution(
+        schedule,
+        {"local_dims": [2], "initial_levels": [0]},
+        device="cpu",
+    )
+
+    assert set(distribution) == {(0,)}
+    assert distribution[(0,)] == pytest.approx(1.0, abs=1.0e-14)
+
+
 def test_sampled_binary_firewall_rejects_zero_frequency_rows_hidden_by_level_route(
 ) -> None:
     import error_coupling_simulator.certify.axis1_mps as certification
@@ -495,6 +539,7 @@ def test_sampled_binary_firewall_rejects_zero_frequency_rows_hidden_by_level_rou
         "visibility": (
             "evaluator_only_not_emitted_record_or_downstream_estimator_input"
         ),
+        "level_record_semantics": certification._LEVEL_RECORD_SEMANTICS,
         "level_records": [[0]],
         "level_record_counts": [2],
         "level_record_probabilities": [1.0],
@@ -502,6 +547,13 @@ def test_sampled_binary_firewall_rejects_zero_frequency_rows_hidden_by_level_rou
     execution = {
         "measurement_keys": ["m0"],
         "measurement_targets": [0],
+        "measurement_bases": ["Z"],
+        "reset_after": [False],
+        "measurement_basis": "Z",
+        "measurement_basis_semantics": (
+            "measurement_bases and reset_after are schedule-ordered one-per-Record-column; "
+            "X measurement rotates into Z, projects, then rotates back unless reset prepares |+>"
+        ),
         "measurement_records": [[0], [1]],
         "record_counts": [2, 0],
         "record_probabilities": [1.0, 0.0],
@@ -522,7 +574,7 @@ def test_sampled_binary_firewall_rejects_zero_frequency_rows_hidden_by_level_rou
         }
     }
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"record_counts\[1\] must be positive"):
         certification._validate_metric_family_execution_payload(
             execution,
             sampled=True,
