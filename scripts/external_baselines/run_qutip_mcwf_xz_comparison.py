@@ -32,7 +32,7 @@ from error_coupling_simulator.numerics import NUMERICAL_ZERO
 import qutip_mcwf_xz_protocol as protocol
 
 
-SCHEMA = "ai_qec.external_baseline.qutip_project_mcwf_xz_comparison.v2"
+SCHEMA = "ai_qec.external_baseline.qutip_project_mcwf_xz_comparison.v3"
 WORKER_SCHEMA = "ai_qec.external_baseline.qutip_mcwf_xz_record.v2"
 WORKER_ENVELOPE_SCHEMA = "ai_qec.external_baseline.qutip_mcwf_xz_worker_envelope.v1"
 EXPECTED_PROJECT_ENVIRONMENT = "ecs"
@@ -41,6 +41,18 @@ EXPECTED_QUTIP_VERSION = "5.4.0.dev0+f343ee3"
 REPO = Path(__file__).resolve().parents[2]
 QUTIP_WORKER = Path(__file__).with_name("qutip_mcwf_xz_worker.py")
 QUTIP_BASELINE_REPO = REPO / "external" / "baselines" / "qutip"
+PROJECT_EVIDENCE_SOURCE_PATHS = (
+    "scripts/external_baselines/qutip_mcwf_xz_protocol.py",
+    "scripts/external_baselines/qutip_mcwf_xz_worker.py",
+    "scripts/external_baselines/run_qutip_mcwf_xz_comparison.py",
+    "scripts/external_baselines/fixtures/qutip_mcwf_xz_two_qubit_t1.json",
+    "tests/test_axis1_mcwf_convergence.py",
+    "tests/test_external_qutip_mcwf_xz_comparison.py",
+)
+PROJECT_ENVIRONMENT_LOCK_PATHS = (
+    "core-environment-cu130.lock",
+    "uv.lock",
+)
 SELECTED_QUTIP_SOURCES = (
     "qutip/__init__.py",
     "qutip/solver/mcsolve.py",
@@ -115,6 +127,68 @@ def _git(*arguments: str) -> str:
     return _git_at(REPO, *arguments)
 
 
+def _project_source_provenance() -> dict[str, Any]:
+    commit = _git("rev-parse", "HEAD")
+    if len(commit) not in (40, 64) or any(
+        character not in "0123456789abcdef" for character in commit
+    ):
+        raise RuntimeError("project comparator requires a full hexadecimal Git commit")
+    tracked = set(
+        _git(
+            "ls-files",
+            "--error-unmatch",
+            "--",
+            *PROJECT_EVIDENCE_SOURCE_PATHS,
+        ).splitlines()
+    )
+    if tracked != set(PROJECT_EVIDENCE_SOURCE_PATHS):
+        raise RuntimeError("project evidence source inventory is not fully tracked")
+    status = _git("status", "--porcelain=v1", "--untracked-files=all")
+    if status:
+        raise RuntimeError(
+            "project evidence requires a clean Git worktree including untracked files"
+        )
+    identities = {
+        relative: {
+            "path": relative,
+            "sha256": _sha256_file(REPO / relative),
+        }
+        for relative in PROJECT_EVIDENCE_SOURCE_PATHS
+    }
+    return {
+        "repo_commit": commit,
+        "git_object_format": "sha1" if len(commit) == 40 else "sha256",
+        "status_scope": "whole_worktree_including_untracked_not_ignored",
+        "git_status_porcelain": "",
+        "whole_worktree_clean_including_untracked": True,
+        "selected_sources_clean_at_repo_commit": True,
+        "selected_sources": identities,
+    }
+
+
+def _environment_lock_provenance() -> dict[str, Any]:
+    lock_hashes: dict[str, str] = {}
+    for relative in PROJECT_ENVIRONMENT_LOCK_PATHS:
+        path = REPO / relative
+        if not path.is_file():
+            raise RuntimeError(f"required project environment lock is missing: {relative}")
+        lock_hashes[relative] = _sha256_file(path)
+    return {
+        "project_environment_locks": lock_hashes,
+        "core_lock_scope": "project_ecs_only_not_qutip_baseline",
+        "uv_lock_scope": "project_ecs_only_not_qutip_baseline",
+        "baseline_environment": "ecs-baseline-qutip",
+        "baseline_environment_lock": None,
+        "authoritative_lock_conformance_checked": False,
+        "claims_qutip_baseline_lock_conformance": False,
+        "claims_reproducible_environment": False,
+        "limitation": (
+            "the hashed project locks do not specify or attest the isolated "
+            "ecs-baseline-qutip environment"
+        ),
+    }
+
+
 def _project_runtime_provenance() -> dict[str, Any]:
     if "PYTHONPATH" in os.environ:
         raise RuntimeError("project comparator refuses caller-provided PYTHONPATH")
@@ -124,6 +198,8 @@ def _project_runtime_provenance() -> dict[str, Any]:
         raise RuntimeError(
             f"project comparator must run inside {EXPECTED_PROJECT_ENVIRONMENT!r}"
         )
+    source_provenance = _project_source_provenance()
+    environment_locks = _environment_lock_provenance()
     if not torch.cuda.is_available():
         raise RuntimeError("project MCWF comparator requires an in-process CUDA device")
     visible = os.environ.get("CUDA_VISIBLE_DEVICES")
@@ -139,13 +215,15 @@ def _project_runtime_provenance() -> dict[str, Any]:
         "cuda_visible_devices": visible,
         "cuda_device_count": int(torch.cuda.device_count()),
         "cuda_device_name": torch.cuda.get_device_name(0),
-        "repo_commit": _git("rev-parse", "HEAD"),
+        "repo_commit": source_provenance["repo_commit"],
         "adapter_path": str(Path(__file__).resolve().relative_to(REPO)),
         "adapter_sha256": _sha256_file(Path(__file__).resolve()),
         "fixture_protocol_sha256": _sha256_file(
             Path(__file__).with_name("qutip_mcwf_xz_protocol.py")
         ),
         "qutip_worker_sha256": _sha256_file(QUTIP_WORKER),
+        "source_provenance": source_provenance,
+        "environment_lock_provenance": environment_locks,
         "pythonpath_env": None,
     }
 
@@ -1147,6 +1225,9 @@ def build_report(fixture_path: Path) -> dict[str, Any]:
     fixture = protocol.load_fixture(fixture_path)
     if float(fixture["numerical_zero"]) != NUMERICAL_ZERO:
         raise RuntimeError("neutral fixture numerical_zero drifted from project constant")
+    deterministic_convergence = protocol.finite_step_convergence_evidence(fixture)
+    if deterministic_convergence.get("all_checks_passed") is not True:
+        raise RuntimeError("finite-step convergence or corruption evidence failed")
     project_runtime = _project_runtime_provenance()
     schedule = _schedule_from_fixture(fixture)
     execution_options = {
@@ -1209,6 +1290,38 @@ def build_report(fixture_path: Path) -> dict[str, Any]:
     direct_label_law = _law(direct_labels)
     direct_binary_law = _law(direct_record)
     carrier_binary_law = _law(carrier_record)
+    direct_finite_step_gate = protocol.finite_step_public_sample_evidence(
+        fixture,
+        direct_binary_law,
+    )
+    carrier_finite_step_gate = protocol.finite_step_public_sample_evidence(
+        fixture,
+        carrier_binary_law,
+    )
+    public_finite_step_passed = bool(
+        direct_carrier_exact
+        and direct_finite_step_gate["passed"]
+        and carrier_finite_step_gate["passed"]
+    )
+    finite_step_convergence: dict[str, Any] = {
+        "schema": (
+            "ai_qec.external_baseline.qutip_project_mcwf_xz_finite_step_evidence.v1"
+        ),
+        "deterministic_recurrence": deterministic_convergence,
+        "public_m40_sample_gate": {
+            "direct": direct_finite_step_gate,
+            "carrier": carrier_finite_step_gate,
+            "direct_carrier_exact_record_match": direct_carrier_exact,
+            "all_checks_passed": public_finite_step_passed,
+        },
+        "all_checks_passed": bool(
+            deterministic_convergence["all_checks_passed"]
+            and public_finite_step_passed
+        ),
+    }
+    finite_step_convergence["content_hash"] = protocol.canonical_content_hash(
+        finite_step_convergence
+    )
     x_after_column = fixture["measurement_keys"].index("mx_after")
     if fixture["measurement_bases"][x_after_column] != "X":
         raise RuntimeError("directed X-after comparison is not bound to an X column")
@@ -1331,7 +1444,15 @@ def build_report(fixture_path: Path) -> dict[str, Any]:
         and all(comparison["passed"] for comparison in comparisons.values())
         and corruption_detected
         and coherence_corruption_detected
+        and finite_step_convergence["all_checks_passed"]
     )
+    if _project_source_provenance() != project_runtime["source_provenance"]:
+        raise RuntimeError("project evidence sources changed during comparator run")
+    if (
+        _environment_lock_provenance()
+        != project_runtime["environment_lock_provenance"]
+    ):
+        raise RuntimeError("project environment locks changed during comparator run")
     report = {
         "schema": SCHEMA,
         "claim_boundary": fixture["claim_boundary"],
@@ -1389,6 +1510,7 @@ def build_report(fixture_path: Path) -> dict[str, Any]:
             "direct_carrier_exact_record_match": direct_carrier_exact,
         },
         "isolated_qutip": qutip_envelope,
+        "finite_step_convergence": finite_step_convergence,
         "comparisons": comparisons,
         "corruption_negative_control": {
             "mutation": "flip every mz_after binary bit from 0 to 1",
@@ -1422,6 +1544,14 @@ def build_report(fixture_path: Path) -> dict[str, Any]:
             "durability_failure_removes_destination": True,
             "parent_directory_fsync_after_replace": True,
             "artifact_presence_means_current_invocation_completed": True,
+        },
+        "canonical_report_identity": {
+            "hash_algorithm": "sha256",
+            "canonicalization": (
+                "json_sort_keys_compact_separators_utf8_allow_nan_false"
+            ),
+            "excluded_top_level_field": "content_hash",
+            "content_hash_locator": "#/content_hash",
         },
         "all_checks_passed": all_checks_passed,
     }

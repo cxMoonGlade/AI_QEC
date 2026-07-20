@@ -1,10 +1,10 @@
 """MCWF finite-step X/Z Record-law convergence on the frozen QuTiP fixture.
 
 This file deliberately makes no linear-channel, Choi, CPTP, or global
-convergence-order claim.  The deterministic reference below is a hand-written
-scalar recurrence for the normalized finite-step candidate law used by this
-one frozen T1 fixture.  The public GPU test compares sampled Records with that
-finite-step law; the continuous-time law comes from the neutral QuTiP protocol.
+convergence-order claim.  The deterministic reference is the standard-library
+scalar recurrence owned by the neutral QuTiP protocol for this one frozen T1
+fixture.  The public GPU test compares sampled Records with that finite-step
+law; the continuous-time law comes from the same neutral protocol.
 """
 
 from __future__ import annotations
@@ -60,59 +60,114 @@ def _load_protocol():
     return module
 
 
-def _finite_step_record_law(
-    fixture: dict[str, Any],
-    microstep_count: int,
-    *,
-    no_jump_linear_factor: float = 0.5,
-    divide_duration_by_microsteps: bool = True,
-) -> dict[tuple[int, int, int, int], float]:
-    """Hand-written normalized-candidate recurrence for the frozen T1 fixture."""
+def test_protocol_owns_the_frozen_finite_step_recurrence():
+    protocol = _load_protocol()
+    fixture = protocol.load_fixture(FIXTURE)
 
-    gamma = float(fixture["gamma_1_per_ns"])
-    duration = float(fixture["evolution_duration_ns"])
-    dt_micro = (
-        duration / float(microstep_count)
-        if divide_duration_by_microsteps
-        else duration
-    )
-    jump_weight = gamma * dt_micro
-    no_jump_excited_amplitude = 1.0 - no_jump_linear_factor * jump_weight
-    amplitude_squared = no_jump_excited_amplitude**2
+    law = protocol.finite_step_binary_distribution(fixture, microstep_count=40)
+    joint, z_before, x_after = _fixture_tvs(protocol, fixture, law)
 
-    z_survival = (
-        amplitude_squared / (amplitude_squared + jump_weight)
-    ) ** microstep_count
-
-    no_jump_path_weight = 1.0
-    for k in range(microstep_count):
-        prior_excited_weight = no_jump_excited_amplitude ** (2 * k)
-        numerator = 1.0 + no_jump_excited_amplitude ** (2 * k + 2)
-        denominator = 1.0 + (
-            amplitude_squared + jump_weight
-        ) * prior_excited_weight
-        no_jump_path_weight *= numerator / denominator
-    x_coherence = (
-        no_jump_path_weight
-        * 2.0
-        * no_jump_excited_amplitude**microstep_count
-        / (1.0 + no_jump_excited_amplitude ** (2 * microstep_count))
-    )
-    p_x_after_zero = 0.5 * (1.0 + x_coherence)
-
-    law: dict[tuple[int, int, int, int], float] = {}
-    for x_before in (0, 1):
-        for z_before in (0, 1):
-            p_z_before = z_survival if z_before == 1 else 1.0 - z_survival
-            for x_after in (0, 1):
-                p_x_after = (
-                    p_x_after_zero if x_after == 0 else 1.0 - p_x_after_zero
-                )
-                law[(x_before, z_before, x_after, 0)] = (
-                    0.5 * p_z_before * p_x_after
-                )
     assert math.fsum(law.values()) == pytest.approx(1.0, abs=NUMERICAL_ZERO)
-    return law
+    assert all(row[3] == 0 for row in law)
+    assert joint == pytest.approx(EXPECTED_FIXTURE_TV[40][0], abs=NUMERICAL_ZERO)
+    assert z_before == pytest.approx(EXPECTED_FIXTURE_TV[40][0], abs=NUMERICAL_ZERO)
+    assert x_after == pytest.approx(EXPECTED_FIXTURE_TV[40][1], abs=NUMERICAL_ZERO)
+
+
+def test_protocol_builds_verdict_driving_convergence_and_corruption_evidence():
+    protocol = _load_protocol()
+    fixture = protocol.load_fixture(FIXTURE)
+
+    packet = protocol.finite_step_convergence_evidence(fixture)
+
+    assert packet["schema"] == (
+        "ai_qec.external_baseline.mcwf_xz_finite_step_convergence.v1"
+    )
+    assert packet["microstep_counts"] == [10, 20, 40, 80]
+    assert packet["ratio_band"] == [1.85, 2.15]
+    for row in packet["grid"]:
+        count = row["microstep_count"]
+        expected_joint_z, expected_x = EXPECTED_FIXTURE_TV[count]
+        assert row["observed_tv"] == pytest.approx(
+            {
+                "joint": expected_joint_z,
+                "z_before": expected_joint_z,
+                "x_after": expected_x,
+            },
+            abs=NUMERICAL_ZERO,
+        )
+        assert row["observed_tv"] == pytest.approx(
+            row["expected_tv"], abs=NUMERICAL_ZERO
+        )
+        assert row["expected_match"] is True
+        assert row["post_z_structural_zero"] is True
+    assert all(check["passed"] for check in packet["ratio_checks"])
+    assert packet["final_grid_gate"]["caps"] == {
+        "joint": FINAL_JOINT_Z_TV_CAP,
+        "z_before": FINAL_JOINT_Z_TV_CAP,
+        "x_after": FINAL_X_TV_CAP,
+    }
+    assert packet["final_grid_gate"]["passed"] is True
+    sample_gate = packet["public_m40_sample_gate_policy"]
+    assert sample_gate["sample_count"] == 2048
+    assert sample_gate["joint_tv_radius"] == pytest.approx(
+        EXPECTED_JOINT_RADIUS, abs=NUMERICAL_ZERO
+    )
+    assert sample_gate["marginal_tv_radius"] == pytest.approx(
+        EXPECTED_MARGINAL_RADIUS, abs=NUMERICAL_ZERO
+    )
+    assert sample_gate["passed"] is True
+    controls = packet["corruption_controls"]
+    assert controls["nojump_half_to_one"]["observed_tv_vs_correct_m40"] == (
+        pytest.approx(
+            {"joint": 0.08111612211053276, "x_after": 0.08111612211053276},
+            abs=NUMERICAL_ZERO,
+        )
+    )
+    assert controls["nojump_half_to_one"]["m80_tv_vs_continuous"] == (
+        pytest.approx(0.08106347555070871, abs=NUMERICAL_ZERO)
+    )
+    assert controls["nojump_half_to_one"]["detected"] is True
+    assert controls["wrong_dt"]["observed_tv_vs_correct_m40"] == pytest.approx(
+        {
+            "joint": 0.30909405210692065,
+            "z_before": 0.24403202853509015,
+            "x_after": 0.24746820619510762,
+        },
+        abs=NUMERICAL_ZERO,
+    )
+    assert controls["wrong_dt"]["detected"] is True
+    assert packet["all_checks_passed"] is True
+    assert packet["content_hash"] == protocol.canonical_content_hash(packet)
+
+
+def test_protocol_public_m40_sample_gate_is_observed_and_fail_closed():
+    protocol = _load_protocol()
+    fixture = protocol.load_fixture(FIXTURE)
+    finite_step = protocol.finite_step_binary_distribution(fixture, 40)
+
+    healthy = protocol.finite_step_public_sample_evidence(fixture, finite_step)
+    corrupted = protocol.finite_step_public_sample_evidence(
+        fixture,
+        protocol.flip_binary_column(finite_step, column=3),
+    )
+
+    assert healthy["schema"] == (
+        "ai_qec.external_baseline.mcwf_xz_public_m40_sample_gate.v1"
+    )
+    assert healthy["observed_tv"] == {"joint": 0.0, "z_before": 0.0, "x_after": 0.0}
+    assert healthy["joint_tv_radius"] == pytest.approx(
+        EXPECTED_JOINT_RADIUS, abs=NUMERICAL_ZERO
+    )
+    assert healthy["marginal_tv_radius"] == pytest.approx(
+        EXPECTED_MARGINAL_RADIUS, abs=NUMERICAL_ZERO
+    )
+    assert healthy["post_z_structural_zero"] is True
+    assert healthy["passed"] is True
+    assert healthy["content_hash"] == protocol.canonical_content_hash(healthy)
+    assert corrupted["observed_tv"]["joint"] == 1.0
+    assert corrupted["post_z_structural_zero"] is False
+    assert corrupted["passed"] is False
 
 
 def _fixture_tvs(protocol, fixture, finite_step_law):
@@ -168,7 +223,7 @@ def test_frozen_fixture_record_tv_bias_approximately_halves_on_this_grid():
     observed: dict[int, tuple[float, float, float]] = {}
 
     for microstep_count in MICROSTEP_COUNTS:
-        law = _finite_step_record_law(fixture, microstep_count)
+        law = protocol.finite_step_binary_distribution(fixture, microstep_count)
         assert all(row[3] == 0 for row in law)
         joint, z_before, x_after = _fixture_tvs(protocol, fixture, law)
         observed[microstep_count] = (joint, z_before, x_after)
@@ -200,8 +255,8 @@ def test_corrupted_scalar_recurrences_have_power_on_the_frozen_fixture():
     fixture = protocol.load_fixture(FIXTURE)
     continuous = protocol.analytic_binary_distribution(fixture)
 
-    correct_40 = _finite_step_record_law(fixture, 40)
-    doubled_no_jump_40 = _finite_step_record_law(
+    correct_40 = protocol.finite_step_binary_distribution(fixture, 40)
+    doubled_no_jump_40 = protocol.finite_step_binary_distribution(
         fixture,
         40,
         no_jump_linear_factor=1.0,
@@ -225,7 +280,7 @@ def test_corrupted_scalar_recurrences_have_power_on_the_frozen_fixture():
     assert joint_half_mutation > EXPECTED_JOINT_RADIUS
     assert x_half_mutation > EXPECTED_MARGINAL_RADIUS
 
-    doubled_no_jump_80 = _finite_step_record_law(
+    doubled_no_jump_80 = protocol.finite_step_binary_distribution(
         fixture,
         80,
         no_jump_linear_factor=1.0,
@@ -235,7 +290,7 @@ def test_corrupted_scalar_recurrences_have_power_on_the_frozen_fixture():
         continuous,
     ) == pytest.approx(0.08106347555070871, abs=NUMERICAL_ZERO)
 
-    wrong_dt = _finite_step_record_law(
+    wrong_dt = protocol.finite_step_binary_distribution(
         fixture,
         40,
         divide_duration_by_microsteps=False,
@@ -311,7 +366,7 @@ def test_public_gpu_xz_records_match_the_finite_step_fixture_law():
         )
 
     empirical = _empirical_law(execution)
-    finite_step = _finite_step_record_law(fixture, microstep_count)
+    finite_step = protocol.finite_step_binary_distribution(fixture, microstep_count)
     alpha_each = float(fixture["comparison_alpha"]) / 3.0
     joint_radius = protocol.multinomial_tv_radius(
         sample_count=trajectory_count,

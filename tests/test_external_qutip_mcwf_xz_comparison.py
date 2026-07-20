@@ -97,6 +97,29 @@ def test_neutral_fixture_binds_ordered_xz_reset_contract_and_analytic_law():
     }
 
 
+def test_neutral_protocol_and_finite_step_recurrence_are_standard_library_only():
+    tree = ast.parse(PROTOCOL.read_text(encoding="utf-8"))
+    imported_roots: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imported_roots.update(alias.name.split(".", 1)[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imported_roots.add(node.module.split(".", 1)[0])
+
+    assert imported_roots <= {
+        "__future__",
+        "collections",
+        "hashlib",
+        "json",
+        "math",
+        "pathlib",
+        "typing",
+    }
+    source = PROTOCOL.read_text(encoding="utf-8")
+    assert "finite_step_binary_distribution" in source
+    assert "error_coupling_simulator" not in source
+
+
 def test_neutral_fixture_is_hash_pinned_and_tampering_fails_closed(tmp_path: Path):
     protocol = _load_protocol()
 
@@ -217,6 +240,61 @@ def test_canonical_report_hash_detects_payload_mutation():
     assert protocol.canonical_content_hash(report) != report["content_hash"]
 
 
+def test_project_evidence_provenance_binds_clean_sources_and_honest_lock_scope(
+    monkeypatch,
+):
+    comparator = _load_comparator(monkeypatch)
+    commit = "a" * 40
+
+    def clean_git(*arguments):
+        if arguments == ("rev-parse", "HEAD"):
+            return commit
+        if arguments[:3] == ("ls-files", "--error-unmatch", "--"):
+            return "\n".join(arguments[3:])
+        if arguments == ("status", "--porcelain=v1", "--untracked-files=all"):
+            return ""
+        raise AssertionError(f"unexpected git query: {arguments!r}")
+
+    monkeypatch.setattr(comparator, "_git", clean_git)
+    source = comparator._project_source_provenance()
+    locks = comparator._environment_lock_provenance()
+
+    assert source["repo_commit"] == commit
+    assert source["selected_sources_clean_at_repo_commit"] is True
+    assert source["whole_worktree_clean_including_untracked"] is True
+    assert set(source["selected_sources"]) >= {
+        "scripts/external_baselines/qutip_mcwf_xz_protocol.py",
+        "scripts/external_baselines/run_qutip_mcwf_xz_comparison.py",
+        "tests/test_axis1_mcwf_convergence.py",
+        "tests/test_external_qutip_mcwf_xz_comparison.py",
+    }
+    assert all(
+        len(identity["sha256"]) == 64
+        for identity in source["selected_sources"].values()
+    )
+    assert locks["baseline_environment_lock"] is None
+    assert locks["claims_qutip_baseline_lock_conformance"] is False
+    assert locks["claims_reproducible_environment"] is False
+    assert locks["core_lock_scope"] == "project_ecs_only_not_qutip_baseline"
+    assert locks["uv_lock_scope"] == "project_ecs_only_not_qutip_baseline"
+    assert len(locks["project_environment_locks"]["core-environment-cu130.lock"]) == 64
+    assert len(locks["project_environment_locks"]["uv.lock"]) == 64
+
+    monkeypatch.setattr(
+        comparator,
+        "_git",
+        lambda *arguments: (
+            commit
+            if arguments == ("rev-parse", "HEAD")
+            else "\n".join(arguments[3:])
+            if arguments[:3] == ("ls-files", "--error-unmatch", "--")
+            else " M scripts/external_baselines/qutip_mcwf_xz_protocol.py"
+        ),
+    )
+    with pytest.raises(RuntimeError, match="clean Git worktree"):
+        comparator._project_source_provenance()
+
+
 def test_qutip_report_shapes_have_distinct_current_schema_versions():
     worker_source = QUTIP_WORKER.read_text(encoding="utf-8")
     comparator_source = COMPARATOR.read_text(encoding="utf-8")
@@ -225,7 +303,7 @@ def test_qutip_report_shapes_have_distinct_current_schema_versions():
         worker_source
     )
     assert (
-        'SCHEMA = "ai_qec.external_baseline.qutip_project_mcwf_xz_comparison.v2"'
+        'SCHEMA = "ai_qec.external_baseline.qutip_project_mcwf_xz_comparison.v3"'
         in comparator_source
     )
     assert (
@@ -238,6 +316,7 @@ def test_qutip_report_shapes_have_distinct_current_schema_versions():
         in comparator_source
     )
     assert "_validate_isolated_qutip_report" in comparator_source
+    assert '"finite_step_convergence": finite_step_convergence' in comparator_source
 
 
 def test_exact_key_validator_rejects_missing_and_additional_fields(monkeypatch):
@@ -815,7 +894,7 @@ def test_optional_public_gpu_mcwf_matches_isolated_qutip_and_detects_corruption(
     assert ran.group_cleanup_verified is True
     report = json.loads(output.read_text(encoding="utf-8"))
     assert report["schema"] == (
-        "ai_qec.external_baseline.qutip_project_mcwf_xz_comparison.v2"
+        "ai_qec.external_baseline.qutip_project_mcwf_xz_comparison.v3"
     )
     assert report["all_checks_passed"] is True
     assert report["fixture"]["sha256"] == (
@@ -835,6 +914,37 @@ def test_optional_public_gpu_mcwf_matches_isolated_qutip_and_detects_corruption(
     ] is True
     assert report["atomic_publication"]["parent_directory_fsync_after_replace"] is True
     assert report["atomic_publication"]["durability_failure_removes_destination"] is True
+    finite_step = report["finite_step_convergence"]
+    assert finite_step["all_checks_passed"] is True
+    deterministic = finite_step["deterministic_recurrence"]
+    assert deterministic["microstep_counts"] == [10, 20, 40, 80]
+    public_m40 = finite_step["public_m40_sample_gate"]
+    assert public_m40["all_checks_passed"] is True
+    assert public_m40["direct"]["passed"] is True
+    assert public_m40["carrier"]["passed"] is True
+    assert public_m40["direct"]["observed_tv"] == public_m40["carrier"][
+        "observed_tv"
+    ]
+    assert deterministic["corruption_controls"]["nojump_half_to_one"][
+        "detected"
+    ] is True
+    assert deterministic["corruption_controls"]["wrong_dt"]["detected"] is True
+    source_provenance = report["project_runtime_provenance"]["source_provenance"]
+    assert source_provenance["whole_worktree_clean_including_untracked"] is True
+    assert source_provenance["selected_sources_clean_at_repo_commit"] is True
+    assert set(source_provenance["selected_sources"]) >= {
+        "scripts/external_baselines/qutip_mcwf_xz_protocol.py",
+        "scripts/external_baselines/run_qutip_mcwf_xz_comparison.py",
+        "tests/test_axis1_mcwf_convergence.py",
+        "tests/test_external_qutip_mcwf_xz_comparison.py",
+    }
+    locks = report["project_runtime_provenance"]["environment_lock_provenance"]
+    assert locks["baseline_environment_lock"] is None
+    assert locks["claims_qutip_baseline_lock_conformance"] is False
+    assert locks["claims_reproducible_environment"] is False
+    assert report["canonical_report_identity"]["content_hash_locator"] == (
+        "#/content_hash"
+    )
     envelope = report["isolated_qutip"]
     assert envelope["schema"] == (
         "ai_qec.external_baseline.qutip_mcwf_xz_worker_envelope.v1"
