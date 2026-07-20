@@ -29,12 +29,17 @@ import scipy
 import qutip_mcwf_xz_protocol as protocol
 
 
-SCHEMA = "ai_qec.external_baseline.qutip_mcwf_xz_record.v2"
+SCHEMA = "error_coupling_simulator.external_baseline.qutip_mcwf_xz_record.v3"
 EXPECTED_ENVIRONMENT = "ecs-baseline-qutip"
 EXPECTED_QUTIP_COMMIT = "f343ee3ca273a4ea19f6bebbd6f563354ea309ed"
 EXPECTED_QUTIP_VERSION = "5.4.0.dev0+f343ee3"
 REPO = Path(__file__).resolve().parents[2]
 BASELINE_REPO = REPO / "external" / "baselines" / "qutip"
+DEFAULT_REGISTRY = (
+    Path(__file__).resolve().parent
+    / "fixtures"
+    / "mcwf_xz_comparison_registry.json"
+)
 SELECTED_QUTIP_SOURCES = (
     "qutip/__init__.py",
     "qutip/solver/mcsolve.py",
@@ -134,6 +139,23 @@ def _runtime_provenance() -> dict[str, Any]:
         )
     if os.environ.get("CUDA_VISIBLE_DEVICES") != "":
         raise RuntimeError("isolated QuTiP worker requires CUDA_VISIBLE_DEVICES='' ")
+    cache_paths = {
+        "home": Path(os.environ.get("HOME", "")).resolve(),
+        "xdg_cache_home": Path(os.environ.get("XDG_CACHE_HOME", "")).resolve(),
+        "matplotlib_config": Path(os.environ.get("MPLCONFIGDIR", "")).resolve(),
+    }
+    private_roots = {path.parent for path in cache_paths.values()}
+    if (
+        len(private_roots) != 1
+        or {path.name for path in cache_paths.values()}
+        != {"home", "xdg-cache", "mpl-config"}
+        or any(not path.is_dir() or path.is_symlink() for path in cache_paths.values())
+    ):
+        raise RuntimeError("isolated QuTiP worker cache roots are not private")
+    private_root = private_roots.pop()
+    private_root_mode = private_root.stat().st_mode & 0o777
+    if private_root_mode & 0o077:
+        raise RuntimeError("isolated QuTiP worker private root is not owner-only")
     prefix = Path(sys.prefix).resolve()
     executable = Path(sys.executable).resolve()
     module_file = Path(qutip.__file__).resolve()
@@ -226,6 +248,13 @@ def _runtime_provenance() -> dict[str, Any]:
         "project_modules_imported": [],
         "project_package_find_spec": None,
         "resolved_sys_path": resolved_sys_path,
+        "cache_isolation": {
+            **{name: str(path) for name, path in cache_paths.items()},
+            "common_private_root": str(private_root),
+            "common_private_root_mode_octal": f"{private_root_mode:03o}",
+            "all_cache_roots_exist_and_are_nonsymlink_directories": True,
+            "private_root_owner_only": True,
+        },
         "sanitized_parent_environment": {
             key: os.environ.get(key)
             for key in SANITIZED_INHERITED_ENVIRONMENT_KEYS
@@ -310,11 +339,22 @@ def _run_mcwf_interval(
 ) -> tuple[list[qutip.Qobj], int]:
     identity = qutip.tensor(qutip.qeye(2), qutip.qeye(2))
     destroy = qutip.destroy(2)
-    gamma = float(fixture["gamma_1_per_ns"])
-    collapse_operators = [
-        math.sqrt(gamma) * qutip.tensor(destroy, qutip.qeye(2)),
-        math.sqrt(gamma) * qutip.tensor(qutip.qeye(2), destroy),
-    ]
+    number = qutip.basis(2, 1) * qutip.basis(2, 1).dag()
+    local_operators = {
+        "sigma_minus": destroy,
+        "sigma_plus": destroy.dag(),
+        "number_dephasing": number,
+    }
+    collapse_operators = []
+    for term in fixture["collapse_terms"]:
+        rate = float(term["generator_rate_per_ns"])
+        collapse_operators.append(
+            math.sqrt(rate)
+            * _lift_one_site(
+                local_operators[term["family"]],
+                int(term["target"]),
+            )
+        )
     result = qutip.mcsolve(
         0.0 * identity,
         initial_state,
@@ -327,7 +367,7 @@ def _run_mcwf_interval(
     final_states = result.runs_final_states
     if final_states is None or len(final_states) != int(fixture["trajectory_count"]):
         raise RuntimeError("QuTiP did not retain every MCWF final state")
-    if result.stats.get("num_collapse") != 2:
+    if result.stats.get("num_collapse") != len(collapse_operators):
         raise RuntimeError("QuTiP MCWF collapse-operator count drifted")
     jump_count = sum(len(trajectory) for trajectory in result.collapse)
     return list(final_states), int(jump_count)
@@ -368,7 +408,10 @@ def _one_sample_tv(
     )
     tv = protocol.total_variation(observed, expected)
     return {
-        "schema": "ai_qec.external_baseline.one_sample_multinomial_tv.v1",
+        "schema": (
+            "error_coupling_simulator.external_baseline."
+            "one_sample_multinomial_tv.v1"
+        ),
         "total_variation": tv,
         "sample_count": sample_count,
         "alphabet_size": alphabet_size,
@@ -379,8 +422,14 @@ def _one_sample_tv(
     }
 
 
-def build_report(fixture_path: Path) -> dict[str, Any]:
+def build_report(
+    fixture_path: Path,
+    registry_path: Path = DEFAULT_REGISTRY,
+) -> dict[str, Any]:
     fixture = protocol.load_fixture(fixture_path)
+    registry = protocol.load_comparison_registry(registry_path)
+    if fixture["comparison_family_alpha"] != registry["comparison_family_alpha"]:
+        raise RuntimeError("fixture comparison alpha drifted from registry")
     runtime = _runtime_provenance()
     numerical_zero = float(fixture["numerical_zero"])
     trajectory_count = int(fixture["trajectory_count"])
@@ -463,41 +512,29 @@ def build_report(fixture_path: Path) -> dict[str, Any]:
             f"{observed_probability_array_dtype!r}"
         )
     analytic = protocol.analytic_binary_distribution(fixture)
-    component_alpha = float(fixture["comparison_alpha"]) / 3.0
-    x_after_column = fixture["measurement_keys"].index("mx_after")
-    if fixture["measurement_bases"][x_after_column] != "X":
-        raise RuntimeError("worker X-after marginal is not bound to an X column")
-    label_tv = _one_sample_tv(
-        _histogram_mapping(label_histogram),
-        analytic,
-        sample_count=trajectory_count,
-        alphabet_size=16,
-        alpha=component_alpha,
-    )
-    binary_tv = _one_sample_tv(
+    component_alpha = float(registry["per_entry_alpha"])
+    joint_tv = _one_sample_tv(
         _histogram_mapping(binary_histogram),
         analytic,
         sample_count=trajectory_count,
         alphabet_size=16,
         alpha=component_alpha,
     )
-    x_after_tv = _one_sample_tv(
-        protocol.binary_column_marginal(
-            _histogram_mapping(binary_histogram), column=x_after_column
-        ),
-        protocol.binary_column_marginal(analytic, column=x_after_column),
-        sample_count=trajectory_count,
-        alphabet_size=2,
-        alpha=component_alpha,
-    )
+    marginal_diagnostics = {}
+    for key in sorted(protocol.EXPECTED_DIRECTED_MARGINALS[fixture["fixture_id"]]):
+        column = fixture["measurement_keys"].index(key)
+        marginal_diagnostics[key] = protocol.total_variation(
+            protocol.binary_column_marginal(
+                _histogram_mapping(binary_histogram), column=column
+            ),
+            protocol.binary_column_marginal(analytic, column=column),
+        )
     max_reset_residual = max(reset_residuals, default=math.inf)
     reset_passed = bool(max_reset_residual <= numerical_zero)
     total_jump_count = first_jump_count + second_jump_count
     all_checks_passed = bool(
         reset_passed
-        and label_tv["passed"]
-        and binary_tv["passed"]
-        and x_after_tv["passed"]
+        and joint_tv["passed"]
         and total_jump_count > 0
         and math.fsum(label_histogram["counts"]) == trajectory_count
         and math.fsum(binary_histogram["counts"]) == trajectory_count
@@ -511,11 +548,9 @@ def build_report(fixture_path: Path) -> dict[str, Any]:
             "path": str(Path(fixture_path).resolve()),
             "sha256": protocol.fixture_sha256(fixture_path),
             "initial_levels": fixture["initial_levels"],
-            "gamma_1_per_ns": fixture["gamma_1_per_ns"],
-            "evolution_duration_ns": fixture["evolution_duration_ns"],
-            "target_survival_probability": fixture[
-                "target_survival_probability"
-            ],
+            "collapse_terms": fixture["collapse_terms"],
+            "evolution_segments_ns": fixture["evolution_segments_ns"],
+            "comparison_registry_sha256": registry["sha256"],
         },
         "runtime_provenance": runtime,
         "numerical_provenance": {
@@ -536,7 +571,7 @@ def build_report(fixture_path: Path) -> dict[str, Any]:
             "unravelling": "continuous_time_monte_carlo_wave_function",
             "device": "cpu",
             "trajectory_count": trajectory_count,
-            "collapse_operator_count": 2,
+            "collapse_operator_count": len(fixture["collapse_terms"]),
             "first_interval_jump_count": first_jump_count,
             "second_interval_jump_count": second_jump_count,
             "total_jump_count": total_jump_count,
@@ -565,26 +600,25 @@ def build_report(fixture_path: Path) -> dict[str, Any]:
         },
         "analytic_reference": {
             "derivation": (
-                "p(X_before=0)=1/2; p(Z_before=1)=exp(-gamma*t); "
-                "after X/Z reset, p(X_after=0)=(1+sqrt(exp(-gamma*t)))/2 "
-                "and p(Z_after=0)=1"
+                "closed-form local Lindblad population/coherence evolution composed "
+                "with the ordered selective measurement and reset maps"
             ),
-            "simultaneous_components": [
-                "labels",
-                "binary_record",
-                "x_after_binary_marginal",
-            ],
+            "registered_statistic": next(
+                entry["statistic_id"]
+                for entry in protocol.comparison_entries_for_fixture(
+                    registry, fixture["fixture_id"]
+                )
+                if entry["comparison_kind"] == "one_sample_qutip_dense"
+            ),
+            "registry_entry_count": registry["entry_count"],
             "bonferroni_component_alpha": component_alpha,
-            "label_tv": label_tv,
-            "binary_tv": binary_tv,
-            "x_after_binary_marginal_tv": x_after_tv,
-            "x_after_column": x_after_column,
-            "x_after_key": fixture["measurement_keys"][x_after_column],
+            "joint_tv": joint_tv,
+            "nonverdict_directed_marginal_tv": marginal_diagnostics,
         },
         "statistical_limitations": {
             "finite_ntraj": trajectory_count,
             "rare_outcome_resolution_floor": 1.0 / trajectory_count,
-            "scope": "one fixed two-qubit two-boundary T1 fixture",
+            "scope": fixture["fixture_id"],
             "not_established": [
                 "trajectory-by-trajectory coupling to the project RNG",
                 "qutrit or leakage label semantics",
@@ -664,6 +698,7 @@ def _atomic_write_json(path: Path, payload: dict[str, Any]) -> None:
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--fixture", type=Path, required=True)
+    parser.add_argument("--registry", type=Path, default=DEFAULT_REGISTRY)
     parser.add_argument("--output", type=Path, required=True)
     return parser.parse_args()
 
@@ -671,7 +706,7 @@ def _parse_args() -> argparse.Namespace:
 def main() -> int:
     args = _parse_args()
     _prepare_output_path(args.output)
-    report = build_report(args.fixture)
+    report = build_report(args.fixture, args.registry)
     _atomic_write_json(args.output, report)
     print(f"isolated QuTiP MCWF X/Z: {'PASS' if report['all_checks_passed'] else 'FAIL'}")
     print(f"wrote {args.output.resolve()}")

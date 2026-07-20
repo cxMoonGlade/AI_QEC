@@ -1793,10 +1793,14 @@ def _require_mcwf_record_b8_artifact_presence(
 
 def _open_required_mcwf_record_artifact(stage_fd: int, name: str) -> int:
     if not isinstance(name, str) or not name or Path(name).name != name:
-        raise RuntimeError("MCWF Record required staged artifact name is invalid")
+        raise RuntimeError(
+            "MCWF Record required prepublication artifact name is invalid"
+        )
     nofollow = getattr(os, "O_NOFOLLOW", None)
     if nofollow is None:
-        raise RuntimeError("MCWF Record required staged artifact no-follow is unavailable")
+        raise RuntimeError(
+            "MCWF Record required prepublication artifact no-follow is unavailable"
+        )
     flags = (
         os.O_RDONLY
         | nofollow
@@ -1807,7 +1811,7 @@ def _open_required_mcwf_record_artifact(stage_fd: int, name: str) -> int:
         return os.open(name, flags, dir_fd=stage_fd)
     except OSError as exc:
         raise RuntimeError(
-            f"MCWF Record required staged artifact is unavailable: {name}"
+            f"MCWF Record required prepublication artifact is unavailable: {name}"
         ) from exc
 
 
@@ -1817,7 +1821,7 @@ def _fsync_required_mcwf_record_artifact(stage_fd: int, name: str) -> None:
         artifact_stat = os.fstat(artifact_fd)
         if not stat.S_ISREG(artifact_stat.st_mode):
             raise RuntimeError(
-                f"MCWF Record required staged artifact is not regular: {name}"
+                f"MCWF Record required prepublication artifact is not regular: {name}"
             )
         os.fsync(artifact_fd)
     finally:
@@ -1849,14 +1853,16 @@ def _canonical_json_payload_sha256(payload: dict[str, Any]) -> str:
 def _mcwf_record_expected_b8_sha256(records: np.ndarray) -> str:
     array = np.asarray(records)
     if array.ndim != 2 or int(array.shape[1]) <= 0:
-        raise RuntimeError("MCWF Record required staged .b8 source is invalid")
+        raise RuntimeError("MCWF Record required prepublication .b8 source is invalid")
     digest = hashlib.sha256()
     row_width = int(array.shape[1])
     rows_per_chunk = max(1, 1_048_576 // row_width)
     for start in range(0, int(array.shape[0]), rows_per_chunk):
         chunk = array[start : start + rows_per_chunk]
         if not bool(np.logical_or(chunk == 0, chunk == 1).all()):
-            raise RuntimeError("MCWF Record required staged .b8 source is nonbinary")
+            raise RuntimeError(
+                "MCWF Record required prepublication .b8 source is nonbinary"
+            )
         packed = np.packbits(
             chunk.astype(np.uint8, copy=False),
             axis=1,
@@ -1878,7 +1884,7 @@ def _seal_required_mcwf_record_artifact(
         before = os.fstat(artifact_fd)
         if not stat.S_ISREG(before.st_mode):
             raise RuntimeError(
-                f"MCWF Record required staged artifact is not regular: {name}"
+                f"MCWF Record required prepublication artifact is not regular: {name}"
             )
         digest = hashlib.sha256()
         while True:
@@ -1908,13 +1914,14 @@ def _seal_required_mcwf_record_artifact(
     )
     if after_version != before_version:
         raise RuntimeError(
-            f"MCWF Record required staged artifact changed while hashing: {name}"
+            "MCWF Record required prepublication artifact changed while hashing: "
+            f"{name}"
         )
     sha256 = digest.hexdigest()
     _require_mcwf_record_artifact_sha256(sha256)
     if sha256 != expected_sha256:
         raise RuntimeError(
-            f"MCWF Record required staged artifact content changed: {name}"
+            f"MCWF Record required prepublication artifact content changed: {name}"
         )
     return _Axis1McwfMpsRecordArtifactSeal(
         name=name,
@@ -1930,12 +1937,14 @@ def _seal_required_mcwf_record_artifact(
 
 def _require_mcwf_record_artifact_sha256(value: str) -> None:
     if not isinstance(value, str) or len(value) != 64:
-        raise RuntimeError("MCWF Record required staged artifact SHA-256 is invalid")
+        raise RuntimeError(
+            "MCWF Record required prepublication artifact SHA-256 is invalid"
+        )
     try:
         int(value, 16)
     except ValueError as exc:
         raise RuntimeError(
-            "MCWF Record required staged artifact SHA-256 is invalid"
+            "MCWF Record required prepublication artifact SHA-256 is invalid"
         ) from exc
 
 
@@ -1956,18 +1965,18 @@ def _validate_mcwf_record_staged_artifact_set(
             )
         except RuntimeError as exc:
             raise RuntimeError(
-                f"MCWF Record staged artifact set revalidation failed: {name}"
+                f"MCWF Record prepublication artifact set revalidation failed: {name}"
             ) from exc
         if observed_seal != expected_seal:
             raise RuntimeError(
-                f"MCWF Record staged artifact set identity changed: {name}"
+                f"MCWF Record prepublication artifact set identity changed: {name}"
             )
     directory_version_after = _validate_mcwf_record_staged_artifact_metadata(
         stage_fd,
         expected,
     )
     if directory_version_after != directory_version_before:
-        raise RuntimeError("MCWF Record staged artifact directory changed")
+        raise RuntimeError("MCWF Record prepublication artifact directory changed")
 
 
 def _validate_mcwf_record_staged_artifact_metadata(
@@ -1978,9 +1987,11 @@ def _validate_mcwf_record_staged_artifact_metadata(
     try:
         observed_names = os.listdir(stage_fd)
     except OSError as exc:
-        raise RuntimeError("MCWF Record staged artifact set is unavailable") from exc
+        raise RuntimeError(
+            "MCWF Record prepublication artifact set is unavailable"
+        ) from exc
     if set(observed_names) != set(expected):
-        raise RuntimeError("MCWF Record staged artifact set is not exact")
+        raise RuntimeError("MCWF Record prepublication artifact set is not exact")
     for name, expected_seal in expected.items():
         try:
             entry_stat = os.stat(
@@ -1990,18 +2001,21 @@ def _validate_mcwf_record_staged_artifact_metadata(
             )
         except OSError as exc:
             raise RuntimeError(
-                f"MCWF Record staged artifact set metadata is unavailable: {name}"
+                "MCWF Record prepublication artifact set metadata is unavailable: "
+                f"{name}"
             ) from exc
         if not _mcwf_record_artifact_seal_matches_stat(expected_seal, entry_stat):
             raise RuntimeError(
-                f"MCWF Record staged artifact set identity changed: {name}"
+                f"MCWF Record prepublication artifact set identity changed: {name}"
             )
     try:
         final_names = os.listdir(stage_fd)
     except OSError as exc:
-        raise RuntimeError("MCWF Record staged artifact set is unavailable") from exc
+        raise RuntimeError(
+            "MCWF Record prepublication artifact set is unavailable"
+        ) from exc
     if set(final_names) != set(expected):
-        raise RuntimeError("MCWF Record staged artifact set is not exact")
+        raise RuntimeError("MCWF Record prepublication artifact set is not exact")
     for name, expected_seal in expected.items():
         try:
             final_stat = os.stat(
@@ -2011,15 +2025,16 @@ def _validate_mcwf_record_staged_artifact_metadata(
             )
         except OSError as exc:
             raise RuntimeError(
-                f"MCWF Record staged artifact set metadata is unavailable: {name}"
+                "MCWF Record prepublication artifact set metadata is unavailable: "
+                f"{name}"
             ) from exc
         if not _mcwf_record_artifact_seal_matches_stat(expected_seal, final_stat):
             raise RuntimeError(
-                f"MCWF Record staged artifact set identity changed: {name}"
+                f"MCWF Record prepublication artifact set identity changed: {name}"
             )
     directory_version_after = _mcwf_record_staged_directory_version(stage_fd)
     if directory_version_after != directory_version_before:
-        raise RuntimeError("MCWF Record staged artifact directory changed")
+        raise RuntimeError("MCWF Record prepublication artifact directory changed")
     return directory_version_after
 
 
@@ -2044,9 +2059,13 @@ def _mcwf_record_staged_directory_version(
     try:
         directory_stat = os.fstat(stage_fd)
     except OSError as exc:
-        raise RuntimeError("MCWF Record staged artifact directory is unavailable") from exc
+        raise RuntimeError(
+            "MCWF Record prepublication artifact directory is unavailable"
+        ) from exc
     if not stat.S_ISDIR(directory_stat.st_mode):
-        raise RuntimeError("MCWF Record staged artifact directory is not a directory")
+        raise RuntimeError(
+            "MCWF Record prepublication artifact directory is not a directory"
+        )
     return (
         int(directory_stat.st_dev),
         int(directory_stat.st_ino),
@@ -3068,7 +3087,9 @@ def _mcwf_record_artifact_entry(
             raise RuntimeError("MCWF Record absent artifact has an unexpected seal")
         return None
     if seal is None:
-        raise RuntimeError("MCWF Record required staged artifact seal is missing")
+        raise RuntimeError(
+            "MCWF Record required prepublication artifact seal is missing"
+        )
     _require_mcwf_record_artifact_seal_name(path, seal)
     return {
         "file": path.name,
@@ -3086,7 +3107,9 @@ def _require_mcwf_record_artifact_seal_name(
     seal: _Axis1McwfMpsRecordArtifactSeal,
 ) -> None:
     if path.name != seal.name:
-        raise RuntimeError("MCWF Record required staged artifact seal name changed")
+        raise RuntimeError(
+            "MCWF Record required prepublication artifact seal name changed"
+        )
 
 
 def _count_measured_qubits(schedule: SubstepSchedule) -> int:

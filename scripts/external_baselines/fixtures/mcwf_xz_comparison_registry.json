@@ -1,0 +1,21 @@
+{
+  "schema": "error_coupling_simulator.neutral.mcwf_xz_comparison_registry.v1",
+  "comparison_family_alpha": 0.01,
+  "entries": [
+    {"statistic_id": "f1.project_dense_joint", "fixture_id": "two_qubit_t1_ordered_xz_reset", "comparison_kind": "one_sample_project_dense", "view": "joint", "column_key": null, "alphabet_size": 16},
+    {"statistic_id": "f1.project_dense_mx_after", "fixture_id": "two_qubit_t1_ordered_xz_reset", "comparison_kind": "one_sample_project_dense", "view": "marginal", "column_key": "mx_after", "alphabet_size": 2},
+    {"statistic_id": "f1.project_dense_mz_before", "fixture_id": "two_qubit_t1_ordered_xz_reset", "comparison_kind": "one_sample_project_dense", "view": "marginal", "column_key": "mz_before", "alphabet_size": 2},
+    {"statistic_id": "f1.qutip_dense_joint", "fixture_id": "two_qubit_t1_ordered_xz_reset", "comparison_kind": "one_sample_qutip_dense", "view": "joint", "column_key": null, "alphabet_size": 16},
+    {"statistic_id": "f1.qutip_project_joint", "fixture_id": "two_qubit_t1_ordered_xz_reset", "comparison_kind": "two_sample_qutip_project", "view": "joint", "column_key": null, "alphabet_size": 16},
+    {"statistic_id": "f2.project_dense_joint", "fixture_id": "two_qubit_pure_dephasing_ordered_xz_reset", "comparison_kind": "one_sample_project_dense", "view": "joint", "column_key": null, "alphabet_size": 16},
+    {"statistic_id": "f2.project_dense_mx_after", "fixture_id": "two_qubit_pure_dephasing_ordered_xz_reset", "comparison_kind": "one_sample_project_dense", "view": "marginal", "column_key": "mx_after", "alphabet_size": 2},
+    {"statistic_id": "f2.project_dense_mz_after", "fixture_id": "two_qubit_pure_dephasing_ordered_xz_reset", "comparison_kind": "one_sample_project_dense", "view": "marginal", "column_key": "mz_after", "alphabet_size": 2},
+    {"statistic_id": "f2.qutip_dense_joint", "fixture_id": "two_qubit_pure_dephasing_ordered_xz_reset", "comparison_kind": "one_sample_qutip_dense", "view": "joint", "column_key": null, "alphabet_size": 16},
+    {"statistic_id": "f2.qutip_project_joint", "fixture_id": "two_qubit_pure_dephasing_ordered_xz_reset", "comparison_kind": "two_sample_qutip_project", "view": "joint", "column_key": null, "alphabet_size": 16},
+    {"statistic_id": "f3.project_dense_joint", "fixture_id": "two_qubit_thermal_ordered_xz_reset", "comparison_kind": "one_sample_project_dense", "view": "joint", "column_key": null, "alphabet_size": 16},
+    {"statistic_id": "f3.project_dense_mz_after", "fixture_id": "two_qubit_thermal_ordered_xz_reset", "comparison_kind": "one_sample_project_dense", "view": "marginal", "column_key": "mz_after", "alphabet_size": 2},
+    {"statistic_id": "f3.project_dense_mz_before", "fixture_id": "two_qubit_thermal_ordered_xz_reset", "comparison_kind": "one_sample_project_dense", "view": "marginal", "column_key": "mz_before", "alphabet_size": 2},
+    {"statistic_id": "f3.qutip_dense_joint", "fixture_id": "two_qubit_thermal_ordered_xz_reset", "comparison_kind": "one_sample_qutip_dense", "view": "joint", "column_key": null, "alphabet_size": 16},
+    {"statistic_id": "f3.qutip_project_joint", "fixture_id": "two_qubit_thermal_ordered_xz_reset", "comparison_kind": "two_sample_qutip_project", "view": "joint", "column_key": null, "alphabet_size": 16}
+  ]
+}

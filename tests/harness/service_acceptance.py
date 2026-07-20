@@ -53,16 +53,6 @@ _SUMMARY_SCHEMA = "error_coupling_simulator.service_acceptance_run.v3"
 _CHECKPOINT_NAME = "service_acceptance_checkpoint.json"
 _LOCK_NAME = ".service_acceptance.lock"
 _CHECKPOINTABLE_PYTEST_RETURN_CODES = frozenset({0, 1, 5})
-_BOUND_PARENT_ENVIRONMENT = (
-    "ECS_DISABLE_NATIVE_KERNELS",
-    "ECS_FORCE_UNFACTORIZED_AXIS1",
-    "ECS_D3_DATA_ROOT",
-    "ECS_D3_MASK",
-    "OMP_NUM_THREADS",
-    "MKL_NUM_THREADS",
-    "OPENBLAS_NUM_THREADS",
-    "NUMEXPR_NUM_THREADS",
-)
 _SNAPSHOT_DIRECTORY_INPUTS = (
     "src",
     "tests",
@@ -117,6 +107,7 @@ _SNAPSHOT_EXCLUDED_PARTS = frozenset(
 _ALLOWED_PROCESS_ENVIRONMENT = frozenset(
     {
         "ECS_RUN_AER_MPS_COMPARISON",
+        "ECS_RUN_MCWF_XZ_FIXTURE_FAMILY_COMPARISON",
         "ECS_RUN_QUTIP_MCWF_XZ_COMPARISON",
         "ECS_RUN_YASTN_MPS_COMPARISON",
         "PYTORCH_ALLOC_CONF",
@@ -708,9 +699,27 @@ def _execution_policy(
             "python_no_user_site": "1",
         },
         "runtime_environment_identity": dict(runtime_environment_identity),
-        "bound_parent_environment": {
-            name: os.environ.get(name) for name in _BOUND_PARENT_ENVIRONMENT
-        },
+        "bound_parent_environment": _bound_parent_environment(),
+    }
+
+
+def _bound_parent_environment(
+    environ: Mapping[str, str] | None = None,
+) -> dict[str, str | None]:
+    """Read the closed parent-environment contract through auditable literals."""
+
+    source = dict(os.environ if environ is None else environ)
+    return {
+        "ECS_DISABLE_NATIVE_KERNELS": source.get("ECS_DISABLE_NATIVE_KERNELS"),
+        "ECS_FORCE_UNFACTORIZED_AXIS1": source.get(
+            "ECS_FORCE_UNFACTORIZED_AXIS1"
+        ),
+        "ECS_D3_DATA_ROOT": source.get("ECS_D3_DATA_ROOT"),
+        "ECS_D3_MASK": source.get("ECS_D3_MASK"),
+        "OMP_NUM_THREADS": source.get("OMP_NUM_THREADS"),
+        "MKL_NUM_THREADS": source.get("MKL_NUM_THREADS"),
+        "OPENBLAS_NUM_THREADS": source.get("OPENBLAS_NUM_THREADS"),
+        "NUMEXPR_NUM_THREADS": source.get("NUMEXPR_NUM_THREADS"),
     }
 
 

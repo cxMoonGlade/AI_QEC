@@ -22,6 +22,7 @@ SPEC.loader.exec_module(BENCHMARK)
 
 def test_atomic_report_is_strict_canonical_json_with_content_hash(
     tmp_path: Path,
+    monkeypatch,
 ) -> None:
     report = {
         "schema": BENCHMARK.REPORT_SCHEMA,
@@ -35,6 +36,14 @@ def test_atomic_report_is_strict_canonical_json_with_content_hash(
 
     first = tmp_path / "first" / "report.json"
     second = tmp_path / "second" / "report.json"
+    fsynced: list[Path] = []
+    real_fsync = BENCHMARK._fsync_directory
+
+    def observe_fsync(path: Path) -> None:
+        fsynced.append(Path(path))
+        real_fsync(path)
+
+    monkeypatch.setattr(BENCHMARK, "_fsync_directory", observe_fsync)
     first_hash = BENCHMARK.atomic_write_json(first, report)
     second_hash = BENCHMARK.atomic_write_json(second, report)
 
@@ -42,6 +51,39 @@ def test_atomic_report_is_strict_canonical_json_with_content_hash(
     assert first_hash == second_hash
     assert json.loads(first.read_text(encoding="utf-8")) == report
     assert list(first.parent.glob("*.tmp")) == []
+    assert fsynced == [first.parent, second.parent]
+
+
+def test_formal_pre_vs_final_block_binds_baseline_bytes_and_canonical_ratios() -> None:
+    repo = SCRIPT.parents[2]
+    baseline_path = repo / BENCHMARK.DEFAULT_BASELINE_REPORT
+    baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
+
+    comparison = BENCHMARK.build_pre_vs_final_comparison(
+        baseline_path=baseline_path,
+        final_performance_summary=baseline["performance_summary"],
+        mode="full",
+    )
+
+    assert comparison["valid"] is True
+    assert comparison["baseline_git_commit"] == (
+        "fa5b0d622b48ccd0cbd34a81b132e11d892d28d2"
+    )
+    assert comparison["performance_is_verdict_driving"] is False
+    assert all(
+        row["semantic_payload_hash_match"] is True
+        and all(
+            metric["final_over_pre"] == pytest.approx(1.0)
+            for metric in row["metrics"].values()
+        )
+        for row in comparison["workloads"]
+    )
+    assert comparison["content_hash_sha256"] == (
+        BENCHMARK.canonical_payload_hash(
+            comparison,
+            hash_field="content_hash_sha256",
+        )
+    )
 
 
 def test_timing_summary_reports_median_and_median_absolute_deviation() -> None:
@@ -600,6 +642,12 @@ def test_parent_provenance_hashes_every_restricted_mps_production_owner() -> Non
         "src/error_coupling_simulator/frontend/axis1_mcwf_mps_execution.py",
         "src/error_coupling_simulator/frontend/axis1_carrier_program.py",
         "src/error_coupling_simulator/frontend/axis1_record_layout.py",
+        "src/error_coupling_simulator/frontend/axis1_ideal_controls.py",
+        "src/error_coupling_simulator/frontend/axis1_selection.py",
+        "src/error_coupling_simulator/frontend/axis1_channel_evidence.py",
+        "src/error_coupling_simulator/frontend/axis1_state_evidence.py",
+        "src/error_coupling_simulator/frontend/analog_schedule.py",
+        "src/error_coupling_simulator/numerics.py",
         "src/error_coupling_simulator/certify/axis1_mps.py",
         "src/error_coupling_simulator/carrier/mps/capped_two_site.py",
         "src/error_coupling_simulator/carrier/mps/controls.py",
@@ -611,3 +659,28 @@ def test_parent_provenance_hashes_every_restricted_mps_production_owner() -> Non
 
     assert required.issubset(hashes)
     assert all(len(hashes[path]) == 64 for path in required)
+
+
+def test_benchmark_parent_and_worker_provenance_bind_lock_and_gpu_identity() -> None:
+    repo = SCRIPT.parents[2]
+    parent = BENCHMARK.parent_provenance(
+        repo,
+        argv=["benchmark", "--mode", "smoke"],
+        require_clean=False,
+    )
+    assert parent["status_scope"] == (
+        "whole_worktree_including_untracked_not_ignored"
+    )
+    assert parent["environment_lock_provenance"][
+        "selected_runtime_lock_conformance_passed"
+    ] is True
+
+    import torch
+
+    worker = BENCHMARK._worker_runtime_provenance(torch, repo_root=repo)
+    assert worker["numpy_version"]
+    assert worker["quimb_version"] == "1.14.0"
+    assert worker["torch_version"]
+    assert worker["cuda_device_uuid"].startswith("GPU-")
+    assert worker["nvidia_driver_version"]
+    assert worker["loaded_cuda_runtime_version_status"] == "not_attested"

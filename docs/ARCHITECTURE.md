@@ -176,9 +176,11 @@ or document must not draw that missing edge as implemented.
   `claims_b8_artifact=true`; it claims neither DEM/decoder integration, complete-QEC behavior, nor
   production scalability.
 - PEPO is retained for current density-matrix research and exact bounded comparisons.
-- PEPS is the full-geometry trajectory frontier; its strict-target FET entropy equality currently
-  follows an all-identity fallback, so the non-degeneracy gate is RED and finite-truncation record
-  faithfulness is unclosed.
+- PEPS is the full-geometry trajectory frontier. The focused B1_3 strict-target cut now preserves and
+  accepts an independently reconstructed rank-four local QR/SVD feasible candidate from stored bond
+  dimension 12, and gauge preparation is gated not to mutate the verdict-driving gamma tensor. This
+  closes the former all-identity implementation blocker on the focused owner surface only; clean-head
+  aggregate replay and finite-truncation full-record faithfulness remain open.
 
 Carrier swaps preserve the channel and record contracts only where the owner explicitly implements
 those contracts. No local state or truncation metric alone establishes record equivalence.
@@ -190,19 +192,22 @@ those contracts. No local state or truncation metric alone establishes record eq
 - CUDA-Q is an isolated plugin workload executed in a separate environment and process.
 - Aer, YASTN, and QuTiP comparison legs execute in isolated environments. YASTN is source/commit-bound
   to its pristine clone. QuTiP binds pristine commit/tree metadata, checks selected installed solver
-  sources against that clone, and records the complete installed-distribution content identity; it
-  does not claim a reproducible full installed-tree build from the clone. Aer records the installed
+  sources against that clone, records the complete installed-distribution content identity, and
+  requires exact conformance to the 36-package Linux-64 environment lock. Aer records the installed
   wheel provenance and separately
   verifies a pristine reference clone, but does not claim wheel-to-clone identity. Aer is a
   finite-circuit state/truncation comparator; YASTN is a product-MPS raw candidate-mass comparator;
-  QuTiP is a fixed two-qubit continuous-time MCWF X/Z measurement/reset comparator with joint-Record
-  and directed X-after statistical gates. Its exact-field v2 worker artifact remains immutable inside
-  a v1 transport envelope; the project-side v3 comparison additionally persists the finite-step
-  recurrence, public `m=40` direct/Carrier sample gates, corruption controls, and canonical outer hash.
-  The project side recomputes its semantic gates, rejects duplicate/non-finite
-  JSON, sanitizes inherited environment markers, and uses stale-safe file-plus-directory-`fsync`
-  publication. Quimb's three-leg comparison is wiring evidence against
-  the same dependency. None establishes a complete QEC Record law, trajectory-by-trajectory
+  the MCWF X/Z family contains fixed two-qubit F1 T1, F2 number-dephasing, and F3 thermal down/up
+  measurement/reset fixtures. An isolated dense worker hand-builds the exact local and Lindblad
+  matrices. A 15-entry registry controls project-vs-dense, QuTiP-vs-dense, and QuTiP-vs-project joint
+  and directed-marginal gates at family `alpha=0.01`. Exact-field QuTiP v3 and dense v1 payloads remain
+  immutable inside v1 transport envelopes; the family v1 comparator binds all fixture/registry,
+  program, source, lock, runtime, GPU, corruption, and content identities. F1 separately retains its
+  finite-step recurrence and public `m=40` direct/Carrier sample gates. The project side recomputes
+  semantic gates, rejects duplicate/non-finite JSON, sanitizes inherited environment markers, and
+  uses stale-safe file-plus-directory-`fsync` publication. Quimb's clean-checkpoint three-leg report
+  binds transitive sources, selected runtime-lock conformance, GPU identity, and atomic publication;
+  it remains wiring evidence against the same dependency. None establishes a complete QEC Record law, trajectory-by-trajectory
   equivalence, qutrit/leakage behavior, scalability, or the restricted-acceptance verdict.
 - Explicit serialized channel files are derived caches, not automatically scientific data.
 - Distribution artifacts include only the current package and shipped documentation inventory.

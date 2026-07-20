@@ -1,8 +1,22 @@
 schema = "error_coupling_simulator.literature.corpus_manifest.v1"
 status = "active"
-corpus_sha256 = "49a22a310b015c3676741623c64b45ff5237c98223dfd942d824952ce3a95e15"
-note_count = 11
-paper_fact_count = 153
+corpus_sha256 = "46ac26a1ced20c297bfa0dbb32773b7fb86be9e2727b688774de8dbc04f794b9"
+note_count = 15
+paper_fact_count = 172
+
+[[notes]]
+path = "docs/papers/reading_notes/arsenijevic_bankovic_damping_1606.01145_source_review.md"
+note_sha256 = "1bb138455f6ca74c8794e5c41b5597b3ce4335331994c737a14cde5bcd3d5ee2"
+source_id = "arxiv:1606.01145"
+source_version = "v1"
+source_sha256 = "32e3d12077bef0b1e6eb84f2f85f5bc35fc1fce6b5f9a3e58c625cf902ee0694"
+
+[[notes]]
+path = "docs/papers/reading_notes/czajkowski_grilo_sequential_measurements_2101.08313_source_review.md"
+note_sha256 = "2dbbd9b827ba884bf1ea0fe2afba959cd5732edabdbc2fa72ca3b953ebceddf1"
+source_id = "arxiv:2101.08313"
+source_version = "v2"
+source_sha256 = "29bfff3bc43db7e5159529ae7be85f87de4803589703fe3f8fa8790f547986ee"
 
 [[notes]]
 path = "docs/papers/reading_notes/evenbly_closed_loop_truncation_1801.05390_source_review.md"
@@ -13,14 +27,21 @@ source_sha256 = "a5578205d15a7c44a11e0508e400109393c555be243d8478c20f668f75997f4
 
 [[notes]]
 path = "docs/papers/reading_notes/froehlich_tensor_jump_2607.01323_source_review.md"
-note_sha256 = "368e47047f62181257374d91ae551c9ebb770f02ad7d9fefb8315d5153cc293f"
+note_sha256 = "686d8d3a7c24d3ea1ac8ae5d704e1488f1b538da9158cd85072be453af776c1c"
 source_id = "arxiv:2607.01323"
 source_version = "v1"
 source_sha256 = "cf1c6c23a33ac7c73b43c5891cee3a5c77c3ba3d36e8e818afe8f9647d65c13a"
 
 [[notes]]
+path = "docs/papers/reading_notes/garner_thermal_relaxation_2512.09189_source_review.md"
+note_sha256 = "9f7ca4c33e05636555f9ad57b76c03366b3ef3c18d40d2ce62964751f555a4f3"
+source_id = "arxiv:2512.09189"
+source_version = "v1"
+source_sha256 = "c1be4a05112b90c3ec250cca2ffbe8bfce06b0fc443e9fc9b2c6bf63a0cb88e4"
+
+[[notes]]
 path = "docs/papers/reading_notes/jaschke_open_system_tn_1804.09796_source_review.md"
-note_sha256 = "bd86307e58fe80d31ae06549fcb13652575953adb80c82fc49c1b2375d1ce15e"
+note_sha256 = "38defd218448d5e2f19bff9a4b80b0ccea0352beaaa3cc8da05b13fdc3dfcace"
 source_id = "arxiv:1804.09796"
 source_version = "v2"
 source_sha256 = "62e6b0ceb9fbce3da5f938968a728873b50953d87e1506f43e1358828714919f"
@@ -47,8 +68,15 @@ source_version = "v1"
 source_sha256 = "c9d066eabc2cf1e4769f4d733737e0330a7882663a48894ed7f6073a0f502b48"
 
 [[notes]]
+path = "docs/papers/reading_notes/oi_schirmer_pure_dephasing_1109.0954_source_review.md"
+note_sha256 = "5b76f4628849e7842493c09baa17b6db19c41abc350f1311b4df7cc829828de9"
+source_id = "arxiv:1109.0954"
+source_version = "v1"
+source_sha256 = "29fb809a2f661af434bda4197fb22f4e109c662282e52905e2f55e6b9eb06a8c"
+
+[[notes]]
 path = "docs/papers/reading_notes/paeckel_mps_time_evolution_1901.05824_source_review.md"
-note_sha256 = "273257a92859d51a986b4408e075a5451d1f899f2d90818f2130b724007a2d07"
+note_sha256 = "3597f27ec537ad3b9053b182f439b20658b508a2717d6a1de30f0b98c8afb869"
 source_id = "arxiv:1901.05824"
 source_version = "v3"
 source_sha256 = "1ce466ed9ec3091ee1a8548cf42a84551584cd5d6f13b0d32a418fcdc981fbb9"
@@ -62,14 +90,14 @@ source_sha256 = "780b8fad4917a9a2031aff235a699999f47b95602922d6ddf912ef946912ce0
 
 [[notes]]
 path = "docs/papers/reading_notes/sander_tensor_jump_2501.17913_source_review.md"
-note_sha256 = "8f9830bad9c84ef9b4d7f3df6d9982da82e4db9f2ccaf5a5e951415149d364c3"
+note_sha256 = "990f7dabd85e298544530374b9a59a774fdec3d8f55cb5b791e115d79f285529"
 source_id = "arxiv:2501.17913"
 source_version = "v2"
 source_sha256 = "9c2b2f2584da0270ef740c5e9ef0b5bc5d2f0fa88326bd0b8b7f04d634dcd2b5"
 
 [[notes]]
 path = "docs/papers/reading_notes/werner_positive_tensor_network_open_systems_1412.5746.md"
-note_sha256 = "7b7301408323965599af76e9cab14fd1630b7100be4a4de60cc858b7e0af2a4e"
+note_sha256 = "08c8008672c5d09889eaa000dcf7e5fbb4b291dfccacbfc7a65ed7448f7065f1"
 source_id = "arxiv:1412.5746"
 source_version = "v2"
 source_sha256 = "a5930d27f28e322d4216384c9ff28e8db7a865fa951a6b33ad5a621fa66a2f2f"

@@ -70,7 +70,9 @@ def test_neutral_fixture_binds_ordered_xz_reset_contract_and_analytic_law():
     protocol = _load_protocol()
     fixture = protocol.load_fixture(FIXTURE)
 
-    assert fixture["schema"] == "ai_qec.neutral.mcwf_xz_fixture.v1"
+    assert fixture["schema"] == (
+        "error_coupling_simulator.neutral.mcwf_xz_fixture.v2"
+    )
     assert fixture["measurement_keys"] == [
         "mx_before",
         "mz_before",
@@ -88,8 +90,9 @@ def test_neutral_fixture_binds_ordered_xz_reset_contract_and_analytic_law():
 
     analytic = protocol.analytic_binary_distribution(fixture)
     assert math.fsum(analytic.values()) == 1.0
-    assert all(record[3] == 0 for record in analytic)
-    assert set(analytic) == {
+    assert len(analytic) == 16
+    assert all(record[3] == 0 or mass == 0.0 for record, mass in analytic.items())
+    assert {record for record, mass in analytic.items() if mass > 0.0} == {
         (x_before, z_before, x_after, 0)
         for x_before in (0, 1)
         for z_before in (0, 1)
@@ -117,14 +120,13 @@ def test_neutral_protocol_and_finite_step_recurrence_are_standard_library_only()
     }
     source = PROTOCOL.read_text(encoding="utf-8")
     assert "finite_step_binary_distribution" in source
-    assert "error_coupling_simulator" not in source
 
 
 def test_neutral_fixture_is_hash_pinned_and_tampering_fails_closed(tmp_path: Path):
     protocol = _load_protocol()
 
     assert protocol.fixture_sha256(FIXTURE) == (
-        "84bb673ab94de1a477a7c770894a2b3add8bc664f90203db4b1ed127cb36c7fa"
+        "72d46d517d2e880327f22148e94611aa3b3c503a4a62d8ee18cf12b2d610257b"
     )
     corrupted = json.loads(FIXTURE.read_text(encoding="utf-8"))
     corrupted["gamma_1_per_ns"] = 0.021
@@ -272,9 +274,16 @@ def test_project_evidence_provenance_binds_clean_sources_and_honest_lock_scope(
         len(identity["sha256"]) == 64
         for identity in source["selected_sources"].values()
     )
-    assert locks["baseline_environment_lock"] is None
-    assert locks["claims_qutip_baseline_lock_conformance"] is False
-    assert locks["claims_reproducible_environment"] is False
+    baseline_lock = locks["baseline_environment_lock"]
+    assert baseline_lock["path"] == (
+        "baseline-environment-qutip-linux-64.lock.json"
+    )
+    assert baseline_lock["conda_explicit_package_count"] > 0
+    assert baseline_lock["qutip_commit"] == comparator.EXPECTED_QUTIP_COMMIT
+    assert baseline_lock["qutip_tree"] == comparator.EXPECTED_QUTIP_TREE
+    assert baseline_lock["authoritative_lock_conformance_checked"] is True
+    assert locks["claims_qutip_baseline_lock_conformance"] is True
+    assert locks["claims_reproducible_environment"] is True
     assert locks["core_lock_scope"] == "project_ecs_only_not_qutip_baseline"
     assert locks["uv_lock_scope"] == "project_ecs_only_not_qutip_baseline"
     assert len(locks["project_environment_locks"]["core-environment-cu130.lock"]) == 64
@@ -299,15 +308,16 @@ def test_qutip_report_shapes_have_distinct_current_schema_versions():
     worker_source = QUTIP_WORKER.read_text(encoding="utf-8")
     comparator_source = COMPARATOR.read_text(encoding="utf-8")
 
-    assert 'SCHEMA = "ai_qec.external_baseline.qutip_mcwf_xz_record.v2"' in (
-        worker_source
+    assert (
+        'SCHEMA = "error_coupling_simulator.external_baseline.'
+        'qutip_mcwf_xz_record.v3"' in worker_source
     )
     assert (
         'SCHEMA = "ai_qec.external_baseline.qutip_project_mcwf_xz_comparison.v3"'
         in comparator_source
     )
     assert (
-        'WORKER_SCHEMA = "ai_qec.external_baseline.qutip_mcwf_xz_record.v2"'
+        '"error_coupling_simulator.external_baseline.qutip_mcwf_xz_record.v3"'
         in comparator_source
     )
     assert (
@@ -459,6 +469,7 @@ def test_atomic_publication_removes_replaced_target_when_directory_fsync_fails(
 
 def test_worker_launch_environment_strips_all_conda_and_loader_markers(
     monkeypatch,
+    tmp_path: Path,
 ):
     comparator = _load_comparator(monkeypatch)
     baseline_python = Path("/isolated/ecs-baseline-qutip/bin/python")
@@ -480,6 +491,7 @@ def test_worker_launch_environment_strips_all_conda_and_loader_markers(
     isolated = comparator._worker_launch_environment(
         parent,
         baseline_python=baseline_python,
+        cache_root=tmp_path / "private-runtime",
     )
 
     assert isolated["KEEP_ME"] == "yes"
@@ -493,6 +505,16 @@ def test_worker_launch_environment_strips_all_conda_and_loader_markers(
     )
     for key in ("LD_LIBRARY_PATH", "CUDA_HOME", "VIRTUAL_ENV"):
         assert key not in isolated
+    private_root = tmp_path / "private-runtime"
+    assert private_root.stat().st_mode & 0o777 == 0o700
+    assert Path(isolated["HOME"]) == private_root / "home"
+    assert Path(isolated["XDG_CACHE_HOME"]) == private_root / "xdg-cache"
+    assert Path(isolated["MPLCONFIGDIR"]) == private_root / "mpl-config"
+    assert all(Path(isolated[key]).is_dir() for key in (
+        "HOME",
+        "XDG_CACHE_HOME",
+        "MPLCONFIGDIR",
+    ))
 
 
 @pytest.mark.parametrize("bad_bit", [0.9, True, "1"])
@@ -734,10 +756,12 @@ def test_optional_isolated_qutip_worker_emits_ordered_xz_reset_artifact(
     assert ran.ok, log.read_text(encoding="utf-8", errors="replace")
     assert ran.group_cleanup_verified is True
     report = json.loads(output.read_text(encoding="utf-8"))
-    assert report["schema"] == "ai_qec.external_baseline.qutip_mcwf_xz_record.v2"
+    assert report["schema"] == (
+        "error_coupling_simulator.external_baseline.qutip_mcwf_xz_record.v3"
+    )
     assert report["all_checks_passed"] is True
     assert report["fixture"]["sha256"] == (
-        "84bb673ab94de1a477a7c770894a2b3add8bc664f90203db4b1ed127cb36c7fa"
+        "72d46d517d2e880327f22148e94611aa3b3c503a4a62d8ee18cf12b2d610257b"
     )
     assert report["runtime_provenance"]["environment"] == "ecs-baseline-qutip"
     assert report["runtime_provenance"]["clone_pristine"] is True
@@ -781,21 +805,18 @@ def test_optional_isolated_qutip_worker_emits_ordered_xz_reset_artifact(
     assert report["reset_checks"]["Z_reset_state"] == "|0>"
     assert report["reset_checks"]["max_post_reset_state_l2"] <= 1.0e-12
     assert report["reset_checks"]["passed"] is True
-    assert report["analytic_reference"]["label_tv"]["passed"] is True
-    assert report["analytic_reference"]["binary_tv"]["passed"] is True
-    assert report["analytic_reference"]["x_after_binary_marginal_tv"][
-        "passed"
-    ] is True
-    assert report["analytic_reference"]["x_after_binary_marginal_tv"][
-        "alphabet_size"
-    ] == 2
-    assert report["analytic_reference"]["x_after_column"] == 2
-    assert report["analytic_reference"]["x_after_key"] == "mx_after"
+    assert report["analytic_reference"]["joint_tv"]["passed"] is True
+    assert report["analytic_reference"]["registered_statistic"] == (
+        "f1.qutip_dense_joint"
+    )
+    assert set(
+        report["analytic_reference"]["nonverdict_directed_marginal_tv"]
+    ) == {"mz_before", "mx_after"}
     assert report["content_hash"] == protocol.canonical_content_hash(report)
 
     corrupted_fixture = tmp_path / "corrupted_fixture.json"
     corrupted_payload = json.loads(FIXTURE.read_text(encoding="utf-8"))
-    corrupted_payload["gamma_1_per_ns"] = 0.0
+    corrupted_payload["collapse_terms"][0]["generator_rate_per_ns"] = 0.0
     corrupted_fixture.write_text(json.dumps(corrupted_payload), encoding="utf-8")
     output.write_text("stale artifact", encoding="utf-8")
     failed = proc.run(
@@ -898,7 +919,7 @@ def test_optional_public_gpu_mcwf_matches_isolated_qutip_and_detects_corruption(
     )
     assert report["all_checks_passed"] is True
     assert report["fixture"]["sha256"] == (
-        "84bb673ab94de1a477a7c770894a2b3add8bc664f90203db4b1ed127cb36c7fa"
+        "72d46d517d2e880327f22148e94611aa3b3c503a4a62d8ee18cf12b2d610257b"
     )
     assert report["project"]["direct"]["passed"] is True
     assert report["project"]["carrier"]["passed"] is True
@@ -939,9 +960,11 @@ def test_optional_public_gpu_mcwf_matches_isolated_qutip_and_detects_corruption(
         "tests/test_external_qutip_mcwf_xz_comparison.py",
     }
     locks = report["project_runtime_provenance"]["environment_lock_provenance"]
-    assert locks["baseline_environment_lock"] is None
-    assert locks["claims_qutip_baseline_lock_conformance"] is False
-    assert locks["claims_reproducible_environment"] is False
+    assert locks["baseline_environment_lock"][
+        "authoritative_lock_conformance_checked"
+    ] is True
+    assert locks["claims_qutip_baseline_lock_conformance"] is True
+    assert locks["claims_reproducible_environment"] is True
     assert report["canonical_report_identity"]["content_hash_locator"] == (
         "#/content_hash"
     )
@@ -951,7 +974,7 @@ def test_optional_public_gpu_mcwf_matches_isolated_qutip_and_detects_corruption(
     )
     assert envelope["fresh_process"]["returncode"] == 0
     assert envelope["worker_report"]["schema"] == (
-        "ai_qec.external_baseline.qutip_mcwf_xz_record.v2"
+        "error_coupling_simulator.external_baseline.qutip_mcwf_xz_record.v3"
     )
     assert envelope["worker_report_content_hash"] == envelope["worker_report"][
         "content_hash"
@@ -975,7 +998,7 @@ def test_optional_public_gpu_mcwf_matches_isolated_qutip_and_detects_corruption(
             "unexpected", True
         ),
         lambda candidate: candidate["fixture"].__setitem__(
-            "gamma_1_per_ns", 0.0
+            "comparison_registry_sha256", "0" * 64
         ),
         lambda candidate: candidate["solver"]["integrator_options"].__setitem__(
             "atol", 1.0e-4
@@ -989,7 +1012,7 @@ def test_optional_public_gpu_mcwf_matches_isolated_qutip_and_detects_corruption(
         lambda candidate: candidate["reset_checks"].__setitem__(
             "passed", False
         ),
-        lambda candidate: candidate["analytic_reference"]["label_tv"].__setitem__(
+        lambda candidate: candidate["analytic_reference"]["joint_tv"].__setitem__(
             "total_variation", 1.0
         ),
         lambda candidate: candidate.__setitem__("all_checks_passed", False),

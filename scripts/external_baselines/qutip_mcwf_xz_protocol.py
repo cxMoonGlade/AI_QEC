@@ -16,10 +16,25 @@ from pathlib import Path
 from typing import Any
 
 
-FIXTURE_SCHEMA = "ai_qec.neutral.mcwf_xz_fixture.v1"
-EXPECTED_FIXTURE_SHA256 = (
-    "84bb673ab94de1a477a7c770894a2b3add8bc664f90203db4b1ed127cb36c7fa"
+FIXTURE_SCHEMA = "error_coupling_simulator.neutral.mcwf_xz_fixture.v2"
+REGISTRY_SCHEMA = (
+    "error_coupling_simulator.neutral.mcwf_xz_comparison_registry.v1"
 )
+EXPECTED_FIXTURE_SHA256_BY_ID = {
+    "two_qubit_t1_ordered_xz_reset": (
+        "72d46d517d2e880327f22148e94611aa3b3c503a4a62d8ee18cf12b2d610257b"
+    ),
+    "two_qubit_pure_dephasing_ordered_xz_reset": (
+        "90604ed353b2334810d6b0af89d82da04e42f4523d47ca846652c21d0c13ca72"
+    ),
+    "two_qubit_thermal_ordered_xz_reset": (
+        "6f1691b833036201fdfcf524e3ddd52d845fc4359fac1cc9d0a0230c74621de1"
+    ),
+}
+EXPECTED_REGISTRY_SHA256 = (
+    "3cd654e798a4c45d3bbebf51665ecffbc109f89ccb3a9eb776904236b5525d62"
+)
+EXPECTED_FIXTURE_IDS = tuple(sorted(EXPECTED_FIXTURE_SHA256_BY_ID))
 EXPECTED_MEASUREMENT_KEYS = (
     "mx_before",
     "mz_before",
@@ -30,6 +45,15 @@ EXPECTED_MEASUREMENT_TARGETS = (0, 1, 0, 1)
 EXPECTED_MEASUREMENT_BASES = ("X", "Z", "X", "Z")
 EXPECTED_RESET_AFTER = (True, True, False, False)
 EXPECTED_RESET_STATES = {"X": "|+>", "Z": "|0>"}
+EXPECTED_DIRECTED_MARGINALS = {
+    "two_qubit_t1_ordered_xz_reset": frozenset({"mz_before", "mx_after"}),
+    "two_qubit_pure_dephasing_ordered_xz_reset": frozenset(
+        {"mx_after", "mz_after"}
+    ),
+    "two_qubit_thermal_ordered_xz_reset": frozenset(
+        {"mz_before", "mz_after"}
+    ),
+}
 FINITE_STEP_MICROSTEP_COUNTS = (10, 20, 40, 80)
 FINITE_STEP_EXPECTED_TVS = {
     10: (0.023409825026091874, 0.010275861041313533),
@@ -45,87 +69,375 @@ FINITE_STEP_EXPECTED_MARGINAL_RADIUS = 0.039518987893233104
 
 
 def load_fixture(path: Path) -> dict[str, Any]:
-    """Load and strictly validate the frozen neutral two-qubit fixture."""
+    """Load and strictly validate one frozen neutral two-qubit fixture."""
 
     resolved = Path(path)
     observed_sha256 = fixture_sha256(resolved)
-    if observed_sha256 != EXPECTED_FIXTURE_SHA256:
-        raise ValueError(
-            "neutral MCWF X/Z fixture SHA-256 mismatch: "
-            f"expected {EXPECTED_FIXTURE_SHA256}, observed {observed_sha256}"
-        )
     raw = json.loads(resolved.read_text(encoding="utf-8"))
     if not isinstance(raw, Mapping):
         raise ValueError("neutral MCWF X/Z fixture must be a JSON object")
     fixture = dict(raw)
     if fixture.get("schema") != FIXTURE_SCHEMA:
         raise ValueError("unsupported neutral MCWF X/Z fixture schema")
-    if fixture.get("fixture_id") != "two_qubit_t1_ordered_xz_reset":
+    fixture_id = fixture.get("fixture_id")
+    if fixture_id not in EXPECTED_FIXTURE_SHA256_BY_ID:
         raise ValueError("unexpected neutral MCWF X/Z fixture id")
+    expected_sha256 = EXPECTED_FIXTURE_SHA256_BY_ID[fixture_id]
+    if observed_sha256 != expected_sha256:
+        raise ValueError(
+            "neutral MCWF X/Z fixture SHA-256 mismatch: "
+            f"expected {expected_sha256}, observed {observed_sha256}"
+        )
+    required_keys = {
+        "schema",
+        "fixture_id",
+        "claim_boundary",
+        "num_qubits",
+        "local_dims",
+        "initial_levels",
+        "collapse_terms",
+        "evolution_segments_ns",
+        "project_microstep_count",
+        "trajectory_count",
+        "seeds",
+        "comparison_family_alpha",
+        "numerical_zero",
+        "measurements",
+        "label_to_bit",
+    }
+    if fixture_id == "two_qubit_thermal_ordered_xz_reset":
+        required_keys.add("thermal_metadata")
+    if set(fixture) != required_keys:
+        raise ValueError("neutral MCWF X/Z fixture fields drifted")
+    if not isinstance(fixture.get("claim_boundary"), str) or not fixture[
+        "claim_boundary"
+    ].strip():
+        raise ValueError("neutral MCWF X/Z claim_boundary must be nonempty")
     if fixture.get("num_qubits") != 2:
         raise ValueError("neutral MCWF X/Z fixture must contain two qubits")
     if fixture.get("local_dims") != [2, 2]:
         raise ValueError("neutral MCWF X/Z fixture local_dims must be [2, 2]")
     if fixture.get("initial_levels") != [0, 1]:
         raise ValueError("neutral MCWF X/Z fixture initial_levels must be [0, 1]")
+
+    terms = fixture.get("collapse_terms")
+    if not isinstance(terms, list) or not terms:
+        raise ValueError("neutral MCWF X/Z collapse_terms must be nonempty")
+    normalized_terms: list[dict[str, Any]] = []
+    seen_term_ids: set[str] = set()
+    for term in terms:
+        if not isinstance(term, Mapping) or set(term) != {
+            "term_id",
+            "family",
+            "target",
+            "generator_rate_per_ns",
+        }:
+            raise ValueError("neutral MCWF X/Z collapse term fields drifted")
+        term_id = term.get("term_id")
+        family = term.get("family")
+        target = term.get("target")
+        if not isinstance(term_id, str) or not term_id or term_id in seen_term_ids:
+            raise ValueError("neutral MCWF X/Z collapse term ids must be unique")
+        seen_term_ids.add(term_id)
+        if family not in {"number_dephasing", "sigma_minus", "sigma_plus"}:
+            raise ValueError("neutral MCWF X/Z collapse family is unsupported")
+        if isinstance(target, bool) or not isinstance(target, int) or target not in (0, 1):
+            raise ValueError("neutral MCWF X/Z collapse target must be 0 or 1")
+        rate = _positive_finite(
+            term.get("generator_rate_per_ns"), "generator_rate_per_ns"
+        )
+        normalized_terms.append(
+            {
+                "term_id": term_id,
+                "family": family,
+                "target": target,
+                "generator_rate_per_ns": rate,
+            }
+        )
+    if [term["term_id"] for term in normalized_terms] != sorted(seen_term_ids):
+        raise ValueError("neutral MCWF X/Z collapse terms must be term-id sorted")
+    expected_families = {
+        "two_qubit_t1_ordered_xz_reset": [
+            (0, "sigma_minus"),
+            (1, "sigma_minus"),
+        ],
+        "two_qubit_pure_dephasing_ordered_xz_reset": [
+            (0, "number_dephasing"),
+            (1, "number_dephasing"),
+        ],
+        "two_qubit_thermal_ordered_xz_reset": [
+            (0, "sigma_minus"),
+            (0, "sigma_plus"),
+            (1, "sigma_minus"),
+            (1, "sigma_plus"),
+        ],
+    }
+    if [(term["target"], term["family"]) for term in normalized_terms] != (
+        expected_families[fixture_id]
+    ):
+        raise ValueError("neutral MCWF X/Z collapse family/target contract drifted")
+
+    segments = fixture.get("evolution_segments_ns")
+    if not isinstance(segments, list) or len(segments) != 2:
+        raise ValueError("neutral MCWF X/Z requires two evolution segments")
+    durations = [
+        _positive_finite(value, "evolution_segments_ns") for value in segments
+    ]
+    if durations != [10.0, 10.0]:
+        raise ValueError("neutral MCWF X/Z evolution segments drifted")
+
+    measurements = fixture.get("measurements")
+    if not isinstance(measurements, list) or len(measurements) != 4:
+        raise ValueError("neutral MCWF X/Z measurements must contain four entries")
+    for measurement in measurements:
+        if not isinstance(measurement, Mapping) or set(measurement) != {
+            "key",
+            "target",
+            "basis",
+            "reset",
+            "reset_state",
+        }:
+            raise ValueError("neutral MCWF X/Z measurement fields drifted")
     _require_exact_sequence(
-        fixture.get("measurement_keys"),
+        [measurement["key"] for measurement in measurements],
         EXPECTED_MEASUREMENT_KEYS,
         "measurement_keys",
     )
     _require_exact_sequence(
-        fixture.get("measurement_targets"),
+        [measurement["target"] for measurement in measurements],
         EXPECTED_MEASUREMENT_TARGETS,
         "measurement_targets",
     )
     _require_exact_sequence(
-        fixture.get("measurement_bases"),
+        [measurement["basis"] for measurement in measurements],
         EXPECTED_MEASUREMENT_BASES,
         "measurement_bases",
     )
     _require_exact_sequence(
-        fixture.get("reset_after"),
+        [measurement["reset"] for measurement in measurements],
         EXPECTED_RESET_AFTER,
         "reset_after",
     )
-    if fixture.get("reset_states") != EXPECTED_RESET_STATES:
+    reset_states = {
+        measurement["basis"]: measurement["reset_state"]
+        for measurement in measurements
+        if measurement["reset"]
+    }
+    if reset_states != EXPECTED_RESET_STATES or any(
+        measurement["reset_state"] is not None
+        for measurement in measurements
+        if not measurement["reset"]
+    ):
         raise ValueError("neutral MCWF X/Z reset-state contract drifted")
-    gamma_1 = _positive_finite(
-        fixture.get("gamma_1_per_ns"), "gamma_1_per_ns"
+
+    rates = _rates_by_target({"collapse_terms": normalized_terms})
+    expected_lambda = math.log(4.0) / 10.0
+    if fixture_id == "two_qubit_t1_ordered_xz_reset":
+        if any(
+            abs(rates[target]["down"] - expected_lambda) > 1.0e-15
+            or rates[target]["up"] != 0.0
+            or rates[target]["dephasing"] != 0.0
+            for target in (0, 1)
+        ):
+            raise ValueError("neutral F1 rate contract drifted")
+    elif fixture_id == "two_qubit_pure_dephasing_ordered_xz_reset":
+        if any(
+            rates[target]["down"] != 0.0
+            or rates[target]["up"] != 0.0
+            or abs(rates[target]["dephasing"] - 2.0 * expected_lambda) > 1.0e-15
+            for target in (0, 1)
+        ):
+            raise ValueError("neutral F2 rate contract drifted")
+    else:
+        thermal = fixture.get("thermal_metadata")
+        if not isinstance(thermal, Mapping) or set(thermal) != {
+            "n_bar",
+            "gamma_base_per_ns",
+            "up_over_down",
+        }:
+            raise ValueError("neutral F3 thermal metadata fields drifted")
+        n_bar = _positive_finite(thermal.get("n_bar"), "n_bar")
+        gamma_base = _positive_finite(
+            thermal.get("gamma_base_per_ns"), "gamma_base_per_ns"
+        )
+        ratio = _positive_finite(thermal.get("up_over_down"), "up_over_down")
+        if (
+            abs(n_bar - 1.0 / 3.0) > 1.0e-15
+            or abs(gamma_base - 3.0 * expected_lambda / 5.0) > 1.0e-15
+            or ratio != 0.25
+        ):
+            raise ValueError("neutral F3 thermal metadata drifted")
+        for target in (0, 1):
+            down = rates[target]["down"]
+            up = rates[target]["up"]
+            if (
+                abs(down - gamma_base * (n_bar + 1.0)) > 1.0e-15
+                or abs(up - gamma_base * n_bar) > 1.0e-15
+                or abs(up / down - ratio) > 1.0e-15
+                or rates[target]["dephasing"] != 0.0
+            ):
+                raise ValueError("neutral F3 detailed-balance contract drifted")
+
+    _positive_integer(
+        fixture.get("project_microstep_count"), "project_microstep_count"
     )
-    _zero(fixture.get("gamma_phi_per_ns"), "gamma_phi_per_ns")
-    duration = _positive_finite(
-        fixture.get("evolution_duration_ns"),
-        "evolution_duration_ns",
-    )
-    target_survival = _positive_finite(
-        fixture.get("target_survival_probability"),
-        "target_survival_probability",
-    )
-    if target_survival != 0.25:
-        raise ValueError("neutral fixture target survival must be exactly 0.25")
-    if abs(math.exp(-gamma_1 * duration) - target_survival) > 1.0e-15:
-        raise ValueError("neutral fixture gamma-duration survival drifted")
-    _positive_integer(fixture.get("microstep_count"), "microstep_count")
     if _positive_integer(
         fixture.get("trajectory_count"), "trajectory_count"
     ) < 128:
         raise ValueError("trajectory_count must be at least 128")
-    for key in (
-        "project_rng_seed",
-        "qutip_mcwf_seed",
-        "qutip_measurement_seed",
-    ):
-        _positive_integer(fixture.get(key), key)
-    alpha = _positive_finite(fixture.get("comparison_alpha"), "comparison_alpha")
+    seeds = fixture.get("seeds")
+    if not isinstance(seeds, Mapping) or set(seeds) != {
+        "project",
+        "qutip_mcwf",
+        "qutip_measurement",
+    }:
+        raise ValueError("neutral MCWF X/Z seed fields drifted")
+    for key, value in seeds.items():
+        _positive_integer(value, key)
+    alpha = _positive_finite(
+        fixture.get("comparison_family_alpha"), "comparison_family_alpha"
+    )
     if not alpha < 1.0:
-        raise ValueError("comparison_alpha must be less than one")
+        raise ValueError("comparison_family_alpha must be less than one")
     numerical_zero = _positive_finite(
         fixture.get("numerical_zero"), "numerical_zero"
     )
     if numerical_zero != 1.0e-12:
         raise ValueError("neutral fixture numerical_zero must be exactly 1e-12")
-    return fixture
+    if fixture.get("label_to_bit") != {"0": 0, "1": 1}:
+        raise ValueError("neutral MCWF X/Z label-to-bit contract drifted")
+
+    normalized = dict(fixture)
+    normalized["collapse_terms"] = normalized_terms
+    normalized["measurement_keys"] = list(EXPECTED_MEASUREMENT_KEYS)
+    normalized["measurement_targets"] = list(EXPECTED_MEASUREMENT_TARGETS)
+    normalized["measurement_bases"] = list(EXPECTED_MEASUREMENT_BASES)
+    normalized["reset_after"] = list(EXPECTED_RESET_AFTER)
+    normalized["reset_states"] = dict(EXPECTED_RESET_STATES)
+    normalized["evolution_duration_ns"] = durations[0]
+    normalized["microstep_count"] = normalized["project_microstep_count"]
+    normalized["project_rng_seed"] = seeds["project"]
+    normalized["qutip_mcwf_seed"] = seeds["qutip_mcwf"]
+    normalized["qutip_measurement_seed"] = seeds["qutip_measurement"]
+    normalized["comparison_alpha"] = alpha
+    normalized["gamma_1_per_ns"] = rates[0]["down"]
+    normalized["gamma_up_per_ns"] = rates[0]["up"]
+    normalized["gamma_phi_per_ns"] = rates[0]["dephasing"] / 2.0
+    normalized["target_survival_probability"] = math.exp(
+        -rates[1]["down"] * durations[0]
+    )
+    return normalized
+
+
+def load_comparison_registry(path: Path) -> dict[str, Any]:
+    """Load the byte-pinned five-statistics-per-fixture comparison registry."""
+
+    resolved = Path(path)
+    observed_sha256 = fixture_sha256(resolved)
+    if observed_sha256 != EXPECTED_REGISTRY_SHA256:
+        raise ValueError(
+            "neutral MCWF X/Z comparison registry SHA-256 mismatch: "
+            f"expected {EXPECTED_REGISTRY_SHA256}, observed {observed_sha256}"
+        )
+    raw = json.loads(resolved.read_text(encoding="utf-8"))
+    if not isinstance(raw, Mapping) or set(raw) != {
+        "schema",
+        "comparison_family_alpha",
+        "entries",
+    }:
+        raise ValueError("neutral MCWF X/Z comparison registry fields drifted")
+    if raw.get("schema") != REGISTRY_SCHEMA:
+        raise ValueError("unsupported neutral MCWF X/Z comparison registry schema")
+    alpha = _positive_finite(
+        raw.get("comparison_family_alpha"), "comparison_family_alpha"
+    )
+    if alpha != 0.01:
+        raise ValueError("neutral MCWF X/Z comparison family alpha drifted")
+    entries = raw.get("entries")
+    if not isinstance(entries, list) or len(entries) != 15:
+        raise ValueError("neutral MCWF X/Z registry must contain 15 entries")
+    normalized_entries: list[dict[str, Any]] = []
+    for entry in entries:
+        if not isinstance(entry, Mapping) or set(entry) != {
+            "statistic_id",
+            "fixture_id",
+            "comparison_kind",
+            "view",
+            "column_key",
+            "alphabet_size",
+        }:
+            raise ValueError("neutral MCWF X/Z registry entry fields drifted")
+        statistic_id = entry.get("statistic_id")
+        fixture_id = entry.get("fixture_id")
+        kind = entry.get("comparison_kind")
+        view = entry.get("view")
+        column_key = entry.get("column_key")
+        alphabet_size = entry.get("alphabet_size")
+        if not isinstance(statistic_id, str) or not statistic_id:
+            raise ValueError("neutral MCWF X/Z statistic id must be nonempty")
+        if fixture_id not in EXPECTED_FIXTURE_IDS:
+            raise ValueError("neutral MCWF X/Z registry fixture id drifted")
+        if kind not in {
+            "one_sample_project_dense",
+            "one_sample_qutip_dense",
+            "two_sample_qutip_project",
+        }:
+            raise ValueError("neutral MCWF X/Z comparison kind drifted")
+        if view == "joint":
+            if column_key is not None or alphabet_size != 16:
+                raise ValueError("neutral MCWF X/Z joint registry entry drifted")
+        elif view == "marginal":
+            if (
+                column_key not in EXPECTED_DIRECTED_MARGINALS[fixture_id]
+                or alphabet_size != 2
+                or kind != "one_sample_project_dense"
+            ):
+                raise ValueError("neutral MCWF X/Z marginal registry entry drifted")
+        else:
+            raise ValueError("neutral MCWF X/Z registry view drifted")
+        normalized_entries.append(dict(entry))
+    statistic_ids = [entry["statistic_id"] for entry in normalized_entries]
+    if statistic_ids != sorted(set(statistic_ids)):
+        raise ValueError("neutral MCWF X/Z registry entries must be uniquely sorted")
+    for fixture_id in EXPECTED_FIXTURE_IDS:
+        fixture_entries = [
+            entry
+            for entry in normalized_entries
+            if entry["fixture_id"] == fixture_id
+        ]
+        if len(fixture_entries) != 5:
+            raise ValueError("neutral MCWF X/Z fixture registry count drifted")
+        if sum(entry["view"] == "marginal" for entry in fixture_entries) != 2:
+            raise ValueError("neutral MCWF X/Z directed marginal count drifted")
+        kinds = [entry["comparison_kind"] for entry in fixture_entries]
+        if (
+            kinds.count("one_sample_project_dense") != 3
+            or kinds.count("one_sample_qutip_dense") != 1
+            or kinds.count("two_sample_qutip_project") != 1
+        ):
+            raise ValueError("neutral MCWF X/Z fixture comparison family drifted")
+    return {
+        "schema": REGISTRY_SCHEMA,
+        "comparison_family_alpha": alpha,
+        "entries": normalized_entries,
+        "sha256": observed_sha256,
+        "entry_count": len(normalized_entries),
+        "per_entry_alpha": alpha / len(normalized_entries),
+    }
+
+
+def comparison_entries_for_fixture(
+    registry: Mapping[str, Any], fixture_id: str
+) -> tuple[dict[str, Any], ...]:
+    """Return the five frozen registry entries for one fixture."""
+
+    entries = registry.get("entries")
+    if not isinstance(entries, list):
+        raise ValueError("comparison registry entries are unavailable")
+    selected = tuple(entry for entry in entries if entry.get("fixture_id") == fixture_id)
+    if len(selected) != 5:
+        raise ValueError("comparison registry fixture entry count drifted")
+    return selected
 
 
 def fixture_sha256(path: Path) -> str:
@@ -138,19 +450,64 @@ def fixture_sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _rates_by_target(fixture: Mapping[str, Any]) -> dict[int, dict[str, float]]:
+    rates = {
+        0: {"down": 0.0, "up": 0.0, "dephasing": 0.0},
+        1: {"down": 0.0, "up": 0.0, "dephasing": 0.0},
+    }
+    terms = fixture.get("collapse_terms")
+    if not isinstance(terms, Sequence) or isinstance(terms, (str, bytes)):
+        raise ValueError("collapse_terms must be a sequence")
+    family_key = {
+        "sigma_minus": "down",
+        "sigma_plus": "up",
+        "number_dephasing": "dephasing",
+    }
+    for term in terms:
+        if not isinstance(term, Mapping):
+            raise ValueError("collapse term must be a mapping")
+        target = term.get("target")
+        family = term.get("family")
+        if target not in rates or family not in family_key:
+            raise ValueError("collapse term family/target is unsupported")
+        key = family_key[family]
+        rates[target][key] += _positive_finite(
+            term.get("generator_rate_per_ns"), "generator_rate_per_ns"
+        )
+    return rates
+
+
 def analytic_binary_distribution(
     fixture: Mapping[str, Any],
 ) -> dict[tuple[int, int, int, int], float]:
-    """Return the hand-derived Lindblad Record law for the frozen fixture."""
+    """Return the hand-derived continuous Lindblad law for one frozen fixture."""
 
-    gamma = _positive_finite(fixture.get("gamma_1_per_ns"), "gamma_1_per_ns")
-    duration = _positive_finite(
-        fixture.get("evolution_duration_ns"), "evolution_duration_ns"
-    )
-    survival = math.exp(-gamma * duration)
+    rates = _rates_by_target(fixture)
+    segments = fixture.get("evolution_segments_ns")
+    if not isinstance(segments, Sequence) or isinstance(segments, (str, bytes)):
+        raise ValueError("evolution_segments_ns must be a sequence")
+    if len(segments) != 2:
+        raise ValueError("analytic law requires two evolution segments")
+    first_duration = _positive_finite(segments[0], "first evolution segment")
+    second_duration = _positive_finite(segments[1], "second evolution segment")
+
+    def population_one(target: int, initial_one: float, duration: float) -> float:
+        down = rates[target]["down"]
+        up = rates[target]["up"]
+        total = down + up
+        if total == 0.0:
+            return initial_one
+        equilibrium = up / total
+        return equilibrium + (initial_one - equilibrium) * math.exp(-total * duration)
+
     p_x_before_zero = 0.5
-    p_z_before_one = survival
-    p_x_after_zero = 0.5 * (1.0 + math.sqrt(survival))
+    p_z_before_one = population_one(1, 1.0, first_duration)
+    coherence_rate = (
+        0.5 * (rates[0]["down"] + rates[0]["up"])
+        + 0.5 * rates[0]["dephasing"]
+    )
+    p_x_after_zero = 0.5 * (1.0 + math.exp(-coherence_rate * second_duration))
+    p_z_after_one = population_one(1, 0.0, second_duration)
     law: dict[tuple[int, int, int, int], float] = {}
     for x_before in (0, 1):
         p_x_before = p_x_before_zero if x_before == 0 else 1.0 - p_x_before_zero
@@ -158,10 +515,14 @@ def analytic_binary_distribution(
             p_z_before = p_z_before_one if z_before == 1 else 1.0 - p_z_before_one
             for x_after in (0, 1):
                 p_x_after = p_x_after_zero if x_after == 0 else 1.0 - p_x_after_zero
-                law[(x_before, z_before, x_after, 0)] = (
-                    p_x_before * p_z_before * p_x_after
-                )
-    return law
+                for z_after in (0, 1):
+                    p_z_after = (
+                        p_z_after_one if z_after == 1 else 1.0 - p_z_after_one
+                    )
+                    law[(x_before, z_before, x_after, z_after)] = (
+                        p_x_before * p_z_before * p_x_after * p_z_after
+                    )
+    return _normalized_distribution(law, "analytic")
 
 
 def finite_step_binary_distribution(
@@ -179,6 +540,8 @@ def finite_step_binary_distribution(
     packet can demonstrate power against those corruptions.
     """
 
+    if fixture.get("fixture_id") != "two_qubit_t1_ordered_xz_reset":
+        raise ValueError("finite-step scalar recurrence is registered only for F1")
     count = _positive_integer(microstep_count, "microstep_count")
     factor = _positive_finite(no_jump_linear_factor, "no_jump_linear_factor")
     if type(divide_duration_by_microsteps) is not bool:
@@ -277,7 +640,9 @@ def finite_step_convergence_evidence(
                 "expected_tv": expected,
                 "absolute_tolerance": tolerance,
                 "expected_match": expected_match,
-                "post_z_structural_zero": all(row[3] == 0 for row in law),
+                "post_z_structural_zero": all(
+                    row[3] == 0 or mass == 0.0 for row, mass in law.items()
+                ),
             }
         )
 
@@ -652,7 +1017,10 @@ def two_sample_tv_comparison(
     simultaneous_radius = min(1.0, left_radius + right_radius)
     observed = total_variation(left, right)
     return {
-        "schema": "ai_qec.external_baseline.two_sample_multinomial_tv.v1",
+        "schema": (
+            "error_coupling_simulator.external_baseline."
+            "two_sample_multinomial_tv.v1"
+        ),
         "total_variation": observed,
         "left_sample_count": int(left_sample_count),
         "right_sample_count": int(right_sample_count),
@@ -663,6 +1031,40 @@ def two_sample_tv_comparison(
         "simultaneous_tv_radius": simultaneous_radius,
         "gate_rule": "observed_total_variation <= left_radius + right_radius",
         "passed": bool(observed <= simultaneous_radius),
+    }
+
+
+def one_sample_tv_comparison(
+    observed: Mapping[Sequence[int], float],
+    reference: Mapping[Sequence[int], float],
+    *,
+    sample_count: int,
+    alphabet_size: int,
+    alpha: float,
+) -> dict[str, Any]:
+    """Apply one registered empirical-to-exact multinomial TV gate."""
+
+    risk = _positive_finite(alpha, "alpha")
+    if risk >= 1.0:
+        raise ValueError("alpha must be less than one")
+    radius = multinomial_tv_radius(
+        sample_count=sample_count,
+        alphabet_size=alphabet_size,
+        alpha=risk,
+    )
+    total = total_variation(observed, reference)
+    return {
+        "schema": (
+            "error_coupling_simulator.external_baseline."
+            "one_sample_multinomial_tv.v1"
+        ),
+        "total_variation": total,
+        "sample_count": int(sample_count),
+        "alphabet_size": int(alphabet_size),
+        "alpha": risk,
+        "tv_radius": radius,
+        "gate_rule": "observed_total_variation <= tv_radius",
+        "passed": bool(total <= radius),
     }
 
 

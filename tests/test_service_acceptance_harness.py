@@ -54,6 +54,26 @@ def test_supervisor_source_does_not_import_a_native_compute_runtime() -> None:
     assert imported_roots.isdisjoint({"torch", "cupy", "qutip", "cudaq"})
 
 
+def test_bound_parent_environment_is_closed_and_value_preserving() -> None:
+    supplied = {
+        "ECS_DISABLE_NATIVE_KERNELS": "1",
+        "ECS_D3_MASK": "101",
+        "OMP_NUM_THREADS": "3",
+        "UNREGISTERED_PARENT_VALUE": "must-not-leak",
+    }
+
+    assert acceptance._bound_parent_environment(supplied) == {
+        "ECS_DISABLE_NATIVE_KERNELS": "1",
+        "ECS_FORCE_UNFACTORIZED_AXIS1": None,
+        "ECS_D3_DATA_ROOT": None,
+        "ECS_D3_MASK": "101",
+        "OMP_NUM_THREADS": "3",
+        "MKL_NUM_THREADS": None,
+        "OPENBLAS_NUM_THREADS": None,
+        "NUMEXPR_NUM_THREADS": None,
+    }
+
+
 def test_cpu_admission_is_bounded_by_available_memory(monkeypatch) -> None:
     config = {
         "cpu_light_jobs": 8,
@@ -418,6 +438,12 @@ def test_current_catalog_routes_cuda_transitive_mps_gate_to_gpu_serial() -> None
         ("ECS_RUN_QUTIP_MCWF_XZ_COMPARISON", "1"),
     )
     assert qutip_task.nested_environments == ("ecs-baseline-qutip",)
+    family_task = by_file["tests/test_external_mcwf_xz_fixture_family.py"]
+    assert family_task.lane == "gpu_serial"
+    assert family_task.process_environment == (
+        ("ECS_RUN_MCWF_XZ_FIXTURE_FAMILY_COMPARISON", "1"),
+    )
+    assert family_task.nested_environments == ("ecs-baseline-qutip",)
 
 
 def test_acceptance_plan_rejects_non_acceptance_process_environment_path() -> None:
@@ -434,6 +460,7 @@ def test_acceptance_plan_rejects_non_acceptance_process_environment_path() -> No
     "name",
     [
         "ECS_RUN_AER_MPS_COMPARISON",
+        "ECS_RUN_MCWF_XZ_FIXTURE_FAMILY_COMPARISON",
         "ECS_RUN_QUTIP_MCWF_XZ_COMPARISON",
         "ECS_RUN_YASTN_MPS_COMPARISON",
     ],

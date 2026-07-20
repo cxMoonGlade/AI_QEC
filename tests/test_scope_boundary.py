@@ -1808,18 +1808,22 @@ def test_current_research_carrier_blockers_remain_visible() -> None:
         REPO_ROOT / "docs/simulator_validation/PEPS_FET_VALIDATION.md"
     ).read_text(encoding="utf-8")
     required_fet_evidence = (
-        "tests/test_peps_fet.py::TestFetEnvWiring::test_fet_env_exercises_an_accepted_rank_reducing_writeback",
-        "RED_ALL_NOOP",
-        "16",
-        "zero rank-reducing write-backs",
-        "2.0",
-        "1e-4",
+        "research carrier",
+        "B1_3",
+        "stored dimension 12",
+        "structural local rank 4",
+        "eps_fid=1e-8",
+        "Gamma",
+        "historical pre-repair evidence",
+        "all-noop state",
+        "clean-head fresh-process replay artifact",
+        "full-record faithfulness",
     )
     missing_evidence = [
         item for item in required_fet_evidence if item not in fet_validation
     ]
     assert not missing_evidence, (
-        "neutral PEPS/FET validation lost the current blocker evidence: "
+        "neutral PEPS/FET validation lost current repair or open-boundary evidence: "
         f"{missing_evidence!r}"
     )
 

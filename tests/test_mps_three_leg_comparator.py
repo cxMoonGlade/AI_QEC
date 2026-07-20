@@ -161,9 +161,18 @@ def test_dense_leg_is_ordered_svd_oracle_and_detects_corruptions() -> None:
 
 def test_three_leg_report_atomic_writer_emits_strict_stable_json(
     tmp_path: Path,
+    monkeypatch,
 ) -> None:
     report = {"schema": "fixture.three_leg.v1", "passed": True}
     output = tmp_path / "nested" / "report.json"
+    fsynced: list[Path] = []
+    real_fsync = COMPARATOR._fsync_directory
+
+    def observe_fsync(path: Path) -> None:
+        fsynced.append(Path(path))
+        real_fsync(path)
+
+    monkeypatch.setattr(COMPARATOR, "_fsync_directory", observe_fsync)
 
     exact_byte_sha256 = COMPARATOR.atomic_write_json(output, report)
 
@@ -172,6 +181,69 @@ def test_three_leg_report_atomic_writer_emits_strict_stable_json(
     ).encode("utf-8")
     assert output.read_bytes() == expected
     assert exact_byte_sha256 == hashlib.sha256(expected).hexdigest()
+    assert fsynced == [output.parent]
+
+
+def test_publishable_report_binds_gate_provenance_and_atomic_protocol(
+    monkeypatch,
+) -> None:
+    provenance = {
+        "git": {"worktree_clean": True},
+        "lock_conformance": {
+            "selected_runtime_lock_conformance_passed": True,
+        },
+    }
+    monkeypatch.setattr(
+        COMPARATOR,
+        "build_provenance",
+        lambda *, require_clean: provenance,
+    )
+
+    report = COMPARATOR.build_report(require_clean=True)
+
+    assert report["schema"] == COMPARATOR.REPORT_SCHEMA
+    assert report["passed"] is True
+    assert report["three_leg_gate"]["passed"] is True
+    assert report["provenance"] is provenance
+    assert report["fixture_manifest_sha256"] == report["fixture_manifest"][
+        "content_hash_sha256"
+    ]
+    assert report["atomic_publication"][
+        "parent_directory_fsync_after_replace_required"
+    ] is True
+    assert report["content_hash_sha256"] == COMPARATOR.canonical_hash(
+        report,
+        hash_field="content_hash_sha256",
+    )
+
+
+def test_three_leg_provenance_binds_transitive_sources_runtime_locks_and_gpu() -> None:
+    provenance = COMPARATOR.build_provenance(require_clean=False)
+
+    assert set(provenance["selected_and_transitive_source_sha256"]) == set(
+        COMPARATOR.PROVENANCE_SOURCE_PATHS
+    )
+    assert all(
+        len(value) == 64
+        for value in provenance["selected_and_transitive_source_sha256"].values()
+    )
+    assert set(provenance["runtime"]["distributions"]) == {
+        "numpy",
+        "quimb",
+        "torch",
+    }
+    assert provenance["lock_conformance"][
+        "selected_runtime_lock_conformance_passed"
+    ] is True
+    assert provenance["lock_conformance"][
+        "claims_full_environment_lock_conformance"
+    ] is False
+    assert provenance["gpu_runtime"]["cuda_available"] is True
+    assert provenance["gpu_runtime"]["device_uuid"].startswith("GPU-")
+    assert provenance["gpu_runtime"]["nvidia_driver_version"]
+    assert provenance["gpu_runtime"][
+        "loaded_cuda_runtime_version_status"
+    ] == "not_attested"
 
 
 def test_ours_leg_runs_the_repository_actual_split_adapter_on_every_fixture() -> None:

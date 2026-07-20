@@ -50,6 +50,7 @@ FID_ANTICIRC_TOL = 1e-6  # Fid_Γ == fid_dense comparison bar
 SA_BASELINE_LEAKOFF = 2.0   # d3 leak-off GF(2) stabilizer entropy across cut (0,1,2,3)
 SA_OFF_TOL = 1e-4        # leak-off post-trunc S_A deviation bar
 NORM_GUARD = 1e-12       # fid_dense norm guard: degenerate truncation gives fidelity 0
+LOCAL_RANK_REL_ZERO = 1e-12  # independent local QR/SVD structural-rank convention
 
 _CUDA = torch.cuda.is_available()
 requires_cuda = pytest.mark.skipif(
@@ -417,6 +418,50 @@ def _basis_col(D: int, k: int, device) -> torch.Tensor:
     return U
 
 
+def _local_qr_svd_feasible_ref(state, bond: str) -> tuple:
+    """Independent exact local gauge-compression candidate for one real PEPS bond.
+
+    Reshape both endpoint tensors directly, QR each endpoint, SVD the resulting
+    two-site insertion, and solve the two QR-coordinate pullbacks.  At the
+    structural rank this reconstructs the original two-site contraction without
+    importing ``fet.py`` or the carrier's QR/SVD truncation helpers.
+    """
+    a, b = _parse_bond(bond)
+    ta, tb = _site_tensor(state, a), _site_tensor(state, b)
+    axa = ta.inds.index(bond)
+    axb = tb.inds.index(bond)
+    amat = torch.movedim(ta.data, axa, -1).reshape(-1, ta.data.shape[axa])
+    bmat = torch.movedim(tb.data, axb, -1).reshape(-1, tb.data.shape[axb])
+    _qa, ra = torch.linalg.qr(amat, mode="reduced")
+    _qb, rb = torch.linalg.qr(bmat, mode="reduced")
+    ref_device = ra.device
+    insertion = ra @ rb.mT
+    u0, singular, vh0 = torch.linalg.svd(insertion, full_matrices=False)
+    require_precondition(
+        singular.numel() > 0 and float(singular[0]) > 0.0,
+        f"local QR/SVD insertion vanished on {bond}",
+    )
+    rank = max(
+        1,
+        int((singular > LOCAL_RANK_REL_ZERO * float(singular[0])).sum()),
+    )
+    sqrt_s = torch.sqrt(singular[:rank]).to(torch.complex128)
+    left_target = u0[:, :rank] * sqrt_s
+    right_target = vh0[:rank, :].mT * sqrt_s
+    U = (
+        torch.linalg.pinv(ra, rtol=LOCAL_RANK_REL_ZERO) @ left_target
+    ).contiguous().to(ref_device)
+    Vh = (
+        torch.linalg.pinv(rb, rtol=LOCAL_RANK_REL_ZERO) @ right_target
+    ).mT.contiguous().to(ref_device)
+    local_before = amat @ bmat.mT
+    local_after = (amat @ U) @ (bmat @ Vh.mT).mT
+    residual = float(torch.linalg.norm(local_before - local_after)) / max(
+        float(torch.linalg.norm(local_before)), 1e-300
+    )
+    return int(rank), U, Vh, float(residual)
+
+
 # =========================================================================== #
 # Drive helpers + fixtures (the REAL Google d3 leak-off carrier, EXACT route)  #
 # =========================================================================== #
@@ -513,6 +558,44 @@ def grown_state(d3):
 
 
 @pytest.fixture(scope="module")
+def first_fet_preselection(d3):
+    """Stop the real d3 drive at its first FET call and retain that raw state."""
+    import importlib
+
+    sched, c01, m01 = d3
+    fet = importlib.import_module(f"{_PEPS_PKG}.fet")
+    original_selector = fet.env_optimal_rank
+    captured: dict = {}
+
+    class _Captured(RuntimeError):
+        pass
+
+    def _capture_then_stop(state, bond, _eps_fid, **_kwargs):
+        captured["state"] = state.copy()
+        captured["bond"] = str(bond)
+        raise _Captured
+
+    fet.env_optimal_rank = _capture_then_stop
+    try:
+        _drive_capture(
+            sched,
+            c01,
+            m01,
+            _trunc_policy("fet_env", eps_fid=EPS_FID),
+            d_abort=None,
+        )
+    except _Captured:
+        pass
+    finally:
+        fet.env_optimal_rank = original_selector
+    require_precondition(
+        set(captured) == {"state", "bond"},
+        "fet_env drive exposed no pre-selection state snapshot",
+    )
+    return captured
+
+
+@pytest.fixture(scope="module")
 def fet_env_run(d3):
     """One shared ``fet_env`` drive, including its state and mutation ledger."""
     sched, c01, m01 = d3
@@ -548,6 +631,81 @@ def _biggest_grown_bond(state):
 # =========================================================================== #
 @requires_cuda
 class TestEnvironmentCrossChecks:
+
+    def test_real_d3_local_qr_svd_candidate_is_feasible_and_selected(
+        self, first_fet_preselection
+    ):
+        """A hand-written endpoint QR/SVD supplies a strict feasible candidate.
+
+        On the first real d3 grown bond whose local structural rank is smaller
+        than its stored dimension, the independent candidate must reconstruct
+        the state, score at the strict environment-fidelity target, and bound the
+        production selector's chosen rank.  This prevents a broken optimizer
+        from hiding a known feasible rank-reducing map behind a full-rank no-op.
+        """
+        import importlib
+
+        fet = importlib.import_module(f"{_PEPS_PKG}.fet")
+        captured = first_fet_preselection
+        state = captured["state"]
+        bond = captured["bond"]
+        dim = int(state.tn.ind_size(bond))
+        rank, U, Vh, local_residual = _local_qr_svd_feasible_ref(state, bond)
+        require_precondition(
+            rank < dim,
+            f"first real d3 FET bond {bond} is not locally gauge-compressible "
+            f"({rank} !< {dim})",
+        )
+        assert rank == 4, (bond, dim, rank)
+        assert local_residual <= 1e-10, (
+            f"independent local QR/SVD reconstruction residual {local_residual:.3e} "
+            f"on {bond} exceeds 1e-10"
+        )
+
+        psi_before = _dense_psi(state)
+        fid_dense = _fid_dense_ref(state, bond, U, Vh, psi_before)
+        Gamma = _fet_gamma_TN(state, bond)
+        fid_gamma = _fet_gamma_fidelity(Gamma, U @ Vh)
+        assert fid_dense >= 1.0 - EPS_FID, (bond, dim, rank, fid_dense)
+        assert fid_gamma >= 1.0 - EPS_FID, (bond, dim, rank, fid_gamma)
+        assert abs(fid_gamma - fid_dense) <= FID_ANTICIRC_TOL
+
+        source_U, source_Vh = fet._carrier_svd_feasible_candidate(
+            state.copy(), bond, rank
+        )
+        source_fid_dense = _fid_dense_ref(
+            state, bond, source_U, source_Vh, psi_before
+        )
+        source_fid_gamma = _fet_gamma_fidelity(
+            Gamma, source_U @ source_Vh
+        )
+        assert source_fid_dense >= 1.0 - EPS_FID, source_fid_dense
+        assert source_fid_gamma >= 1.0 - EPS_FID, source_fid_gamma
+        Gamma_copy = _fet_gamma_TN(state.copy(), bond)
+        gamma_repeat_rel = float(torch.linalg.norm(Gamma - Gamma_copy)) / max(
+            float(torch.linalg.norm(Gamma)), 1e-300
+        )
+        assert gamma_repeat_rel <= GAMMA_REL_TOL, gamma_repeat_rel
+        assert _fet_gamma_fidelity(
+            Gamma_copy, source_U @ source_Vh
+        ) >= 1.0 - EPS_FID
+
+        curve: list[dict] = []
+        production = fet.env_optimal_rank(
+            state.copy(), bond, EPS_FID, fidelity_curve=curve
+        )
+        assert production.outcome == "accepted", {
+            "outcome": production.outcome,
+            "candidate_rank": production.candidate_rank,
+            "candidate_fid": production.candidate_fid,
+            "curve": curve,
+        }
+        assert 0 < int(production.env_rank) <= rank < dim, (
+            bond,
+            dim,
+            rank,
+            production.env_rank,
+        )
 
     def test_gamma_two_route_identity(self, grown_state):
         """Γ_TN (source) equals the independent dense reference on the biggest
@@ -1531,6 +1689,32 @@ def test_als_result_is_independent_of_ambient_cuda_seed() -> None:
 
     assert torch.equal(outputs[0][0], outputs[1][0])
     assert outputs[0][1] == outputs[1][1]
+
+
+@pytest.mark.parametrize("device", ["cpu", "cuda"])
+def test_fix_gauge_cannot_mutate_verdict_driving_gamma(device: str) -> None:
+    """The eig preparation must never overwrite its shared Gamma input view."""
+    if device == "cuda" and not torch.cuda.is_available():
+        pytest.skip("CUDA unavailable")
+    import importlib
+
+    fet = importlib.import_module(f"{_PEPS_PKG}.fet")
+    base = torch.tensor(
+        [
+            [2.0, 0.2 + 0.1j, 0.0, 0.0],
+            [0.2 - 0.1j, 1.5, 0.1, 0.0],
+            [0.0, 0.1, 1.0, 0.05j],
+            [0.0, 0.0, -0.05j, 0.5],
+        ],
+        dtype=torch.complex128,
+        device=device,
+    )
+    Gamma = (base @ base.conj().mT).reshape(2, 2, 2, 2).contiguous()
+    before = Gamma.clone()
+
+    fet._fix_gauge(Gamma)
+
+    assert torch.equal(Gamma, before)
 
 
 @pytest.mark.parametrize("device", ["cpu", "cuda"])

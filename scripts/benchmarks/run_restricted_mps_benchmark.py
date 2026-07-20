@@ -33,6 +33,9 @@ WORKER_REQUEST_SCHEMA = (
 WORKER_RESULT_SCHEMA = (
     "error_coupling_simulator.benchmarks.restricted_mps_worker_result.v1"
 )
+DEFAULT_BASELINE_REPORT = Path(
+    "outputs/simulator_validation/benchmarks/restricted_mps/final_fa5b0d6.json"
+)
 WORKLOAD_IDS = (
     "qt_exact",
     "qt_sampled",
@@ -374,6 +377,110 @@ def _validated_worker_result(
     return dict(result)
 
 
+def build_pre_vs_final_comparison(
+    *,
+    baseline_path: Path,
+    final_performance_summary: Sequence[Mapping[str, Any]],
+    mode: str,
+) -> dict[str, Any]:
+    """Bind one historical benchmark artifact to the current measured summary."""
+
+    resolved = Path(baseline_path).resolve()
+    baseline = _read_json_object(resolved)
+    if (
+        baseline.get("schema") != REPORT_SCHEMA
+        or baseline.get("mode") != mode
+        or baseline.get("passed") is not True
+        or baseline.get("content_hash_sha256")
+        != canonical_payload_hash(baseline, hash_field="content_hash_sha256")
+    ):
+        raise ValueError("benchmark baseline report is not a valid same-mode pass")
+    baseline_rows = baseline.get("performance_summary")
+    if not isinstance(baseline_rows, list):
+        raise ValueError("benchmark baseline performance summary is unavailable")
+    before = {row.get("workload_id"): row for row in baseline_rows}
+    after = {row.get("workload_id"): row for row in final_performance_summary}
+    if (
+        sorted(before) != sorted(WORKLOAD_IDS)
+        or sorted(after) != sorted(WORKLOAD_IDS)
+    ):
+        raise ValueError("benchmark pre/final workload identities drifted")
+
+    metrics = (
+        "wall_time_median_seconds",
+        "cuda_peak_allocated_median_bytes",
+        "cuda_peak_reserved_median_bytes",
+        "process_max_rss_median_bytes",
+    )
+    comparisons: list[dict[str, Any]] = []
+    for workload_id in WORKLOAD_IDS:
+        pre = before[workload_id]
+        final = after[workload_id]
+        metric_rows: dict[str, Any] = {}
+        for metric in metrics:
+            pre_value = float(pre[metric])
+            final_value = float(final[metric])
+            if (
+                not math.isfinite(pre_value)
+                or not math.isfinite(final_value)
+                or pre_value < 0.0
+                or final_value < 0.0
+            ):
+                raise ValueError("benchmark pre/final metric is invalid")
+            metric_rows[metric] = {
+                "pre": pre_value,
+                "final": final_value,
+                "final_over_pre": (
+                    None if pre_value == 0.0 else final_value / pre_value
+                ),
+                "final_minus_pre": final_value - pre_value,
+            }
+        comparisons.append(
+            {
+                "workload_id": workload_id,
+                "metrics": metric_rows,
+                "pre_semantic_payload_sha256": pre[
+                    "semantic_payload_sha256"
+                ],
+                "final_semantic_payload_sha256": final[
+                    "semantic_payload_sha256"
+                ],
+                "semantic_payload_hash_match": (
+                    pre["semantic_payload_sha256"]
+                    == final["semantic_payload_sha256"]
+                ),
+                "pre_passed": pre.get("passed") is True,
+                "final_passed": final.get("passed") is True,
+            }
+        )
+    baseline_provenance = baseline.get("provenance")
+    baseline_commit = (
+        baseline_provenance.get("git_commit")
+        if isinstance(baseline_provenance, Mapping)
+        else None
+    )
+    block: dict[str, Any] = {
+        "schema": (
+            "error_coupling_simulator.benchmarks."
+            "restricted_mps_pre_vs_final.v1"
+        ),
+        "baseline_path": str(resolved.relative_to(Path(__file__).resolve().parents[2])),
+        "baseline_file_sha256": _sha256_file(resolved),
+        "baseline_content_hash_sha256": baseline["content_hash_sha256"],
+        "baseline_git_commit": baseline_commit,
+        "mode": mode,
+        "workloads": comparisons,
+        "performance_is_verdict_driving": False,
+        "semantic_payload_hash_match_is_diagnostic_across_source_checkpoints": True,
+        "valid": bool(all(row["pre_passed"] and row["final_passed"] for row in comparisons)),
+    }
+    block["content_hash_sha256"] = canonical_payload_hash(
+        block,
+        hash_field="content_hash_sha256",
+    )
+    return block
+
+
 def build_benchmark_report(
     *,
     mode: str,
@@ -381,6 +488,8 @@ def build_benchmark_report(
     provenance: Mapping[str, Any],
     generated_at_utc: str,
     parent_runtime_seconds: float,
+    pre_vs_final_comparison: Mapping[str, Any] | None = None,
+    require_pre_vs_final: bool = False,
 ) -> dict[str, Any]:
     """Assemble the complete five-workload, claim-bounded benchmark report."""
 
@@ -435,6 +544,19 @@ def build_benchmark_report(
         }
         for result in ordered_results
     ]
+    if require_pre_vs_final and pre_vs_final_comparison is None:
+        raise ValueError("formal pre-vs-final benchmark comparison is required")
+    comparison = (
+        {
+            "status": "not_requested",
+            "performance_is_verdict_driving": False,
+        }
+        if pre_vs_final_comparison is None
+        else dict(pre_vs_final_comparison)
+    )
+    comparison_passed = bool(
+        not require_pre_vs_final or comparison.get("valid") is True
+    )
     report: dict[str, Any] = {
         "schema": REPORT_SCHEMA,
         "generated_at_utc": str(generated_at_utc),
@@ -450,6 +572,7 @@ def build_benchmark_report(
             "pythonpath_modified_by_harness": False,
         },
         "performance_summary": performance_summary,
+        "pre_vs_final_comparison": comparison,
         "workloads": ordered_results,
         "all_workloads_passed": all_workloads_passed,
         "claim_boundary": {
@@ -460,7 +583,9 @@ def build_benchmark_report(
             "external_baseline_oracle": False,
         },
         "provenance": dict(provenance),
-        "passed": bool(topology_passed and all_workloads_passed),
+        "passed": bool(
+            topology_passed and all_workloads_passed and comparison_passed
+        ),
     }
     report["content_hash_sha256"] = canonical_payload_hash(
         report,
@@ -508,9 +633,18 @@ def atomic_write_json(path: Path, payload: Mapping[str, Any]) -> str:
             handle.flush()
             os.fsync(handle.fileno())
         os.replace(temporary, path)
+        _fsync_directory(path.parent)
     finally:
         temporary.unlink(missing_ok=True)
     return hashlib.sha256(encoded).hexdigest()
+
+
+def _fsync_directory(path: Path) -> None:
+    descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
 
 
 def summarize_samples(values: Sequence[float | int], *, unit: str) -> dict[str, Any]:
@@ -1027,10 +1161,16 @@ def _contract_file_hashes(repo_root: Path) -> dict[str, str]:
         "src/error_coupling_simulator/frontend/__init__.py",
         "src/error_coupling_simulator/frontend/axis1_carrier_execution.py",
         "src/error_coupling_simulator/frontend/axis1_carrier_program.py",
+        "src/error_coupling_simulator/frontend/axis1_channel_evidence.py",
+        "src/error_coupling_simulator/frontend/axis1_ideal_controls.py",
         "src/error_coupling_simulator/frontend/axis1_record_layout.py",
+        "src/error_coupling_simulator/frontend/axis1_selection.py",
+        "src/error_coupling_simulator/frontend/axis1_state_evidence.py",
+        "src/error_coupling_simulator/frontend/analog_schedule.py",
         "src/error_coupling_simulator/frontend/axis1_qt_mps_execution.py",
         "src/error_coupling_simulator/frontend/axis1_mcwf_mps_execution.py",
         "src/error_coupling_simulator/certify/axis1_mps.py",
+        "src/error_coupling_simulator/numerics.py",
         "scripts/benchmarks/run_restricted_mps_benchmark.py",
     ]
     carrier_source_root = repo_root / "src/error_coupling_simulator/carrier/mps"
@@ -1044,14 +1184,70 @@ def _contract_file_hashes(repo_root: Path) -> dict[str, str]:
     }
 
 
-def parent_provenance(repo_root: Path, *, argv: Sequence[str]) -> dict[str, Any]:
+def _selected_runtime_lock_provenance(repo_root: Path) -> dict[str, Any]:
+    core_lock = repo_root / "core-environment-cu130.lock"
+    uv_lock = repo_root / "uv.lock"
+    pinned: dict[str, str] = {}
+    for raw_line in core_lock.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "==" not in line:
+            continue
+        name, version = line.split("==", 1)
+        pinned[name.lower()] = version
+    observed = {
+        name: _distribution_version(name)
+        for name in ("numpy", "quimb", "torch")
+    }
+    selected = {
+        name: {
+            "locked": pinned.get(name),
+            "observed": version,
+            "matches": pinned.get(name) == version,
+        }
+        for name, version in observed.items()
+    }
+    passed = all(record["matches"] for record in selected.values())
+    if not passed:
+        raise RuntimeError("benchmark selected runtime drifted from core lock")
+    return {
+        "lock_sha256": {
+            "core-environment-cu130.lock": _sha256_file(core_lock),
+            "uv.lock": _sha256_file(uv_lock),
+        },
+        "selected_distributions": selected,
+        "selected_runtime_lock_conformance_checked": True,
+        "selected_runtime_lock_conformance_passed": True,
+        "claims_full_environment_lock_conformance": False,
+        "claims_reproducible_environment": False,
+        "limitation": (
+            "selected NumPy/Quimb/Torch direct pins are checked; full transitive "
+            "environment reconstruction is not performed by this benchmark"
+        ),
+    }
+
+
+def parent_provenance(
+    repo_root: Path,
+    *,
+    argv: Sequence[str],
+    require_clean: bool = False,
+) -> dict[str, Any]:
     """Collect stdlib-only parent provenance without importing Torch/CUDA."""
 
-    status = _git_output(repo_root, "status", "--porcelain")
+    status = _git_output(
+        repo_root,
+        "status",
+        "--porcelain=v1",
+        "--untracked-files=all",
+    )
+    if require_clean and status:
+        raise RuntimeError("restricted MPS benchmark requires a clean Git worktree")
     return {
         "repo_root": str(repo_root.resolve()),
         "git_commit": _git_output(repo_root, "rev-parse", "HEAD"),
         "worktree_dirty": bool(status),
+        "whole_worktree_clean_including_untracked": not bool(status),
+        "status_scope": "whole_worktree_including_untracked_not_ignored",
         "worktree_status_sha256": hashlib.sha256(
             status.encode("utf-8")
         ).hexdigest(),
@@ -1064,9 +1260,13 @@ def parent_provenance(repo_root: Path, *, argv: Sequence[str]) -> dict[str, Any]
             "error-coupling-simulator": _distribution_version(
                 "error-coupling-simulator"
             ),
+            "numpy": _distribution_version("numpy"),
             "torch": _distribution_version("torch"),
             "quimb": _distribution_version("quimb"),
         },
+        "environment_lock_provenance": _selected_runtime_lock_provenance(
+            repo_root
+        ),
         "declared_environment_controls": {
             name: os.environ.get(name)
             for name in (
@@ -1083,15 +1283,32 @@ def parent_provenance(repo_root: Path, *, argv: Sequence[str]) -> dict[str, Any]
 
 
 def _worker_runtime_provenance(torch: Any, *, repo_root: Path) -> dict[str, Any]:
+    import numpy
     import quimb
 
     device_index = int(torch.cuda.current_device())
     properties = torch.cuda.get_device_properties(device_index)
+    driver_process = subprocess.run(
+        [
+            "nvidia-smi",
+            f"--id={device_index}",
+            "--query-gpu=driver_version",
+            "--format=csv,noheader,nounits",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=30.0,
+    )
+    driver_version = driver_process.stdout.strip()
+    if not driver_version:
+        raise RuntimeError("benchmark NVIDIA driver identity is unavailable")
     return {
         "python_executable": sys.executable,
         "python_version": platform.python_version(),
         "platform": platform.platform(),
         "torch_version": str(torch.__version__),
+        "numpy_version": str(numpy.__version__),
         "torch_cuda_build_version": (
             None if torch.version.cuda is None else str(torch.version.cuda)
         ),
@@ -1102,8 +1319,11 @@ def _worker_runtime_provenance(torch: Any, *, repo_root: Path) -> dict[str, Any]
         "cuda_available_in_worker": bool(torch.cuda.is_available()),
         "cuda_device_index": device_index,
         "cuda_device_name": str(properties.name),
+        "cuda_device_uuid": f"GPU-{properties.uuid}",
         "cuda_device_capability": list(torch.cuda.get_device_capability(device_index)),
         "cuda_device_total_memory_bytes": int(properties.total_memory),
+        "nvidia_driver_version": driver_version,
+        "loaded_cuda_runtime_version_status": "not_attested",
         "route_array_dtype": "torch.complex128",
         "contract_file_sha256": _contract_file_hashes(repo_root),
         "declared_environment_controls": {
@@ -1244,10 +1464,16 @@ def run_benchmark(
     output: Path,
     timeout_seconds: float,
     argv: Sequence[str],
+    baseline_report: Path | None = None,
 ) -> tuple[dict[str, Any], str]:
     """Run the complete catalog and atomically write its aggregate report."""
 
     repo_root = Path(__file__).resolve().parents[2]
+    provenance = parent_provenance(
+        repo_root,
+        argv=argv,
+        require_clean=True,
+    )
     started = time.perf_counter()
     results = [
         run_fresh_worker(
@@ -1258,12 +1484,39 @@ def run_benchmark(
         for workload in workload_catalog(mode)
     ]
     runtime = time.perf_counter() - started
+    final_provenance = parent_provenance(
+        repo_root,
+        argv=argv,
+        require_clean=True,
+    )
+    if final_provenance != provenance:
+        raise RuntimeError("benchmark source/environment provenance drifted during run")
+    provenance["post_run_revalidation"] = {
+        "identical_to_pre_run": True,
+        "canonical_sha256": canonical_payload_hash(final_provenance),
+    }
+    preliminary = build_benchmark_report(
+        mode=mode,
+        worker_results=results,
+        provenance=provenance,
+        generated_at_utc=_utc_now(),
+        parent_runtime_seconds=runtime,
+    )
+    comparison = None
+    if baseline_report is not None:
+        comparison = build_pre_vs_final_comparison(
+            baseline_path=baseline_report,
+            final_performance_summary=preliminary["performance_summary"],
+            mode=mode,
+        )
     report = build_benchmark_report(
         mode=mode,
         worker_results=results,
-        provenance=parent_provenance(repo_root, argv=argv),
-        generated_at_utc=_utc_now(),
+        provenance=provenance,
+        generated_at_utc=preliminary["generated_at_utc"],
         parent_runtime_seconds=runtime,
+        pre_vs_final_comparison=comparison,
+        require_pre_vs_final=baseline_report is not None,
     )
     exact_byte_sha256 = atomic_write_json(Path(output), report)
     return report, exact_byte_sha256
@@ -1293,6 +1546,12 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         default=900.0,
         help="per-workload fresh-worker timeout",
     )
+    parser.add_argument(
+        "--baseline-report",
+        type=Path,
+        default=None,
+        help="same-mode hash-valid pre checkpoint for formal pre-vs-final ratios",
+    )
     parser.add_argument("--worker-request", type=Path, help=argparse.SUPPRESS)
     parser.add_argument("--worker-output", type=Path, help=argparse.SUPPRESS)
     return parser.parse_args(argv)
@@ -1320,6 +1579,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         output=args.output,
         timeout_seconds=args.timeout_seconds,
         argv=effective_argv,
+        baseline_report=args.baseline_report,
     )
     print(
         "restricted MPS benchmark: "

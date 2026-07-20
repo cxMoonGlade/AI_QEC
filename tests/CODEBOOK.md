@@ -50,43 +50,40 @@ one-fact locators and checked pages, empty-corpus refusal, project-inference inj
 corpora, and corrupted RAG/KG text, claims, counts, hashes, IDs, relationships, statistics, and
 endpoints. Trusted build/query paths have no artifact-verification bypass.
 
-`test_external_aer_mps_comparison.py`, `test_external_yastn_mcwf_mass_comparison.py`, and
-`test_external_qutip_mcwf_xz_comparison.py` protect repository-owned neutral adapters for isolated,
-external baselines. All three run in isolated environments. YASTN is source/commit-bound to its
-pristine clone. QuTiP binds pristine commit/tree metadata, checks selected installed solver sources
-against that clone, and records the full installed-distribution identity; this is not a claim that
-the entire installed tree is reproducibly rebuilt from the clone. Aer records installed-wheel
-provenance and separately verifies a pristine
+`test_external_aer_mps_comparison.py`, `test_external_yastn_mcwf_mass_comparison.py`,
+`test_external_qutip_mcwf_xz_comparison.py`, and `test_external_mcwf_xz_fixture_family.py` protect
+repository-owned neutral adapters for isolated external baselines. All external legs run in isolated
+environments. YASTN is source/commit-bound to its pristine clone. QuTiP binds pristine commit/tree,
+selected installed solver sources, full installed-distribution identity, and exact conformance to the
+36-package Linux-64 lock. Aer records installed-wheel provenance and separately verifies a pristine
 reference clone, but does not claim wheel-to-clone identity. Aer checks independent dense/unitary
-state evolution and finite-bond damage; YASTN checks the frozen product-MPS MCWF candidate-mass
-arithmetic and an omitted-jump falsifier. QuTiP runs actual continuous-time CPU MCWF trajectories for
-a frozen two-qubit T1 fixture, independently samples ordered X/Z projectors and reset instruments,
-and compares its label/binary histograms with public GPU direct and Carrier MCWF under a conservative
-six-way Bonferroni allocation: three joint Record views and three directed X-after marginals. The
-fixture fixes survival to `s=0.25`; both the deterministic final-Z-bit corruption and the
-`sqrt(s) -> s` X-coherence mutation must exceed their registered radius and force failure. The
-retained v2 worker report binds its pristine source commit/tree, installed-distribution content hash,
-Python/NumPy/SciPy versions, explicit QuTiP integrator controls, worker/protocol hashes, observed
-state/probability dtypes, and canonical content hash. The project side recursively validates its exact
-shape and recomputes the fixture, runtime, solver, histogram, reset, statistical, and verdict
-invariants. Strict JSON and raw-type checks reject duplicate/non-finite values and coercible Record
-bits/counts, while an immutable transport envelope separately binds stdout/stderr/return code and a
-construction-time raw JSON byte identity that must decode to the embedded payload. The launch strips
-all `CONDA_*`/`_CE_*` and loader/toolkit/venv markers, with worker-side rejection of leakage. Both CLI targets invalidate stale
-output before computation and use file-plus-directory `fsync` publication; a failed post-replace
-directory sync removes the destination. The service snapshot includes all three pristine external clones, so clone drift
-or same-tree HEAD drift invalidates a resumable checkpoint before admission. Its runtime identity also
-hashes every installed NumPy/SciPy/QuTiP file in `ecs-baseline-qutip`, so package-tree drift cannot
-reuse an old PASS. The nested worker inherits the comparator's supervisor-owned process group rather
-than creating a private session. Canonical service acceptance
-supplies exact file-local opt-in flags, so all three test files run their isolated external
-subprocess rather than only helper contracts. The QuTiP fixture is finite-sample and covers only two
-qubits and two measurement boundaries; none of these external libraries establishes a complete QEC
-Record law, qutrit/leakage semantics, scalable execution, production readiness, or the internal
-restricted-acceptance verdict.
-`test_mps_three_leg_comparator.py` separately checks repository actual splits and Quimb public
-wiring against independent dense NumPy state math; the Quimb leg is not an independent scientific
-oracle.
+state evolution and finite-bond damage; YASTN checks frozen product-MPS MCWF candidate-mass arithmetic
+and an omitted-jump falsifier.
+
+The MCWF X/Z family freezes two-qubit F1 T1, F2 number dephasing, and F3 thermal down/up fixtures. An
+implementation-isolated dense worker hand-builds each operator and 16x16 Lindblad superoperator;
+QuTiP runs continuous-time CPU trajectories; public GPU direct and Carrier APIs produce the project
+samples. A byte-pinned registry assigns five statistics per fixture, 15 total, at family
+`alpha=0.01`: project-vs-dense joint and two directed marginals, QuTiP-vs-dense joint, and
+QuTiP-vs-project joint. Fixture-specific mechanism corruptions must fail, while a unit-modulus collapse
+phase remains inert. The QuTiP v3 and dense v1 reports bind source/runtime identities and canonical
+content hashes. The project side recursively validates exact shape and recomputes fixture, runtime,
+solver, Record, reset, statistical, and verdict invariants. Strict JSON and raw-type checks reject
+duplicate/non-finite values and coercible Record bits/counts, while an immutable v1 transport envelope
+binds process outcome and construction-time raw bytes. Launch strips all `CONDA_*`/`_CE_*` and
+loader/toolkit/venv markers; stale-safe targets use file-plus-directory `fsync`. Service snapshots
+include all pristine external clones and the installed NumPy/SciPy/QuTiP tree, so source or package
+drift cannot reuse an old PASS. Nested workers remain in the supervisor-owned process group. Canonical
+service acceptance supplies file-local opt-in flags so isolated subprocesses execute rather than only
+helper contracts. These finite-sample fixtures do not establish a complete QEC Record law,
+qutrit/leakage semantics, scalable execution, production readiness, or the internal restricted verdict.
+
+`test_mps_three_leg_comparator.py` separately checks repository actual splits and Quimb public wiring
+against independent dense NumPy state math. Its publishable report requires a clean worktree, hashes
+selected and transitive owner sources plus both environment locks, checks selected NumPy/Quimb/Torch
+pins without claiming full transitive lock conformance, binds project/runtime/GPU identity, and
+publishes strict JSON by file and parent-directory `fsync`. The Quimb leg is wiring evidence only,
+not an independent scientific oracle.
 
 `test_restricted_mps_benchmark.py` protects an engineering-only five-workload instrument. A benchmark
 row passes only when its exact public outcome matches the catalog: QT exact, QT sampled, and capped
@@ -214,8 +211,9 @@ and service acceptance continue to execute those architecture gates against norm
 test-topology isolation only; it does not exempt any production mutant or lower the semantic score.
 `test_mps_three_leg_comparator.py` protects the MPS-016 dense
 NumPy/SVD, repository actual-split, and Quimb public-wiring reconciliation, including
-swapped-topology and norm corruption falsifiers. The Quimb leg is wiring evidence only, not an
-independent scientific oracle.
+swapped-topology and norm corruption falsifiers. It also protects clean-checkpoint provenance,
+selected-runtime lock conformance, transitive source hashes, GPU identity, and atomic report
+publication. The Quimb leg is wiring evidence only, not an independent scientific oracle.
 
 `test_mps_uncapped_nonlocal.py` is the MPS-001 numerical and transactionality gate. Its independent
 NumPy construction freezes a weak connected three-site unitary that Quimb 1.14 `auto-mps` loses in
@@ -343,8 +341,8 @@ closed before execution when unavailable. The environment lock is asserted as ha
 `authoritative_lock_conformance_checked=false` and `claims_reproducible_environment=false`; GPU
 provenance names `torch.version.cuda` as the PyTorch build CUDA version and leaves the loaded runtime
 `not_attested`.
-At every seal/revalidation checkpoint, each required staged artifact must be opened through the stage
-fd with `O_NOFOLLOW|O_NONBLOCK`, remain a regular file, and be sealed by
+At every seal/revalidation checkpoint, each required prepublication artifact must be opened through
+the stage fd with `O_NOFOLLOW|O_NONBLOCK`, remain a regular file, and be sealed by
 `st_dev`/`st_ino`/`st_mode`/`st_size`/`st_mtime_ns`/`st_ctime_ns`/non-null 64-hex SHA-256. Hashing and
 file fsync must use that same artifact fd. JSON files are compared to canonical-payload
 expected hashes; `.b8` files are compared to chunked hashes of the in-memory binary Record rows. The

@@ -508,8 +508,8 @@ Current slice:
   names/widths/hashes, run seed/dtypes, package-tree/Git/source identity including resolved import
   origin, environment-lock identity and its hash-only scope, GPU name/UUID/compute capability, NVIDIA
   driver, PyTorch build CUDA version, explicit loaded-runtime `not_attested` status, and publication
-  status/protocol. At every seal/revalidation checkpoint, each required staged file is opened through
-  the stage fd with `O_NOFOLLOW|O_NONBLOCK`, required to
+  status/protocol. At every seal/revalidation checkpoint, each required prepublication file is
+  opened through the stage fd with `O_NOFOLLOW|O_NONBLOCK`, required to
   be regular, and sealed by `st_dev`, `st_ino`, `st_mode`, `st_size`, `st_mtime_ns`, `st_ctime_ns`, and
   a non-null 64-hex SHA-256; hashing and file fsync use that same open artifact fd. JSON files
   must match canonical-payload expected hashes, while optional `.b8` files must match chunked expected

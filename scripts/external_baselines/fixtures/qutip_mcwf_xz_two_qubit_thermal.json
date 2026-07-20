@@ -1,7 +1,7 @@
 {
   "schema": "error_coupling_simulator.neutral.mcwf_xz_fixture.v2",
-  "fixture_id": "two_qubit_t1_ordered_xz_reset",
-  "claim_boundary": "Two-qubit finite-trajectory MCWF ordered X/Z measurement and reset differential fixture; not a complete QEC Record or production-faithfulness oracle.",
+  "fixture_id": "two_qubit_thermal_ordered_xz_reset",
+  "claim_boundary": "Two-qubit finite-trajectory MCWF ordered X/Z finite-temperature differential fixture; not a complete QEC Record or production-faithfulness oracle.",
   "num_qubits": 2,
   "local_dims": [2, 2],
   "initial_levels": [0, 1],
@@ -10,22 +10,39 @@
       "term_id": "target0_down",
       "family": "sigma_minus",
       "target": 0,
-      "generator_rate_per_ns": 0.13862943611198905
+      "generator_rate_per_ns": 0.11090354888959125
+    },
+    {
+      "term_id": "target0_up",
+      "family": "sigma_plus",
+      "target": 0,
+      "generator_rate_per_ns": 0.027725887222397813
     },
     {
       "term_id": "target1_down",
       "family": "sigma_minus",
       "target": 1,
-      "generator_rate_per_ns": 0.13862943611198905
+      "generator_rate_per_ns": 0.11090354888959125
+    },
+    {
+      "term_id": "target1_up",
+      "family": "sigma_plus",
+      "target": 1,
+      "generator_rate_per_ns": 0.027725887222397813
     }
   ],
+  "thermal_metadata": {
+    "n_bar": 0.3333333333333333,
+    "gamma_base_per_ns": 0.08317766166719343,
+    "up_over_down": 0.25
+  },
   "evolution_segments_ns": [10.0, 10.0],
   "project_microstep_count": 40,
   "trajectory_count": 2048,
   "seeds": {
-    "project": 19073,
-    "qutip_mcwf": 29077,
-    "qutip_measurement": 39079
+    "project": 19091,
+    "qutip_mcwf": 29093,
+    "qutip_measurement": 39097
   },
   "comparison_family_alpha": 0.01,
   "numerical_zero": 1e-12,

@@ -5,14 +5,18 @@ relationships appear here. This is routing metadata; the cited PDF and locator r
 the evidence.
 
 - corpus status: active
-- sources: 11
-- concept nodes: 42
-- source-located relationships: 42
+- sources: 15
+- concept nodes: 52
+- source-located relationships: 52
 - dangling relationships: 0
 
 ## bond environment (concept)
 
 - **defines** — Gauge fixing, canonical forms, and optimal truncations in tensor networks with closed loops — `Sec. II, Eq. (1) and Fig. 1`, PDF p. 2 — The bond environment `Upsilon` is obtained by contracting the state norm network while leaving a selected bond and its conjugate open, and contracting it with the two bond matrices recovers the state norm. ([docs/papers/reading_notes/evenbly_closed_loop_truncation_1801.05390_source_review.md](reading_notes/evenbly_closed_loop_truncation_1801.05390_source_review.md))
+
+## collapse-operator gauge invariance (concept)
+
+- **defines** — Fundamental Speed Limits on Quantum Coherence and Correlation Decay — `Methods, Eqs. (10)–(11)`, PDF p. 5 — The summed dissipator has collapse-operator gauge invariance under unitary mixing, while adding an identity multiple to a collapse operator produces only the stated effective-Hamiltonian correction. ([docs/papers/reading_notes/oi_schirmer_pure_dephasing_1109.0954_source_review.md](reading_notes/oi_schirmer_pure_dephasing_1109.0954_source_review.md))
 
 ## mixed-canonical matrix-product-state cut (concept)
 
@@ -74,6 +78,10 @@ the evidence.
 
 - **defines** — One-dimensional many-body entangled open quantum systems with tensor network methods — `Sec. III.B, steps (a)–(c) and Fig. 3`, PDF p. 12 — Quantum-trajectory jump-channel selection normalizes the expectations `p_nu = <psi|L_nu^dagger L_nu|psi>`, samples one channel, applies its Lindblad operator, and then renormalizes the state. ([docs/papers/reading_notes/jaschke_open_system_tn_1804.09796_source_review.md](reading_notes/jaschke_open_system_tn_1804.09796_source_review.md))
 
+## selective measurement update (method)
+
+- **defines** — On-State Commutativity of Measurements and Joint Distributions of Their Outcomes — `Sec. 2.2, Eq. (1)`, PDF p. 5 — A selective measurement update assigns outcome probability `Tr(Q_x rho)` and post-measurement state `A_x rho A_x^dagger/Tr(Q_x rho)` when `Q_x=A_x^dagger A_x`. ([docs/papers/reading_notes/czajkowski_grilo_sequential_measurements_2101.08313_source_review.md](reading_notes/czajkowski_grilo_sequential_measurements_2101.08313_source_review.md))
+
 ## tensor jump method (method)
 
 - **defines** — Large-scale stochastic simulation of open quantum systems — `Sec. III.A, Eqs. (14)–(20) and Fig. 1`, PDF p. 5 — The tensor jump method composes dynamic TDVP, dissipative contraction, and stochastic jumping through a sampling MPS whose reordered evolution permits physical-state retrieval at requested time steps. ([docs/papers/reading_notes/sander_tensor_jump_2501.17913_source_review.md](reading_notes/sander_tensor_jump_2501.17913_source_review.md))
@@ -90,9 +98,21 @@ the evidence.
 
 - **defines** — Quantification and Characterization of Leakage Errors — `Sec. VI.A.3, Eq. (48)`, PDF p. 8 — The depolarizing leakage model is the DLE special case in Eq. (48) whose computational-subspace component is depolarizing. ([docs/papers/reading_notes/wood_gambetta_leakage_diagnostics_pra_97_032306.md](reading_notes/wood_gambetta_leakage_diagnostics_pra_97_032306.md))
 
+## diagonal pure-dephasing rate (model)
+
+- **defines** — Fundamental Speed Limits on Quantum Coherence and Correlation Decay — `Results, Eqs. (1)–(4)`, PDF p. 2 — A diagonal pure-dephasing rate is one half the summed squared diagonal entries minus their real cross product, and each coherence magnitude decays exponentially at that rate. ([docs/papers/reading_notes/oi_schirmer_pure_dephasing_1109.0954_source_review.md](reading_notes/oi_schirmer_pure_dephasing_1109.0954_source_review.md))
+
 ## finite open-boundary PEPS (model)
 
 - **defines** — Algorithms for finite projected entangled pair states — `Sec. II, PEPS definition and Fig. 1`, PDF p. 2 — The source studies a finite open-boundary PEPS on a square lattice, with one physical index per lattice site and virtual bond dimension `D`. ([docs/papers/reading_notes/lubasch_finite_peps_1405.3259_source_review.md](reading_notes/lubasch_finite_peps_1405.3259_source_review.md))
+
+## finite-temperature relaxation generator (model)
+
+- **defines** — Exact and Efficient Stabilizer Simulation of Thermal-Relaxation Noise for Quantum Error Correction — `Sec. II.A, Eqs. (1)–(2)`, PDF p. 3 — The finite-temperature relaxation generator contains downward `gamma(n_bar+1)D[|0><1|]`, upward `gamma n_bar D[|1><0|]`, and pure-dephasing `(gamma_phi/2)D[sigma_z]` terms under one explicit dissipator convention. ([docs/papers/reading_notes/garner_thermal_relaxation_2512.09189_source_review.md](reading_notes/garner_thermal_relaxation_2512.09189_source_review.md))
+
+## generalized amplitude-damping channel (model)
+
+- **derives** — Microscopic derivation of the one qubit Kraus operators for amplitude and phase damping — `Sec. 3, Eqs. (17)–(18)`, PDF p. 5 — The finite-temperature master equation generates a generalized amplitude-damping channel with four Kraus branches and distinct positive downward and upward rates. ([docs/papers/reading_notes/arsenijevic_bankovic_damping_1606.01145_source_review.md](reading_notes/arsenijevic_bankovic_damping_1606.01145_source_review.md))
 
 ## Lindblad leakage model (model)
 
@@ -102,6 +122,10 @@ the evidence.
 
 - **defines** — A positive tensor network approach for simulating open quantum many-body systems — `Main text, Eq. (3) and Fig. 1(a)`, PDF p. 2 — A locally purified tensor network represents the density operator as `rho = X X^dagger`, with `X` decomposed into local tensors carrying physical, bond, and Kraus indices. ([docs/papers/reading_notes/werner_positive_tensor_network_open_systems_1412.5746.md](reading_notes/werner_positive_tensor_network_open_systems_1412.5746.md))
 
+## phase-damping channel (model)
+
+- **defines** — Microscopic derivation of the one qubit Kraus operators for amplitude and phase damping — `Sec. 4, Eqs. (48)–(49)`, PDF p. 12 — The phase-damping channel obeys `d rho/dt=r(sigma_z rho sigma_z-rho)` and is derived as pure decoherence without energy loss. ([docs/papers/reading_notes/arsenijevic_bankovic_damping_1606.01145_source_review.md](reading_notes/arsenijevic_bankovic_damping_1606.01145_source_review.md))
+
 ## quantum-trajectory effective non-Hermitian Hamiltonian (model)
 
 - **defines** — One-dimensional many-body entangled open quantum systems with tensor network methods — `Sec. III.B, Eq. (25)`, PDF p. 11 — The quantum-trajectory effective non-Hermitian Hamiltonian is the system Hamiltonian minus one half of `i` times the sum of `L_nu^dagger L_nu`, and its norm loss is used to determine jump timing. ([docs/papers/reading_notes/jaschke_open_system_tn_1804.09796_source_review.md](reading_notes/jaschke_open_system_tn_1804.09796_source_review.md))
@@ -109,6 +133,14 @@ the evidence.
 ## simple dissipative leakage model (model)
 
 - **defines** — Quantification and Characterization of Leakage Errors — `Sec. VI.C.1, Eq. (72)`, PDF p. 11 — The simple dissipative leakage model uses jump `A_21 = |2><1|` with rate `gamma_1` for leakage and jump `A_12 = |1><2|` with rate `gamma_2` for seepage. ([docs/papers/reading_notes/wood_gambetta_leakage_diagnostics_pra_97_032306.md](reading_notes/wood_gambetta_leakage_diagnostics_pra_97_032306.md))
+
+## state-reset channel (model)
+
+- **defines** — Exact and Efficient Stabilizer Simulation of Thermal-Relaxation Noise for Quantum Error Correction — `Sec. II.C, Eq. (22)`, PDF p. 5 — The amplitude-damping decomposition includes a state-reset channel `R_|0>` that maps its branch to the state `|0>`. ([docs/papers/reading_notes/garner_thermal_relaxation_2512.09189_source_review.md](reading_notes/garner_thermal_relaxation_2512.09189_source_review.md))
+
+## thermal down/up Lindblad generator (model)
+
+- **defines** — Microscopic derivation of the one qubit Kraus operators for amplitude and phase damping — `Sec. 3, Eq. (16)`, PDF p. 5 — The microscopic thermal master equation contains a thermal down/up Lindblad generator with downward coefficient `2 pi J(omega_0)(n_bar+1)` and upward coefficient `2 pi J(omega_0)n_bar`. ([docs/papers/reading_notes/arsenijevic_bankovic_damping_1606.01145_source_review.md](reading_notes/arsenijevic_bankovic_damping_1606.01145_source_review.md))
 
 ## unitary leakage model (model)
 
@@ -142,6 +174,10 @@ the evidence.
 
 - **defines** — Large-scale stochastic simulation of open quantum systems — `Sec. II.B, Eqs. (2)–(11)`, PDF p. 3 — The MCWF norm-deficit jump probability is `delta p = 1 - ||Psi^(i)(t+delta t)||^2`, with channel contributions `delta p_m = delta t gamma_m <Psi|L_m^dagger L_m|Psi>` normalized only after a jump is selected. ([docs/papers/reading_notes/sander_tensor_jump_2501.17913_source_review.md](reading_notes/sander_tensor_jump_2501.17913_source_review.md))
 
+## ordered projective outcome law (observable)
+
+- **defines** — On-State Commutativity of Measurements and Joint Distributions of Their Outcomes — `Sec. 3.1, Eq. (9)`, PDF p. 7 — For projectors `A` followed by `B`, the ordered projective outcome law assigns probability `Tr(A B A rho)`, whereas the reversed order generally gives `Tr(B A B rho)`. ([docs/papers/reading_notes/czajkowski_grilo_sequential_measurements_2101.08313_source_review.md](reading_notes/czajkowski_grilo_sequential_measurements_2101.08313_source_review.md))
+
 ## purification discarded weight (observable)
 
 - **defines** — A positive tensor network approach for simulating open quantum many-body systems — `Appendix D, Definition 5 and Eq. (55)`, PDF p. 10 — Purification discarded weight is the square root of the sum of squared singular values omitted when one mixed-canonical local tensor is compressed along a bond or Kraus index. ([docs/papers/reading_notes/werner_positive_tensor_network_open_systems_1412.5746.md](reading_notes/werner_positive_tensor_network_open_systems_1412.5746.md))
@@ -161,6 +197,10 @@ the evidence.
 ## state leakage (observable)
 
 - **defines** — Quantification and Characterization of Leakage Errors — `Sec. II, Eq. (1)`, PDF p. 2 — State leakage is the population outside computational subspace `X_1`, defined by `L(rho) = Tr[1_2 rho] = 1 - Tr[1_1 rho]` on the direct sum `X = X_1 direct-sum X_2`. ([docs/papers/reading_notes/wood_gambetta_leakage_diagnostics_pra_97_032306.md](reading_notes/wood_gambetta_leakage_diagnostics_pra_97_032306.md))
+
+## thermal equilibrium population (observable)
+
+- **defines** — Exact and Efficient Stabilizer Simulation of Thermal-Relaxation Noise for Quantum Error Correction — `Sec. II.A, Eqs. (10) and (15)`, PDF p. 3 — The thermal equilibrium population is `p_1=n_bar/(1+2n_bar)`, while the total population-relaxation rate is `gamma(2n_bar+1)`. ([docs/papers/reading_notes/garner_thermal_relaxation_2512.09189_source_review.md](reading_notes/garner_thermal_relaxation_2512.09189_source_review.md))
 
 ## full-bond TJM convergence theorem (theorem)
 

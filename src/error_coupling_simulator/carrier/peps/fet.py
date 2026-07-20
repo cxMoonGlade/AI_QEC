@@ -3,10 +3,11 @@ from __future__ import annotations
 r"""Environment-aware single-bond rank selection for the single-wire PEPS carrier.
 
 This implementation remains a research path. The mutation boundary is fail-closed,
-but the current strict-``eps_fid`` d3 run reaches the independent entropy reference
-only through an all-identity fallback: no rank-reducing FET write-back is accepted.
-The non-degeneracy gate is therefore RED, and this module is not certified as a
-state-faithful or record-faithful truncation path. See
+and the current focused strict-``eps_fid`` d3 owner test accepts a rank-reducing
+local-QR/SVD feasible candidate while retaining the independent entropy reference.
+That repairs the former all-identity non-degeneracy blocker; it does not certify a
+state-faithful or record-faithful truncation path, and clean-head release evidence is
+still pending. See
 ``docs/simulator_validation/PEPS_FET_VALIDATION.md``.
 
 WHAT THIS MODULE IS
@@ -25,9 +26,11 @@ PUBLIC SURFACE
     on both layers). The exact route is bounded to d3.
   * :func:`gamma_fidelity` — the Γ-fidelity of a rank-χ bond map ``M[i,j]`` vs the
     identity insertion (with the tn_qsim instability sentinel).
-  * the multi-restart ALS solver: :func:`_als_inner`, :func:`_fix_gauge`,
-    :func:`_gauge_fix_truncation`, :func:`_carrier_svd_seed`,
-    :func:`build_seeds`, :func:`_multistart_als_truncation`.
+  * the candidate solver: :func:`_carrier_svd_feasible_candidate` supplies an
+    analytic local-QR/SVD feasible upper bound, while :func:`_als_inner`,
+    :func:`_fix_gauge`, :func:`_gauge_fix_truncation`,
+    :func:`_carrier_svd_seed`, :func:`build_seeds`, and
+    :func:`_multistart_als_truncation` search for lower-rank environment-aware maps.
   * :func:`apply_fet_truncation` — the in-place write-back (mirrors ``ntu_truncate``'s
     absorb layout: ``U`` into site A's bond leg, ``V†`` into site B's).
   * :func:`env_optimal_rank` — sweep ``χ = 1..bare_rank`` and
@@ -53,6 +56,7 @@ import numpy as np
 import torch
 import quimb.tensor as qtn
 
+from ...numerics import NUMERICAL_ZERO
 from ..pepo.dynamics import _qr_split
 from ..pepo.sampler import _row_tag
 from .contraction import _bra_ind, _site_pair
@@ -301,10 +305,13 @@ def _fix_gauge(Gamma: torch.Tensor):
     dominant transfer eigenvectors. Returns ``(sigma, xinv, yinv)`` (all D x D)."""
     D = int(Gamma.shape[0])
     dev = Gamma.device
-    Gm = Gamma.reshape(D * D, D * D)  # grouping (iI),(jJ) — the (non-normal) transfer matrix
-    leig, leigv = torch.linalg.eig(Gm)
+    # cuSOLVER's eig path is permitted to overwrite its workspace.  Do not pass
+    # a reshape/view backed by the verdict-driving Gamma tensor: the real d3
+    # selector previously observed a relative Gamma mutation of O(1) here.
+    Gm = Gamma.reshape(D * D, D * D).clone()
+    leig, leigv = torch.linalg.eig(Gm.clone())
     L0 = leigv[:, int(torch.argmax(leig.abs()))]
-    reig, reigv = torch.linalg.eig(Gm.mT)
+    reig, reigv = torch.linalg.eig(Gm.mT.contiguous().clone())
     R0 = reigv[:, int(torch.argmax(reig.abs()))]
     L0 = L0 + 1e-10
     R0 = R0 + 1e-10
@@ -337,17 +344,70 @@ def _gauge_fix_truncation(Gamma: torch.Tensor, chi: int, prep=None) -> tuple:
     return U_full, Vh_full, gamma_fidelity(Gamma, M)
 
 
-def _carrier_svd_seed(state, bond: str, chi: int, device) -> torch.Tensor:
-    """Seed (ii): the carrier's OWN local-SVD top-chi of ``X0 = R_A R_B^T`` lifted to a
-    full-bond D x chi isometry."""
+def _carrier_svd_factorization(state, bond: str) -> tuple:
+    """Freeze the endpoint QR/SVD and rank-aware Moore-Penrose pullbacks."""
     a, b = _parse_bond(bond)
     ta, tb = site_tensor(state, a), site_tensor(state, b)
     _QA, RA, _ia, _da = _qr_split(ta, bond)
     _QB, RB, _ib, _db = _qr_split(tb, bond)
-    X0 = RA @ RB.mT
-    U0, _S0, _V0 = torch.linalg.svd(X0, full_matrices=False)
-    lift = RA.conj().mT @ U0[:, :chi]            # (D, chi) in the bond leg
-    q, _r = torch.linalg.qr(lift)
+    device = RA.device
+    U0, S0, Vh0 = torch.linalg.svd(
+        RA @ RB.mT, full_matrices=False
+    )
+    pinv_RA = torch.linalg.pinv(RA, rtol=NUMERICAL_ZERO)
+    pinv_RB = torch.linalg.pinv(RB, rtol=NUMERICAL_ZERO)
+    return device, pinv_RA, pinv_RB, U0, S0, Vh0
+
+
+def _carrier_svd_candidate_from_factorization(
+    factorization: tuple, chi: int
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Construct one candidate from a frozen endpoint factorization."""
+    device, pinv_RA, pinv_RB, U0, S0, Vh0 = factorization
+    chi = int(chi)
+    if not 1 <= chi <= int(S0.numel()):
+        raise ValueError(
+            f"carrier-SVD candidate rank must lie in [1, {int(S0.numel())}] "
+            f"(got {chi})"
+        )
+    sqrt_s = torch.sqrt(S0[:chi]).to(CDTYPE)
+    left_target = U0[:, :chi] * sqrt_s
+    right_target = Vh0[:chi, :].mT * sqrt_s
+    U = (pinv_RA @ left_target).contiguous().to(device=device, dtype=CDTYPE)
+    Vh = (
+        (pinv_RB @ right_target).mT.contiguous().to(
+            device=device, dtype=CDTYPE
+        )
+    )
+    return U, Vh
+
+
+def _carrier_svd_feasible_candidate(
+    state, bond: str, chi: int
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Return the analytic local-QR/SVD rank-``chi`` bond-map factors.
+
+    For endpoint QR decompositions ``A = Q_A R_A`` and ``B = Q_B R_B``, let
+    ``R_A R_B^T = U_0 S V_0†``.  The returned full-bond factors solve
+    ``R_A U = U_0 sqrt(S)`` and ``R_B V^T = V_0^T sqrt(S)`` by a rank-aware
+    Moore-Penrose pullback.  At the structural local rank this reconstructs the
+    original two-site contraction, so it is a known feasible upper bound even
+    when the environment-aware ALS search fails.  Lower ranks remain ordinary
+    scored candidates and receive no special acceptance.
+    """
+    return _carrier_svd_candidate_from_factorization(
+        _carrier_svd_factorization(state, bond), chi
+    )
+
+
+def _carrier_svd_seed(state, bond: str, chi: int, device) -> torch.Tensor:
+    """Seed (ii): isometrize the analytic carrier-SVD factor for ALS."""
+    U, _Vh = _carrier_svd_feasible_candidate(state, bond, chi)
+    if U.device != torch.device(device):
+        raise RuntimeError(
+            f"carrier-SVD seed device {U.device!s} != Gamma device {device!s}"
+        )
+    q, _r = torch.linalg.qr(U)
     return q[:, :chi].contiguous().to(CDTYPE)
 
 
@@ -475,8 +535,34 @@ def _multistart_als_truncation(
     prep,
     *,
     solver_seed: int = FET_SOLVER_SEED_DEFAULT,
+    feasible_candidate: tuple[torch.Tensor, torch.Tensor] | None = None,
 ) -> dict:
     """Return the best multistart ALS map and its gauge-fix comparison."""
+    per_seed = []
+    best = None
+    try:
+        if feasible_candidate is None:
+            candidate_U, candidate_Vh = _carrier_svd_feasible_candidate(
+                state, bond, chi
+            )
+        else:
+            candidate_U, candidate_Vh = feasible_candidate
+        candidate_fid = gamma_fidelity(
+            Gamma, candidate_U @ candidate_Vh
+        )
+        per_seed.append(("carrier_svd_feasible", float(candidate_fid)))
+        if np.isfinite(candidate_fid) and 0.0 <= candidate_fid <= 1.0:
+            best = {
+                "seed": "carrier_svd_feasible",
+                "U": candidate_U,
+                "Vh": candidate_Vh,
+                "fid": float(candidate_fid),
+            }
+    except Exception as exc:  # noqa: BLE001
+        _p(
+            "      [candidate carrier_svd_feasible skipped] "
+            f"{type(exc).__name__}: {exc}"
+        )
     seeds = build_seeds(
         Gamma,
         state,
@@ -485,8 +571,6 @@ def _multistart_als_truncation(
         prep,
         solver_seed=solver_seed,
     )
-    per_seed = []
-    best = None
     for name, U0 in seeds:
         fluct = name in ("rand", "perm_id")
         try:
@@ -697,6 +781,17 @@ def env_optimal_rank(
     solver_seed = int(solver_seed)
     if solver_seed < 0:
         raise ValueError(f"solver_seed must be nonnegative (got {solver_seed})")
+    # Freeze the analytic upper-bound factorization before environment eig/SVD
+    # work.  Rank-deficient CUDA decompositions must not acquire call-order
+    # dependence from repeatedly rebuilding their Moore-Penrose pullbacks.
+    carrier_svd_factorization = None
+    try:
+        carrier_svd_factorization = _carrier_svd_factorization(state, bond)
+    except Exception as exc:  # noqa: BLE001  # standalone solver KATs lack a carrier state
+        _p(
+            f"      [env_optimal_rank {bond}] carrier-SVD factorization "
+            f"unavailable: {type(exc).__name__}: {exc}"
+        )
     Gamma = gamma_TN(state, bond)
     D = int(Gamma.shape[0])
     fid_target = 1.0 - eps_fid
@@ -721,6 +816,13 @@ def env_optimal_rank(
             chi,
             prep,
             solver_seed=solver_seed,
+            feasible_candidate=(
+                None
+                if carrier_svd_factorization is None
+                else _carrier_svd_candidate_from_factorization(
+                    carrier_svd_factorization, chi
+                )
+            ),
         )
         fid = gamma_fidelity(Gamma, als_result["U"] @ als_result["Vh"])
         solver_reported_ok = als_result.get("solver_status", "ok") == "ok"

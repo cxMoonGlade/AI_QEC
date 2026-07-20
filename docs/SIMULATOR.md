@@ -335,41 +335,38 @@ The current routes are deliberately not one universal executor:
    `fail`. Empirical Record normalization, a fixed RNG seed, or backend completion cannot promote
    that run into certification.
    External comparisons remain role-scoped. Aer checks its own finite-circuit MPS against an
-   independent hand-written dense state; YASTN checks a product-MPS raw MCWF candidate-mass family;
-   isolated CPU QuTiP checks one frozen two-qubit T1 fixture with ordered X/Z measurement/reset
-   boundaries against public GPU direct and Carrier MCWF Record histograms under Bonferroni
-   two-sample TV gates. In addition to the joint Record comparisons, directed X-after binary
-   marginals must pass; the fixture fixes survival to `s=0.25`, so the load-bearing
-   `sqrt(s) -> s` coherence-rate mutation lies outside the registered simultaneous radius and must
-   fail. That QuTiP fixture also requires real jumps, independently verifies X reset to `|+>` and Z
-    reset to `|0>`, and includes a verdict-driving final-Z-bit corruption. The same neutral fixture
-    also has a certifier-local finite-step scalar recurrence at
-   `m=10,20,40,80`: joint/Z and X-after TV biases must decrease and approximately halve on that
-   frozen grid, and the public `m=40`, `n=2048` GPU histogram must lie within one-sample Weissman
-   radii of the finite-step law. This is fixture-bound Record convergence, not a global order or
-    linear-channel convergence claim. The isolated worker binds the
-   pristine QuTiP commit/tree, installed-distribution content identity, Python/NumPy/SciPy versions,
-   explicit MCWF integrator controls, worker/protocol hashes, and canonical report hash. The project-side
-   comparison v3 persists the deterministic recurrence, both public `m=40` sample gates, their corruption
-   controls, source/lock scope, and one canonical outer content hash. The v2 worker
-   shape is recursively exact-field checked and its semantic invariants are recomputed. Strict JSON
-   parsing rejects duplicate/non-finite values and coercible non-integer Record bits/counts; a separate
-   transport envelope binds the immutable worker payload plus its construction-time raw-byte hash/size
-   and process outcome, and requires those bytes to decode to that payload. The direct worker launch
-   strips every inherited `CONDA_*`/`_CE_*` marker plus CUDA-toolkit, virtual-environment, and
-   dynamic-library-path markers; the worker rejects leakage and records the fixed marker set's absence.
-   Worker and outer targets first invalidate and directory-`fsync` any stale file, then file-`fsync`,
-   replace, and directory-`fsync` the completed artifact; a failed post-replace durability step removes
-   the destination before propagating the error. The service
-   checkpoint separately binds the external clone HEAD/tree plus the installed NumPy/SciPy/QuTiP
-   trees. The nested worker directly uses the isolated environment's Python and remains in the
-   supervisor-owned process group, so outer cancellation cannot strand a private session. Quimb's
-   public leg checks wiring against the repository's actual-split adapter while NumPy owns the
-   independent state math. These comparisons do not establish a complete QEC Record law,
-   trajectory-by-trajectory coupling, qutrit/leakage behavior, PEPS faithfulness, scalability, or
-   production readiness, and none is itself the restricted-acceptance oracle. Canonical service
-   acceptance opts into the isolated Aer, YASTN, and QuTiP subprocess runs rather than executing
-   only their helper tests.
+   independent hand-written dense state; YASTN checks a product-MPS raw MCWF candidate-mass family.
+   The neutral MCWF X/Z family freezes three two-qubit fixtures: F1 T1 decay, F2 number dephasing,
+   and F3 thermal down/up relaxation. Each uses `n=2048`, ordered `[X,Z,X,Z]` measurement/reset
+   boundaries, a simulator-independent dense worker that hand-builds the 4x4 operators and 16x16
+   Lindblad superoperator, isolated CPU QuTiP trajectories, and public GPU direct/Carrier Record
+   histograms. A byte-pinned 15-entry registry assigns five statistics per fixture: project-vs-dense
+   joint plus two directed marginals, QuTiP-vs-dense joint, and QuTiP-vs-project joint. The family
+   alpha is `0.01`, allocated as `alpha/15`; one-sample and two-sample Weissman TV gates are selected
+   by the registered comparison kind. Dense analytic agreement is a numerical sanity check with
+   exact preservation of registered structural-zero cells. Fixture-specific corruptions must fail,
+   including reversed F1 relaxation, the missing F2 number-operator factor, and removed, swapped,
+   doubled-rate, or wrong-target F3 thermal jumps; a unit-modulus collapse phase is the inert control.
+   F1 separately retains the certifier-local finite-step scalar recurrence at `m=10,20,40,80`: its
+   joint/Z and X-after TV biases must decrease and approximately halve, and the public `m=40` GPU
+   histogram must lie within the registered one-sample radii. This is fixture-bound Record evidence,
+   not a global convergence-order or linear-channel claim.
+
+   The current family schemas are QuTiP worker v3, independent dense worker v1, worker envelope v1,
+   per-fixture comparison v1, and family comparison v1. The QuTiP leg binds the pristine source
+   commit/tree, installed-distribution content identity, selected installed-source equality,
+   Python/NumPy/SciPy versions, explicit MCWF controls, and the exact 36-package Linux-64 conda URL
+   lock plus installed-package conformance; its private solver cache is created mode `0700`. Strict
+   JSON and exact-field checks reject malformed or semantically drifted worker payloads, and the raw
+   transport envelope binds bytes and process outcome. The launch strips inherited conda, CUDA,
+   loader, and virtual-environment markers; nested workers remain in the supervisor-owned process
+   group. Stale-safe atomic publication uses file and parent-directory `fsync`. A publishable family
+   artifact additionally requires a clean Git checkpoint. Quimb's public three-leg leg checks wiring
+   against repository actual splits while independent NumPy owns the dense state math. None of these
+   comparisons establishes a complete QEC Record law, trajectory-by-trajectory coupling,
+   qutrit/leakage behavior, PEPS faithfulness, scalability, calibration, production readiness, or
+   the internal restricted-acceptance verdict. Canonical service acceptance opts into all isolated
+   external subprocesses rather than executing only helper tests.
    The restricted-MPS performance instrument is engineering-only. It binds every production owner
    by file hash and requires each workload's declared public outcome. In particular, the lossy QT
    cap-one fixture must remain `rejected`, and the over-cap MCWF fixture must remain `unavailable`;
@@ -408,13 +405,16 @@ The PEPS environment-aware truncation mutation boundary is now engineering-harde
 authenticated, finite, target-meeting rank reduction may write both endpoints; rejected candidates
 are no-ops; a partial or failed absorption rolls both tensors back; and solver perturbations use a
 declared private RNG rather than advancing ambient CPU/CUDA streams. This closes the known mutation,
-transactionality, and RNG-control defects, not the scientific claim. At the strict registered
-``eps_fid``, the d3 entropy equality currently occurs with zero accepted rank-reducing write-backs;
-the explicit FET non-degeneracy gate is therefore RED and the pruning path is not scientifically
-validated. The committed fresh-process replay bound to `c8c553e` authenticates the all-noop split
-verdict: scoped replay, fallback contract, RNG neutrality, and entropy pass, while solver health and
-non-degeneracy remain RED. A primary-literature bridge must still connect the local FET objective to
-the QEC entropy and complete record-law observables. Local
+transactionality, and RNG-control defects, not the scientific claim. The former strict-``eps_fid``
+d3 all-noop result was traced to an aliasing defect in gauge preparation that changed the
+verdict-driving environment tensor plus the absence of a complete local-QR/SVD feasible candidate.
+The current focused owner surface clones the eig inputs, freezes and scores that analytic feasible
+candidate, requires the environment tensor to remain byte-identical, applies an authenticated rank
+reduction, and still matches the independent GF(2) entropy reference. The PEPS/FET owner suite passes;
+clean-head fresh-process release evidence remains pending. The committed `c8c553e` all-noop replay is
+historical pre-repair evidence and cannot grade the current implementation. A primary-literature
+bridge must still connect the local FET objective to the QEC entropy and complete record-law
+observables. Local
 environment, entropy, or dense-reference checks cannot individually certify full-record faithfulness,
 and no tolerance, target, or algorithm substitution may be chosen merely to manufacture a pass.
 

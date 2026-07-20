@@ -15,7 +15,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from typing import Any
+from typing import Any, Mapping
 
 import torch
 
@@ -33,20 +33,31 @@ import qutip_mcwf_xz_protocol as protocol
 
 
 SCHEMA = "ai_qec.external_baseline.qutip_project_mcwf_xz_comparison.v3"
-WORKER_SCHEMA = "ai_qec.external_baseline.qutip_mcwf_xz_record.v2"
+WORKER_SCHEMA = (
+    "error_coupling_simulator.external_baseline.qutip_mcwf_xz_record.v3"
+)
 WORKER_ENVELOPE_SCHEMA = "ai_qec.external_baseline.qutip_mcwf_xz_worker_envelope.v1"
 EXPECTED_PROJECT_ENVIRONMENT = "ecs"
 EXPECTED_QUTIP_COMMIT = "f343ee3ca273a4ea19f6bebbd6f563354ea309ed"
 EXPECTED_QUTIP_VERSION = "5.4.0.dev0+f343ee3"
+EXPECTED_QUTIP_TREE = "f09c4126447d8d77b66f2da39dca759a606346dd"
 REPO = Path(__file__).resolve().parents[2]
 QUTIP_WORKER = Path(__file__).with_name("qutip_mcwf_xz_worker.py")
 QUTIP_BASELINE_REPO = REPO / "external" / "baselines" / "qutip"
+QUTIP_BASELINE_LOCK = REPO / "baseline-environment-qutip-linux-64.lock.json"
 PROJECT_EVIDENCE_SOURCE_PATHS = (
+    "baseline-environment-qutip-linux-64.lock.json",
+    "scripts/external_baselines/mcwf_xz_dense_worker.py",
     "scripts/external_baselines/qutip_mcwf_xz_protocol.py",
     "scripts/external_baselines/qutip_mcwf_xz_worker.py",
+    "scripts/external_baselines/run_mcwf_xz_fixture_family_comparison.py",
     "scripts/external_baselines/run_qutip_mcwf_xz_comparison.py",
+    "scripts/external_baselines/fixtures/mcwf_xz_comparison_registry.json",
+    "scripts/external_baselines/fixtures/qutip_mcwf_xz_two_qubit_pure_dephasing.json",
     "scripts/external_baselines/fixtures/qutip_mcwf_xz_two_qubit_t1.json",
+    "scripts/external_baselines/fixtures/qutip_mcwf_xz_two_qubit_thermal.json",
     "tests/test_axis1_mcwf_convergence.py",
+    "tests/test_external_mcwf_xz_fixture_family.py",
     "tests/test_external_qutip_mcwf_xz_comparison.py",
 )
 PROJECT_ENVIRONMENT_LOCK_PATHS = (
@@ -166,6 +177,141 @@ def _project_source_provenance() -> dict[str, Any]:
     }
 
 
+def _qutip_baseline_lock_provenance() -> dict[str, Any]:
+    if not QUTIP_BASELINE_LOCK.is_file():
+        raise RuntimeError("authoritative QuTiP baseline lock is missing")
+    lock = _strict_json_loads(QUTIP_BASELINE_LOCK.read_bytes())
+    if set(lock) != {
+        "conda_explicit_sha256_urls",
+        "environment_name",
+        "platform",
+        "python_version",
+        "qutip_vcs",
+        "recreation_sequence",
+        "schema",
+    } or lock.get("schema") != (
+        "error_coupling_simulator.environment_lock.qutip_baseline.v1"
+    ):
+        raise RuntimeError("authoritative QuTiP baseline lock schema drifted")
+    if lock.get("environment_name") != "ecs-baseline-qutip":
+        raise RuntimeError("authoritative QuTiP baseline environment name drifted")
+    expected_urls = lock.get("conda_explicit_sha256_urls")
+    if not isinstance(expected_urls, list) or not expected_urls:
+        raise RuntimeError("authoritative QuTiP conda package lock is empty")
+    if len(set(expected_urls)) != len(expected_urls) or any(
+        not isinstance(value, str)
+        or not value.startswith("https://")
+        or len(value.rsplit("#", 1)) != 2
+        or len(value.rsplit("#", 1)[1]) != 64
+        or any(character not in "0123456789abcdef" for character in value.rsplit("#", 1)[1])
+        for value in expected_urls
+    ):
+        raise RuntimeError("authoritative QuTiP conda package lock is malformed")
+
+    conda = shutil.which("conda")
+    if conda is None:
+        raise RuntimeError("conda is required for QuTiP baseline lock conformance")
+    completed = subprocess.run(
+        [conda, "list", "-n", "ecs-baseline-qutip", "--explicit", "--sha256"],
+        cwd=REPO,
+        env={key: value for key, value in os.environ.items() if key != "PYTHONPATH"},
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=120.0,
+    )
+    observed_urls = [
+        line.strip()
+        for line in completed.stdout.splitlines()
+        if line.strip().startswith("https://")
+    ]
+    if observed_urls != expected_urls:
+        raise RuntimeError("ecs-baseline-qutip conda packages drifted from lock")
+
+    baseline_python = _resolve_named_conda_python(
+        conda,
+        environment_name="ecs-baseline-qutip",
+    )
+    identity_process = subprocess.run(
+        [
+            str(baseline_python),
+            "-c",
+            (
+                "import importlib.metadata as m,json,platform;"
+                "d=m.distribution('qutip');"
+                "print(json.dumps({'python_version':platform.python_version(),"
+                "'qutip_version':d.version,'direct_url':json.loads("
+                "d.read_text('direct_url.json'))},sort_keys=True))"
+            ),
+        ],
+        cwd=REPO,
+        env=_worker_launch_environment(
+            os.environ,
+            baseline_python=baseline_python,
+        ),
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=120.0,
+    )
+    installed = _strict_json_loads(identity_process.stdout.encode("utf-8"))
+    qutip_vcs = lock.get("qutip_vcs")
+    if not isinstance(qutip_vcs, Mapping) or set(qutip_vcs) != {
+        "commit",
+        "installed_distribution_version",
+        "source_relative_to_repository",
+        "tree",
+    }:
+        raise RuntimeError("authoritative QuTiP VCS lock is malformed")
+    direct_url = installed.get("direct_url")
+    vcs_info = direct_url.get("vcs_info") if isinstance(direct_url, Mapping) else None
+    observed_commit = _git_at(QUTIP_BASELINE_REPO, "rev-parse", "HEAD")
+    observed_tree = _git_at(QUTIP_BASELINE_REPO, "rev-parse", "HEAD^{tree}")
+    if (
+        lock.get("platform") != "linux-64"
+        or installed.get("python_version") != lock.get("python_version")
+        or qutip_vcs.get("source_relative_to_repository")
+        != "external/baselines/qutip"
+        or qutip_vcs.get("commit") != EXPECTED_QUTIP_COMMIT
+        or qutip_vcs.get("tree") != EXPECTED_QUTIP_TREE
+        or qutip_vcs.get("installed_distribution_version")
+        != EXPECTED_QUTIP_VERSION
+        or installed.get("qutip_version") != EXPECTED_QUTIP_VERSION
+        or not isinstance(direct_url, Mapping)
+        or direct_url.get("url") != QUTIP_BASELINE_REPO.resolve().as_uri()
+        or not isinstance(vcs_info, Mapping)
+        or vcs_info.get("vcs") != "git"
+        or vcs_info.get("commit_id") != EXPECTED_QUTIP_COMMIT
+        or vcs_info.get("requested_revision") != EXPECTED_QUTIP_COMMIT
+        or observed_commit != EXPECTED_QUTIP_COMMIT
+        or observed_tree != EXPECTED_QUTIP_TREE
+        or _git_at(
+            QUTIP_BASELINE_REPO,
+            "status",
+            "--porcelain",
+            "--untracked-files=all",
+        )
+        != ""
+    ):
+        raise RuntimeError("ecs-baseline-qutip VCS/install identity drifted from lock")
+    return {
+        "path": str(QUTIP_BASELINE_LOCK.relative_to(REPO)),
+        "sha256": _sha256_file(QUTIP_BASELINE_LOCK),
+        "schema": lock["schema"],
+        "environment_name": lock["environment_name"],
+        "conda_explicit_package_count": len(expected_urls),
+        "conda_executable": str(Path(conda).resolve()),
+        "conda_executable_sha256": _sha256_file(Path(conda).resolve()),
+        "python_executable": str(baseline_python),
+        "python_version": installed["python_version"],
+        "qutip_commit": observed_commit,
+        "qutip_tree": observed_tree,
+        "qutip_version": installed["qutip_version"],
+        "authoritative_lock_conformance_checked": True,
+        "claims_reproducible_environment": True,
+    }
+
+
 def _environment_lock_provenance() -> dict[str, Any]:
     lock_hashes: dict[str, str] = {}
     for relative in PROJECT_ENVIRONMENT_LOCK_PATHS:
@@ -173,19 +319,17 @@ def _environment_lock_provenance() -> dict[str, Any]:
         if not path.is_file():
             raise RuntimeError(f"required project environment lock is missing: {relative}")
         lock_hashes[relative] = _sha256_file(path)
+    baseline = _qutip_baseline_lock_provenance()
     return {
         "project_environment_locks": lock_hashes,
         "core_lock_scope": "project_ecs_only_not_qutip_baseline",
         "uv_lock_scope": "project_ecs_only_not_qutip_baseline",
         "baseline_environment": "ecs-baseline-qutip",
-        "baseline_environment_lock": None,
-        "authoritative_lock_conformance_checked": False,
-        "claims_qutip_baseline_lock_conformance": False,
-        "claims_reproducible_environment": False,
-        "limitation": (
-            "the hashed project locks do not specify or attest the isolated "
-            "ecs-baseline-qutip environment"
-        ),
+        "baseline_environment_lock": baseline,
+        "authoritative_lock_conformance_checked": True,
+        "claims_qutip_baseline_lock_conformance": True,
+        "claims_reproducible_environment": True,
+        "limitation": None,
     }
 
 
@@ -234,6 +378,10 @@ def _schedule_from_fixture(fixture: dict[str, Any]):
         Axis1LocalLindbladContextSpec(
             gamma_phi_per_ns=float(fixture["gamma_phi_per_ns"]),
             gamma_1_per_ns=float(fixture["gamma_1_per_ns"]),
+            include_thermal_excitation=(
+                float(fixture["gamma_up_per_ns"]) > 0.0
+            ),
+            gamma_up_per_ns=float(fixture["gamma_up_per_ns"]),
             gamma_readout_phi_per_ns=0.0,
         )
     )
@@ -461,26 +609,26 @@ def _validate_isolated_qutip_report(
     fixture_record = _require_exact_keys(
         report["fixture"],
         {
-            "evolution_duration_ns",
-            "gamma_1_per_ns",
+            "collapse_terms",
+            "comparison_registry_sha256",
+            "evolution_segments_ns",
             "id",
             "initial_levels",
             "path",
             "schema",
             "sha256",
-            "target_survival_probability",
         },
         label="worker fixture",
     )
     fixture_expectations = {
-        "evolution_duration_ns": fixture["evolution_duration_ns"],
-        "gamma_1_per_ns": fixture["gamma_1_per_ns"],
+        "collapse_terms": fixture["collapse_terms"],
+        "comparison_registry_sha256": protocol.EXPECTED_REGISTRY_SHA256,
+        "evolution_segments_ns": fixture["evolution_segments_ns"],
         "id": fixture["fixture_id"],
         "initial_levels": fixture["initial_levels"],
         "path": str(fixture_path.resolve()),
         "schema": fixture["schema"],
         "sha256": protocol.fixture_sha256(fixture_path),
-        "target_survival_probability": fixture["target_survival_probability"],
     }
     if not _json_type_exact_equal(fixture_record, fixture_expectations):
         raise RuntimeError("isolated QuTiP fixture binding drifted")
@@ -489,6 +637,7 @@ def _validate_isolated_qutip_report(
         report["runtime_provenance"],
         {
             "baseline_repo",
+            "cache_isolation",
             "clone_pristine",
             "cuda_visible_devices",
             "environment",
@@ -546,6 +695,33 @@ def _validate_isolated_qutip_report(
         or runtime["pythonpath_env"] is not None
     ):
         raise RuntimeError("isolated QuTiP runtime isolation drifted")
+    cache_isolation = _require_exact_keys(
+        runtime["cache_isolation"],
+        {
+            "all_cache_roots_exist_and_are_nonsymlink_directories",
+            "common_private_root",
+            "common_private_root_mode_octal",
+            "home",
+            "matplotlib_config",
+            "private_root_owner_only",
+            "xdg_cache_home",
+        },
+        label="worker cache isolation",
+    )
+    private_root = Path(str(cache_isolation["common_private_root"]))
+    if (
+        cache_isolation["all_cache_roots_exist_and_are_nonsymlink_directories"]
+        is not True
+        or cache_isolation["private_root_owner_only"] is not True
+        or cache_isolation["common_private_root_mode_octal"] != "700"
+        or Path(str(cache_isolation["home"])).parent != private_root
+        or Path(str(cache_isolation["xdg_cache_home"])).parent != private_root
+        or Path(str(cache_isolation["matplotlib_config"])).parent != private_root
+        or Path(str(cache_isolation["home"])).name != "home"
+        or Path(str(cache_isolation["xdg_cache_home"])).name != "xdg-cache"
+        or Path(str(cache_isolation["matplotlib_config"])).name != "mpl-config"
+    ):
+        raise RuntimeError("isolated QuTiP cache isolation drifted")
     sanitized = _require_exact_keys(
         runtime["sanitized_parent_environment"],
         set(SANITIZED_INHERITED_ENVIRONMENT_KEYS),
@@ -695,7 +871,7 @@ def _validate_isolated_qutip_report(
         or solver["device"] != "cpu"
         or solver["trajectory_count"] != trajectory_count
         or solver["retained_final_state_count_per_interval"] != trajectory_count
-        or solver["collapse_operator_count"] != 2
+        or solver["collapse_operator_count"] != len(fixture["collapse_terms"])
         or solver["first_interval_jump_count"] < 0
         or solver["second_interval_jump_count"] < 0
         or not _json_type_exact_equal(
@@ -769,33 +945,28 @@ def _validate_isolated_qutip_report(
     analytic = _require_exact_keys(
         report["analytic_reference"],
         {
-            "binary_tv",
             "bonferroni_component_alpha",
             "derivation",
-            "label_tv",
-            "simultaneous_components",
-            "x_after_binary_marginal_tv",
-            "x_after_column",
-            "x_after_key",
+            "joint_tv",
+            "nonverdict_directed_marginal_tv",
+            "registered_statistic",
+            "registry_entry_count",
         },
         label="worker analytic reference",
     )
-    if (
-        analytic["derivation"]
-        != (
-            "p(X_before=0)=1/2; p(Z_before=1)=exp(-gamma*t); "
-            "after X/Z reset, p(X_after=0)=(1+sqrt(exp(-gamma*t)))/2 "
-            "and p(Z_after=0)=1"
-        )
-        or analytic["simultaneous_components"]
-        != [
-        "labels",
-        "binary_record",
-        "x_after_binary_marginal",
-        ]
-    ):
+    expected_statistic = {
+        "two_qubit_t1_ordered_xz_reset": "f1.qutip_dense_joint",
+        "two_qubit_pure_dephasing_ordered_xz_reset": "f2.qutip_dense_joint",
+        "two_qubit_thermal_ordered_xz_reset": "f3.qutip_dense_joint",
+    }[fixture["fixture_id"]]
+    if analytic["derivation"] != (
+        "closed-form local Lindblad population/coherence evolution composed "
+        "with the ordered selective measurement and reset maps"
+    ) or analytic["registered_statistic"] != expected_statistic:
         raise RuntimeError("isolated QuTiP analytic comparison family drifted")
-    expected_worker_alpha = float(fixture["comparison_alpha"]) / 3.0
+    if analytic["registry_entry_count"] != 15:
+        raise RuntimeError("isolated QuTiP registry cardinality drifted")
+    expected_worker_alpha = float(fixture["comparison_family_alpha"]) / 15.0
     if not math.isclose(
         float(analytic["bonferroni_component_alpha"]),
         expected_worker_alpha,
@@ -803,80 +974,74 @@ def _validate_isolated_qutip_report(
         abs_tol=NUMERICAL_ZERO,
     ):
         raise RuntimeError("isolated QuTiP worker Bonferroni alpha drifted")
-    x_after_column = fixture["measurement_keys"].index("mx_after")
-    if (
-        analytic["x_after_column"] != x_after_column
-        or analytic["x_after_key"] != "mx_after"
-    ):
-        raise RuntimeError("isolated QuTiP X-after binding drifted")
     analytic_law = protocol.analytic_binary_distribution(fixture)
-    observed_label_law = _law(labels)
     observed_binary_law = _law(binary)
-    observed_x_after_law = protocol.binary_column_marginal(
-        observed_binary_law, column=x_after_column
+    comparison = _require_exact_keys(
+        analytic["joint_tv"],
+        {
+            "alpha",
+            "alphabet_size",
+            "gate_rule",
+            "passed",
+            "sample_count",
+            "schema",
+            "total_variation",
+            "tv_radius",
+        },
+        label="worker joint_tv",
     )
-    expected_x_after_law = protocol.binary_column_marginal(
-        analytic_law, column=x_after_column
+    recomputed_tv = protocol.total_variation(observed_binary_law, analytic_law)
+    recomputed_radius = protocol.multinomial_tv_radius(
+        sample_count=trajectory_count,
+        alphabet_size=16,
+        alpha=expected_worker_alpha,
     )
-    for label, expected_alphabet_size, observed_law, expected_law in (
-        ("label_tv", 16, observed_label_law, analytic_law),
-        ("binary_tv", 16, observed_binary_law, analytic_law),
-        (
-            "x_after_binary_marginal_tv",
-            2,
-            observed_x_after_law,
-            expected_x_after_law,
-        ),
+    if (
+        comparison["schema"]
+        != (
+            "error_coupling_simulator.external_baseline."
+            "one_sample_multinomial_tv.v1"
+        )
+        or comparison["sample_count"] != trajectory_count
+        or comparison["alphabet_size"] != 16
+        or not math.isclose(
+            float(comparison["alpha"]),
+            expected_worker_alpha,
+            rel_tol=0.0,
+            abs_tol=NUMERICAL_ZERO,
+        )
+        or not math.isclose(
+            float(comparison["total_variation"]),
+            recomputed_tv,
+            rel_tol=0.0,
+            abs_tol=NUMERICAL_ZERO,
+        )
+        or not math.isclose(
+            float(comparison["tv_radius"]),
+            recomputed_radius,
+            rel_tol=0.0,
+            abs_tol=NUMERICAL_ZERO,
+        )
+        or comparison["gate_rule"] != "observed_total_variation <= tv_radius"
+        or comparison["passed"] is not bool(recomputed_tv <= recomputed_radius)
+        or comparison["passed"] is not True
     ):
-        comparison = _require_exact_keys(
-            analytic[label],
-            {
-                "alpha",
-                "alphabet_size",
-                "gate_rule",
-                "passed",
-                "sample_count",
-                "schema",
-                "total_variation",
-                "tv_radius",
-            },
-            label=f"worker {label}",
+        raise RuntimeError("isolated QuTiP joint evidence drifted")
+    marginal_diagnostics = _require_exact_keys(
+        analytic["nonverdict_directed_marginal_tv"],
+        set(protocol.EXPECTED_DIRECTED_MARGINALS[fixture["fixture_id"]]),
+        label="worker nonverdict directed marginals",
+    )
+    for key, observed_tv in marginal_diagnostics.items():
+        column = fixture["measurement_keys"].index(key)
+        recomputed = protocol.total_variation(
+            protocol.binary_column_marginal(observed_binary_law, column=column),
+            protocol.binary_column_marginal(analytic_law, column=column),
         )
-        recomputed_tv = protocol.total_variation(observed_law, expected_law)
-        recomputed_radius = protocol.multinomial_tv_radius(
-            sample_count=trajectory_count,
-            alphabet_size=expected_alphabet_size,
-            alpha=expected_worker_alpha,
-        )
-        recomputed_passed = bool(recomputed_tv <= recomputed_radius)
-        if (
-            comparison["schema"]
-            != "ai_qec.external_baseline.one_sample_multinomial_tv.v1"
-            or comparison["sample_count"] != trajectory_count
-            or comparison["alphabet_size"] != expected_alphabet_size
-            or not math.isclose(
-                float(comparison["alpha"]),
-                expected_worker_alpha,
-                rel_tol=0.0,
-                abs_tol=NUMERICAL_ZERO,
-            )
-            or not math.isclose(
-                float(comparison["total_variation"]),
-                recomputed_tv,
-                rel_tol=0.0,
-                abs_tol=NUMERICAL_ZERO,
-            )
-            or not math.isclose(
-                float(comparison["tv_radius"]),
-                recomputed_radius,
-                rel_tol=0.0,
-                abs_tol=NUMERICAL_ZERO,
-            )
-            or comparison["gate_rule"] != "observed_total_variation <= tv_radius"
-            or comparison["passed"] is not recomputed_passed
-            or recomputed_passed is not True
+        if not math.isclose(
+            float(observed_tv), recomputed, rel_tol=0.0, abs_tol=NUMERICAL_ZERO
         ):
-            raise RuntimeError(f"isolated QuTiP {label} evidence drifted")
+            raise RuntimeError("isolated QuTiP marginal diagnostic drifted")
 
     limitations = _require_exact_keys(
         report["statistical_limitations"],
@@ -897,8 +1062,7 @@ def _validate_isolated_qutip_report(
             rel_tol=0.0,
             abs_tol=NUMERICAL_ZERO,
         )
-        or limitations["scope"]
-        != "one fixed two-qubit two-boundary T1 fixture"
+        or limitations["scope"] != fixture["fixture_id"]
         or limitations["not_established"] != expected_not_established
     ):
         raise RuntimeError("isolated QuTiP statistical limitations drifted")
@@ -1016,6 +1180,7 @@ def _worker_launch_environment(
     parent: dict[str, str],
     *,
     baseline_python: Path,
+    cache_root: Path | None = None,
 ) -> dict[str, str]:
     environment = dict(parent)
     environment.pop("PYTHONPATH", None)
@@ -1036,6 +1201,19 @@ def _worker_launch_environment(
             "PATH": f"{baseline_python.parent}:{os.defpath}",
         }
     )
+    if cache_root is not None:
+        resolved_cache_root = Path(cache_root).resolve()
+        resolved_cache_root.mkdir(parents=True, exist_ok=False, mode=0o700)
+        private_paths = {
+            "HOME": resolved_cache_root / "home",
+            "XDG_CACHE_HOME": resolved_cache_root / "xdg-cache",
+            "MPLCONFIGDIR": resolved_cache_root / "mpl-config",
+        }
+        for path in private_paths.values():
+            path.mkdir(exist_ok=False, mode=0o700)
+        environment.update(
+            {name: str(path) for name, path in private_paths.items()}
+        )
     return environment
 
 
@@ -1048,12 +1226,14 @@ def _run_isolated_qutip(fixture_path: Path) -> dict[str, Any]:
         conda,
         environment_name="ecs-baseline-qutip",
     )
-    environment = _worker_launch_environment(
-        os.environ,
-        baseline_python=baseline_python,
-    )
     with tempfile.TemporaryDirectory(prefix="qutip_mcwf_xz_") as temporary:
-        output = Path(temporary) / "qutip_mcwf_xz.json"
+        temporary_root = Path(temporary)
+        environment = _worker_launch_environment(
+            os.environ,
+            baseline_python=baseline_python,
+            cache_root=temporary_root / "private-runtime",
+        )
+        output = temporary_root / "qutip_mcwf_xz.json"
         process = subprocess.Popen(
             [
                 str(baseline_python),

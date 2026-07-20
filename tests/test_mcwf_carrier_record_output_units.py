@@ -1490,7 +1490,7 @@ def test_writer_rejects_missing_required_staged_artifact_before_manifest(
         remove_program_after_carrier_write,
     )
     out_dir = tmp_path / "missing-required-artifact"
-    with pytest.raises(RuntimeError, match="required staged artifact"):
+    with pytest.raises(RuntimeError, match="required prepublication artifact"):
         carrier_execution.write_axis1_mcwf_mps_record_samples(
             projected_xz_schedule,
             out_dir,
@@ -1529,7 +1529,7 @@ def test_writer_rejects_symlinked_required_staged_artifact(
         replace_program_with_symlink,
     )
     out_dir = tmp_path / "symlinked-required-artifact"
-    with pytest.raises(RuntimeError, match="required staged artifact"):
+    with pytest.raises(RuntimeError, match="required prepublication artifact"):
         carrier_execution.write_axis1_mcwf_mps_record_samples(
             projected_xz_schedule,
             out_dir,
@@ -1614,8 +1614,8 @@ def test_writer_revalidates_exact_staged_artifact_set_after_directory_fsync(
         "_fsync_directory",
         mutate_then_fsync,
     )
-    out_dir = tmp_path / f"staged-set-{mutation}"
-    with pytest.raises(RuntimeError, match="staged artifact set"):
+    out_dir = tmp_path / f"prepublication-set-{mutation}"
+    with pytest.raises(RuntimeError, match="prepublication artifact set"):
         carrier_execution.write_axis1_mcwf_mps_record_samples(
             projected_xz_schedule,
             out_dir,
@@ -2561,7 +2561,7 @@ def test_writer_rechecks_artifact_set_after_successful_rename(
         "_atomic_rename_directory_noreplace",
         tamper_after_final_rename,
     )
-    with pytest.raises(RuntimeError, match="staged artifact set"):
+    with pytest.raises(RuntimeError, match="prepublication artifact set"):
         carrier_execution.write_axis1_mcwf_mps_record_samples(
             projected_xz_schedule,
             out_dir,
@@ -2599,7 +2599,7 @@ def test_writer_rechecks_artifact_set_after_parent_fsync(
         "_fsync_directory_fd",
         tamper_after_parent_fsync,
     )
-    with pytest.raises(RuntimeError, match="staged artifact set"):
+    with pytest.raises(RuntimeError, match="prepublication artifact set"):
         carrier_execution.write_axis1_mcwf_mps_record_samples(
             projected_xz_schedule,
             out_dir,
@@ -2765,7 +2765,7 @@ def test_final_artifact_validator_rejects_extra_file_injected_while_hashing(
         "_seal_required_mcwf_record_artifact",
         inject_extra_after_first_final_seal,
     )
-    with pytest.raises(RuntimeError, match="staged artifact set"):
+    with pytest.raises(RuntimeError, match="prepublication artifact set"):
         carrier_execution.write_axis1_mcwf_mps_record_samples(
             projected_xz_schedule,
             out_dir,

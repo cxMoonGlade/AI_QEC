@@ -5,10 +5,14 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.metadata
 import json
 import math
 import os
 from pathlib import Path
+import platform
+import subprocess
+import sys
 import tempfile
 from typing import Any, Sequence
 
@@ -19,6 +23,23 @@ FIXTURE_SCHEMA = "error_coupling_simulator.diagnostics.mps_three_leg_fixture.v1"
 LEG_RESULT_SCHEMA = "error_coupling_simulator.diagnostics.mps_three_leg_result.v2"
 DTYPE = "complex128"
 QUBIT_ORDER = "site_0_most_significant_big_endian"
+REPORT_SCHEMA = (
+    "error_coupling_simulator.diagnostics.mps_three_leg_comparison.v1"
+)
+REPO = Path(__file__).resolve().parents[1]
+PROVENANCE_SOURCE_PATHS = (
+    "scripts/mps_three_leg_comparator.py",
+    "src/error_coupling_simulator/carrier/mps/__init__.py",
+    "src/error_coupling_simulator/carrier/mps/capped_two_site.py",
+    "src/error_coupling_simulator/carrier/mps/controls.py",
+    "src/error_coupling_simulator/carrier/mps/state.py",
+    "src/error_coupling_simulator/numerics.py",
+    "tests/test_mps_three_leg_comparator.py",
+)
+ENVIRONMENT_LOCK_PATHS = (
+    "core-environment-cu130.lock",
+    "uv.lock",
+)
 _SPLIT_SITES = ((3, 4), (2, 3), (1, 2), (0, 1), (1, 2), (2, 3), (3, 4))
 _SPLIT_ROLES = (
     "forward_swap_split",
@@ -64,9 +85,176 @@ def atomic_write_json(path: Path, payload: dict[str, Any]) -> str:
             handle.flush()
             os.fsync(handle.fileno())
         os.replace(temporary, output)
+        _fsync_directory(output.parent)
     finally:
         temporary.unlink(missing_ok=True)
     return hashlib.sha256(encoded).hexdigest()
+
+
+def _fsync_directory(path: Path) -> None:
+    descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _git_output(*arguments: str) -> str:
+    completed = subprocess.run(
+        ["git", "-C", str(REPO), *arguments],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return completed.stdout.strip()
+
+
+def _distribution_record(name: str, module: Any) -> dict[str, Any]:
+    distribution = importlib.metadata.distribution(name)
+    module_path = Path(module.__file__).resolve()
+    direct_url_text = distribution.read_text("direct_url.json")
+    return {
+        "name": distribution.metadata["Name"],
+        "version": distribution.version,
+        "module_path": str(module_path),
+        "module_sha256": _sha256_file(module_path),
+        "direct_url": (
+            None if direct_url_text is None else json.loads(direct_url_text)
+        ),
+    }
+
+
+def _selected_lock_conformance(
+    distributions: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    lock_path = REPO / "core-environment-cu130.lock"
+    pinned: dict[str, str] = {}
+    for raw_line in lock_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "==" not in line:
+            continue
+        name, version = line.split("==", 1)
+        pinned[name.lower()] = version
+    observed = {
+        name: record["version"] for name, record in distributions.items()
+    }
+    selected = {
+        name: {
+            "locked": pinned.get(name),
+            "observed": version,
+            "matches": pinned.get(name) == version,
+        }
+        for name, version in observed.items()
+        if name in {"numpy", "quimb", "torch"}
+    }
+    passed = bool(len(selected) == 3 and all(row["matches"] for row in selected.values()))
+    return {
+        "lock_path": "core-environment-cu130.lock",
+        "lock_sha256": _sha256_file(lock_path),
+        "selected_distributions": selected,
+        "selected_runtime_lock_conformance_checked": True,
+        "selected_runtime_lock_conformance_passed": passed,
+        "claims_full_environment_lock_conformance": False,
+        "claims_reproducible_environment": False,
+        "limitation": (
+            "selected NumPy/Quimb/Torch pins are checked; the complete transitive "
+            "environment is hash-bound but not reconstructed in this comparator"
+        ),
+    }
+
+
+def build_provenance(*, require_clean: bool) -> dict[str, Any]:
+    import quimb
+    import torch
+
+    status = _git_output("status", "--porcelain=v1", "--untracked-files=all")
+    if require_clean and status:
+        raise RuntimeError("three-leg comparator requires a clean Git worktree")
+    sources = {
+        relative: _sha256_file(REPO / relative)
+        for relative in PROVENANCE_SOURCE_PATHS
+    }
+    locks = {
+        relative: _sha256_file(REPO / relative)
+        for relative in ENVIRONMENT_LOCK_PATHS
+    }
+    distributions = {
+        "numpy": _distribution_record("numpy", np),
+        "quimb": _distribution_record("quimb", quimb),
+        "torch": _distribution_record("torch", torch),
+    }
+    project_distribution = _distribution_record(
+        "error-coupling-simulator",
+        __import__("error_coupling_simulator"),
+    )
+    if not torch.cuda.is_available():
+        raise RuntimeError("three-leg provenance requires an available CUDA device")
+    device_index = int(torch.cuda.current_device())
+    properties = torch.cuda.get_device_properties(device_index)
+    nvidia = subprocess.run(
+        [
+            "nvidia-smi",
+            f"--id={device_index}",
+            "--query-gpu=uuid,name,driver_version",
+            "--format=csv,noheader,nounits",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=30.0,
+    ).stdout.strip()
+    fields = [value.strip() for value in nvidia.split(",")]
+    if len(fields) != 3 or any(not value for value in fields):
+        raise RuntimeError("three-leg NVIDIA runtime identity is malformed")
+    lock_conformance = _selected_lock_conformance(distributions)
+    if not lock_conformance["selected_runtime_lock_conformance_passed"]:
+        raise RuntimeError("three-leg selected runtime drifted from core lock")
+    return {
+        "git": {
+            "commit": _git_output("rev-parse", "HEAD"),
+            "object_format": (
+                "sha1"
+                if len(_git_output("rev-parse", "HEAD")) == 40
+                else "sha256"
+            ),
+            "status_scope": "whole_worktree_including_untracked_not_ignored",
+            "worktree_clean": not bool(status),
+            "status_sha256": hashlib.sha256(status.encode("utf-8")).hexdigest(),
+        },
+        "selected_and_transitive_source_sha256": sources,
+        "environment_lock_sha256": locks,
+        "runtime": {
+            "python_executable": sys.executable,
+            "python_version": platform.python_version(),
+            "python_implementation": platform.python_implementation(),
+            "platform": platform.platform(),
+            "distributions": distributions,
+            "project_distribution": project_distribution,
+        },
+        "lock_conformance": lock_conformance,
+        "gpu_runtime": {
+            "cuda_available": True,
+            "device_index": device_index,
+            "device_uuid": fields[0],
+            "device_name": fields[1],
+            "compute_capability": list(
+                torch.cuda.get_device_capability(device_index)
+            ),
+            "total_memory_bytes": int(properties.total_memory),
+            "nvidia_driver_version": fields[2],
+            "pytorch_build_cuda_version": str(torch.version.cuda),
+            "loaded_cuda_runtime_version_status": "not_attested",
+            "comparator_tensor_device": "cpu",
+        },
+    }
 
 
 def _complex_array_payload(values: np.ndarray | Sequence[complex]) -> dict[str, Any]:
@@ -912,6 +1100,43 @@ def run_three_leg_gate(manifest: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+def build_report(*, require_clean: bool = True) -> dict[str, Any]:
+    """Build the provenance-bound publishable three-leg comparison report."""
+
+    manifest = build_fixture_manifest()
+    gate = run_three_leg_gate(manifest)
+    provenance = build_provenance(require_clean=require_clean)
+    passed = bool(
+        gate["passed"]
+        and provenance["git"]["worktree_clean"]
+        and provenance["lock_conformance"][
+            "selected_runtime_lock_conformance_passed"
+        ]
+    )
+    report = {
+        "schema": REPORT_SCHEMA,
+        "fixture_manifest": manifest,
+        "fixture_manifest_sha256": manifest["content_hash_sha256"],
+        "three_leg_gate": gate,
+        "provenance": provenance,
+        "atomic_publication": {
+            "protocol": "mkstemp_file_fsync_replace_parent_directory_fsync",
+            "file_fsync_before_replace": True,
+            "parent_directory_fsync_after_replace_required": True,
+            "parent_directory_fsync_success_attested_in_payload": False,
+            "successful_writer_return_required_for_durability_claim": True,
+        },
+        "claim_boundary": gate["claim_boundary"],
+        "passed": passed,
+        "verdict": "pass" if passed else "fail",
+    }
+    report["content_hash_sha256"] = canonical_hash(
+        report,
+        hash_field="content_hash_sha256",
+    )
+    return report
+
+
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=None)
@@ -920,7 +1145,7 @@ def _parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = _parse_args()
-    result = run_three_leg_gate(build_fixture_manifest())
+    result = build_report(require_clean=True)
     if args.output is None:
         print(
             json.dumps(
