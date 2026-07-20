@@ -15,6 +15,8 @@ from error_coupling_simulator.frontend import (
     AXIS1_CARRIER_MCWF_MPS_EXECUTION_BACKEND_CONTRACT,
     AXIS1_CARRIER_QT_MPS_RESTRICTED_EXECUTION_BACKEND_CONTRACT,
     CircuitBuilder,
+    DurationBracket,
+    DurationPolicy,
     axis1_carrier_execution_manifest,
     axis1_mcwf_mps_state_record_execution_manifest,
     axis1_qt_mps_restricted_execution_manifest,
@@ -32,7 +34,7 @@ _FORGED_CHILD_TARGETS = {
     ),
     "mcwf": (
         mcwf_execution,
-        "axis1_mcwf_mps_state_record_execution_manifest",
+        "_axis1_mcwf_mps_state_record_execution_manifest_from_precompiled_program",
     ),
     "carrier": (
         carrier_execution,
@@ -52,11 +54,20 @@ def _rejects_forged_child_without_mutation(
     match=None,
 ):
     owner, attribute = _FORGED_CHILD_TARGETS[route]
+    auto_mcwf_child = (
+        route == "carrier"
+        and isinstance(forged.get("mcwf_mps_execution"), dict)
+    )
+    if auto_mcwf_child:
+        owner = carrier_execution
+        attribute = "_axis1_mcwf_mps_execution_manifest"
     delegated_child = getattr(owner, attribute)
     calls = []
 
     def counted_child(*args, **kwargs):
         calls.append((args, kwargs))
+        if route == "mcwf" or auto_mcwf_child:
+            return forged
         return delegated_child(*args, **kwargs)
 
     monkeypatch.setattr(owner, attribute, counted_child)
@@ -85,6 +96,17 @@ def _rehash(payload: dict[str, object]) -> None:
         allow_nan=False,
     ).encode("utf-8")
     payload["content_hash"] = hashlib.sha256(encoded).hexdigest()
+
+
+def _schedule_content_hash(schedule) -> str:
+    encoded = json.dumps(
+        {"schedule": schedule.to_manifest()},
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
+        allow_nan=False,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
 
 
 @pytest.fixture(scope="module")
@@ -1486,7 +1508,7 @@ def test_auto_router_accepts_honest_mcwf_child(
     )
     monkeypatch.setattr(
         carrier_execution,
-        "axis1_carrier_execution_manifest",
+        "_axis1_mcwf_mps_execution_manifest",
         lambda *_args, **_kwargs: honest,
     )
 
@@ -1520,7 +1542,7 @@ def test_auto_router_accepts_honest_ordered_xz_mcwf_child(
     )
     monkeypatch.setattr(
         carrier_execution,
-        "axis1_carrier_execution_manifest",
+        "_axis1_mcwf_mps_execution_manifest",
         lambda *_args, **_kwargs: honest,
     )
 
@@ -1596,6 +1618,930 @@ def test_public_auto_router_executes_real_ordered_xz_mcwf_child(
     assert record["measurement_records"] == [[0, 0]]
     assert record["record_counts"] == [8]
     assert record["record_probabilities"] == [1.0]
+
+
+def test_public_direct_mcwf_compiles_once_and_consumes_same_program_object(
+    monkeypatch,
+    measurement_schedule,
+):
+    original_compile = mcwf_execution.axis1_carrier_program_manifest
+    original_dynamics_compile = mcwf_execution._compile_mcwf_dynamics_artifacts
+    compiled_programs = []
+    consumed_programs = []
+
+    def counted_compile(*args, **kwargs):
+        program = original_compile(*args, **kwargs)
+        compiled_programs.append(program)
+        return program
+
+    def observed_dynamics_compile(*args, **kwargs):
+        consumed_programs.append(args[0])
+        return original_dynamics_compile(*args, **kwargs)
+
+    monkeypatch.setattr(
+        mcwf_execution,
+        "axis1_carrier_program_manifest",
+        counted_compile,
+    )
+    monkeypatch.setattr(
+        mcwf_execution,
+        "_compile_mcwf_dynamics_artifacts",
+        observed_dynamics_compile,
+    )
+
+    manifest = axis1_mcwf_mps_state_record_execution_manifest(
+        measurement_schedule,
+        device="cuda",
+        trajectory_count=1,
+        rng_seed=4816,
+    )
+
+    assert manifest["passed"] is True
+    assert len(compiled_programs) == 1
+    assert len(consumed_programs) == 1
+    assert consumed_programs[0] is compiled_programs[0]
+
+
+def test_mcwf_carrier_compiles_once_and_delegates_same_program_object(
+    monkeypatch,
+    measurement_schedule,
+):
+    original_compile = carrier_execution.axis1_carrier_program_manifest
+    original_child = getattr(
+        mcwf_execution,
+        "_axis1_mcwf_mps_state_record_execution_manifest_from_precompiled_program",
+    )
+    original_dynamics_compile = mcwf_execution._compile_mcwf_dynamics_artifacts
+    compiled_programs = []
+    delegated_programs = []
+    consumed_programs = []
+
+    def counted_compile(*args, **kwargs):
+        program = original_compile(*args, **kwargs)
+        compiled_programs.append(program)
+        return program
+
+    def observed_child(*args, **kwargs):
+        delegated_programs.append(kwargs.get("precompiled_program"))
+        return original_child(*args, **kwargs)
+
+    def observed_dynamics_compile(*args, **kwargs):
+        consumed_programs.append(args[0])
+        return original_dynamics_compile(*args, **kwargs)
+
+    monkeypatch.setattr(
+        carrier_execution,
+        "axis1_carrier_program_manifest",
+        counted_compile,
+    )
+    monkeypatch.setattr(
+        mcwf_execution,
+        "axis1_carrier_program_manifest",
+        counted_compile,
+    )
+    monkeypatch.setattr(
+        mcwf_execution,
+        "_axis1_mcwf_mps_state_record_execution_manifest_from_precompiled_program",
+        observed_child,
+    )
+    monkeypatch.setattr(
+        mcwf_execution,
+        "_compile_mcwf_dynamics_artifacts",
+        observed_dynamics_compile,
+    )
+
+    manifest = axis1_carrier_execution_manifest(
+        measurement_schedule,
+        device="cuda",
+        execution_backend_contract=(
+            AXIS1_CARRIER_MCWF_MPS_EXECUTION_BACKEND_CONTRACT
+        ),
+        execution_backend_options={
+            "trajectory_count": 1,
+            "rng_seed": 4817,
+        },
+    )
+
+    assert manifest["mcwf_mps_backend_executed"] is True
+    assert (
+        len(compiled_programs) == 1
+        and len(delegated_programs) == 1
+        and delegated_programs[0] is compiled_programs[0]
+        and len(consumed_programs) >= 1
+        and all(program is compiled_programs[0] for program in consumed_programs)
+    ), (
+        "Carrier must compile exactly once and delegate that same manifest "
+        f"object; compile_count={len(compiled_programs)}, "
+        f"delegated_count={len(delegated_programs)}, "
+        f"compiled_ids={[id(program) for program in compiled_programs]}, "
+        "delegated_ids="
+        f"{[id(program) if program is not None else None for program in delegated_programs]}, "
+        f"consumed_ids={[id(program) for program in consumed_programs]}"
+    )
+
+
+def test_auto_mcwf_route_compiles_once_and_delegates_same_program_object(
+    monkeypatch,
+    measurement_schedule,
+):
+    original_compile = carrier_execution.axis1_carrier_program_manifest
+    original_carrier = carrier_execution._axis1_mcwf_mps_execution_manifest
+    original_direct = getattr(
+        mcwf_execution,
+        "_axis1_mcwf_mps_state_record_execution_manifest_from_precompiled_program",
+    )
+    original_dynamics_compile = mcwf_execution._compile_mcwf_dynamics_artifacts
+    compiled_programs = []
+    delegated_programs = []
+    direct_programs = []
+    consumed_programs = []
+
+    def counted_compile(*args, **kwargs):
+        program = original_compile(*args, **kwargs)
+        compiled_programs.append(program)
+        return program
+
+    def observed_carrier(*args, **kwargs):
+        delegated_programs.append(kwargs.get("precompiled_program"))
+        return original_carrier(*args, **kwargs)
+
+    def observed_direct(*args, **kwargs):
+        direct_programs.append(kwargs.get("precompiled_program"))
+        return original_direct(*args, **kwargs)
+
+    def observed_dynamics_compile(*args, **kwargs):
+        consumed_programs.append(args[0])
+        return original_dynamics_compile(*args, **kwargs)
+
+    monkeypatch.setattr(
+        carrier_execution,
+        "axis1_carrier_program_manifest",
+        counted_compile,
+    )
+    monkeypatch.setattr(
+        mcwf_execution,
+        "axis1_carrier_program_manifest",
+        counted_compile,
+    )
+    monkeypatch.setattr(
+        carrier_execution,
+        "_axis1_mcwf_mps_execution_manifest",
+        observed_carrier,
+    )
+    monkeypatch.setattr(
+        mcwf_execution,
+        "_axis1_mcwf_mps_state_record_execution_manifest_from_precompiled_program",
+        observed_direct,
+    )
+    monkeypatch.setattr(
+        mcwf_execution,
+        "_compile_mcwf_dynamics_artifacts",
+        observed_dynamics_compile,
+    )
+    monkeypatch.setattr(
+        carrier_execution,
+        "_available_vram_bytes",
+        lambda _device: 0.0,
+    )
+
+    manifest = axis1_carrier_execution_manifest(
+        measurement_schedule,
+        device="cuda",
+        execution_backend_contract=(
+            carrier_execution.AXIS1_CARRIER_AUTO_BACKEND_CONTRACT
+        ),
+        execution_backend_options={
+            "trajectory_count": 1,
+            "rng_seed": 4822,
+        },
+    )
+
+    assert manifest["resolved_backend_contract"] == (
+        AXIS1_CARRIER_MCWF_MPS_EXECUTION_BACKEND_CONTRACT
+    )
+    assert manifest["passed"] is True
+    assert (
+        len(compiled_programs) == 1
+        and len(delegated_programs) == 1
+        and delegated_programs[0] is compiled_programs[0]
+        and len(direct_programs) >= 1
+        and all(program is compiled_programs[0] for program in direct_programs)
+        and len(consumed_programs) >= 1
+        and all(program is compiled_programs[0] for program in consumed_programs)
+    ), (
+        "auto MCWF must compile exactly once and delegate that same manifest "
+        f"object; compile_count={len(compiled_programs)}, "
+        f"delegated_count={len(delegated_programs)}, "
+        f"compiled_ids={[id(program) for program in compiled_programs]}, "
+        "delegated_ids="
+        f"{[id(program) if program is not None else None for program in delegated_programs]}, "
+        "direct_ids="
+        f"{[id(program) if program is not None else None for program in direct_programs]}, "
+        f"consumed_ids={[id(program) for program in consumed_programs]}"
+    )
+
+
+def test_auto_mcwf_rechecks_program_after_cuda_probe_before_routing(
+    monkeypatch,
+    measurement_schedule,
+):
+    original_compile = carrier_execution.axis1_carrier_program_manifest
+    compiled_programs = []
+    routing_calls = []
+
+    def captured_compile(*args, **kwargs):
+        program = original_compile(*args, **kwargs)
+        compiled_programs.append(program)
+        return program
+
+    def mutate_during_cuda_probe(device):
+        program = compiled_programs[0]
+        program["scope"] = "mutated_during_auto_cuda_probe"
+        _rehash(program)
+        return str(device)
+
+    def observed_routing(*args, **kwargs):
+        routing_calls.append((args, kwargs))
+        raise AssertionError("changed program must not reach auto routing")
+
+    monkeypatch.setattr(
+        carrier_execution,
+        "axis1_carrier_program_manifest",
+        captured_compile,
+    )
+    monkeypatch.setattr(
+        carrier_execution,
+        "_require_cuda_device",
+        mutate_during_cuda_probe,
+    )
+    monkeypatch.setattr(
+        carrier_execution,
+        "_select_dense_or_mcwf",
+        observed_routing,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="declared content hash changed after compile",
+    ):
+        axis1_carrier_execution_manifest(
+            measurement_schedule,
+            device="cuda",
+            execution_backend_contract=(
+                carrier_execution.AXIS1_CARRIER_AUTO_BACKEND_CONTRACT
+            ),
+            execution_backend_options={
+                "trajectory_count": 1,
+                "rng_seed": 4825,
+            },
+        )
+
+    assert len(compiled_programs) == 1
+    assert routing_calls == []
+
+
+def test_auto_mcwf_rechecks_program_after_routing_selector(
+    monkeypatch,
+    measurement_schedule,
+):
+    delegated_calls = []
+
+    def mutate_during_routing(_schedule, _device, program):
+        program["scope"] = "mutated_by_auto_routing_selector"
+        _rehash(program)
+        return (
+            AXIS1_CARRIER_MCWF_MPS_EXECUTION_BACKEND_CONTRACT,
+            {"schema": "test_auto_routing_decision"},
+        )
+
+    def observed_carrier(*args, **kwargs):
+        delegated_calls.append((args, kwargs))
+        raise AssertionError("changed program must not reach delegated Carrier")
+
+    monkeypatch.setattr(
+        carrier_execution,
+        "_select_dense_or_mcwf",
+        mutate_during_routing,
+    )
+    monkeypatch.setattr(
+        carrier_execution,
+        "_axis1_mcwf_mps_execution_manifest",
+        observed_carrier,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="declared content hash changed after compile",
+    ):
+        carrier_execution._axis1_auto_routed_execution_manifest(
+            measurement_schedule,
+            device="cuda",
+            instrument_spec=None,
+            execution_backend_options={
+                "trajectory_count": 1,
+                "rng_seed": 4827,
+            },
+        )
+
+    assert delegated_calls == []
+
+
+def test_mcwf_carrier_rejects_rehashed_program_mutation_before_cuda(
+    monkeypatch,
+    measurement_schedule,
+):
+    original_seam = getattr(
+        mcwf_execution,
+        "_axis1_mcwf_mps_state_record_execution_manifest_from_precompiled_program",
+    )
+    cuda_checks = []
+
+    def mutate_before_execution(*args, **kwargs):
+        program = kwargs["precompiled_program"]
+        program["scope"] = "mutated_after_outer_compile"
+        _rehash(program)
+        return original_seam(*args, **kwargs)
+
+    def observed_cuda_check(device):
+        cuda_checks.append(device)
+        return str(device)
+
+    monkeypatch.setattr(
+        mcwf_execution,
+        "_axis1_mcwf_mps_state_record_execution_manifest_from_precompiled_program",
+        mutate_before_execution,
+    )
+    monkeypatch.setattr(
+        mcwf_execution,
+        "_require_cuda_device",
+        observed_cuda_check,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="declared content hash changed after compile",
+    ):
+        axis1_carrier_execution_manifest(
+            measurement_schedule,
+            device="cuda",
+            execution_backend_contract=(
+                AXIS1_CARRIER_MCWF_MPS_EXECUTION_BACKEND_CONTRACT
+            ),
+            execution_backend_options={
+                "trajectory_count": 1,
+                "rng_seed": 4818,
+            },
+        )
+
+    assert cuda_checks == []
+
+
+def test_mcwf_carrier_rechecks_program_after_delegated_child(
+    monkeypatch,
+    measurement_schedule,
+    honest_mcwf_child,
+):
+    forged = copy.deepcopy(honest_mcwf_child)
+
+    def mutate_program_and_return_child(*_args, **kwargs):
+        program = kwargs["precompiled_program"]
+        program["scope"] = "mutated_by_delegated_child"
+        _rehash(program)
+        return forged
+
+    monkeypatch.setattr(
+        mcwf_execution,
+        "_axis1_mcwf_mps_state_record_execution_manifest_from_precompiled_program",
+        mutate_program_and_return_child,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="declared content hash changed after compile",
+    ):
+        axis1_carrier_execution_manifest(
+            measurement_schedule,
+            execution_backend_contract=(
+                AXIS1_CARRIER_MCWF_MPS_EXECUTION_BACKEND_CONTRACT
+            ),
+            execution_backend_options={
+                "local_dims": [3],
+                "max_bond": 2,
+                "trajectory_count": 4,
+                "rng_seed": 17,
+            },
+        )
+
+
+def test_mcwf_carrier_rechecks_program_after_outer_artifact_authority(
+    monkeypatch,
+    measurement_schedule,
+):
+    original_authority = carrier_execution._trusted_mcwf_artifact_authority
+
+    def mutate_after_outer_authority(program, **kwargs):
+        authority = original_authority(program, **kwargs)
+        program["scope"] = "mutated_after_outer_artifact_authority"
+        _rehash(program)
+        return authority
+
+    monkeypatch.setattr(
+        carrier_execution,
+        "_trusted_mcwf_artifact_authority",
+        mutate_after_outer_authority,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="declared content hash changed after compile",
+    ):
+        axis1_carrier_execution_manifest(
+            measurement_schedule,
+            device="cuda",
+            execution_backend_contract=(
+                AXIS1_CARRIER_MCWF_MPS_EXECUTION_BACKEND_CONTRACT
+            ),
+            execution_backend_options={
+                "trajectory_count": 1,
+                "rng_seed": 4829,
+            },
+        )
+
+
+def test_auto_mcwf_rechecks_program_after_delegated_carrier(
+    monkeypatch,
+    measurement_schedule,
+    honest_mcwf_carrier_child,
+):
+    forged = copy.deepcopy(honest_mcwf_carrier_child)
+
+    def mutate_program_and_return_carrier(*_args, **kwargs):
+        program = kwargs["precompiled_program"]
+        program["scope"] = "mutated_by_auto_delegated_carrier"
+        _rehash(program)
+        return forged
+
+    monkeypatch.setattr(
+        carrier_execution,
+        "_select_dense_or_mcwf",
+        lambda *_args: (
+            AXIS1_CARRIER_MCWF_MPS_EXECUTION_BACKEND_CONTRACT,
+            {"schema": "test_auto_routing_decision"},
+        ),
+    )
+    monkeypatch.setattr(
+        carrier_execution,
+        "_axis1_mcwf_mps_execution_manifest",
+        mutate_program_and_return_carrier,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="declared content hash changed after compile",
+    ):
+        carrier_execution._axis1_auto_routed_execution_manifest(
+            measurement_schedule,
+            device="cuda",
+            instrument_spec=None,
+            execution_backend_options={
+                "local_dims": [3],
+                "initial_levels": [2],
+                "trajectory_count": 4,
+                "rng_seed": 17,
+            },
+        )
+
+
+def test_auto_mcwf_rechecks_program_after_child_validator(
+    monkeypatch,
+    measurement_schedule,
+):
+    original_validator = carrier_execution._validate_auto_routed_carrier_child
+
+    def mutate_after_validator(*args, **kwargs):
+        original_validator(*args, **kwargs)
+        program = kwargs["trusted_program"]
+        program["scope"] = "mutated_after_auto_child_validator"
+        _rehash(program)
+
+    monkeypatch.setattr(
+        carrier_execution,
+        "_validate_auto_routed_carrier_child",
+        mutate_after_validator,
+    )
+    monkeypatch.setattr(
+        carrier_execution,
+        "_available_vram_bytes",
+        lambda _device: 0.0,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="declared content hash changed after compile",
+    ):
+        carrier_execution._axis1_auto_routed_execution_manifest(
+            measurement_schedule,
+            device="cuda",
+            instrument_spec=None,
+            execution_backend_options={
+                "trajectory_count": 1,
+                "rng_seed": 4830,
+            },
+        )
+
+
+def test_precompiled_mcwf_executor_rejects_wrong_schedule_before_cuda(
+    monkeypatch,
+    measurement_schedule,
+):
+    builder = CircuitBuilder(num_qubits=1)
+    builder.measure(0, key="other_measurement")
+    other_schedule = circuit_ir_to_substep_schedule(builder.build())
+    program = carrier_execution.axis1_carrier_program_manifest(
+        other_schedule,
+        backend_contract=AXIS1_CARRIER_MCWF_MPS_EXECUTION_BACKEND_CONTRACT,
+    )
+    cuda_checks = []
+    precompiled_executor = getattr(
+        mcwf_execution,
+        "_axis1_mcwf_mps_state_record_execution_manifest_from_precompiled_program",
+    )
+    monkeypatch.setattr(
+        mcwf_execution,
+        "_require_cuda_device",
+        lambda device: cuda_checks.append(device),
+    )
+
+    with pytest.raises(ValueError, match="source_hash must match"):
+        precompiled_executor(
+            measurement_schedule,
+            precompiled_program=program,
+            expected_program_content_hash=program["content_hash"],
+            expected_schedule_content_hash=_schedule_content_hash(
+                measurement_schedule
+            ),
+            device="cuda",
+            execution_backend_options={
+                "trajectory_count": 1,
+                "rng_seed": 4819,
+            },
+        )
+
+    assert cuda_checks == []
+
+
+def test_precompiled_mcwf_executor_rejects_same_source_different_duration_policy(
+    monkeypatch,
+):
+    builder = CircuitBuilder(num_qubits=1)
+    builder.h(0)
+    circuit = builder.build()
+    compiled_schedule = circuit_ir_to_substep_schedule(circuit)
+    alternate_policy = DurationPolicy(
+        "same_source_alternate_duration_policy",
+        (
+            DurationBracket("one_qubit_gate", 13.0, 14.0, 13.5),
+            DurationBracket("two_qubit_gate", 15.0, 16.0, 15.5),
+            DurationBracket("idle", 0.0, 5.0, None),
+            DurationBracket("measurement", 100.0, 200.0, None),
+            DurationBracket("reset", 100.0, 200.0, None),
+            DurationBracket("barrier", 0.0, 0.0, None),
+        ),
+    )
+    requested_schedule = circuit_ir_to_substep_schedule(
+        circuit,
+        duration_policy=alternate_policy,
+    )
+    assert requested_schedule.source_hash == compiled_schedule.source_hash
+    assert requested_schedule.to_manifest() != compiled_schedule.to_manifest()
+
+    program = carrier_execution.axis1_carrier_program_manifest(
+        compiled_schedule,
+        backend_contract=AXIS1_CARRIER_MCWF_MPS_EXECUTION_BACKEND_CONTRACT,
+    )
+    cuda_checks = []
+    precompiled_executor = getattr(
+        mcwf_execution,
+        "_axis1_mcwf_mps_state_record_execution_manifest_from_precompiled_program",
+    )
+    monkeypatch.setattr(
+        mcwf_execution,
+        "_require_cuda_device",
+        lambda device: cuda_checks.append(device),
+    )
+
+    with pytest.raises(ValueError, match="schedule content hash"):
+        precompiled_executor(
+            requested_schedule,
+            precompiled_program=program,
+            expected_program_content_hash=program["content_hash"],
+            expected_schedule_content_hash=_schedule_content_hash(
+                compiled_schedule
+            ),
+            device="cuda",
+            execution_backend_options={
+                "trajectory_count": 1,
+                "rng_seed": 4826,
+            },
+        )
+
+    assert cuda_checks == []
+
+
+def test_precompiled_mcwf_executor_rejects_wrong_backend_before_cuda(
+    monkeypatch,
+    measurement_schedule,
+):
+    program = carrier_execution.axis1_carrier_program_manifest(
+        measurement_schedule,
+        backend_contract=(
+            AXIS1_CARRIER_QT_MPS_RESTRICTED_EXECUTION_BACKEND_CONTRACT
+        ),
+    )
+    cuda_checks = []
+    precompiled_executor = getattr(
+        mcwf_execution,
+        "_axis1_mcwf_mps_state_record_execution_manifest_from_precompiled_program",
+    )
+    monkeypatch.setattr(
+        mcwf_execution,
+        "_require_cuda_device",
+        lambda device: cuda_checks.append(device),
+    )
+
+    with pytest.raises(ValueError, match="backend_contract must match"):
+        precompiled_executor(
+            measurement_schedule,
+            precompiled_program=program,
+            expected_program_content_hash=program["content_hash"],
+            expected_schedule_content_hash=_schedule_content_hash(
+                measurement_schedule
+            ),
+            device="cuda",
+            execution_backend_options={
+                "trajectory_count": 1,
+                "rng_seed": 4820,
+            },
+        )
+
+    assert cuda_checks == []
+
+
+def test_precompiled_mcwf_executor_rechecks_content_after_cuda_probe(
+    monkeypatch,
+    measurement_schedule,
+):
+    program = carrier_execution.axis1_carrier_program_manifest(
+        measurement_schedule,
+        backend_contract=AXIS1_CARRIER_MCWF_MPS_EXECUTION_BACKEND_CONTRACT,
+    )
+    expected_content_hash = program["content_hash"]
+    dynamics_compile_calls = []
+    precompiled_executor = getattr(
+        mcwf_execution,
+        "_axis1_mcwf_mps_state_record_execution_manifest_from_precompiled_program",
+    )
+
+    def mutate_during_cuda_probe(device):
+        program["scope"] = "mutated_during_cuda_probe"
+        _rehash(program)
+        return str(device)
+
+    def observed_dynamics_compile(*args, **kwargs):
+        dynamics_compile_calls.append((args, kwargs))
+        raise AssertionError("dynamics compile must not observe a changed program")
+
+    monkeypatch.setattr(
+        mcwf_execution,
+        "_require_cuda_device",
+        mutate_during_cuda_probe,
+    )
+    monkeypatch.setattr(
+        mcwf_execution,
+        "_compile_mcwf_dynamics_artifacts",
+        observed_dynamics_compile,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="declared content hash changed after compile",
+    ):
+        precompiled_executor(
+            measurement_schedule,
+            precompiled_program=program,
+            expected_program_content_hash=expected_content_hash,
+            expected_schedule_content_hash=_schedule_content_hash(
+                measurement_schedule
+            ),
+            device="cuda",
+            execution_backend_options={
+                "trajectory_count": 1,
+                "rng_seed": 4821,
+            },
+        )
+
+    assert dynamics_compile_calls == []
+
+
+def test_precompiled_mcwf_executor_rechecks_layout_callback_before_cuda(
+    monkeypatch,
+):
+    builder = CircuitBuilder(num_qubits=1)
+    builder.measure(0, key="layout_mutation_probe")
+    schedule = circuit_ir_to_substep_schedule(builder.build())
+    program = carrier_execution.axis1_carrier_program_manifest(
+        schedule,
+        backend_contract=AXIS1_CARRIER_MCWF_MPS_EXECUTION_BACKEND_CONTRACT,
+    )
+    original_layout = mcwf_execution.axis1_record_layout_from_schedule
+    cuda_checks = []
+    precompiled_executor = getattr(
+        mcwf_execution,
+        "_axis1_mcwf_mps_state_record_execution_manifest_from_precompiled_program",
+    )
+
+    def mutate_during_layout(requested_schedule):
+        layout = original_layout(requested_schedule)
+        requested_schedule.record_layout_ref["mutation_probe"] = True
+        return layout
+
+    monkeypatch.setattr(
+        mcwf_execution,
+        "axis1_record_layout_from_schedule",
+        mutate_during_layout,
+    )
+    monkeypatch.setattr(
+        mcwf_execution,
+        "_require_cuda_device",
+        lambda device: cuda_checks.append(device) or str(device),
+    )
+
+    with pytest.raises(ValueError):
+        precompiled_executor(
+            schedule,
+            precompiled_program=program,
+            expected_program_content_hash=program["content_hash"],
+            expected_schedule_content_hash=_schedule_content_hash(schedule),
+            device="cuda",
+            execution_backend_options={
+                "trajectory_count": 1,
+                "rng_seed": 4828,
+            },
+        )
+
+    assert cuda_checks == []
+
+
+def test_precompiled_mcwf_executor_rechecks_before_dynamics_compile(
+    monkeypatch,
+    measurement_schedule,
+):
+    program = carrier_execution.axis1_carrier_program_manifest(
+        measurement_schedule,
+        backend_contract=AXIS1_CARRIER_MCWF_MPS_EXECUTION_BACKEND_CONTRACT,
+    )
+    expected_content_hash = program["content_hash"]
+    original_unsupported = mcwf_execution._unsupported_substeps
+    dynamics_compile_calls = []
+    precompiled_executor = getattr(
+        mcwf_execution,
+        "_axis1_mcwf_mps_state_record_execution_manifest_from_precompiled_program",
+    )
+
+    def mutate_after_support_preflight(*args, **kwargs):
+        unsupported = original_unsupported(*args, **kwargs)
+        program["scope"] = "mutated_after_support_preflight"
+        _rehash(program)
+        return unsupported
+
+    def observed_dynamics_compile(*args, **kwargs):
+        dynamics_compile_calls.append((args, kwargs))
+        raise AssertionError("changed program reached dynamics compile")
+
+    monkeypatch.setattr(
+        mcwf_execution,
+        "_unsupported_substeps",
+        mutate_after_support_preflight,
+    )
+    monkeypatch.setattr(
+        mcwf_execution,
+        "_compile_mcwf_dynamics_artifacts",
+        observed_dynamics_compile,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="declared content hash changed after compile",
+    ):
+        precompiled_executor(
+            measurement_schedule,
+            precompiled_program=program,
+            expected_program_content_hash=expected_content_hash,
+            expected_schedule_content_hash=_schedule_content_hash(
+                measurement_schedule
+            ),
+            device="cuda",
+            execution_backend_options={
+                "trajectory_count": 1,
+                "rng_seed": 4823,
+            },
+        )
+
+    assert dynamics_compile_calls == []
+
+
+def test_precompiled_mcwf_executor_rechecks_after_sampled_execution(
+    monkeypatch,
+    measurement_schedule,
+):
+    program = carrier_execution.axis1_carrier_program_manifest(
+        measurement_schedule,
+        backend_contract=AXIS1_CARRIER_MCWF_MPS_EXECUTION_BACKEND_CONTRACT,
+    )
+    expected_content_hash = program["content_hash"]
+    original_execute = mcwf_execution._execute_sampled_mcwf_program
+    precompiled_executor = getattr(
+        mcwf_execution,
+        "_axis1_mcwf_mps_state_record_execution_manifest_from_precompiled_program",
+    )
+
+    def mutate_after_sampled_execution(*args, **kwargs):
+        execution = original_execute(*args, **kwargs)
+        program["scope"] = "mutated_after_sampled_execution"
+        _rehash(program)
+        return execution
+
+    monkeypatch.setattr(
+        mcwf_execution,
+        "_execute_sampled_mcwf_program",
+        mutate_after_sampled_execution,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="declared content hash changed after compile",
+    ):
+        precompiled_executor(
+            measurement_schedule,
+            precompiled_program=program,
+            expected_program_content_hash=expected_content_hash,
+            expected_schedule_content_hash=_schedule_content_hash(
+                measurement_schedule
+            ),
+            device="cuda",
+            execution_backend_options={
+                "trajectory_count": 1,
+                "rng_seed": 4824,
+            },
+        )
+
+
+def test_precompiled_mcwf_executor_rechecks_after_acceptance_helpers(
+    monkeypatch,
+    measurement_schedule,
+):
+    from error_coupling_simulator.certify import axis1_mps as certmod
+
+    program = carrier_execution.axis1_carrier_program_manifest(
+        measurement_schedule,
+        backend_contract=AXIS1_CARRIER_MCWF_MPS_EXECUTION_BACKEND_CONTRACT,
+    )
+    expected_content_hash = program["content_hash"]
+    original_policy = certmod.restricted_acceptance_policy
+    precompiled_executor = getattr(
+        mcwf_execution,
+        "_axis1_mcwf_mps_state_record_execution_manifest_from_precompiled_program",
+    )
+
+    def mutate_after_acceptance(*args, **kwargs):
+        acceptance = original_policy(*args, **kwargs)
+        program["scope"] = "mutated_after_acceptance_helper"
+        _rehash(program)
+        return acceptance
+
+    monkeypatch.setattr(
+        certmod,
+        "restricted_acceptance_policy",
+        mutate_after_acceptance,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="declared content hash changed after compile",
+    ):
+        precompiled_executor(
+            measurement_schedule,
+            precompiled_program=program,
+            expected_program_content_hash=expected_content_hash,
+            expected_schedule_content_hash=_schedule_content_hash(
+                measurement_schedule
+            ),
+            device="cuda",
+            execution_backend_options={
+                "trajectory_count": 1,
+                "rng_seed": 4826,
+            },
+        )
 
 
 def test_auto_router_rejects_all_rehashed_artifact_packet_mirrors(
@@ -2216,7 +3162,7 @@ def test_auto_router_freezes_canonical_options_before_delegation(
 
     monkeypatch.setattr(
         carrier_execution,
-        "axis1_carrier_execution_manifest",
+        "_axis1_mcwf_mps_execution_manifest",
         mutate_delegated_options,
     )
 

@@ -2112,16 +2112,12 @@ def test_qt_resource_probe_rejects_workload_verdict_mismatch(
 
 def test_carrier_auto_envelope_rejects_truthy_nonboolean_child_verdict(
     monkeypatch: pytest.MonkeyPatch,
+    carrier_measurement_schedule,
 ) -> None:
     import error_coupling_simulator.frontend.axis1_carrier_execution as carrier
 
-    schedule = SimpleNamespace(source_kind="fixture", source_hash="fixture-hash")
+    schedule = carrier_measurement_schedule
     monkeypatch.setattr(carrier, "_require_cuda_device", lambda _device: "cuda")
-    monkeypatch.setattr(
-        carrier,
-        "axis1_carrier_program_manifest",
-        lambda _schedule: {"requires_scalable_backend": False},
-    )
     monkeypatch.setattr(
         carrier,
         "_select_dense_or_mcwf",
@@ -2161,7 +2157,7 @@ def test_carrier_mcwf_wrapper_rejects_truthy_nonboolean_child_verdict(
     _rehash_manifest(child)
     monkeypatch.setattr(
         mcwf,
-        "axis1_mcwf_mps_state_record_execution_manifest",
+        "_axis1_mcwf_mps_state_record_execution_manifest_from_precompiled_program",
         lambda *_args, **_kwargs: child,
     )
 
@@ -2436,7 +2432,7 @@ def test_carrier_mcwf_wrapper_binds_backend_and_policy_state(
     _rehash_manifest(child)
     monkeypatch.setattr(
         mcwf,
-        "axis1_mcwf_mps_state_record_execution_manifest",
+        "_axis1_mcwf_mps_state_record_execution_manifest_from_precompiled_program",
         lambda *_args, **_kwargs: child,
     )
 

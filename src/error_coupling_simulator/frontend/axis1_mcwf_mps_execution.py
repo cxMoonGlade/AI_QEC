@@ -40,6 +40,7 @@ from ..numerics import NUMERICAL_ZERO
 from .analog_schedule import SubstepSchedule
 from .axis1_carrier_program import (
     AXIS1_CARRIER_MCWF_MPS_BACKEND_CONTRACT,
+    AXIS1_CARRIER_PROGRAM_SCHEMA,
     axis1_carrier_program_manifest,
     axis1_carrier_substep_summary,
     axis1_reset_basis,
@@ -216,6 +217,124 @@ TWO_SITE_COLLAPSE_FAMILIES = frozenset({"CORR_RELAX"})
 _MCWF_FIRST_ORDER_MASS_RESIDUAL_BUDGET = 0.1
 
 
+def _axis1_mcwf_mps_state_record_execution_manifest_from_precompiled_program(
+    schedule: SubstepSchedule,
+    *,
+    precompiled_program: dict[str, Any],
+    expected_program_content_hash: str,
+    expected_schedule_content_hash: str,
+    device: str,
+    execution_backend_options: dict[str, Any],
+) -> dict[str, Any]:
+    """Execute a Carrier-owned, already compiled MCWF program."""
+
+    if type(execution_backend_options) is not dict:
+        raise TypeError("precompiled MCWF execution options must be a dict")
+    return _axis1_mcwf_mps_state_record_execution_manifest_impl(
+        schedule,
+        device=device,
+        precompiled_program=precompiled_program,
+        precompiled_program_content_hash=expected_program_content_hash,
+        precompiled_schedule_content_hash=expected_schedule_content_hash,
+        **execution_backend_options,
+    )
+
+
+def _mcwf_schedule_content_hash(schedule: SubstepSchedule) -> str:
+    """Authenticate the complete compiler schedule, not only its source IR."""
+
+    return _stable_payload_hash({"schedule": schedule.to_manifest()})
+
+
+def _validate_precompiled_mcwf_program(
+    schedule: SubstepSchedule,
+    program: dict[str, Any],
+    *,
+    expected_content_hash: str | None,
+    expected_schedule_content_hash: str | None,
+) -> None:
+    """Bind an existing program to its compiler schedule before execution."""
+
+    def _matches_exact_type(actual: object, expected: object) -> bool:
+        if type(actual) is not type(expected):
+            return False
+        if type(expected) is list:
+            return len(actual) == len(expected) and all(
+                _matches_exact_type(actual_item, expected_item)
+                for actual_item, expected_item in zip(actual, expected)
+            )
+        return actual == expected
+
+    if type(program) is not dict:
+        raise TypeError("precompiled MCWF program must be a dict")
+    if (
+        not isinstance(expected_schedule_content_hash, str)
+        or len(expected_schedule_content_hash) != 64
+        or any(
+            ch not in "0123456789abcdef"
+            for ch in expected_schedule_content_hash
+        )
+    ):
+        raise ValueError(
+            "precompiled MCWF schedule content hash must be lowercase "
+            "SHA-256 hex"
+        )
+    if _mcwf_schedule_content_hash(schedule) != expected_schedule_content_hash:
+        raise ValueError(
+            "precompiled MCWF schedule content hash changed after compile"
+        )
+    if (
+        not isinstance(expected_content_hash, str)
+        or len(expected_content_hash) != 64
+        or any(ch not in "0123456789abcdef" for ch in expected_content_hash)
+    ):
+        raise ValueError(
+            "precompiled MCWF program expected content hash must be lowercase "
+            "SHA-256 hex"
+        )
+    declared_content_hash = program.get("content_hash")
+    if declared_content_hash != expected_content_hash:
+        raise ValueError(
+            "precompiled MCWF program declared content hash changed after compile"
+        )
+    if _stable_payload_hash(program) != expected_content_hash:
+        raise ValueError(
+            "precompiled MCWF program content hash does not authenticate its payload"
+        )
+    expected_top_level = {
+        "schema": AXIS1_CARRIER_PROGRAM_SCHEMA,
+        "source_kind": schedule.source_kind,
+        "source_hash": schedule.source_hash,
+        "schedule_representability": schedule.representability,
+        "backend_contract": AXIS1_CARRIER_MCWF_MPS_BACKEND_CONTRACT,
+        "gpu_required": True,
+    }
+    for field, expected in expected_top_level.items():
+        if not _matches_exact_type(program.get(field), expected):
+            raise ValueError(
+                "precompiled MCWF program "
+                f"{field} must match its schedule/backend contract"
+            )
+    nested = program.get("program")
+    if type(nested) is not dict:
+        raise TypeError("precompiled MCWF program payload must be a dict")
+    expected_nested = {
+        "schema": AXIS1_CARRIER_PROGRAM_SCHEMA,
+        "source_kind": schedule.source_kind,
+        "source_hash": schedule.source_hash,
+        "num_qubits": int(schedule.num_qubits),
+        "site_order": list(range(int(schedule.num_qubits))),
+        "backend_contract": AXIS1_CARRIER_MCWF_MPS_BACKEND_CONTRACT,
+        "gpu_required": True,
+    }
+    for field, expected in expected_nested.items():
+        if not _matches_exact_type(nested.get(field), expected):
+            raise ValueError(
+                "precompiled MCWF program nested "
+                f"{field} must match its schedule/backend contract"
+            )
+
+
 def axis1_mcwf_mps_state_record_execution_manifest(
     schedule: SubstepSchedule,
     *,
@@ -249,6 +368,47 @@ def axis1_mcwf_mps_state_record_execution_manifest(
     convergence study; such a
     run may execute and emit diagnostics but cannot pass restricted acceptance.
     """
+
+    return _axis1_mcwf_mps_state_record_execution_manifest_impl(
+        schedule,
+        local_dims=local_dims,
+        device=device,
+        max_bond=max_bond,
+        worst_cut_discarded_weight_gate=worst_cut_discarded_weight_gate,
+        total_discarded_weight_gate=total_discarded_weight_gate,
+        microstep_count=microstep_count,
+        finite_step_order=finite_step_order,
+        trajectory_count=trajectory_count,
+        rng_seed=rng_seed,
+        initial_levels=initial_levels,
+        leaked_readout_b=leaked_readout_b,
+        mass_residual_budget=mass_residual_budget,
+        precompiled_program=None,
+        precompiled_program_content_hash=None,
+        precompiled_schedule_content_hash=None,
+    )
+
+
+def _axis1_mcwf_mps_state_record_execution_manifest_impl(
+    schedule: SubstepSchedule,
+    *,
+    local_dims: Sequence[int] | None = None,
+    device: str = "cuda",
+    max_bond: int | None = None,
+    worst_cut_discarded_weight_gate: float | None = None,
+    total_discarded_weight_gate: float | None = None,
+    microstep_count: int = 1,
+    finite_step_order: str = _FINITE_STEP_ORDER_FIRST,
+    trajectory_count: int = 1,
+    rng_seed: int | None = None,
+    initial_levels: Sequence[int] | None = None,
+    leaked_readout_b: float = 1.0,
+    mass_residual_budget: float | None = _MCWF_FIRST_ORDER_MASS_RESIDUAL_BUDGET,
+    precompiled_program: dict[str, Any] | None = None,
+    precompiled_program_content_hash: str | None = None,
+    precompiled_schedule_content_hash: str | None = None,
+) -> dict[str, Any]:
+    """Implement public direct execution and the Carrier-owned compile seam."""
 
     device = normalize_mps_device(device)
     max_bond = normalize_mps_max_bond(max_bond)
@@ -285,12 +445,42 @@ def axis1_mcwf_mps_state_record_execution_manifest(
     dims = _normalize_local_dims(local_dims, num_sites=int(schedule.num_qubits))
     levels = _normalize_initial_levels(initial_levels, local_dims=dims)
     readout_b = _normalize_leaked_readout_b(leaked_readout_b)
-    program = axis1_carrier_program_manifest(
-        schedule,
-        backend_contract=AXIS1_CARRIER_MCWF_MPS_BACKEND_CONTRACT,
-    )
+    if precompiled_program is None:
+        if (
+            precompiled_program_content_hash is not None
+            or precompiled_schedule_content_hash is not None
+        ):
+            raise ValueError(
+                "precompiled MCWF hashes require a precompiled program"
+            )
+        expected_schedule_content_hash = _mcwf_schedule_content_hash(schedule)
+        program = axis1_carrier_program_manifest(
+            schedule,
+            backend_contract=AXIS1_CARRIER_MCWF_MPS_BACKEND_CONTRACT,
+        )
+        expected_program_content_hash = program.get("content_hash")
+    else:
+        program = precompiled_program
+        expected_program_content_hash = precompiled_program_content_hash
+        expected_schedule_content_hash = precompiled_schedule_content_hash
+
+    def _revalidate_execution_inputs() -> None:
+        _validate_schedule_for_axis1_channel_evidence(
+            schedule,
+            allow_multilevel_leakage_context=True,
+        )
+        _validate_precompiled_mcwf_program(
+            schedule,
+            program,
+            expected_content_hash=expected_program_content_hash,
+            expected_schedule_content_hash=expected_schedule_content_hash,
+        )
+
+    _revalidate_execution_inputs()
     record_layout = axis1_record_layout_from_schedule(schedule)
+    _revalidate_execution_inputs()
     dev = _require_cuda_device(device)
+    _revalidate_execution_inputs()
     base: dict[str, Any] = {
         "schema": AXIS1_MCWF_MPS_EXECUTION_SCHEMA,
         "source_kind": schedule.source_kind,
@@ -436,6 +626,7 @@ def axis1_mcwf_mps_state_record_execution_manifest(
         payload["content_hash"] = _stable_payload_hash(payload)
         return payload
 
+    _revalidate_execution_inputs()
     try:
         dynamics_artifacts = _compile_mcwf_dynamics_artifacts(
             program,
@@ -476,6 +667,7 @@ def axis1_mcwf_mps_state_record_execution_manifest(
         payload["content_hash"] = _stable_payload_hash(payload)
         return payload
 
+    _revalidate_execution_inputs()
     dynamics_artifact_content_hash = _mcwf_dynamics_artifacts_content_hash(
         program,
         dynamics_artifacts,
@@ -575,6 +767,7 @@ def axis1_mcwf_mps_state_record_execution_manifest(
             payload["content_hash"] = _stable_payload_hash(payload)
             return payload
 
+    _revalidate_execution_inputs()
     execution = _execute_sampled_mcwf_program(
         program,
         record_layout=record_layout,
@@ -589,6 +782,7 @@ def axis1_mcwf_mps_state_record_execution_manifest(
         leaked_readout_b=readout_b,
         dynamics_artifacts=dynamics_artifacts,
     )
+    _revalidate_execution_inputs()
     if (
         _mcwf_dynamics_artifacts_content_hash(
             program,
@@ -676,6 +870,7 @@ def axis1_mcwf_mps_state_record_execution_manifest(
         execution=execution,
         dynamics_artifact_reference_certification=artifact_certification,
     )
+    _revalidate_execution_inputs()
     payload = {
         **base,
         "verdict": "pass" if passed else "fail",

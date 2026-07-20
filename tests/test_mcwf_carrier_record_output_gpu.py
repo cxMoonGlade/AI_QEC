@@ -24,6 +24,12 @@ from error_coupling_simulator.frontend import (
     circuit_ir_to_substep_schedule,
     write_axis1_mcwf_mps_record_samples,
 )
+from error_coupling_simulator.frontend import (
+    axis1_carrier_execution as carrier_execution,
+)
+from error_coupling_simulator.frontend import (
+    axis1_mcwf_mps_execution as mcwf_execution,
+)
 
 
 _MATERIALIZATION_ORDER = "carrier_histogram_grouped_canonical_support_order"
@@ -221,6 +227,101 @@ def test_mixed_xz_carrier_histogram_materializes_once_and_writes_little_endian_b
             width=record_batch.obs.shape[1],
         ),
         record_batch.obs,
+    )
+
+
+def test_record_batch_compiles_once_and_delegates_preflight_program(
+    monkeypatch,
+):
+    if not torch.cuda.is_available():
+        pytest.fail(
+            "MCWF Carrier Record materialization is GPU-gated; CUDA-MISSING is not a release basis",
+            pytrace=False,
+        )
+
+    schedule = _mixed_xz_projected_schedule()
+    options = _execution_options(trajectory_count=8, seed=19077)
+    original_compile = carrier_execution.axis1_carrier_program_manifest
+    original_carrier = carrier_execution._axis1_mcwf_mps_execution_manifest
+    original_direct = getattr(
+        mcwf_execution,
+        "_axis1_mcwf_mps_state_record_execution_manifest_from_precompiled_program",
+    )
+    original_dynamics_compile = mcwf_execution._compile_mcwf_dynamics_artifacts
+    compiled_programs = []
+    delegated_programs = []
+    direct_programs = []
+    consumed_programs = []
+
+    def counted_compile(*args, **kwargs):
+        program = original_compile(*args, **kwargs)
+        compiled_programs.append(program)
+        return program
+
+    def observed_carrier(*args, **kwargs):
+        delegated_programs.append(kwargs.get("precompiled_program"))
+        return original_carrier(*args, **kwargs)
+
+    def observed_direct(*args, **kwargs):
+        direct_programs.append(kwargs.get("precompiled_program"))
+        return original_direct(*args, **kwargs)
+
+    def observed_dynamics_compile(*args, **kwargs):
+        consumed_programs.append(args[0])
+        return original_dynamics_compile(*args, **kwargs)
+
+    monkeypatch.setattr(
+        carrier_execution,
+        "axis1_carrier_program_manifest",
+        counted_compile,
+    )
+    monkeypatch.setattr(
+        mcwf_execution,
+        "axis1_carrier_program_manifest",
+        counted_compile,
+    )
+    monkeypatch.setattr(
+        carrier_execution,
+        "_axis1_mcwf_mps_execution_manifest",
+        observed_carrier,
+    )
+    monkeypatch.setattr(
+        mcwf_execution,
+        "_axis1_mcwf_mps_state_record_execution_manifest_from_precompiled_program",
+        observed_direct,
+    )
+    monkeypatch.setattr(
+        mcwf_execution,
+        "_compile_mcwf_dynamics_artifacts",
+        observed_dynamics_compile,
+    )
+
+    record_batch = axis1_mcwf_mps_record_batch(
+        schedule,
+        device="cuda",
+        execution_backend_options=options,
+        max_record_array_payload_bytes=4_096,
+    )
+
+    assert record_batch.n_shots == options["trajectory_count"]
+    assert (
+        len(compiled_programs) == 1
+        and len(delegated_programs) == 1
+        and delegated_programs[0] is compiled_programs[0]
+        and len(direct_programs) == 1
+        and direct_programs[0] is compiled_programs[0]
+        and len(consumed_programs) >= 1
+        and all(program is compiled_programs[0] for program in consumed_programs)
+    ), (
+        "Record preflight must compile exactly once and delegate that same "
+        f"manifest object; compile_count={len(compiled_programs)}, "
+        f"delegated_count={len(delegated_programs)}, "
+        f"compiled_ids={[id(program) for program in compiled_programs]}, "
+        "delegated_ids="
+        f"{[id(program) if program is not None else None for program in delegated_programs]}, "
+        "direct_ids="
+        f"{[id(program) if program is not None else None for program in direct_programs]}, "
+        f"consumed_ids={[id(program) for program in consumed_programs]}"
     )
 
 

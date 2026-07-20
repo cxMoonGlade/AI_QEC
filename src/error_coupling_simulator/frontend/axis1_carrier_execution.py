@@ -174,6 +174,8 @@ class _Axis1McwfMpsRecordPreflight:
     execution_backend_options: dict[str, Any]
     expected_execution_options: dict[str, Any]
     carrier_program: dict[str, Any]
+    carrier_program_content_hash: str
+    schedule_content_hash: str
     layout: Axis1ScheduleRecordLayout
     trajectory_count: int
     detector_width: int
@@ -816,10 +818,23 @@ def _preflight_mcwf_record_materialization(
         normalized_options,
         num_sites=int(schedule.num_qubits),
     )
+    schedule_content_hash = _mcwf_schedule_content_hash(schedule)
     carrier_program = axis1_carrier_program_manifest(
         schedule,
         backend_contract=AXIS1_CARRIER_MCWF_MPS_EXECUTION_BACKEND_CONTRACT,
     )
+    carrier_program_content_hash = carrier_program.get("content_hash")
+    if (
+        not isinstance(carrier_program_content_hash, str)
+        or len(carrier_program_content_hash) != 64
+        or any(
+            ch not in "0123456789abcdef"
+            for ch in carrier_program_content_hash
+        )
+    ):
+        raise ValueError(
+            "MCWF Record preflight carrier program content hash is invalid"
+        )
     layout = axis1_record_layout_from_schedule(schedule)
     if layout.measurement_width <= 0:
         raise ValueError("MCWF Record materialization requires measurement columns")
@@ -881,6 +896,8 @@ def _preflight_mcwf_record_materialization(
         execution_backend_options=normalized_options,
         expected_execution_options=expected_options,
         carrier_program=carrier_program,
+        carrier_program_content_hash=carrier_program_content_hash,
+        schedule_content_hash=schedule_content_hash,
         layout=layout,
         trajectory_count=trajectory_count,
         detector_width=detector_width,
@@ -965,8 +982,15 @@ def write_axis1_mcwf_mps_record_samples(
             publication_preflight,
             device=preflight.device,
         )
+        _revalidate_precompiled_mcwf_program_for_carrier(
+            schedule,
+            preflight.carrier_program,
+            expected_content_hash=preflight.carrier_program_content_hash,
+            expected_schedule_content_hash=preflight.schedule_content_hash,
+        )
         return _publish_mcwf_record_samples(
             root,
+            schedule=schedule,
             carrier=carrier,
             record_batch=record_batch,
             preflight=preflight,
@@ -988,7 +1012,18 @@ def _execute_mcwf_carrier_record_batch(
         execution_backend_options=copy.deepcopy(
             preflight.execution_backend_options
         ),
+        precompiled_program=preflight.carrier_program,
+        expected_program_content_hash=(
+            preflight.carrier_program_content_hash
+        ),
+        expected_schedule_content_hash=preflight.schedule_content_hash,
         _return_record_binding=True,
+    )
+    _revalidate_precompiled_mcwf_program_for_carrier(
+        schedule,
+        preflight.carrier_program,
+        expected_content_hash=preflight.carrier_program_content_hash,
+        expected_schedule_content_hash=preflight.schedule_content_hash,
     )
     if not isinstance(produced, tuple) or len(produced) != 2:
         raise TypeError("MCWF Record producer did not return a same-call binding")
@@ -997,6 +1032,12 @@ def _execute_mcwf_carrier_record_batch(
         carrier,
         preflight=preflight,
         binding=binding,
+    )
+    _revalidate_precompiled_mcwf_program_for_carrier(
+        schedule,
+        preflight.carrier_program,
+        expected_content_hash=preflight.carrier_program_content_hash,
+        expected_schedule_content_hash=preflight.schedule_content_hash,
     )
     return carrier, record_batch
 
@@ -1358,6 +1399,7 @@ def _mcwf_record_directory_entry_exists(parent_fd: int, name: str) -> bool:
 def _publish_mcwf_record_samples(
     root: Path,
     *,
+    schedule: SubstepSchedule,
     carrier: dict[str, Any],
     record_batch: RecordBatch,
     preflight: _Axis1McwfMpsRecordPreflight,
@@ -1365,6 +1407,15 @@ def _publish_mcwf_record_samples(
 ) -> Axis1McwfMpsRecordSampleResult:
     """Publish a complete artifact directory with one atomic rename."""
 
+    def _revalidate_record_program() -> None:
+        _revalidate_precompiled_mcwf_program_for_carrier(
+            schedule,
+            preflight.carrier_program,
+            expected_content_hash=preflight.carrier_program_content_hash,
+            expected_schedule_content_hash=preflight.schedule_content_hash,
+        )
+
+    _revalidate_record_program()
     if root.parent != publication_preflight.target_parent:
         raise ValueError("MCWF Record publication preflight targets another parent")
     _require_fresh_mcwf_record_output_directory(root)
@@ -1400,10 +1451,12 @@ def _publish_mcwf_record_samples(
         for path in (det_path, obs_path):
             if path is not None:
                 _fsync_required_mcwf_record_artifact(stage.fd, path.name)
+        _revalidate_record_program()
         _write_canonical_json_streaming(
             staged_carrier_program,
             preflight.carrier_program,
         )
+        _revalidate_record_program()
         _fsync_required_mcwf_record_artifact(
             stage.fd,
             staged_carrier_program.name,
@@ -1439,6 +1492,7 @@ def _publish_mcwf_record_samples(
                 obs_path.name,
                 expected_sha256=_mcwf_record_expected_b8_sha256(record_batch.obs),
             )
+        _revalidate_record_program()
         sample_manifest = _mcwf_record_sample_manifest(
             carrier,
             record_batch,
@@ -1450,6 +1504,7 @@ def _publish_mcwf_record_samples(
             preflight=preflight,
             publication_preflight=publication_preflight,
         )
+        _revalidate_record_program()
         _validate_child_content_hash_streaming(
             sample_manifest,
             context="MCWF Record sample manifest",
@@ -1486,6 +1541,7 @@ def _publish_mcwf_record_samples(
             stage.fd,
             publication_artifact_seals,
         )
+        _revalidate_record_program()
         try:
             _atomic_rename_directory_noreplace(
                 stage.name,
@@ -3194,9 +3250,36 @@ def _axis1_auto_routed_execution_manifest(
         else {}
     )
     canonical_options = copy.deepcopy(options)
+    _validate_schedule_for_axis1_channel_evidence(
+        schedule,
+        allow_multilevel_leakage_context=True,
+    )
+    schedule_content_hash = _mcwf_schedule_content_hash(schedule)
+    program = axis1_carrier_program_manifest(
+        schedule,
+        backend_contract=AXIS1_CARRIER_MCWF_MPS_EXECUTION_BACKEND_CONTRACT,
+    )
+    program_content_hash = program.get("content_hash")
+    _revalidate_precompiled_mcwf_program_for_carrier(
+        schedule,
+        program,
+        expected_content_hash=program_content_hash,
+        expected_schedule_content_hash=schedule_content_hash,
+    )
     dev = _require_cuda_device(device)
-    program = axis1_carrier_program_manifest(schedule)
+    _revalidate_precompiled_mcwf_program_for_carrier(
+        schedule,
+        program,
+        expected_content_hash=program_content_hash,
+        expected_schedule_content_hash=schedule_content_hash,
+    )
     chosen, decision = _select_dense_or_mcwf(schedule, dev, program)
+    _revalidate_precompiled_mcwf_program_for_carrier(
+        schedule,
+        program,
+        expected_content_hash=program_content_hash,
+        expected_schedule_content_hash=schedule_content_hash,
+    )
     routes_to_mcwf = chosen == AXIS1_CARRIER_MCWF_MPS_EXECUTION_BACKEND_CONTRACT
     if routes_to_mcwf and instrument_spec is not None:
         raise ValueError(
@@ -3213,15 +3296,31 @@ def _axis1_auto_routed_execution_manifest(
             f"{sorted(options)} were supplied; those tune the MCWF/MPS backend and the "
             "dense probe accepts none. Drop the options, or force the scalable backend."
         )
-    inner = axis1_carrier_execution_manifest(
-        schedule,
-        device=dev,
-        instrument_spec=instrument_spec,
-        execution_backend_contract=chosen,
-        execution_backend_options=(
-            copy.deepcopy(canonical_options) if routes_to_mcwf else None
-        ),
-    )
+    if routes_to_mcwf:
+        inner = _axis1_mcwf_mps_execution_manifest(
+            schedule,
+            device=dev,
+            instrument_spec=instrument_spec,
+            execution_backend_options=copy.deepcopy(canonical_options),
+            precompiled_program=program,
+            expected_program_content_hash=program_content_hash,
+            expected_schedule_content_hash=schedule_content_hash,
+        )
+    else:
+        inner = axis1_carrier_execution_manifest(
+            schedule,
+            device=dev,
+            instrument_spec=instrument_spec,
+            execution_backend_contract=chosen,
+            execution_backend_options=None,
+        )
+    if routes_to_mcwf:
+        _revalidate_precompiled_mcwf_program_for_carrier(
+            schedule,
+            program,
+            expected_content_hash=program_content_hash,
+            expected_schedule_content_hash=schedule_content_hash,
+        )
     inner_passed = _require_manifest_bool(
         inner, "passed", context="auto-routed Carrier execution"
     )
@@ -3241,7 +3340,21 @@ def _axis1_auto_routed_execution_manifest(
         expected_execution_backend_options=(
             canonical_options if routes_to_mcwf else None
         ),
+        trusted_program=program if routes_to_mcwf else None,
+        trusted_program_content_hash=(
+            program_content_hash if routes_to_mcwf else None
+        ),
+        trusted_schedule_content_hash=(
+            schedule_content_hash if routes_to_mcwf else None
+        ),
     )
+    if routes_to_mcwf:
+        _revalidate_precompiled_mcwf_program_for_carrier(
+            schedule,
+            program,
+            expected_content_hash=program_content_hash,
+            expected_schedule_content_hash=schedule_content_hash,
+        )
     payload: dict[str, Any] = {
         "schema": AXIS1_CARRIER_AUTO_EXECUTION_SCHEMA,
         "source_kind": schedule.source_kind,
@@ -3270,6 +3383,13 @@ def _axis1_auto_routed_execution_manifest(
         "claims_axis2_source_timeline": False,
     }
     payload["content_hash"] = _stable_payload_hash(payload)
+    if routes_to_mcwf:
+        _revalidate_precompiled_mcwf_program_for_carrier(
+            schedule,
+            program,
+            expected_content_hash=program_content_hash,
+            expected_schedule_content_hash=schedule_content_hash,
+        )
     return payload
 
 
@@ -3280,6 +3400,9 @@ def _validate_auto_routed_carrier_child(
     chosen_backend_contract: str,
     expected_device: str,
     expected_execution_backend_options: dict[str, Any] | None,
+    trusted_program: dict[str, Any] | None,
+    trusted_program_content_hash: str | None,
+    trusted_schedule_content_hash: str | None,
 ) -> None:
     """Authenticate the delegated Carrier envelope against the router request."""
 
@@ -3333,9 +3456,15 @@ def _validate_auto_routed_carrier_child(
             raise ValueError(
                 "auto-routed MCWF Carrier request options must be registered"
             )
-        trusted_program = axis1_carrier_program_manifest(
+        if type(trusted_program) is not dict:
+            raise TypeError(
+                "auto-routed MCWF Carrier trusted program must be a dict"
+            )
+        _revalidate_precompiled_mcwf_program_for_carrier(
             schedule,
-            backend_contract=chosen_backend_contract,
+            trusted_program,
+            expected_content_hash=trusted_program_content_hash,
+            expected_schedule_content_hash=trusted_schedule_content_hash,
         )
         expected_mcwf = _mcwf_mps_expected_options(
             expected_execution_backend_options,
@@ -3350,6 +3479,8 @@ def _validate_auto_routed_carrier_child(
             trusted_program=trusted_program,
             expected=expected_mcwf,
             expected_device=expected_device,
+            trusted_program_content_hash=trusted_program_content_hash,
+            trusted_schedule_content_hash=trusted_schedule_content_hash,
         )
         expected_program = _restricted_mps_program_summary(trusted_program)
         route_false_claims = (
@@ -3365,8 +3496,8 @@ def _validate_auto_routed_carrier_child(
             expected_execution=expected_mcwf,
         )
     else:
-        trusted_program = axis1_carrier_program_manifest(schedule)
-        expected_program = _carrier_program_summary(trusted_program)
+        dense_trusted_program = axis1_carrier_program_manifest(schedule)
+        expected_program = _carrier_program_summary(dense_trusted_program)
         route_false_claims = ()
         optional_route_false_claims = (
             "claims_production_scalable_backend",
@@ -3664,17 +3795,33 @@ def _trusted_seeded_mcwf_direct_authority(
     *,
     execution_backend_options: dict[str, Any],
     device: Any,
+    trusted_program: dict[str, Any],
+    trusted_program_content_hash: str,
+    trusted_schedule_content_hash: str,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Independently replay a seeded direct child and derive its public Record."""
 
     from .axis1_mcwf_mps_execution import (
-        axis1_mcwf_mps_state_record_execution_manifest,
+        _axis1_mcwf_mps_state_record_execution_manifest_from_precompiled_program,
     )
 
-    direct = axis1_mcwf_mps_state_record_execution_manifest(
+    direct = (
+        _axis1_mcwf_mps_state_record_execution_manifest_from_precompiled_program(
+            schedule,
+            precompiled_program=trusted_program,
+            expected_program_content_hash=trusted_program_content_hash,
+            expected_schedule_content_hash=trusted_schedule_content_hash,
+            device=device,
+            execution_backend_options=copy.deepcopy(
+                execution_backend_options
+            ),
+        )
+    )
+    _revalidate_precompiled_mcwf_program_for_carrier(
         schedule,
-        device=device,
-        **copy.deepcopy(execution_backend_options),
+        trusted_program,
+        expected_content_hash=trusted_program_content_hash,
+        expected_schedule_content_hash=trusted_schedule_content_hash,
     )
     _validate_child_content_hash(direct, context="trusted seeded direct MCWF child")
     executed = _require_manifest_bool(
@@ -3703,9 +3850,20 @@ def _validate_auto_routed_mcwf_summary(
     trusted_program: dict[str, Any],
     expected: dict[str, Any],
     expected_device: Any,
+    trusted_program_content_hash: str,
+    trusted_schedule_content_hash: str,
 ) -> None:
     """Authenticate MCWF Carrier state, policy, and request provenance."""
 
+    def _revalidate_trusted_program() -> None:
+        _revalidate_precompiled_mcwf_program_for_carrier(
+            schedule,
+            trusted_program,
+            expected_content_hash=trusted_program_content_hash,
+            expected_schedule_content_hash=trusted_schedule_content_hash,
+        )
+
+    _revalidate_trusted_program()
     _require_exact_summary_fields(
         child,
         _MCWF_CARRIER_CHILD_FIELDS,
@@ -3748,6 +3906,7 @@ def _validate_auto_routed_mcwf_summary(
         raise ValueError(
             "auto-routed MCWF Carrier execution claim must equal backend state"
         )
+    _revalidate_trusted_program()
     trusted_artifact_certification, trusted_blocked_reason = (
         _trusted_mcwf_artifact_authority(
             trusted_program,
@@ -3755,6 +3914,7 @@ def _validate_auto_routed_mcwf_summary(
             device=expected_device,
         )
     )
+    _revalidate_trusted_program()
     artifact_certification = child.get(
         "dynamics_artifact_reference_certification"
     )
@@ -4055,13 +4215,18 @@ def _validate_auto_routed_mcwf_summary(
             raise ValueError(
                 "accepted auto-routed MCWF evidence requires a seeded direct execution"
             )
+        _revalidate_trusted_program()
         trusted_direct, trusted_record_execution = (
             _trusted_seeded_mcwf_direct_authority(
                 schedule,
                 execution_backend_options=expected_execution_backend_options,
                 device=expected_device,
+                trusted_program=trusted_program,
+                trusted_program_content_hash=trusted_program_content_hash,
+                trusted_schedule_content_hash=trusted_schedule_content_hash,
             )
         )
+        _revalidate_trusted_program()
         if (
             trusted_direct.get("passed") is not True
             or trusted_direct.get("content_hash") != direct_hash
@@ -4089,6 +4254,7 @@ def _validate_auto_routed_mcwf_summary(
             raise ValueError(
                 "auto-routed MCWF policy must match the seeded direct MCWF execution"
             )
+    _revalidate_trusted_program()
 
 
 def _validate_auto_routed_mcwf_policy_evidence(
@@ -4552,12 +4718,44 @@ def _validate_auto_routed_mcwf_record_execution(
         )
 
 
+def _mcwf_schedule_content_hash(schedule: SubstepSchedule) -> str:
+    """Authenticate the exact schedule consumed by one compiled MCWF program."""
+
+    return _stable_payload_hash({"schedule": schedule.to_manifest()})
+
+
+def _revalidate_precompiled_mcwf_program_for_carrier(
+    schedule: SubstepSchedule,
+    program: dict[str, Any],
+    *,
+    expected_content_hash: str | None,
+    expected_schedule_content_hash: str | None,
+) -> None:
+    """Recheck a sealed MCWF program without recompiling it."""
+
+    _validate_schedule_for_axis1_channel_evidence(
+        schedule,
+        allow_multilevel_leakage_context=True,
+    )
+    from .axis1_mcwf_mps_execution import _validate_precompiled_mcwf_program
+
+    _validate_precompiled_mcwf_program(
+        schedule,
+        program,
+        expected_content_hash=expected_content_hash,
+        expected_schedule_content_hash=expected_schedule_content_hash,
+    )
+
+
 def _axis1_mcwf_mps_execution_manifest(
     schedule: SubstepSchedule,
     *,
     device: str,
     instrument_spec: Axis1ReadoutResetInstrumentSpec | None,
     execution_backend_options: dict[str, Any] | None,
+    precompiled_program: dict[str, Any] | None = None,
+    expected_program_content_hash: str | None = None,
+    expected_schedule_content_hash: str | None = None,
     _return_record_binding: bool = False,
 ) -> dict[str, Any] | tuple[dict[str, Any], _Axis1McwfMpsRecordBinding]:
     """Execute or fail closed through the MCWF/MPS carrier endpoint."""
@@ -4569,30 +4767,58 @@ def _axis1_mcwf_mps_execution_manifest(
         )
     options = _validate_mcwf_mps_execution_options(execution_backend_options or {})
     device = normalize_mps_device(device)
-    dev = _require_cuda_device(device)
+    dev = device
     _validate_schedule_for_axis1_channel_evidence(
         schedule,
         allow_multilevel_leakage_context=True,
     )
-    program = axis1_carrier_program_manifest(
-        schedule,
-        backend_contract=AXIS1_CARRIER_MCWF_MPS_EXECUTION_BACKEND_CONTRACT,
-    )
+    if precompiled_program is None:
+        if (
+            expected_program_content_hash is not None
+            or expected_schedule_content_hash is not None
+        ):
+            raise ValueError(
+                "precompiled MCWF hashes require a precompiled program"
+            )
+        sealed_schedule_content_hash = _mcwf_schedule_content_hash(schedule)
+        program = axis1_carrier_program_manifest(
+            schedule,
+            backend_contract=AXIS1_CARRIER_MCWF_MPS_EXECUTION_BACKEND_CONTRACT,
+        )
+        sealed_program_content_hash = program.get("content_hash")
+    else:
+        program = precompiled_program
+        sealed_program_content_hash = expected_program_content_hash
+        sealed_schedule_content_hash = expected_schedule_content_hash
+
+    def _revalidate_owned_program() -> None:
+        _revalidate_precompiled_mcwf_program_for_carrier(
+            schedule,
+            program,
+            expected_content_hash=sealed_program_content_hash,
+            expected_schedule_content_hash=sealed_schedule_content_hash,
+        )
+
     expected = _mcwf_mps_expected_options(
         options,
         num_sites=int(schedule.num_qubits),
     )
     from .axis1_mcwf_mps_execution import (
         AXIS1_MCWF_MPS_EXECUTION_REPRESENTABILITY,
+        _axis1_mcwf_mps_state_record_execution_manifest_from_precompiled_program as _execute_precompiled_mcwf_program,
         _blocked_acceptance_policy,
-        axis1_mcwf_mps_state_record_execution_manifest,
     )
 
-    mcwf_mps = axis1_mcwf_mps_state_record_execution_manifest(
+    _revalidate_owned_program()
+    mcwf_mps = _execute_precompiled_mcwf_program(
         schedule,
+        precompiled_program=program,
+        expected_program_content_hash=sealed_program_content_hash,
+        expected_schedule_content_hash=sealed_schedule_content_hash,
         device=dev,
-        **options,
+        execution_backend_options=options,
     )
+    _revalidate_owned_program()
     _validate_child_content_hash(mcwf_mps, context="MCWF/MPS child")
     _require_exact_summary_fields(
         mcwf_mps,
@@ -4656,6 +4882,7 @@ def _axis1_mcwf_mps_execution_manifest(
         raise ValueError(
             "MCWF/MPS backend execution claim must equal actual backend state"
         )
+    _revalidate_owned_program()
     trusted_artifact_certification, trusted_blocked_reason = (
         _trusted_mcwf_artifact_authority(
             program,
@@ -4663,6 +4890,7 @@ def _axis1_mcwf_mps_execution_manifest(
             device=dev,
         )
     )
+    _revalidate_owned_program()
     artifact_certification = mcwf_mps.get(
         "dynamics_artifact_reference_certification"
     )
@@ -4814,6 +5042,7 @@ def _axis1_mcwf_mps_execution_manifest(
             expected=expected,
         )
         record_layout = axis1_record_layout_from_schedule(schedule)
+        _revalidate_owned_program()
         expected_record_metadata = {
             "measurement_keys": list(record_layout.measurement_keys),
             "measurement_targets": list(record_layout.measurement_targets),
@@ -4864,6 +5093,7 @@ def _axis1_mcwf_mps_execution_manifest(
             declared_local_dims=expected["local_dims"],
             program=program,
         )
+        _revalidate_owned_program()
         _validate_axis1_projected_record_payload(
             record_layout,
             execution,
@@ -4886,6 +5116,7 @@ def _axis1_mcwf_mps_execution_manifest(
                 declared_local_dims=expected["local_dims"],
                 device=dev,
             )
+        _revalidate_owned_program()
         canonical_acceptance = restricted_acceptance_policy(
             execution=execution,
             certification=certification,
@@ -4902,6 +5133,7 @@ def _axis1_mcwf_mps_execution_manifest(
                 trusted_artifact_certification
             ),
         )
+        _revalidate_owned_program()
         if _stable_payload_hash({"policy": acceptance}) != _stable_payload_hash(
             {"policy": canonical_acceptance}
         ):
@@ -4910,6 +5142,7 @@ def _axis1_mcwf_mps_execution_manifest(
                 "canonical restricted acceptance policy independently recomputed "
                 "from the requested schedule, options, execution, and dense metric"
             )
+    _revalidate_owned_program()
     record_execution_summary = _mcwf_carrier_record_execution_summary(
         mcwf_mps,
         execution,
@@ -5015,6 +5248,7 @@ def _axis1_mcwf_mps_execution_manifest(
         ),
     }
     payload["content_hash"] = _streaming_stable_payload_hash(payload)
+    _revalidate_owned_program()
     if _return_record_binding:
         direct_content_hash = _require_manifest_text(
             mcwf_mps,
@@ -5031,7 +5265,9 @@ def _axis1_mcwf_mps_execution_manifest(
                 {"policy": mcwf_mps["restricted_acceptance_policy"]}
             ),
         )
+        _revalidate_owned_program()
         return payload, binding
+    _revalidate_owned_program()
     return payload
 
 

@@ -14,6 +14,7 @@ import pytest
 from error_coupling_simulator.carrier.records import RecordBatch
 from error_coupling_simulator.frontend import CircuitBuilder
 from error_coupling_simulator.frontend import axis1_carrier_execution as carrier_execution
+from error_coupling_simulator.frontend import axis1_mcwf_mps_execution as mcwf_execution
 from error_coupling_simulator.frontend import circuit_ir_to_substep_schedule
 
 
@@ -359,6 +360,114 @@ def _zero_width_case(projection: str):
     )
     _rehash(carrier)
     return schedule, options, carrier
+
+
+def test_record_preflight_rejects_rehashed_program_mutation_before_cuda(
+    monkeypatch,
+    projected_xz_schedule,
+):
+    preflight = carrier_execution._preflight_mcwf_record_materialization(
+        projected_xz_schedule,
+        device="cuda",
+        execution_backend_options=copy.deepcopy(_BACKEND_OPTIONS),
+        max_record_array_payload_bytes=48,
+    )
+    sealed_content_hash = preflight.carrier_program_content_hash
+    preflight.carrier_program["scope"] = "mutated_after_record_preflight"
+    _rehash(preflight.carrier_program)
+    cuda_checks = []
+    monkeypatch.setattr(
+        mcwf_execution,
+        "_require_cuda_device",
+        lambda device: cuda_checks.append(device),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="declared content hash changed after compile",
+    ):
+        carrier_execution._execute_mcwf_carrier_record_batch(
+            projected_xz_schedule,
+            preflight=preflight,
+        )
+
+    assert preflight.carrier_program_content_hash == sealed_content_hash
+    assert cuda_checks == []
+
+
+def test_record_path_rechecks_program_after_delegated_carrier(
+    monkeypatch,
+    projected_xz_schedule,
+):
+    preflight = carrier_execution._preflight_mcwf_record_materialization(
+        projected_xz_schedule,
+        device="cuda",
+        execution_backend_options=copy.deepcopy(_BACKEND_OPTIONS),
+        max_record_array_payload_bytes=48,
+    )
+    forged = _accepted_carrier(projected_xz_schedule)
+
+    def mutate_program_and_return_carrier(*_args, **kwargs):
+        program = kwargs["precompiled_program"]
+        program["scope"] = "mutated_by_record_delegated_carrier"
+        _rehash(program)
+        return _produced(forged)
+
+    monkeypatch.setattr(
+        carrier_execution,
+        "_axis1_mcwf_mps_execution_manifest",
+        mutate_program_and_return_carrier,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="declared content hash changed after compile",
+    ):
+        carrier_execution._execute_mcwf_carrier_record_batch(
+            projected_xz_schedule,
+            preflight=preflight,
+        )
+
+
+def test_record_path_rechecks_program_after_materialization(
+    monkeypatch,
+    projected_xz_schedule,
+):
+    preflight = carrier_execution._preflight_mcwf_record_materialization(
+        projected_xz_schedule,
+        device="cuda",
+        execution_backend_options=copy.deepcopy(_BACKEND_OPTIONS),
+        max_record_array_payload_bytes=48,
+    )
+    forged = _accepted_carrier(projected_xz_schedule)
+    original_materialize = carrier_execution._materialize_mcwf_carrier_record_batch
+
+    monkeypatch.setattr(
+        carrier_execution,
+        "_axis1_mcwf_mps_execution_manifest",
+        lambda *_args, **_kwargs: _produced(forged),
+    )
+
+    def mutate_program_after_materialization(*args, **kwargs):
+        record_batch = original_materialize(*args, **kwargs)
+        preflight.carrier_program["scope"] = "mutated_during_record_materialization"
+        _rehash(preflight.carrier_program)
+        return record_batch
+
+    monkeypatch.setattr(
+        carrier_execution,
+        "_materialize_mcwf_carrier_record_batch",
+        mutate_program_after_materialization,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="declared content hash changed after compile",
+    ):
+        carrier_execution._execute_mcwf_carrier_record_batch(
+            projected_xz_schedule,
+            preflight=preflight,
+        )
 
 
 def test_materializes_grouped_sealed_xz_projection_as_immutable_record_batch(
@@ -1150,6 +1259,135 @@ def test_writer_rejects_existing_output_directory_before_mcwf_execution(
             max_record_array_payload_bytes=48,
         )
     assert calls == 0
+
+
+def test_writer_rechecks_program_after_publication_preflight_before_publish(
+    monkeypatch,
+    tmp_path: Path,
+    projected_xz_schedule,
+) -> None:
+    carrier = _accepted_carrier(projected_xz_schedule)
+    captured_preflights = []
+    real_record_preflight = (
+        carrier_execution._preflight_mcwf_record_materialization
+    )
+    real_publication_validation = (
+        carrier_execution._validate_mcwf_record_publication_preflight
+    )
+    publish_calls = []
+
+    def capture_record_preflight(*args, **kwargs):
+        preflight = real_record_preflight(*args, **kwargs)
+        captured_preflights.append(preflight)
+        return preflight
+
+    def mutate_after_publication_validation(*args, **kwargs):
+        real_publication_validation(*args, **kwargs)
+        program = captured_preflights[0].carrier_program
+        program["scope"] = "mutated_after_publication_preflight"
+        _rehash(program)
+
+    def observed_publish(*args, **kwargs):
+        publish_calls.append((args, kwargs))
+        raise AssertionError("changed program must not reach publication")
+
+    monkeypatch.setattr(
+        carrier_execution,
+        "_preflight_mcwf_record_materialization",
+        capture_record_preflight,
+    )
+    monkeypatch.setattr(
+        carrier_execution,
+        "_axis1_mcwf_mps_execution_manifest",
+        lambda *_args, **_kwargs: _produced(carrier),
+    )
+    monkeypatch.setattr(
+        carrier_execution,
+        "_validate_mcwf_record_publication_preflight",
+        mutate_after_publication_validation,
+    )
+    monkeypatch.setattr(
+        carrier_execution,
+        "_publish_mcwf_record_samples",
+        observed_publish,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="declared content hash changed after compile",
+    ):
+        carrier_execution.write_axis1_mcwf_mps_record_samples(
+            projected_xz_schedule,
+            tmp_path / "not-published",
+            device="cuda",
+            execution_backend_options=copy.deepcopy(_BACKEND_OPTIONS),
+            max_record_array_payload_bytes=48,
+        )
+
+    assert len(captured_preflights) == 1
+    assert publish_calls == []
+
+
+def test_writer_rechecks_program_before_atomic_publication(
+    monkeypatch,
+    tmp_path: Path,
+    projected_xz_schedule,
+) -> None:
+    carrier = _accepted_carrier(projected_xz_schedule)
+    captured_preflights = []
+    validation_calls = 0
+    real_record_preflight = (
+        carrier_execution._preflight_mcwf_record_materialization
+    )
+    real_publication_validation = (
+        carrier_execution._validate_mcwf_record_publication_preflight
+    )
+
+    def capture_record_preflight(*args, **kwargs):
+        preflight = real_record_preflight(*args, **kwargs)
+        captured_preflights.append(preflight)
+        return preflight
+
+    def mutate_during_staged_publication_validation(*args, **kwargs):
+        nonlocal validation_calls
+        real_publication_validation(*args, **kwargs)
+        validation_calls += 1
+        if validation_calls == 2:
+            program = captured_preflights[0].carrier_program
+            program["scope"] = "mutated_before_atomic_publication"
+            _rehash(program)
+
+    monkeypatch.setattr(
+        carrier_execution,
+        "_preflight_mcwf_record_materialization",
+        capture_record_preflight,
+    )
+    monkeypatch.setattr(
+        carrier_execution,
+        "_axis1_mcwf_mps_execution_manifest",
+        lambda *_args, **_kwargs: _produced(carrier),
+    )
+    monkeypatch.setattr(
+        carrier_execution,
+        "_validate_mcwf_record_publication_preflight",
+        mutate_during_staged_publication_validation,
+    )
+    out_dir = tmp_path / "atomic-publication-rejected"
+
+    with pytest.raises(
+        ValueError,
+        match="declared content hash changed after compile",
+    ):
+        carrier_execution.write_axis1_mcwf_mps_record_samples(
+            projected_xz_schedule,
+            out_dir,
+            device="cuda",
+            execution_backend_options=copy.deepcopy(_BACKEND_OPTIONS),
+            max_record_array_payload_bytes=48,
+        )
+
+    assert validation_calls >= 2
+    assert not out_dir.exists()
 
 
 def test_writer_freezes_relative_output_path_before_long_running_execution(
