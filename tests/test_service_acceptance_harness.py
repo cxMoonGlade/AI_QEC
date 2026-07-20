@@ -444,6 +444,8 @@ def test_current_catalog_routes_cuda_transitive_mps_gate_to_gpu_serial() -> None
         ("ECS_RUN_MCWF_XZ_FIXTURE_FAMILY_COMPARISON", "1"),
     )
     assert family_task.nested_environments == ("ecs-baseline-qutip",)
+    assert by_file["tests/test_mps_three_leg_comparator.py"].lane == "gpu_serial"
+    assert by_file["tests/test_restricted_mps_benchmark.py"].lane == "gpu_serial"
 
 
 def test_acceptance_plan_rejects_non_acceptance_process_environment_path() -> None:
