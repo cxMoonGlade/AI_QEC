@@ -11,12 +11,27 @@ dense channel or pairwise fallback.
 """
 
 import copy
+import ctypes
+from dataclasses import dataclass
+import errno
 import hashlib
+from importlib import metadata
 import json
 import math
 from numbers import Real
+import os
+from pathlib import Path
+import platform
+import stat
+import subprocess
+import tempfile
 from typing import Any
 
+import numpy as np
+import torch
+
+from .. import _PACKAGE_TREE_SHA256_AT_IMPORT
+from ..carrier.records import RecordBatch
 from ..carrier.mps.controls import (
     normalize_mps_bool,
     normalize_mps_choice,
@@ -43,6 +58,7 @@ from .axis1_record_evidence import (
     axis1_measurement_record_evidence_manifest,
 )
 from .axis1_record_layout import (
+    Axis1ScheduleRecordLayout,
     _require_exact_binary_record_matrix,
     _validate_axis1_projected_record_payload,
     axis1_record_layout_from_schedule,
@@ -57,6 +73,11 @@ from .axis1_qutip_cuquantum_probe import (
     AXIS1_QUTIP_CUQUANTUM_PROBE_BACKEND_CONTRACT,
     axis1_qutip_cuquantum_record_probe_manifest,
     axis1_qutip_cuquantum_trajectory_probe_manifest,
+)
+from .artifacts import (
+    file_sha256,
+    record_summary,
+    write_b8_optional,
 )
 
 
@@ -87,6 +108,115 @@ AXIS1_CARRIER_AUTO_BACKEND_CONTRACT = "auto"
 AXIS1_CARRIER_AUTO_EXECUTION_SCHEMA = (
     "error_coupling_simulator.frontend.carrier_auto_routed_execution.v5"
 )
+AXIS1_MCWF_MPS_RECORD_OUTPUT_SCHEMA = (
+    "error_coupling_simulator.frontend.mcwf_mps_record_sample_summary.v1"
+)
+AXIS1_MCWF_MPS_RECORD_OUTPUT_REPRESENTABILITY = (
+    "axis1_mcwf_mps_grouped_canonical_record_batch_b8_"
+    "no_original_trajectory_order"
+)
+# The grouped writer preallocates one uint8 output table and RecordBatch freezes
+# one copy. Its current binary validation can transiently hold up to three bool
+# comparison arrays for either side, so four bytes per output bit is the exact
+# conservative NumPy Record-array payload bound. It is not a whole-process RSS
+# estimate and excludes the already-resident Carrier, Python metadata, canonical
+# JSON authentication, allocator overhead, and publication provenance.
+AXIS1_MCWF_MPS_RECORD_MAX_ARRAY_PAYLOAD_BYTES = 512 * 1024 * 1024
+AXIS1_MCWF_MPS_RECORD_MAX_SUPPORT_CELLS = 16 * 1024 * 1024
+_MCWF_RECORD_ARRAY_PAYLOAD_BYTES_PER_OUTPUT_BIT = 4
+_MCWF_RECORD_MATERIALIZATION_ORDER = (
+    "carrier_histogram_grouped_canonical_support_order"
+)
+_MCWF_RECORD_SAMPLE_SUMMARY_FILENAME = "axis1_mcwf_mps_sample_summary.json"
+_MCWF_RECORD_CARRIER_EVIDENCE_FILENAME = "axis1_mcwf_mps_carrier_execution.json"
+_MCWF_RECORD_CARRIER_PROGRAM_FILENAME = "axis1_mcwf_mps_carrier_program.json"
+_AT_FDCWD = -100
+_RENAME_NOREPLACE = 1
+_MCWF_RECORD_SOURCE_SHA256_AT_IMPORT = file_sha256(Path(__file__).resolve())
+if (
+    not isinstance(_MCWF_RECORD_SOURCE_SHA256_AT_IMPORT, str)
+    or len(_MCWF_RECORD_SOURCE_SHA256_AT_IMPORT) != 64
+):
+    raise RuntimeError("MCWF Record source-file SHA-256 is unavailable at import")
+
+
+@dataclass(frozen=True)
+class Axis1McwfMpsRecordSampleResult:
+    """Canonical RecordBatch and `.b8` files materialized from one MCWF run."""
+
+    out_dir: Path
+    detection_events: Path | None
+    obs_flips_actual: Path | None
+    carrier_evidence: Path
+    carrier_program_evidence: Path
+    sample_summary: Path
+    sample_manifest: dict[str, Any]
+    record_batch: RecordBatch
+
+
+@dataclass(frozen=True)
+class _Axis1McwfMpsRecordBinding:
+    """Same-call consistency hashes, not a cryptographic or replay boundary."""
+
+    carrier_content_hash: str
+    direct_content_hash: str
+    record_execution_content_hash: str
+    restricted_acceptance_policy_content_hash: str
+
+
+@dataclass(frozen=True)
+class _Axis1McwfMpsRecordPreflight:
+    source_kind: str
+    source_hash: str
+    schedule_representability: str
+    num_qubits: int
+    device: str
+    execution_backend_options: dict[str, Any]
+    expected_execution_options: dict[str, Any]
+    carrier_program: dict[str, Any]
+    layout: Axis1ScheduleRecordLayout
+    trajectory_count: int
+    detector_width: int
+    observable_width: int
+    estimated_peak_record_array_payload_bytes: int
+    max_record_array_payload_bytes: int
+    estimated_record_support_upper_bound: int
+    estimated_record_support_cells: int
+    max_record_support_cells: int
+
+
+@dataclass(frozen=True)
+class _Axis1McwfMpsRecordPublicationPreflight:
+    target_parent: Path
+    target_parent_fd: int
+    target_parent_device: int
+    target_parent_inode: int
+    environment_lock_path: Path
+    environment_lock_sha256: str
+    build_identity: dict[str, Any]
+    source_implementation: dict[str, Any]
+    environment_identity: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class _Axis1McwfMpsRecordStage:
+    name: str
+    fd: int
+    path: Path
+    device: int
+    inode: int
+
+
+@dataclass(frozen=True)
+class _Axis1McwfMpsRecordArtifactSeal:
+    name: str
+    device: int
+    inode: int
+    mode: int
+    size_bytes: int
+    mtime_ns: int
+    ctime_ns: int
+    sha256: str
 _RESTRICTED_POLICY_SCHEMAS = {
     "mcwf": (
         "error_coupling_simulator.frontend."
@@ -664,8 +794,2243 @@ def axis1_carrier_execution_manifest(
             "scalable QT/MPS backend claim"
         ),
     }
-    payload["content_hash"] = _stable_payload_hash(payload)
+    payload["content_hash"] = _streaming_stable_payload_hash(payload)
     return payload
+
+
+def _preflight_mcwf_record_materialization(
+    schedule: SubstepSchedule,
+    *,
+    device: str,
+    execution_backend_options: dict[str, Any] | None,
+    max_record_array_payload_bytes: int,
+    max_record_support_cells: int = AXIS1_MCWF_MPS_RECORD_MAX_SUPPORT_CELLS,
+) -> _Axis1McwfMpsRecordPreflight:
+    """Reject impossible or over-budget output before CUDA execution."""
+
+    normalized_device = normalize_mps_device(device)
+    normalized_options = _validate_mcwf_mps_execution_options(
+        dict(execution_backend_options or {})
+    )
+    expected_options = _mcwf_mps_expected_options(
+        normalized_options,
+        num_sites=int(schedule.num_qubits),
+    )
+    carrier_program = axis1_carrier_program_manifest(
+        schedule,
+        backend_contract=AXIS1_CARRIER_MCWF_MPS_EXECUTION_BACKEND_CONTRACT,
+    )
+    layout = axis1_record_layout_from_schedule(schedule)
+    if layout.measurement_width <= 0:
+        raise ValueError("MCWF Record materialization requires measurement columns")
+    if any(basis not in {"X", "Z"} for basis in layout.measurement_bases):
+        raise ValueError("MCWF Record materialization supports only X/Z bases")
+    detector_width = len(layout.detectors)
+    observable_width = len(layout.observables)
+    output_width = detector_width + observable_width
+    if output_width <= 0:
+        raise ValueError(
+            "MCWF Record materialization requires at least one detector or observable"
+        )
+    materialization_limit = normalize_mps_index(
+        max_record_array_payload_bytes,
+        name="max_record_array_payload_bytes",
+        minimum=1,
+    )
+    trajectory_count = int(expected_options["trajectory_count"])
+    support_cell_limit = normalize_mps_index(
+        max_record_support_cells,
+        name="max_record_support_cells",
+        minimum=1,
+    )
+    if layout.measurement_width >= trajectory_count.bit_length():
+        support_upper_bound = trajectory_count
+    else:
+        support_upper_bound = 1 << layout.measurement_width
+    layout_reference_cells = layout.measurement_width + sum(
+        len(definition.columns)
+        for definition in (*layout.detectors, *layout.observables)
+    )
+    estimated_record_support_cells = (
+        support_upper_bound * (layout.measurement_width + output_width + 2)
+        + layout_reference_cells
+    )
+    if estimated_record_support_cells > support_cell_limit:
+        raise ValueError(
+            "MCWF Record support-cell budget exceeded before execution: "
+            f"required={estimated_record_support_cells}, limit={support_cell_limit}"
+        )
+    estimated_peak_bytes = (
+        _MCWF_RECORD_ARRAY_PAYLOAD_BYTES_PER_OUTPUT_BIT
+        * trajectory_count
+        * output_width
+    )
+    if estimated_peak_bytes > materialization_limit:
+        raise ValueError(
+            "MCWF Record-array payload byte budget exceeded before execution: "
+            f"required={estimated_peak_bytes}, limit={materialization_limit}"
+        )
+    if trajectory_count > int(np.iinfo(np.intp).max):
+        raise ValueError("MCWF Record trajectory_count exceeds platform index range")
+    return _Axis1McwfMpsRecordPreflight(
+        source_kind=schedule.source_kind,
+        source_hash=schedule.source_hash,
+        schedule_representability=schedule.representability,
+        num_qubits=int(schedule.num_qubits),
+        device=normalized_device,
+        execution_backend_options=normalized_options,
+        expected_execution_options=expected_options,
+        carrier_program=carrier_program,
+        layout=layout,
+        trajectory_count=trajectory_count,
+        detector_width=detector_width,
+        observable_width=observable_width,
+        estimated_peak_record_array_payload_bytes=estimated_peak_bytes,
+        max_record_array_payload_bytes=materialization_limit,
+        estimated_record_support_upper_bound=support_upper_bound,
+        estimated_record_support_cells=estimated_record_support_cells,
+        max_record_support_cells=support_cell_limit,
+    )
+
+
+def axis1_mcwf_mps_record_batch(
+    schedule: SubstepSchedule,
+    *,
+    device: str = "cuda",
+    execution_backend_options: dict[str, Any] | None = None,
+    max_record_array_payload_bytes: int = (
+        AXIS1_MCWF_MPS_RECORD_MAX_ARRAY_PAYLOAD_BYTES
+    ),
+    max_record_support_cells: int = AXIS1_MCWF_MPS_RECORD_MAX_SUPPORT_CELLS,
+) -> RecordBatch:
+    """Execute MCWF Carrier once and materialize its authenticated histogram.
+
+    Rows are repeated by their exact integer counts in canonical support order.
+    This reconstructs an exchangeable shot batch without drawing a second
+    sample; the original per-trajectory order was not retained by the child and
+    is therefore explicitly unavailable.
+    """
+
+    preflight = _preflight_mcwf_record_materialization(
+        schedule,
+        device=device,
+        execution_backend_options=execution_backend_options,
+        max_record_array_payload_bytes=max_record_array_payload_bytes,
+        max_record_support_cells=max_record_support_cells,
+    )
+    _, record_batch = _execute_mcwf_carrier_record_batch(
+        schedule,
+        preflight=preflight,
+    )
+    return record_batch
+
+
+def write_axis1_mcwf_mps_record_samples(
+    schedule: SubstepSchedule,
+    out_dir: str | Path,
+    *,
+    device: str = "cuda",
+    execution_backend_options: dict[str, Any] | None = None,
+    max_record_array_payload_bytes: int = (
+        AXIS1_MCWF_MPS_RECORD_MAX_ARRAY_PAYLOAD_BYTES
+    ),
+    max_record_support_cells: int = AXIS1_MCWF_MPS_RECORD_MAX_SUPPORT_CELLS,
+) -> Axis1McwfMpsRecordSampleResult:
+    """Write canonical MCWF detector/observable `.b8` products fail closed.
+
+    The writer owns the `.b8` claim; the restricted Carrier child continues to
+    claim no artifact emission. Validation and bounded RecordBatch construction
+    finish before the output directory is touched.
+    """
+
+    root = Path(out_dir).absolute()
+    _require_fresh_mcwf_record_output_directory(root)
+    preflight = _preflight_mcwf_record_materialization(
+        schedule,
+        device=device,
+        execution_backend_options=execution_backend_options,
+        max_record_array_payload_bytes=max_record_array_payload_bytes,
+        max_record_support_cells=max_record_support_cells,
+    )
+    publication_preflight = _preflight_mcwf_record_publication(
+        root,
+        device=preflight.device,
+    )
+    try:
+        carrier, record_batch = _execute_mcwf_carrier_record_batch(
+            schedule,
+            preflight=preflight,
+        )
+        _validate_mcwf_record_publication_preflight(
+            publication_preflight,
+            device=preflight.device,
+        )
+        return _publish_mcwf_record_samples(
+            root,
+            carrier=carrier,
+            record_batch=record_batch,
+            preflight=preflight,
+            publication_preflight=publication_preflight,
+        )
+    finally:
+        os.close(publication_preflight.target_parent_fd)
+
+
+def _execute_mcwf_carrier_record_batch(
+    schedule: SubstepSchedule,
+    *,
+    preflight: _Axis1McwfMpsRecordPreflight,
+) -> tuple[dict[str, Any], RecordBatch]:
+    produced = _axis1_mcwf_mps_execution_manifest(
+        schedule,
+        device=preflight.device,
+        instrument_spec=None,
+        execution_backend_options=copy.deepcopy(
+            preflight.execution_backend_options
+        ),
+        _return_record_binding=True,
+    )
+    if not isinstance(produced, tuple) or len(produced) != 2:
+        raise TypeError("MCWF Record producer did not return a same-call binding")
+    carrier, binding = produced
+    record_batch = _materialize_mcwf_carrier_record_batch(
+        carrier,
+        preflight=preflight,
+        binding=binding,
+    )
+    return carrier, record_batch
+
+
+def _require_fresh_mcwf_record_output_directory(root: Path) -> None:
+    if root.exists() or root.is_symlink():
+        raise ValueError(
+            "MCWF Record writer requires a fresh output directory: "
+            f"{root}"
+        )
+
+
+def _mcwf_record_authoritative_environment_lock() -> Path:
+    return Path(__file__).resolve().parents[3] / "core-environment-cu130.lock"
+
+
+def _require_mcwf_record_environment_lock_sha256(value: object) -> str:
+    if not isinstance(value, str) or len(value) != 64:
+        raise ValueError(
+            "MCWF Record authoritative environment lock hash is invalid"
+        )
+    try:
+        int(value, 16)
+    except ValueError as exc:
+        raise ValueError(
+            "MCWF Record authoritative environment lock hash is invalid"
+        ) from exc
+    return value
+
+
+def _preflight_mcwf_record_publication(
+    root: Path,
+    *,
+    device: str,
+) -> _Axis1McwfMpsRecordPublicationPreflight:
+    target_parent = root.parent
+    target_parent_device, target_parent_inode = (
+        _mcwf_record_target_parent_identity(target_parent)
+    )
+    target_parent_fd = _open_mcwf_record_target_parent(
+        target_parent,
+        expected_identity=(target_parent_device, target_parent_inode),
+    )
+    try:
+        environment_lock = _mcwf_record_authoritative_environment_lock()
+        if not environment_lock.is_file():
+            raise FileNotFoundError(
+                "MCWF Record publication requires the authoritative environment lock: "
+                f"{environment_lock}"
+            )
+        environment_lock_hash = _require_mcwf_record_environment_lock_sha256(
+            file_sha256(environment_lock)
+        )
+        _probe_atomic_noreplace_publication(
+            target_parent,
+            parent_fd=target_parent_fd,
+        )
+        if _mcwf_record_target_parent_identity(target_parent) != (
+            target_parent_device,
+            target_parent_inode,
+        ):
+            raise RuntimeError(
+                "MCWF Record target parent changed during publication preflight"
+            )
+        build_identity = _mcwf_record_build_identity()
+        source_implementation = _mcwf_record_source_implementation_identity()
+        environment_identity = _mcwf_record_environment_identity(
+            environment_lock=environment_lock,
+            environment_lock_hash=environment_lock_hash,
+            device=device,
+        )
+        if _mcwf_record_target_parent_identity(target_parent) != (
+            target_parent_device,
+            target_parent_inode,
+        ):
+            raise RuntimeError(
+                "MCWF Record target parent changed during identity preflight"
+            )
+        return _Axis1McwfMpsRecordPublicationPreflight(
+            target_parent=target_parent,
+            target_parent_fd=target_parent_fd,
+            target_parent_device=target_parent_device,
+            target_parent_inode=target_parent_inode,
+            environment_lock_path=environment_lock,
+            environment_lock_sha256=environment_lock_hash,
+            build_identity=copy.deepcopy(build_identity),
+            source_implementation=copy.deepcopy(source_implementation),
+            environment_identity=copy.deepcopy(environment_identity),
+        )
+    except BaseException:
+        os.close(target_parent_fd)
+        raise
+
+
+def _mcwf_record_target_parent_identity(parent: Path) -> tuple[int, int]:
+    try:
+        parent_stat = parent.stat()
+    except FileNotFoundError as exc:
+        raise FileNotFoundError(
+            f"MCWF Record target parent must already exist: {parent}"
+        ) from exc
+    if not stat.S_ISDIR(parent_stat.st_mode):
+        raise NotADirectoryError(
+            f"MCWF Record target parent is not a directory: {parent}"
+        )
+    return int(parent_stat.st_dev), int(parent_stat.st_ino)
+
+
+def _open_mcwf_record_target_parent(
+    parent: Path,
+    *,
+    expected_identity: tuple[int, int],
+) -> int:
+    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_CLOEXEC", 0)
+    parent_fd = os.open(parent, flags)
+    try:
+        parent_stat = os.fstat(parent_fd)
+        actual_identity = (int(parent_stat.st_dev), int(parent_stat.st_ino))
+        if actual_identity != expected_identity:
+            raise RuntimeError("MCWF Record target parent changed while opening dirfd")
+        return parent_fd
+    except BaseException:
+        os.close(parent_fd)
+        raise
+
+
+def _validate_mcwf_record_publication_preflight(
+    preflight: _Axis1McwfMpsRecordPublicationPreflight,
+    *,
+    device: str,
+) -> None:
+    try:
+        sealed_parent_stat = os.fstat(preflight.target_parent_fd)
+    except OSError as exc:
+        raise RuntimeError("MCWF Record sealed target-parent dirfd is unavailable") from exc
+    if (
+        int(sealed_parent_stat.st_dev),
+        int(sealed_parent_stat.st_ino),
+    ) != (
+        preflight.target_parent_device,
+        preflight.target_parent_inode,
+    ):
+        raise RuntimeError("MCWF Record sealed target-parent dirfd identity changed")
+    current_parent_identity = _mcwf_record_target_parent_identity(
+        preflight.target_parent
+    )
+    if current_parent_identity != (
+        preflight.target_parent_device,
+        preflight.target_parent_inode,
+    ):
+        raise RuntimeError("MCWF Record target parent changed after preflight")
+
+    current_environment_lock = _mcwf_record_authoritative_environment_lock()
+    if current_environment_lock != preflight.environment_lock_path:
+        raise RuntimeError("MCWF Record authoritative environment lock changed")
+    if not current_environment_lock.is_file():
+        raise RuntimeError("MCWF Record authoritative environment lock disappeared")
+    _require_mcwf_record_environment_lock_sha256(
+        preflight.environment_lock_sha256
+    )
+    current_environment_lock_hash = _require_mcwf_record_environment_lock_sha256(
+        file_sha256(current_environment_lock)
+    )
+    if current_environment_lock_hash != preflight.environment_lock_sha256:
+        raise RuntimeError("MCWF Record environment lock changed after preflight")
+
+    if _mcwf_record_build_identity() != preflight.build_identity:
+        raise RuntimeError("MCWF Record build identity changed after preflight")
+    if (
+        _mcwf_record_source_implementation_identity()
+        != preflight.source_implementation
+    ):
+        raise RuntimeError(
+            "MCWF Record source implementation changed after preflight"
+        )
+    current_environment_identity = _mcwf_record_environment_identity(
+        environment_lock=current_environment_lock,
+        environment_lock_hash=current_environment_lock_hash,
+        device=device,
+    )
+    if (
+        current_environment_identity.get("runtime")
+        != preflight.environment_identity.get("runtime")
+    ):
+        raise RuntimeError("MCWF Record runtime identity changed after preflight")
+    if current_environment_identity != preflight.environment_identity:
+        raise RuntimeError("MCWF Record environment identity changed after preflight")
+
+
+def _require_atomic_noreplace_publication():
+    if platform.system() != "Linux":
+        raise OSError(
+            errno.ENOTSUP,
+            "claim-bearing MCWF Record publication requires Linux renameat2",
+        )
+    libc = ctypes.CDLL(None, use_errno=True)
+    renameat2 = getattr(libc, "renameat2", None)
+    if renameat2 is None:
+        raise OSError(
+            errno.ENOTSUP,
+            "claim-bearing MCWF Record publication requires renameat2",
+        )
+    renameat2.argtypes = (
+        ctypes.c_int,
+        ctypes.c_char_p,
+        ctypes.c_int,
+        ctypes.c_char_p,
+        ctypes.c_uint,
+    )
+    renameat2.restype = ctypes.c_int
+    return renameat2
+
+
+def _atomic_rename_directory_noreplace(
+    source: str | Path,
+    destination: str | Path,
+    *,
+    source_dir_fd: int = _AT_FDCWD,
+    destination_dir_fd: int = _AT_FDCWD,
+) -> None:
+    renameat2 = _require_atomic_noreplace_publication()
+    result = renameat2(
+        source_dir_fd,
+        os.fsencode(source),
+        destination_dir_fd,
+        os.fsencode(destination),
+        _RENAME_NOREPLACE,
+    )
+    if result != 0:
+        error_code = ctypes.get_errno()
+        raise OSError(error_code, os.strerror(error_code), str(destination))
+
+
+def _probe_atomic_noreplace_publication(
+    parent: Path,
+    *,
+    parent_fd: int | None = None,
+) -> None:
+    """Exercise no-clobber rename semantics on the actual target filesystem."""
+
+    _require_atomic_noreplace_publication()
+    owns_parent_fd = parent_fd is None
+    if parent_fd is None:
+        expected_identity = _mcwf_record_target_parent_identity(parent)
+        parent_fd = _open_mcwf_record_target_parent(
+            parent,
+            expected_identity=expected_identity,
+        )
+    source_name: str | None = None
+    destination_name: str | None = None
+    try:
+        source_name = Path(
+            tempfile.mkdtemp(
+                prefix=".mcwf-noreplace-source-",
+                dir=f"/proc/self/fd/{parent_fd}",
+            )
+        ).name
+        destination_name = Path(
+            tempfile.mkdtemp(
+                prefix=".mcwf-noreplace-destination-",
+                dir=f"/proc/self/fd/{parent_fd}",
+            )
+        ).name
+        source_identity = _mcwf_record_directory_entry_identity(
+            parent_fd,
+            source_name,
+        )
+        destination_identity = _mcwf_record_directory_entry_identity(
+            parent_fd,
+            destination_name,
+        )
+        try:
+            _atomic_rename_directory_noreplace(
+                source_name,
+                destination_name,
+                source_dir_fd=parent_fd,
+                destination_dir_fd=parent_fd,
+            )
+        except FileExistsError:
+            pass
+        except OSError as exc:
+            raise OSError(
+                exc.errno or errno.ENOTSUP,
+                "target filesystem does not support renameat2 RENAME_NOREPLACE",
+                str(parent),
+            ) from exc
+        else:
+            raise OSError(
+                errno.ENOTSUP,
+                "target filesystem failed to preserve an existing no-replace destination",
+                str(parent),
+            )
+        if (
+            _mcwf_record_directory_entry_identity(parent_fd, source_name)
+            != source_identity
+            or _mcwf_record_directory_entry_identity(parent_fd, destination_name)
+            != destination_identity
+        ):
+            raise OSError(
+                errno.ENOTSUP,
+                "target filesystem no-replace probe did not preserve both directory identities",
+                str(parent),
+            )
+
+        os.rmdir(destination_name, dir_fd=parent_fd)
+        try:
+            _atomic_rename_directory_noreplace(
+                source_name,
+                destination_name,
+                source_dir_fd=parent_fd,
+                destination_dir_fd=parent_fd,
+            )
+        except OSError as exc:
+            raise OSError(
+                exc.errno or errno.ENOTSUP,
+                "target filesystem does not support successful no-replace rename",
+                str(parent),
+            ) from exc
+        if (
+            _mcwf_record_directory_entry_exists(parent_fd, source_name)
+            or _mcwf_record_directory_entry_identity(parent_fd, destination_name)
+            != source_identity
+        ):
+            raise OSError(
+                errno.ENOTSUP,
+                "target filesystem no-replace probe produced an invalid rename result",
+                str(parent),
+            )
+    finally:
+        try:
+            for probe_name in (source_name, destination_name):
+                if probe_name is None:
+                    continue
+                try:
+                    os.rmdir(probe_name, dir_fd=parent_fd)
+                except FileNotFoundError:
+                    pass
+        finally:
+            if owns_parent_fd:
+                os.close(parent_fd)
+
+
+def _mcwf_record_directory_entry_identity(
+    parent_fd: int,
+    name: str,
+) -> tuple[int, int]:
+    entry_stat = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
+    return int(entry_stat.st_dev), int(entry_stat.st_ino)
+
+
+def _mcwf_record_directory_entry_exists(parent_fd: int, name: str) -> bool:
+    try:
+        os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
+    except FileNotFoundError:
+        return False
+    return True
+
+
+def _publish_mcwf_record_samples(
+    root: Path,
+    *,
+    carrier: dict[str, Any],
+    record_batch: RecordBatch,
+    preflight: _Axis1McwfMpsRecordPreflight,
+    publication_preflight: _Axis1McwfMpsRecordPublicationPreflight,
+) -> Axis1McwfMpsRecordSampleResult:
+    """Publish a complete artifact directory with one atomic rename."""
+
+    if root.parent != publication_preflight.target_parent:
+        raise ValueError("MCWF Record publication preflight targets another parent")
+    _require_fresh_mcwf_record_output_directory(root)
+    stage = _create_mcwf_record_stage(
+        publication_preflight.target_parent_fd,
+        output_name=root.name,
+    )
+    published = False
+    try:
+        staged_detection_events = stage.path / "detection_events.b8"
+        staged_obs_flips_actual = stage.path / "obs_flips_actual.b8"
+        staged_carrier_evidence = (
+            stage.path / _MCWF_RECORD_CARRIER_EVIDENCE_FILENAME
+        )
+        staged_carrier_program = (
+            stage.path / _MCWF_RECORD_CARRIER_PROGRAM_FILENAME
+        )
+        staged_summary = stage.path / _MCWF_RECORD_SAMPLE_SUMMARY_FILENAME
+        det_path = write_b8_optional(staged_detection_events, record_batch.det)
+        obs_path = write_b8_optional(staged_obs_flips_actual, record_batch.obs)
+        _require_mcwf_record_b8_artifact_presence(
+            det_path,
+            expected_path=staged_detection_events,
+            bit_width=int(record_batch.det.shape[1]),
+            label="detector",
+        )
+        _require_mcwf_record_b8_artifact_presence(
+            obs_path,
+            expected_path=staged_obs_flips_actual,
+            bit_width=int(record_batch.obs.shape[1]),
+            label="observable",
+        )
+        for path in (det_path, obs_path):
+            if path is not None:
+                _fsync_required_mcwf_record_artifact(stage.fd, path.name)
+        _write_canonical_json_streaming(
+            staged_carrier_program,
+            preflight.carrier_program,
+        )
+        _fsync_required_mcwf_record_artifact(
+            stage.fd,
+            staged_carrier_program.name,
+        )
+        _write_canonical_json_streaming(staged_carrier_evidence, carrier)
+        _fsync_required_mcwf_record_artifact(
+            stage.fd,
+            staged_carrier_evidence.name,
+        )
+        artifact_seals = {
+            staged_carrier_program.name: _seal_required_mcwf_record_artifact(
+                stage.fd,
+                staged_carrier_program.name,
+                expected_sha256=_canonical_json_payload_sha256(
+                    preflight.carrier_program
+                ),
+            ),
+            staged_carrier_evidence.name: _seal_required_mcwf_record_artifact(
+                stage.fd,
+                staged_carrier_evidence.name,
+                expected_sha256=_canonical_json_payload_sha256(carrier),
+            ),
+        }
+        if det_path is not None:
+            artifact_seals[det_path.name] = _seal_required_mcwf_record_artifact(
+                stage.fd,
+                det_path.name,
+                expected_sha256=_mcwf_record_expected_b8_sha256(record_batch.det),
+            )
+        if obs_path is not None:
+            artifact_seals[obs_path.name] = _seal_required_mcwf_record_artifact(
+                stage.fd,
+                obs_path.name,
+                expected_sha256=_mcwf_record_expected_b8_sha256(record_batch.obs),
+            )
+        sample_manifest = _mcwf_record_sample_manifest(
+            carrier,
+            record_batch,
+            detection_events=det_path,
+            obs_flips_actual=obs_path,
+            carrier_evidence=staged_carrier_evidence,
+            carrier_program_evidence=staged_carrier_program,
+            artifact_seals=artifact_seals,
+            preflight=preflight,
+            publication_preflight=publication_preflight,
+        )
+        _validate_child_content_hash_streaming(
+            sample_manifest,
+            context="MCWF Record sample manifest",
+        )
+        _write_canonical_json_streaming(staged_summary, sample_manifest)
+        _fsync_required_mcwf_record_artifact(stage.fd, staged_summary.name)
+        publication_artifact_seals = dict(artifact_seals)
+        publication_artifact_seals[staged_summary.name] = (
+            _seal_required_mcwf_record_artifact(
+                stage.fd,
+                staged_summary.name,
+                expected_sha256=_canonical_json_payload_sha256(sample_manifest),
+            )
+        )
+        _fsync_directory(stage.path)
+        _validate_mcwf_record_staged_artifact_set(
+            stage.fd,
+            publication_artifact_seals,
+        )
+        _validate_mcwf_record_publication_preflight(
+            publication_preflight,
+            device=preflight.device,
+        )
+        _require_fresh_mcwf_record_output_directory(root)
+        _validate_mcwf_record_staged_artifact_set(
+            stage.fd,
+            publication_artifact_seals,
+        )
+        _validate_mcwf_record_publication_preflight(
+            publication_preflight,
+            device=preflight.device,
+        )
+        _validate_mcwf_record_staged_artifact_metadata(
+            stage.fd,
+            publication_artifact_seals,
+        )
+        try:
+            _atomic_rename_directory_noreplace(
+                stage.name,
+                root.name,
+                source_dir_fd=publication_preflight.target_parent_fd,
+                destination_dir_fd=publication_preflight.target_parent_fd,
+            )
+        except BaseException:
+            published = _mcwf_record_directory_entry_matches_identity(
+                publication_preflight.target_parent_fd,
+                root.name,
+                expected_identity=(stage.device, stage.inode),
+            )
+            raise
+        if not _mcwf_record_directory_entry_matches_identity(
+            publication_preflight.target_parent_fd,
+            root.name,
+            expected_identity=(stage.device, stage.inode),
+        ):
+            raise RuntimeError(
+                "MCWF Record published directory identity does not match sealed stage"
+            )
+        published = True
+        _validate_mcwf_record_staged_artifact_set(
+            stage.fd,
+            publication_artifact_seals,
+        )
+        _fsync_directory_fd(publication_preflight.target_parent_fd)
+        _require_mcwf_record_published_directory_identity(
+            publication_preflight.target_parent_fd,
+            root.name,
+            expected_identity=(stage.device, stage.inode),
+        )
+        _validate_mcwf_record_staged_artifact_set(
+            stage.fd,
+            publication_artifact_seals,
+        )
+        _validate_mcwf_record_publication_preflight(
+            publication_preflight,
+            device=preflight.device,
+        )
+        _validate_mcwf_record_staged_artifact_metadata(
+            stage.fd,
+            publication_artifact_seals,
+        )
+        _require_mcwf_record_published_directory_identity(
+            publication_preflight.target_parent_fd,
+            root.name,
+            expected_identity=(stage.device, stage.inode),
+        )
+        _require_mcwf_record_return_parent_identity(publication_preflight)
+    finally:
+        if published:
+            os.close(stage.fd)
+        else:
+            _remove_unpublished_mcwf_record_stage(
+                stage,
+                parent_fd=publication_preflight.target_parent_fd,
+            )
+
+    detection_events = (
+        root / staged_detection_events.name if det_path is not None else None
+    )
+    obs_flips_actual = (
+        root / staged_obs_flips_actual.name if obs_path is not None else None
+    )
+    carrier_evidence = root / staged_carrier_evidence.name
+    carrier_program_evidence = root / staged_carrier_program.name
+    sample_summary = root / staged_summary.name
+    return Axis1McwfMpsRecordSampleResult(
+        out_dir=root,
+        detection_events=detection_events,
+        obs_flips_actual=obs_flips_actual,
+        carrier_evidence=carrier_evidence,
+        carrier_program_evidence=carrier_program_evidence,
+        sample_summary=sample_summary,
+        sample_manifest=sample_manifest,
+        record_batch=record_batch,
+    )
+
+
+def _create_mcwf_record_stage(
+    parent_fd: int,
+    *,
+    output_name: str,
+) -> _Axis1McwfMpsRecordStage:
+    stage_name = Path(
+        tempfile.mkdtemp(
+            prefix=f".{output_name}.tmp-",
+            dir=f"/proc/self/fd/{parent_fd}",
+        )
+    ).name
+    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_CLOEXEC", 0)
+    try:
+        stage_fd = os.open(stage_name, flags, dir_fd=parent_fd)
+    except BaseException:
+        os.rmdir(stage_name, dir_fd=parent_fd)
+        raise
+    try:
+        stage_stat = os.fstat(stage_fd)
+        stage_identity = (int(stage_stat.st_dev), int(stage_stat.st_ino))
+        if (
+            _mcwf_record_directory_entry_identity(parent_fd, stage_name)
+            != stage_identity
+        ):
+            raise RuntimeError("MCWF Record staging directory changed while opening")
+        return _Axis1McwfMpsRecordStage(
+            name=stage_name,
+            fd=stage_fd,
+            path=Path(f"/proc/self/fd/{stage_fd}"),
+            device=stage_identity[0],
+            inode=stage_identity[1],
+        )
+    except BaseException:
+        os.close(stage_fd)
+        try:
+            os.rmdir(stage_name, dir_fd=parent_fd)
+        except OSError:
+            pass
+        raise
+
+
+def _remove_unpublished_mcwf_record_stage(
+    stage: _Axis1McwfMpsRecordStage,
+    *,
+    parent_fd: int,
+) -> None:
+    owned_stage_entry = False
+    try:
+        owned_stage_entry = _mcwf_record_directory_entry_matches_identity(
+            parent_fd,
+            stage.name,
+            expected_identity=(stage.device, stage.inode),
+        )
+        if owned_stage_entry:
+            try:
+                child_names = os.listdir(stage.fd)
+            except OSError:
+                child_names = []
+            for child_name in child_names:
+                try:
+                    os.unlink(child_name, dir_fd=stage.fd)
+                except OSError:
+                    pass
+    finally:
+        os.close(stage.fd)
+    if not owned_stage_entry:
+        return
+    try:
+        if _mcwf_record_directory_entry_identity(parent_fd, stage.name) != (
+            stage.device,
+            stage.inode,
+        ):
+            return
+        os.rmdir(stage.name, dir_fd=parent_fd)
+    except OSError:
+        pass
+
+
+def _mcwf_record_directory_entry_matches_identity(
+    parent_fd: int,
+    name: str,
+    *,
+    expected_identity: tuple[int, int],
+) -> bool:
+    try:
+        return (
+            _mcwf_record_directory_entry_identity(parent_fd, name)
+            == expected_identity
+        )
+    except FileNotFoundError:
+        return False
+
+
+def _fsync_directory_fd(directory_fd: int) -> None:
+    os.fsync(directory_fd)
+
+
+def _require_mcwf_record_published_directory_identity(
+    parent_fd: int,
+    output_name: str,
+    *,
+    expected_identity: tuple[int, int],
+) -> None:
+    try:
+        matches_identity = _mcwf_record_directory_entry_matches_identity(
+            parent_fd,
+            output_name,
+            expected_identity=expected_identity,
+        )
+    except OSError as exc:
+        raise RuntimeError(
+            "MCWF Record published directory identity changed after parent fsync"
+        ) from exc
+    if not matches_identity:
+        raise RuntimeError(
+            "MCWF Record published directory identity changed after parent fsync"
+        )
+
+
+def _require_mcwf_record_return_parent_identity(
+    preflight: _Axis1McwfMpsRecordPublicationPreflight,
+) -> None:
+    try:
+        current_identity = _mcwf_record_target_parent_identity(
+            preflight.target_parent
+        )
+    except OSError as exc:
+        raise RuntimeError(
+            "MCWF Record target parent changed after atomic publication"
+        ) from exc
+    if current_identity != (
+        preflight.target_parent_device,
+        preflight.target_parent_inode,
+    ):
+        raise RuntimeError("MCWF Record target parent changed after atomic publication")
+
+
+def _write_canonical_json_streaming(path: Path, payload: dict[str, Any]) -> None:
+    encoder = json.JSONEncoder(
+        indent=2,
+        sort_keys=True,
+        ensure_ascii=True,
+        allow_nan=False,
+    )
+    with path.open("w", encoding="utf-8", newline="\n") as stream:
+        for chunk in encoder.iterencode(payload):
+            stream.write(chunk)
+        stream.write("\n")
+
+
+def _require_mcwf_record_b8_artifact_presence(
+    path: Path | None,
+    *,
+    expected_path: Path,
+    bit_width: int,
+    label: str,
+) -> None:
+    expected_present = bit_width > 0
+    if expected_present and path != expected_path:
+        raise RuntimeError(
+            f"MCWF Record artifact presence does not match {label} width"
+        )
+    if not expected_present and path is not None:
+        raise RuntimeError(
+            f"MCWF Record artifact presence does not match {label} width"
+        )
+
+
+def _open_required_mcwf_record_artifact(stage_fd: int, name: str) -> int:
+    if not isinstance(name, str) or not name or Path(name).name != name:
+        raise RuntimeError("MCWF Record required staged artifact name is invalid")
+    nofollow = getattr(os, "O_NOFOLLOW", None)
+    if nofollow is None:
+        raise RuntimeError("MCWF Record required staged artifact no-follow is unavailable")
+    flags = (
+        os.O_RDONLY
+        | nofollow
+        | getattr(os, "O_NONBLOCK", 0)
+        | getattr(os, "O_CLOEXEC", 0)
+    )
+    try:
+        return os.open(name, flags, dir_fd=stage_fd)
+    except OSError as exc:
+        raise RuntimeError(
+            f"MCWF Record required staged artifact is unavailable: {name}"
+        ) from exc
+
+
+def _fsync_required_mcwf_record_artifact(stage_fd: int, name: str) -> None:
+    artifact_fd = _open_required_mcwf_record_artifact(stage_fd, name)
+    try:
+        artifact_stat = os.fstat(artifact_fd)
+        if not stat.S_ISREG(artifact_stat.st_mode):
+            raise RuntimeError(
+                f"MCWF Record required staged artifact is not regular: {name}"
+            )
+        os.fsync(artifact_fd)
+    finally:
+        os.close(artifact_fd)
+
+
+def _fsync_directory(path: Path) -> None:
+    descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+
+
+def _canonical_json_payload_sha256(payload: dict[str, Any]) -> str:
+    encoder = json.JSONEncoder(
+        indent=2,
+        sort_keys=True,
+        ensure_ascii=True,
+        allow_nan=False,
+    )
+    digest = hashlib.sha256()
+    for chunk in encoder.iterencode(payload):
+        digest.update(chunk.encode("utf-8"))
+    digest.update(b"\n")
+    return digest.hexdigest()
+
+
+def _mcwf_record_expected_b8_sha256(records: np.ndarray) -> str:
+    array = np.asarray(records)
+    if array.ndim != 2 or int(array.shape[1]) <= 0:
+        raise RuntimeError("MCWF Record required staged .b8 source is invalid")
+    digest = hashlib.sha256()
+    row_width = int(array.shape[1])
+    rows_per_chunk = max(1, 1_048_576 // row_width)
+    for start in range(0, int(array.shape[0]), rows_per_chunk):
+        chunk = array[start : start + rows_per_chunk]
+        if not bool(np.logical_or(chunk == 0, chunk == 1).all()):
+            raise RuntimeError("MCWF Record required staged .b8 source is nonbinary")
+        packed = np.packbits(
+            chunk.astype(np.uint8, copy=False),
+            axis=1,
+            bitorder="little",
+        )
+        digest.update(np.ascontiguousarray(packed).tobytes())
+    return digest.hexdigest()
+
+
+def _seal_required_mcwf_record_artifact(
+    stage_fd: int,
+    name: str,
+    *,
+    expected_sha256: str,
+) -> _Axis1McwfMpsRecordArtifactSeal:
+    _require_mcwf_record_artifact_sha256(expected_sha256)
+    artifact_fd = _open_required_mcwf_record_artifact(stage_fd, name)
+    try:
+        before = os.fstat(artifact_fd)
+        if not stat.S_ISREG(before.st_mode):
+            raise RuntimeError(
+                f"MCWF Record required staged artifact is not regular: {name}"
+            )
+        digest = hashlib.sha256()
+        while True:
+            chunk = os.read(artifact_fd, 1024 * 1024)
+            if not chunk:
+                break
+            digest.update(chunk)
+        os.fsync(artifact_fd)
+        after = os.fstat(artifact_fd)
+    finally:
+        os.close(artifact_fd)
+    before_version = (
+        int(before.st_dev),
+        int(before.st_ino),
+        int(before.st_mode),
+        int(before.st_size),
+        int(before.st_mtime_ns),
+        int(before.st_ctime_ns),
+    )
+    after_version = (
+        int(after.st_dev),
+        int(after.st_ino),
+        int(after.st_mode),
+        int(after.st_size),
+        int(after.st_mtime_ns),
+        int(after.st_ctime_ns),
+    )
+    if after_version != before_version:
+        raise RuntimeError(
+            f"MCWF Record required staged artifact changed while hashing: {name}"
+        )
+    sha256 = digest.hexdigest()
+    _require_mcwf_record_artifact_sha256(sha256)
+    if sha256 != expected_sha256:
+        raise RuntimeError(
+            f"MCWF Record required staged artifact content changed: {name}"
+        )
+    return _Axis1McwfMpsRecordArtifactSeal(
+        name=name,
+        device=int(after.st_dev),
+        inode=int(after.st_ino),
+        mode=int(after.st_mode),
+        size_bytes=int(after.st_size),
+        mtime_ns=int(after.st_mtime_ns),
+        ctime_ns=int(after.st_ctime_ns),
+        sha256=sha256,
+    )
+
+
+def _require_mcwf_record_artifact_sha256(value: str) -> None:
+    if not isinstance(value, str) or len(value) != 64:
+        raise RuntimeError("MCWF Record required staged artifact SHA-256 is invalid")
+    try:
+        int(value, 16)
+    except ValueError as exc:
+        raise RuntimeError(
+            "MCWF Record required staged artifact SHA-256 is invalid"
+        ) from exc
+
+
+def _validate_mcwf_record_staged_artifact_set(
+    stage_fd: int,
+    expected: dict[str, _Axis1McwfMpsRecordArtifactSeal],
+) -> None:
+    directory_version_before = _validate_mcwf_record_staged_artifact_metadata(
+        stage_fd,
+        expected,
+    )
+    for name, expected_seal in expected.items():
+        try:
+            observed_seal = _seal_required_mcwf_record_artifact(
+                stage_fd,
+                name,
+                expected_sha256=expected_seal.sha256,
+            )
+        except RuntimeError as exc:
+            raise RuntimeError(
+                f"MCWF Record staged artifact set revalidation failed: {name}"
+            ) from exc
+        if observed_seal != expected_seal:
+            raise RuntimeError(
+                f"MCWF Record staged artifact set identity changed: {name}"
+            )
+    directory_version_after = _validate_mcwf_record_staged_artifact_metadata(
+        stage_fd,
+        expected,
+    )
+    if directory_version_after != directory_version_before:
+        raise RuntimeError("MCWF Record staged artifact directory changed")
+
+
+def _validate_mcwf_record_staged_artifact_metadata(
+    stage_fd: int,
+    expected: dict[str, _Axis1McwfMpsRecordArtifactSeal],
+) -> tuple[int, int, int, int, int, int]:
+    directory_version_before = _mcwf_record_staged_directory_version(stage_fd)
+    try:
+        observed_names = os.listdir(stage_fd)
+    except OSError as exc:
+        raise RuntimeError("MCWF Record staged artifact set is unavailable") from exc
+    if set(observed_names) != set(expected):
+        raise RuntimeError("MCWF Record staged artifact set is not exact")
+    for name, expected_seal in expected.items():
+        try:
+            entry_stat = os.stat(
+                name,
+                dir_fd=stage_fd,
+                follow_symlinks=False,
+            )
+        except OSError as exc:
+            raise RuntimeError(
+                f"MCWF Record staged artifact set metadata is unavailable: {name}"
+            ) from exc
+        if not _mcwf_record_artifact_seal_matches_stat(expected_seal, entry_stat):
+            raise RuntimeError(
+                f"MCWF Record staged artifact set identity changed: {name}"
+            )
+    try:
+        final_names = os.listdir(stage_fd)
+    except OSError as exc:
+        raise RuntimeError("MCWF Record staged artifact set is unavailable") from exc
+    if set(final_names) != set(expected):
+        raise RuntimeError("MCWF Record staged artifact set is not exact")
+    for name, expected_seal in expected.items():
+        try:
+            final_stat = os.stat(
+                name,
+                dir_fd=stage_fd,
+                follow_symlinks=False,
+            )
+        except OSError as exc:
+            raise RuntimeError(
+                f"MCWF Record staged artifact set metadata is unavailable: {name}"
+            ) from exc
+        if not _mcwf_record_artifact_seal_matches_stat(expected_seal, final_stat):
+            raise RuntimeError(
+                f"MCWF Record staged artifact set identity changed: {name}"
+            )
+    directory_version_after = _mcwf_record_staged_directory_version(stage_fd)
+    if directory_version_after != directory_version_before:
+        raise RuntimeError("MCWF Record staged artifact directory changed")
+    return directory_version_after
+
+
+def _mcwf_record_artifact_seal_matches_stat(
+    seal: _Axis1McwfMpsRecordArtifactSeal,
+    entry_stat: os.stat_result,
+) -> bool:
+    return (
+        stat.S_ISREG(entry_stat.st_mode)
+        and int(entry_stat.st_dev) == seal.device
+        and int(entry_stat.st_ino) == seal.inode
+        and int(entry_stat.st_mode) == seal.mode
+        and int(entry_stat.st_size) == seal.size_bytes
+        and int(entry_stat.st_mtime_ns) == seal.mtime_ns
+        and int(entry_stat.st_ctime_ns) == seal.ctime_ns
+    )
+
+
+def _mcwf_record_staged_directory_version(
+    stage_fd: int,
+) -> tuple[int, int, int, int, int, int]:
+    try:
+        directory_stat = os.fstat(stage_fd)
+    except OSError as exc:
+        raise RuntimeError("MCWF Record staged artifact directory is unavailable") from exc
+    if not stat.S_ISDIR(directory_stat.st_mode):
+        raise RuntimeError("MCWF Record staged artifact directory is not a directory")
+    return (
+        int(directory_stat.st_dev),
+        int(directory_stat.st_ino),
+        int(directory_stat.st_mode),
+        int(directory_stat.st_size),
+        int(directory_stat.st_mtime_ns),
+        int(directory_stat.st_ctime_ns),
+    )
+
+
+def _materialize_mcwf_carrier_record_batch(
+    carrier: dict[str, Any],
+    *,
+    preflight: _Axis1McwfMpsRecordPreflight,
+    binding: _Axis1McwfMpsRecordBinding,
+) -> RecordBatch:
+    """Authenticate and expand one Carrier histogram without resampling."""
+
+    if type(carrier) is not dict:
+        raise TypeError("MCWF Record materialization requires an exact Carrier mapping")
+    if type(preflight) is not _Axis1McwfMpsRecordPreflight:
+        raise TypeError("MCWF Record materialization requires a sealed preflight")
+    if type(binding) is not _Axis1McwfMpsRecordBinding:
+        raise TypeError("MCWF Record materialization requires a same-call binding")
+    _validate_child_content_hash_streaming(
+        carrier,
+        context="MCWF Record materialization Carrier",
+    )
+    _require_exact_summary_fields(
+        carrier,
+        _MCWF_CARRIER_CHILD_FIELDS,
+        context="MCWF Record materialization Carrier",
+    )
+    _reject_auto_routed_evaluator_truth(
+        carrier,
+        path="MCWF Record materialization Carrier",
+    )
+    if carrier["content_hash"] != binding.carrier_content_hash:
+        raise ValueError(
+            "MCWF Record materialization Carrier content changed after binding"
+        )
+    expected_identity = {
+        "schema": AXIS1_CARRIER_EXECUTION_SCHEMA,
+        "source_kind": preflight.source_kind,
+        "source_hash": preflight.source_hash,
+        "schedule_representability": preflight.schedule_representability,
+        "representability": AXIS1_CARRIER_MCWF_MPS_EXECUTION_REPRESENTABILITY,
+        "execution_backend_contract": (
+            AXIS1_CARRIER_MCWF_MPS_EXECUTION_BACKEND_CONTRACT
+        ),
+        "device": preflight.device,
+    }
+    for field, expected_value in expected_identity.items():
+        if carrier.get(field) != expected_value:
+            raise ValueError(
+                f"MCWF Record materialization Carrier {field} must match the request"
+            )
+    actual_options = carrier.get("execution_backend_options")
+    if type(actual_options) is not dict:
+        raise TypeError(
+            "MCWF Record materialization Carrier options must be an exact mapping"
+        )
+    if _stable_payload_hash({"options": actual_options}) != _stable_payload_hash(
+        {"options": _jsonable(preflight.execution_backend_options)}
+    ):
+        raise ValueError(
+            "MCWF Record materialization Carrier options must match the request"
+        )
+    expected_program_summary = _restricted_mps_program_summary(
+        preflight.carrier_program
+    )
+    actual_program_summary = carrier.get("carrier_program")
+    if (
+        type(actual_program_summary) is not dict
+        or actual_program_summary != expected_program_summary
+    ):
+        raise ValueError(
+            "MCWF Record materialization Carrier program must match the sealed input"
+        )
+    passed = _require_manifest_bool(
+        carrier,
+        "passed",
+        context="MCWF Record materialization Carrier",
+    )
+    verdict = _require_manifest_text(
+        carrier,
+        "verdict",
+        context="MCWF Record materialization Carrier",
+    )
+    execution_status = _require_manifest_text(
+        carrier,
+        "execution_status",
+        context="MCWF Record materialization Carrier",
+    )
+    certification_status = _require_manifest_text(
+        carrier,
+        "certification_status",
+        context="MCWF Record materialization Carrier",
+    )
+    diagnostic_only = _require_manifest_bool(
+        carrier,
+        "diagnostic_only",
+        context="MCWF Record materialization Carrier",
+    )
+    backend_executed = _require_manifest_bool(
+        carrier,
+        "mcwf_mps_backend_executed",
+        context="MCWF Record materialization Carrier",
+    )
+    _validate_restricted_child_state_machine(
+        passed=passed,
+        child_verdict=verdict,
+        backend_executed=backend_executed,
+        execution_status=execution_status,
+        certification_status=certification_status,
+        diagnostic_only=diagnostic_only,
+        blocked_reason=carrier.get("blocked_reason"),
+        context="MCWF Record materialization Carrier",
+    )
+    if not (
+        passed
+        and backend_executed
+        and execution_status == "completed"
+        and certification_status == "accepted"
+        and not diagnostic_only
+        and carrier.get("blocked_reason") is None
+    ):
+        raise ValueError(
+            "MCWF Record materialization requires accepted completed evidence"
+        )
+
+    record_execution = carrier.get("record_execution")
+    if not isinstance(record_execution, dict):
+        raise TypeError("MCWF Record materialization record_execution must be a mapping")
+    _require_exact_summary_fields(
+        record_execution,
+        _MCWF_CARRIER_RECORD_EXECUTION_FIELDS,
+        context="MCWF Record materialization record_execution",
+    )
+    if _streaming_stable_payload_hash({"record_execution": record_execution}) != (
+        binding.record_execution_content_hash
+    ):
+        raise ValueError(
+            "MCWF Record materialization Record law does not match its same-call binding"
+        )
+    if not _require_manifest_bool(
+        record_execution,
+        "executed",
+        context="MCWF Record materialization record_execution",
+    ):
+        raise ValueError(
+            "MCWF Record materialization requires a schedule with measurement Records"
+        )
+    for field in ("claims_b8_artifact", "claims_decoder_integration"):
+        if _require_manifest_bool(
+            record_execution,
+            field,
+            context="MCWF Record materialization record_execution",
+        ):
+            raise ValueError(
+                f"MCWF Carrier child must not pre-claim output ownership via {field}"
+            )
+
+    policy = carrier.get("restricted_acceptance_policy")
+    direct = carrier.get("mcwf_mps_execution")
+    if not isinstance(policy, dict) or not isinstance(direct, dict):
+        raise TypeError(
+            "MCWF Record materialization requires policy and direct summaries"
+        )
+    if _streaming_stable_payload_hash({"policy": policy}) != (
+        binding.restricted_acceptance_policy_content_hash
+    ):
+        raise ValueError(
+            "MCWF Record materialization policy does not match its same-call binding"
+        )
+    accepted = _require_manifest_bool(
+        policy,
+        "accepted_for_restricted_execution",
+        context="MCWF Record materialization policy",
+    )
+    if accepted is not True:
+        raise ValueError(
+            "MCWF Record materialization requires accepted restricted evidence"
+        )
+    direct_schema = _require_manifest_text(
+        direct,
+        "schema",
+        context="MCWF Record materialization direct summary",
+    )
+    if direct_schema != _RESTRICTED_EXECUTION_SCHEMAS["mcwf"]:
+        raise ValueError("MCWF Record materialization direct schema is not registered")
+    direct_hash = _require_manifest_text(
+        direct,
+        "content_hash",
+        context="MCWF Record materialization direct summary",
+    )
+    if direct_hash != binding.direct_content_hash:
+        raise ValueError(
+            "MCWF Record materialization direct hash does not match its same-call binding"
+        )
+    if len(direct_hash) != 64 or any(
+        character not in "0123456789abcdef" for character in direct_hash
+    ):
+        raise ValueError("MCWF Record materialization direct hash is invalid")
+    direct_mirrors = {
+        "execution_status": execution_status,
+        "certification_status": certification_status,
+        "diagnostic_only": diagnostic_only,
+        "passed": True,
+        "mcwf_mps_backend_executed": True,
+    }
+    for field, expected_value in direct_mirrors.items():
+        if direct.get(field) != expected_value or type(direct.get(field)) is not type(
+            expected_value
+        ):
+            raise ValueError(
+                f"MCWF Record materialization direct {field} must mirror Carrier"
+            )
+
+    measurement_records = _require_exact_binary_record_matrix(
+        record_execution.get("measurement_records"),
+        field="measurement_records",
+        context="MCWF Record materialization",
+    )
+    layout = preflight.layout
+    expected_metadata = {
+        "measurement_keys": list(layout.measurement_keys),
+        "measurement_targets": list(layout.measurement_targets),
+        "measurement_bases": list(layout.measurement_bases),
+        "reset_after": list(layout.reset_after),
+    }
+    for field, expected_value in expected_metadata.items():
+        actual_value = record_execution.get(field)
+        if type(actual_value) is not list or actual_value != expected_value:
+            raise ValueError(
+                f"MCWF Record materialization {field} must match the sealed layout"
+            )
+    expected_basis_summary = (
+        "X"
+        if all(basis == "X" for basis in layout.measurement_bases)
+        else (
+            "Z"
+            if all(basis == "Z" for basis in layout.measurement_bases)
+            else "mixed_pauli"
+        )
+    )
+    if record_execution.get("measurement_basis") != expected_basis_summary:
+        raise ValueError(
+            "MCWF Record materialization measurement_basis must summarize the layout"
+        )
+    if record_execution.get("measurement_basis_semantics") != (
+        _MCWF_MEASUREMENT_BASIS_SEMANTICS
+    ):
+        raise ValueError(
+            "MCWF Record materialization measurement semantics are not registered"
+        )
+    detector_rows = _require_exact_binary_record_matrix(
+        record_execution.get("detector_records"),
+        field="detector_records",
+        context="MCWF Record materialization",
+    )
+    observable_rows = _require_exact_binary_record_matrix(
+        record_execution.get("logical_observable_records"),
+        field="logical_observable_records",
+        context="MCWF Record materialization",
+    )
+    _validate_mcwf_record_support_projection(
+        layout,
+        measurement_records=measurement_records,
+        detector_rows=detector_rows,
+        observable_rows=observable_rows,
+    )
+
+    counts = record_execution.get("record_counts")
+    probabilities = record_execution.get("record_probabilities")
+    sampling = record_execution.get("trajectory_sampling")
+    if type(counts) is not list or type(probabilities) is not list:
+        raise TypeError("MCWF Record counts and probabilities must be exact lists")
+    if not isinstance(sampling, dict):
+        raise TypeError("MCWF Record trajectory_sampling must be a mapping")
+    trajectory_count = sampling.get("trajectory_count")
+    if type(trajectory_count) is not int or trajectory_count <= 0:
+        raise ValueError("MCWF Record trajectory_count must be a positive exact integer")
+    if trajectory_count != preflight.trajectory_count:
+        raise ValueError("MCWF Record trajectory_count must match the request")
+    if sampling.get("mode") != _MCWF_SAMPLED_TRAJECTORY_MODE:
+        raise ValueError("MCWF Record trajectory mode is not registered")
+    expected_seed = preflight.expected_execution_options["rng_seed"]
+    if expected_seed is None:
+        expected_seed = 0
+    if sampling.get("rng_seed") != expected_seed or type(
+        sampling.get("rng_seed")
+    ) is not int:
+        raise ValueError("MCWF Record rng_seed must match the executed request")
+    if not (
+        len(measurement_records)
+        == len(detector_rows)
+        == len(observable_rows)
+        == len(counts)
+        == len(probabilities)
+    ):
+        raise ValueError("MCWF Record support rows, counts, and probabilities must align")
+    for index, (count, probability) in enumerate(
+        zip(counts, probabilities, strict=True)
+    ):
+        if type(count) is not int or count <= 0:
+            raise ValueError(f"record_counts[{index}] must be a positive exact integer")
+        if (
+            isinstance(probability, bool)
+            or not isinstance(probability, Real)
+            or float(probability) < 0.0
+        ):
+            raise ValueError(f"record_probabilities[{index}] is invalid")
+        if abs(float(probability) - count / trajectory_count) > NUMERICAL_ZERO:
+            raise ValueError("MCWF Record probabilities must equal counts / trajectories")
+    if sum(counts) != trajectory_count:
+        raise ValueError("MCWF Record counts must sum to trajectory_count")
+    if abs(math.fsum(float(value) for value in probabilities) - 1.0) > NUMERICAL_ZERO:
+        raise ValueError("MCWF Record probabilities must sum to one")
+
+    detector_width = preflight.detector_width
+    observable_width = preflight.observable_width
+    detector_samples = np.empty(
+        (trajectory_count, detector_width),
+        dtype=np.uint8,
+    )
+    observable_samples = np.empty(
+        (trajectory_count, observable_width),
+        dtype=np.uint8,
+    )
+    cursor = 0
+    for detector_row, observable_row, count in zip(
+        detector_rows,
+        observable_rows,
+        counts,
+        strict=True,
+    ):
+        stop = cursor + count
+        if detector_width:
+            detector_samples[cursor:stop, :] = detector_row
+        if observable_width:
+            observable_samples[cursor:stop, :] = observable_row
+        cursor = stop
+
+    layout_manifest = _mcwf_record_layout_manifest(layout)
+    provenance = {
+        "backend": AXIS1_CARRIER_MCWF_MPS_EXECUTION_BACKEND_CONTRACT,
+        "representability": AXIS1_MCWF_MPS_RECORD_OUTPUT_REPRESENTABILITY,
+        "record_semantics": "temporal_detector_events_and_logical_observable_flips",
+        "source_kind": preflight.source_kind,
+        "source_hash": preflight.source_hash,
+        "carrier_execution_schema": carrier["schema"],
+        "carrier_execution_content_hash": carrier["content_hash"],
+        "direct_execution_schema": direct_schema,
+        "direct_execution_content_hash": direct_hash,
+        "restricted_acceptance_policy_content_hash": (
+            binding.restricted_acceptance_policy_content_hash
+        ),
+        "measurement_keys": list(layout.measurement_keys),
+        "measurement_targets": list(layout.measurement_targets),
+        "measurement_bases": list(layout.measurement_bases),
+        "reset_after": list(layout.reset_after),
+        "measurement_basis": record_execution["measurement_basis"],
+        "record_layout_schema": layout_manifest["schema"],
+        "record_layout_content_hash": layout_manifest["content_hash"],
+        "detector_names": [definition.name for definition in layout.detectors],
+        "observable_names": [definition.name for definition in layout.observables],
+        "detector_xor_columns": [
+            list(definition.columns) for definition in layout.detectors
+        ],
+        "observable_xor_columns": [
+            list(definition.columns) for definition in layout.observables
+        ],
+        "trajectory_count": trajectory_count,
+        "rng_seed": expected_seed,
+        "device": preflight.device,
+        "local_dims": list(preflight.expected_execution_options["local_dims"]),
+        "initial_levels": list(
+            preflight.expected_execution_options["initial_levels"]
+        ),
+        "microstep_count": preflight.expected_execution_options[
+            "microstep_count"
+        ],
+        "finite_step_order": preflight.expected_execution_options[
+            "finite_step_order"
+        ],
+        "mass_residual_budget": preflight.expected_execution_options[
+            "mass_residual_budget"
+        ],
+        "max_bond": preflight.expected_execution_options["max_bond"],
+        "worst_cut_discarded_weight_gate": preflight.expected_execution_options[
+            "worst_cut_discarded_weight_gate"
+        ],
+        "total_discarded_weight_gate": preflight.expected_execution_options[
+            "total_discarded_weight_gate"
+        ],
+        "leaked_readout_b": preflight.expected_execution_options[
+            "leaked_readout_b"
+        ],
+        "state_dtype": "torch.complex128",
+        "record_dtype": "numpy.uint8",
+        "estimated_peak_record_array_payload_bytes": (
+            preflight.estimated_peak_record_array_payload_bytes
+        ),
+        "max_record_array_payload_bytes": preflight.max_record_array_payload_bytes,
+        "estimated_record_support_upper_bound": (
+            preflight.estimated_record_support_upper_bound
+        ),
+        "estimated_record_support_cells": preflight.estimated_record_support_cells,
+        "max_record_support_cells": preflight.max_record_support_cells,
+        "materialization_order": _MCWF_RECORD_MATERIALIZATION_ORDER,
+        "original_trajectory_order_preserved": False,
+        "execution_status": execution_status,
+        "certification_status": certification_status,
+        "diagnostic_only": diagnostic_only,
+        "accepted_for_restricted_execution": True,
+    }
+    record_batch = RecordBatch(
+        det=detector_samples,
+        obs=observable_samples,
+        provenance=provenance,
+    )
+    if record_batch.n_shots != trajectory_count:
+        raise ValueError("MCWF RecordBatch shot count changed during freezing")
+    return record_batch
+
+
+def _validate_mcwf_record_support_projection(
+    layout: Axis1ScheduleRecordLayout,
+    *,
+    measurement_records: list[list[int]],
+    detector_rows: list[list[int]],
+    observable_rows: list[list[int]],
+) -> None:
+    """Stream canonical-order and sealed-XOR checks with O(one row) workspace."""
+
+    if not (
+        len(measurement_records) == len(detector_rows) == len(observable_rows)
+    ):
+        raise ValueError("MCWF Record support projection rows must align")
+    previous_row: list[int] | None = None
+    for row_index, (measurement_row, detector_row, observable_row) in enumerate(
+        zip(
+            measurement_records,
+            detector_rows,
+            observable_rows,
+            strict=True,
+        )
+    ):
+        if len(measurement_row) != layout.measurement_width:
+            raise ValueError(
+                f"MCWF measurement record {row_index} width does not match the sealed layout"
+            )
+        if previous_row is not None and previous_row >= measurement_row:
+            raise ValueError(
+                "MCWF Record materialization requires sorted unique measurement Records"
+            )
+        previous_row = measurement_row
+        if len(detector_row) != len(layout.detectors):
+            raise ValueError("MCWF detector row width does not match the sealed layout")
+        if len(observable_row) != len(layout.observables):
+            raise ValueError("MCWF observable row width does not match the sealed layout")
+        for output_index, definition in enumerate(layout.detectors):
+            expected = 0
+            for column in definition.columns:
+                expected ^= measurement_row[column]
+            if detector_row[output_index] != expected:
+                raise ValueError(
+                    "MCWF detector rows do not match the sealed XOR projection"
+                )
+        for output_index, definition in enumerate(layout.observables):
+            expected = 0
+            for column in definition.columns:
+                expected ^= measurement_row[column]
+            if observable_row[output_index] != expected:
+                raise ValueError(
+                    "MCWF observable rows do not match the sealed XOR projection"
+                )
+
+
+def _mcwf_record_layout_manifest(
+    layout: Axis1ScheduleRecordLayout,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "schema": layout.schema,
+        "source_hash": layout.source_hash,
+        "schedule_schema": layout.schedule_schema,
+        "measurement_keys": list(layout.measurement_keys),
+        "measurement_targets": list(layout.measurement_targets),
+        "measurement_bases": list(layout.measurement_bases),
+        "reset_after": list(layout.reset_after),
+        "measurement_boundaries": [
+            {
+                "substep_id": boundary.substep_id,
+                "substep_index": boundary.substep_index,
+                "global_slice": list(boundary.global_slice),
+            }
+            for boundary in layout.boundaries
+        ],
+        "detectors": [
+            {
+                "ordinal": definition.ordinal,
+                "name": definition.name,
+                "keys": list(definition.keys),
+                "columns": list(definition.columns),
+            }
+            for definition in layout.detectors
+        ],
+        "observables": [
+            {
+                "ordinal": definition.ordinal,
+                "name": definition.name,
+                "keys": list(definition.keys),
+                "columns": list(definition.columns),
+            }
+            for definition in layout.observables
+        ],
+    }
+    payload["content_hash"] = _streaming_stable_payload_hash(payload)
+    return payload
+
+
+def _mcwf_record_sample_manifest(
+    carrier: dict[str, Any],
+    record_batch: RecordBatch,
+    *,
+    detection_events: Path | None,
+    obs_flips_actual: Path | None,
+    carrier_evidence: Path,
+    carrier_program_evidence: Path,
+    artifact_seals: dict[str, _Axis1McwfMpsRecordArtifactSeal],
+    preflight: _Axis1McwfMpsRecordPreflight,
+    publication_preflight: _Axis1McwfMpsRecordPublicationPreflight,
+) -> dict[str, Any]:
+    provenance = dict(record_batch.provenance)
+    layout_manifest = _mcwf_record_layout_manifest(preflight.layout)
+    summary = record_summary(record_batch.det, record_batch.obs)
+    summary.update(
+        {
+            "schema": AXIS1_MCWF_MPS_RECORD_OUTPUT_SCHEMA,
+            "representability": AXIS1_MCWF_MPS_RECORD_OUTPUT_REPRESENTABILITY,
+            "source_kind": provenance["source_kind"],
+            "source_hash": provenance["source_hash"],
+            "carrier_execution_schema": provenance["carrier_execution_schema"],
+            "carrier_execution_content_hash": provenance[
+                "carrier_execution_content_hash"
+            ],
+            "direct_execution_schema": provenance["direct_execution_schema"],
+            "direct_execution_content_hash": provenance[
+                "direct_execution_content_hash"
+            ],
+            "restricted_acceptance_policy_content_hash": provenance[
+                "restricted_acceptance_policy_content_hash"
+            ],
+            "execution_status": provenance["execution_status"],
+            "certification_status": provenance["certification_status"],
+            "diagnostic_only": provenance["diagnostic_only"],
+            "accepted_for_restricted_execution": provenance[
+                "accepted_for_restricted_execution"
+            ],
+            "verdict": carrier["verdict"],
+            "passed": carrier["passed"],
+            "trajectory_count": provenance["trajectory_count"],
+            "measurement_keys": list(provenance["measurement_keys"]),
+            "measurement_targets": list(provenance["measurement_targets"]),
+            "measurement_bases": list(provenance["measurement_bases"]),
+            "reset_after": list(provenance["reset_after"]),
+            "measurement_basis": provenance["measurement_basis"],
+            "record_layout": layout_manifest,
+            "record_semantics": provenance["record_semantics"],
+            "materialization_order": _MCWF_RECORD_MATERIALIZATION_ORDER,
+            "original_trajectory_order_preserved": False,
+            "estimated_peak_record_array_payload_bytes": (
+                preflight.estimated_peak_record_array_payload_bytes
+            ),
+            "max_record_array_payload_bytes": (
+                preflight.max_record_array_payload_bytes
+            ),
+            "estimated_record_support_upper_bound": (
+                preflight.estimated_record_support_upper_bound
+            ),
+            "estimated_record_support_cells": (
+                preflight.estimated_record_support_cells
+            ),
+            "max_record_support_cells": preflight.max_record_support_cells,
+            "record_array_payload_peak_model": (
+                "4 * trajectory_count * (detector_width + observable_width) "
+                "bytes: preallocated uint8 rows plus RecordBatch binary "
+                "validation/freezing temporaries"
+            ),
+            "record_array_payload_bound_scope": (
+                "incremental NumPy Record arrays only; excludes resident Carrier, "
+                "Python support/layout objects, canonical JSON authentication, "
+                "array headers/allocator overhead, build provenance, and publication RSS"
+            ),
+            "run_configuration": {
+                "num_qubits": preflight.num_qubits,
+                "trajectory_count": preflight.trajectory_count,
+                "detector_width": preflight.detector_width,
+                "observable_width": preflight.observable_width,
+                "device": preflight.device,
+                "local_dims": list(
+                    preflight.expected_execution_options["local_dims"]
+                ),
+                "initial_levels": list(
+                    preflight.expected_execution_options["initial_levels"]
+                ),
+                "rng_seed": provenance["rng_seed"],
+                "microstep_count": preflight.expected_execution_options[
+                    "microstep_count"
+                ],
+                "finite_step_order": preflight.expected_execution_options[
+                    "finite_step_order"
+                ],
+                "mass_residual_budget": preflight.expected_execution_options[
+                    "mass_residual_budget"
+                ],
+                "max_bond": preflight.expected_execution_options["max_bond"],
+                "worst_cut_discarded_weight_gate": (
+                    preflight.expected_execution_options[
+                        "worst_cut_discarded_weight_gate"
+                    ]
+                ),
+                "total_discarded_weight_gate": (
+                    preflight.expected_execution_options[
+                        "total_discarded_weight_gate"
+                    ]
+                ),
+                "leaked_readout_b": preflight.expected_execution_options[
+                    "leaked_readout_b"
+                ],
+                "state_dtype": "torch.complex128",
+                "record_dtype": "numpy.uint8",
+                "precision_purpose": (
+                    "complex128 restricted-state execution; exact binary "
+                    "Record encoding"
+                ),
+            },
+              "build_identity": copy.deepcopy(publication_preflight.build_identity),
+              "build_identity_scope": (
+                  "disk_package_tree_matches_package_import_time_digest_at_"
+                  "validation_checkpoints"
+              ),
+            "source_implementation": copy.deepcopy(
+                publication_preflight.source_implementation
+            ),
+              "source_implementation_identity_scope": (
+                  "disk_source_file_matches_module_import_time_digest_at_"
+                  "validation_checkpoints"
+              ),
+            "claims_runtime_code_object_attestation": False,
+            "environment_identity": copy.deepcopy(
+                publication_preflight.environment_identity
+            ),
+            "carrier_child_claims_b8_artifact": carrier["record_execution"][
+                "claims_b8_artifact"
+            ],
+            "claims_b8_artifact": True,
+            "claims_dem_artifact": False,
+            "claims_decoder_integration": False,
+              "claims_original_trajectory_order": False,
+              "claims_production_scalable_backend": False,
+              "offline_audit_scope": (
+                  "public_record_gate_and_binding_not_evaluator_replay"
+              ),
+              "claims_evaluator_oracle_replay": False,
+              "metric_and_gate_policy": {
+                "new_metric": None,
+                "new_gate": None,
+                "negative_controls": [
+                    "reject_unaccepted_or_diagnostic_carrier",
+                    "reject_rehashed_record_law_without_same_call_binding",
+                    "reject_noncanonical_or_over_budget_output",
+                ],
+                "verdict_source": (
+                    "same-call-validated Carrier restricted acceptance"
+                ),
+                "verdict_evidence_locator": (
+                    f"{carrier_evidence.name}#/restricted_acceptance_policy"
+                ),
+                  "program_evidence_locator": carrier_program_evidence.name,
+                  "direct_execution_summary_locator": (
+                      f"{carrier_evidence.name}#/mcwf_mps_execution"
+                  ),
+                  "evaluator_replay_available": False,
+              },
+            "artifacts": {
+                  "carrier_program": _mcwf_record_carrier_program_entry(
+                      carrier_program_evidence,
+                      program=preflight.carrier_program,
+                      seal=artifact_seals[carrier_program_evidence.name],
+                  ),
+                  "carrier_execution": _mcwf_record_carrier_evidence_entry(
+                      carrier_evidence,
+                      carrier=carrier,
+                      seal=artifact_seals[carrier_evidence.name],
+                  ),
+                  "detection_events": _mcwf_record_artifact_entry(
+                      detection_events,
+                      bit_width=int(record_batch.det.shape[1]),
+                      seal=(
+                          artifact_seals[detection_events.name]
+                          if detection_events is not None
+                          else None
+                      ),
+                  ),
+                  "obs_flips_actual": _mcwf_record_artifact_entry(
+                      obs_flips_actual,
+                      bit_width=int(record_batch.obs.shape[1]),
+                      seal=(
+                          artifact_seals[obs_flips_actual.name]
+                          if obs_flips_actual is not None
+                          else None
+                      ),
+                  ),
+                "detector_error_model": None,
+                "decoder_results": None,
+            },
+              "publication_status": "prepared_for_atomic_publication",
+              "claims_offline_durability_confirmation": False,
+              "atomic_publication": {
+                "protocol": (
+                    "sealed_parent_dirfd_staged_fsync_renameat2_noreplace_v2"
+                ),
+                "manifest_written_last_in_stage": True,
+                "complete_artifact_set_visible_after_single_rename": True,
+                "staging_directory_fsync_required_before_rename": True,
+                "staging_directory_fsync_success_attested_in_bundle": False,
+                "staged_artifact_set_policy": (
+                    "exact_regular_files_bound_by_st_dev_st_ino_st_mode_st_size_"
+                    "st_mtime_ns_st_ctime_ns_sha256"
+                ),
+                "artifact_file_fsync_required_at_each_seal_checkpoint": True,
+                "artifact_file_fsync_success_attested_in_bundle": False,
+                "staged_artifact_set_revalidation_required_after_stage_fsync": True,
+                "staged_artifact_set_revalidation_success_attested_in_bundle": False,
+                "published_artifact_set_recheck_after_rename_required": True,
+                "published_artifact_set_recheck_after_rename_success_attested_in_bundle": False,
+                "published_artifact_set_recheck_after_parent_fsync_required": True,
+                "published_artifact_set_recheck_after_parent_fsync_success_attested_in_bundle": False,
+                "parent_directory_fsync_required_after_rename": True,
+                  "parent_directory_fsync_success_attested_in_bundle": False,
+                  "destination_no_clobber": True,
+                  "unsupported_atomic_noreplace_fails_closed": True,
+                  "target_parent_renameat2_noreplace_probe": (
+                      "passed_before_mcwf_execution"
+                  ),
+                  "target_parent_identity_fields": ["st_dev", "st_ino"],
+                  "sealed_parent_dirfd_held_since_preflight": True,
+                  "rename_on_sealed_parent_dirfd_required": True,
+                  "parent_fsync_on_sealed_parent_dirfd_required": True,
+                  "return_path_parent_identity_recheck_required_after_parent_fsync": True,
+                  "published_destination_identity_match_required_after_rename": True,
+                  "published_destination_identity_match_success_attested_in_bundle": False,
+                  "published_destination_identity_recheck_after_parent_fsync_required": True,
+                  "published_destination_identity_recheck_success_attested_in_bundle": False,
+                  "published_destination_identity_recheck_after_final_artifact_recheck_required": True,
+                  "published_destination_identity_recheck_after_final_artifact_recheck_success_attested_in_bundle": False,
+                  "rename_exception_policy": (
+                      "detect_sealed_stage_at_destination_preserve_and_raise"
+                  ),
+                  "sealed_identity_revalidation_required_after_execution": True,
+                  "sealed_identity_revalidation_required_before_atomic_rename": True,
+                  "sealed_identity_revalidation_required_after_final_artifact_recheck": True,
+                  "sealed_identity_revalidation_success_attested_in_bundle": False,
+                  "durability_confirmation": (
+                      "successful_writer_return_only_not_self_attested_in_bundle"
+                  ),
+                  "durability_failure_policy": (
+                      "preserve_published_directory_raise_without_path_cleanup"
+                  ),
+            },
+            "scored_quantity_policy": (
+                "canonical Record materialization only; no new scored quantity"
+            ),
+            "epistemic_classes": {
+                "histogram_count_expansion": "a",
+                "sealed_xor_projection_binding": "a",
+                "b8_encoding": "a",
+                "restricted_scientific_status": "c",
+                "dem_decoder_non_claim": "a",
+            },
+        }
+    )
+    summary["content_hash"] = _streaming_stable_payload_hash(summary)
+    return summary
+
+
+def _mcwf_record_build_identity() -> dict[str, Any]:
+    """Return a fresh, uncached package identity for a claim-bearing run."""
+
+    package_tree_sha256 = _mcwf_record_fresh_package_tree_sha256()
+    if package_tree_sha256 != _PACKAGE_TREE_SHA256_AT_IMPORT:
+        raise RuntimeError(
+            "MCWF Record loaded package tree differs from current disk package tree"
+        )
+    package_version = _required_distribution_version("error-coupling-simulator")
+    return {
+        "schema": "error_coupling_simulator.carrier.package_build_identity.v1",
+        "distribution": "error-coupling-simulator",
+        "version": package_version,
+        "package_tree_sha256": package_tree_sha256,
+        "git_commit": _mcwf_record_fresh_git_commit(),
+    }
+
+
+def _mcwf_record_fresh_package_tree_sha256() -> str:
+    package_root = Path(__file__).resolve().parents[1]
+    included_suffixes = {".py", ".cpp", ".cu", ".md", ".json", ".npz"}
+    paths = sorted(
+        path
+        for path in package_root.rglob("*")
+        if path.is_file()
+        and "__pycache__" not in path.parts
+        and path.suffix in included_suffixes
+    )
+    digest = hashlib.sha256()
+    for path in paths:
+        relative = path.relative_to(package_root).as_posix().encode("utf-8")
+        digest.update(len(relative).to_bytes(4, "big"))
+        digest.update(relative)
+        data = path.read_bytes()
+        digest.update(len(data).to_bytes(8, "big"))
+        digest.update(data)
+    return digest.hexdigest()
+
+
+def _mcwf_record_fresh_git_commit() -> str:
+    try:
+        repository_root = Path(__file__).resolve().parents[3]
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=str(repository_root),
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except Exception as exc:
+        raise RuntimeError("MCWF Record Git HEAD identity is unavailable") from exc
+    commit = result.stdout.strip()
+    if result.returncode != 0 or len(commit) not in {40, 64}:
+        raise RuntimeError("MCWF Record Git HEAD identity is unavailable")
+    try:
+        int(commit, 16)
+    except ValueError as exc:
+        raise RuntimeError("MCWF Record Git HEAD identity is invalid") from exc
+    return commit
+
+
+def _mcwf_record_source_implementation_identity() -> dict[str, Any]:
+    source_path = Path(__file__).resolve()
+    source_sha256 = file_sha256(source_path)
+    if not isinstance(source_sha256, str) or len(source_sha256) != 64:
+        raise RuntimeError("MCWF Record source-file SHA-256 is unavailable")
+    try:
+        int(source_sha256, 16)
+    except ValueError as exc:
+        raise RuntimeError("MCWF Record source-file SHA-256 is invalid") from exc
+    if source_sha256 != _MCWF_RECORD_SOURCE_SHA256_AT_IMPORT:
+        raise RuntimeError(
+            "MCWF Record loaded source file differs from current disk source file"
+        )
+    return {
+        "module": "error_coupling_simulator.frontend.axis1_carrier_execution",
+        "package_relative_file": "frontend/axis1_carrier_execution.py",
+        "resolved_import_origin": str(source_path),
+        "sha256": source_sha256,
+    }
+
+
+def _mcwf_record_environment_identity(
+    *,
+    environment_lock: Path,
+    environment_lock_hash: str,
+    device: str,
+) -> dict[str, Any]:
+    return {
+        "authoritative_lock_file": environment_lock.name,
+        "authoritative_lock_path": str(environment_lock),
+        "authoritative_lock_sha256": environment_lock_hash,
+        "authoritative_lock_status": "bound",
+        "authoritative_lock_scope": "lock_hash_bound_only",
+        "authoritative_lock_conformance_checked": False,
+        "claims_reproducible_environment": False,
+        "python": platform.python_version(),
+        "numpy": np.__version__,
+        "torch": _required_distribution_version("torch"),
+        "quimb": _required_distribution_version("quimb"),
+        "scipy": _required_distribution_version("scipy"),
+        "runtime": _mcwf_record_runtime_identity(device),
+    }
+
+
+def _mcwf_record_runtime_identity(device: str) -> dict[str, Any]:
+    if not device.startswith("cuda") or not torch.cuda.is_available():
+        raise RuntimeError(
+            "claim-bearing MCWF Record publication requires in-process CUDA identity"
+        )
+    if ":" in device:
+        logical_index = int(device.split(":", 1)[1])
+    else:
+        logical_index = int(torch.cuda.current_device())
+    properties = torch.cuda.get_device_properties(logical_index)
+    gpu_uuid = str(getattr(properties, "uuid", ""))
+    cuda_build_version = torch.version.cuda
+    if (
+        not gpu_uuid
+        or gpu_uuid == "None"
+        or not isinstance(cuda_build_version, str)
+        or not cuda_build_version.strip()
+        or cuda_build_version == "None"
+    ):
+        raise RuntimeError("MCWF Record CUDA UUID/build identity is unavailable")
+    driver_path = Path("/proc/driver/nvidia/version")
+    try:
+        driver_line = driver_path.read_text(encoding="utf-8").splitlines()[0]
+    except (OSError, IndexError) as exc:
+        raise RuntimeError("MCWF Record NVIDIA driver identity is unavailable") from exc
+    driver_version = next(
+        (
+            token
+            for token in driver_line.split()
+            if token.count(".") == 2
+            and all(part.isdigit() for part in token.split("."))
+        ),
+        None,
+    )
+    if driver_version is None:
+        raise RuntimeError("MCWF Record NVIDIA driver version is unavailable")
+    return {
+        "cuda_visible_devices": os.environ.get("CUDA_VISIBLE_DEVICES"),
+        "logical_device_index": logical_index,
+        "gpu_name": str(properties.name),
+        "gpu_uuid": gpu_uuid,
+        "pci_bus_id": int(getattr(properties, "pci_bus_id", -1)),
+        "compute_capability": [int(properties.major), int(properties.minor)],
+        "total_memory_bytes": int(properties.total_memory),
+        "torch_cuda_build_version": cuda_build_version,
+        "loaded_cuda_runtime_version": None,
+        "loaded_cuda_runtime_version_status": "not_attested",
+        "cudnn_runtime": torch.backends.cudnn.version(),
+        "nvidia_driver": driver_version,
+    }
+
+
+def _distribution_version(distribution: str) -> str | None:
+    try:
+        return metadata.version(distribution)
+    except metadata.PackageNotFoundError:
+        return None
+
+
+def _required_distribution_version(distribution: str) -> str:
+    version = _distribution_version(distribution)
+    if not isinstance(version, str) or not version:
+        raise RuntimeError(
+            f"MCWF Record distribution identity is unavailable: {distribution}"
+        )
+    return version
+
+
+def _mcwf_record_carrier_evidence_entry(
+    path: Path,
+    *,
+    carrier: dict[str, Any],
+    seal: _Axis1McwfMpsRecordArtifactSeal,
+) -> dict[str, Any]:
+    _require_mcwf_record_artifact_seal_name(path, seal)
+    return {
+        "file": path.name,
+        "sha256": seal.sha256,
+        "size_bytes": seal.size_bytes,
+        "status": "written",
+        "schema": carrier["schema"],
+        "content_hash": carrier["content_hash"],
+        "contains_restricted_acceptance_policy": True,
+        "contains_carrier_program_summary": True,
+        "contains_evaluator_only_truth": False,
+        "restricted_acceptance_policy_locator": (
+            f"{path.name}#/restricted_acceptance_policy"
+        ),
+        "carrier_program_summary_locator": f"{path.name}#/carrier_program",
+        "direct_execution_summary_locator": f"{path.name}#/mcwf_mps_execution",
+        "record_execution_locator": f"{path.name}#/record_execution",
+        "audit_role": "exact_materialization_input_not_downstream_record",
+        "present": True,
+    }
+
+
+def _mcwf_record_carrier_program_entry(
+    path: Path,
+    *,
+    program: dict[str, Any],
+    seal: _Axis1McwfMpsRecordArtifactSeal,
+) -> dict[str, Any]:
+    _require_mcwf_record_artifact_seal_name(path, seal)
+    return {
+        "file": path.name,
+        "sha256": seal.sha256,
+        "size_bytes": seal.size_bytes,
+        "status": "written",
+        "schema": program["schema"],
+        "content_hash": program["content_hash"],
+        "contains_complete_sealed_program": True,
+        "contains_evaluator_only_truth": False,
+        "audit_role": "exact_sealed_execution_input_not_downstream_record",
+        "present": True,
+    }
+
+
+def _mcwf_record_artifact_entry(
+    path: Path | None,
+    *,
+    bit_width: int,
+    seal: _Axis1McwfMpsRecordArtifactSeal | None,
+) -> dict[str, Any] | None:
+    if path is None:
+        if seal is not None:
+            raise RuntimeError("MCWF Record absent artifact has an unexpected seal")
+        return None
+    if seal is None:
+        raise RuntimeError("MCWF Record required staged artifact seal is missing")
+    _require_mcwf_record_artifact_seal_name(path, seal)
+    return {
+        "file": path.name,
+        "sha256": seal.sha256,
+        "size_bytes": seal.size_bytes,
+        "status": "written",
+        "bit_width": int(bit_width),
+        "packing": "little_endian_bits_padded_per_shot",
+        "present": True,
+    }
+
+
+def _require_mcwf_record_artifact_seal_name(
+    path: Path,
+    seal: _Axis1McwfMpsRecordArtifactSeal,
+) -> None:
+    if path.name != seal.name:
+        raise RuntimeError("MCWF Record required staged artifact seal name changed")
 
 
 def _count_measured_qubits(schedule: SubstepSchedule) -> int:
@@ -2193,7 +4558,8 @@ def _axis1_mcwf_mps_execution_manifest(
     device: str,
     instrument_spec: Axis1ReadoutResetInstrumentSpec | None,
     execution_backend_options: dict[str, Any] | None,
-) -> dict[str, Any]:
+    _return_record_binding: bool = False,
+) -> dict[str, Any] | tuple[dict[str, Any], _Axis1McwfMpsRecordBinding]:
     """Execute or fail closed through the MCWF/MPS carrier endpoint."""
 
     if instrument_spec is not None:
@@ -2544,6 +4910,11 @@ def _axis1_mcwf_mps_execution_manifest(
                 "canonical restricted acceptance policy independently recomputed "
                 "from the requested schedule, options, execution, and dense metric"
             )
+    record_execution_summary = _mcwf_carrier_record_execution_summary(
+        mcwf_mps,
+        execution,
+        executed=executed,
+    )
     payload: dict[str, Any] = {
         "schema": AXIS1_CARRIER_EXECUTION_SCHEMA,
         "source_kind": schedule.source_kind,
@@ -2581,11 +4952,7 @@ def _axis1_mcwf_mps_execution_manifest(
             "finite_step_policy": dict(execution.get("finite_step_policy", {})),
             "mps_truncation_ledger": dict(execution.get("mps_truncation_ledger", {})),
         },
-        "record_execution": _mcwf_carrier_record_execution_summary(
-            mcwf_mps,
-            execution,
-            executed=executed,
-        ),
+        "record_execution": record_execution_summary,
         "mcwf_mps_execution": {
             "schema": mcwf_mps.get("schema"),
             "content_hash": mcwf_mps.get("content_hash"),
@@ -2647,7 +5014,24 @@ def _axis1_mcwf_mps_execution_manifest(
             "fallback, no DEM/decoder semantics, and no Axis-2 source timeline"
         ),
     }
-    payload["content_hash"] = _stable_payload_hash(payload)
+    payload["content_hash"] = _streaming_stable_payload_hash(payload)
+    if _return_record_binding:
+        direct_content_hash = _require_manifest_text(
+            mcwf_mps,
+            "content_hash",
+            context="MCWF/MPS same-call Record binding",
+        )
+        binding = _Axis1McwfMpsRecordBinding(
+            carrier_content_hash=payload["content_hash"],
+            direct_content_hash=direct_content_hash,
+            record_execution_content_hash=_streaming_stable_payload_hash(
+                {"record_execution": record_execution_summary}
+            ),
+            restricted_acceptance_policy_content_hash=_streaming_stable_payload_hash(
+                {"policy": mcwf_mps["restricted_acceptance_policy"]}
+            ),
+        )
+        return payload, binding
     return payload
 
 
@@ -3956,6 +6340,35 @@ def _stable_payload_hash(payload: dict[str, Any]) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def _streaming_stable_payload_hash(payload: dict[str, Any]) -> str:
+    """Hash canonical JSON without materializing one full JSON string/bytes pair."""
+
+    without_hash = dict(payload)
+    without_hash.pop("content_hash", None)
+    encoder = json.JSONEncoder(
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
+        allow_nan=False,
+    )
+    digest = hashlib.sha256()
+    for chunk in encoder.iterencode(without_hash):
+        digest.update(chunk.encode("utf-8"))
+    return digest.hexdigest()
+
+
+def _validate_child_content_hash_streaming(
+    child: dict[str, Any],
+    *,
+    context: str,
+) -> None:
+    declared = child.get("content_hash")
+    if not isinstance(declared, str) or not declared:
+        raise TypeError(f"{context} content_hash must be a nonempty string")
+    if declared != _streaming_stable_payload_hash(child):
+        raise ValueError(f"{context} content_hash does not authenticate its payload")
+
+
 def _validate_child_content_hash(
     child: dict[str, Any],
     *,
@@ -3983,5 +6396,12 @@ __all__ = [
     "AXIS1_CARRIER_QT_MPS_RESTRICTED_EXECUTION_REPRESENTABILITY",
     "AXIS1_CARRIER_EXECUTION_REPRESENTABILITY",
     "AXIS1_CARRIER_EXECUTION_SCHEMA",
+    "AXIS1_MCWF_MPS_RECORD_MAX_ARRAY_PAYLOAD_BYTES",
+    "AXIS1_MCWF_MPS_RECORD_MAX_SUPPORT_CELLS",
+    "AXIS1_MCWF_MPS_RECORD_OUTPUT_REPRESENTABILITY",
+    "AXIS1_MCWF_MPS_RECORD_OUTPUT_SCHEMA",
+    "Axis1McwfMpsRecordSampleResult",
     "axis1_carrier_execution_manifest",
+    "axis1_mcwf_mps_record_batch",
+    "write_axis1_mcwf_mps_record_samples",
 ]

@@ -26,6 +26,8 @@
     "tests/test_mps_carrier_child_authentication.py",
     "tests/test_mps_mcwf_measurement_semantics.py",
     "tests/test_axis1_mcwf_dense_certification.py",
+    "tests/test_mcwf_carrier_record_output_units.py",
+    "tests/test_mcwf_carrier_record_output_gpu.py",
     "tests/test_simulator_axis1_schedule.py",
     "tests/test_collective_decay_finite_step_guard.py"
   ],

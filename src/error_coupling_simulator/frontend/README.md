@@ -434,6 +434,113 @@ Current slice:
   `mcwf_normalized_candidate_law_has_no_registered_linear_channel_metric`. The
   normalized finite-step candidate law has input-dependent mass and is generally nonlinear;
   no Choi/process metric or retired channel gate can authorize it.
+- Axis-1 MCWF/MPS canonical grouped Record output:
+  `axis1_mcwf_mps_record_batch(...)` executes the public MCWF Carrier once,
+  validates its completed measured child accepted for restricted execution, and expands each canonical
+  sorted support row by its
+  exact integer count into immutable detector/observable `RecordBatch` arrays. A private same-call
+  consistency binding created beside the same validated direct execution rechecks the direct child,
+  Carrier, policy, and Record-law hashes without a seeded replay or trust in a separately supplied
+  Carrier dictionary. This binding is not a cryptographic authenticity boundary or replay boundary.
+  `write_axis1_mcwf_mps_record_samples(...)` applies the same validation and writes the nonzero-width
+  subset of `detection_events.b8`/`obs_flips_actual.b8`, the Carrier execution and complete sealed
+  Carrier-program evidence JSONs, and
+  `axis1_mcwf_mps_sample_summary.json` under schema
+  `error_coupling_simulator.frontend.mcwf_mps_record_sample_summary.v1`. Expansion is not a second
+  random sample. It intentionally groups rows in canonical support order because the child did not
+  retain original per-trajectory order. Detector and observable rows are revalidated against the
+  compiler-sealed X/Z XOR layout and are already temporal detector/logical records; they never pass
+  through raw-syndrome `s_to_det`. The Carrier child continues to set
+  `claims_b8_artifact=false`, while the writer-owned sample summary sets it to `true` and preserves
+  the child's execution, certification, diagnostic, and restricted-acceptance status.
+  The materializer validates strict support order and each sealed X/Z XOR projection row in a
+  streaming pass and computes canonical hashes incrementally; it allocates neither an aggregate
+  projection nor a support-sized `np.repeat` buffer. Before CUDA, both wrappers apply two independent
+  guards. `max_record_support_cells` caps the static histogram/layout cell estimate.
+  `max_record_array_payload_bytes`, defaulting to
+  `AXIS1_MCWF_MPS_RECORD_MAX_ARRAY_PAYLOAD_BYTES == 512 MiB`, caps
+  `4 * trajectory_count * (detector_width + observable_width)` bytes. This is only the incremental
+  NumPy Record-array payload for preallocated `uint8` rows plus current `RecordBatch`
+  binary-validation/freezing temporaries; it excludes the resident Carrier, Python support/layout
+  objects, canonical JSON hashing, array headers/allocator overhead, build provenance, publication
+  buffers, and whole-process RSS.
+  The writer freezes `out_dir` as an absolute lexical path and requires a non-existent destination
+  beneath an already-existing parent directory. Before MCWF it opens and holds the parent directory fd,
+  seals its `st_dev`/`st_ino`, the authoritative environment-lock path/hash, freshly recomputed
+  build/package-tree identity, required full 40/64-hex Git HEAD, source-file hash, and
+  environment/runtime identity. Relative to that
+  same fd, a sacrificial probe on the actual target filesystem must pass both collision-preservation and
+  successful Linux `renameat2(..., RENAME_NOREPLACE)` legs. At each validation checkpoint, the live disk
+  package tree must match its package-import-time digest and the module source its module-import-time
+  digest; source provenance records the resolved import origin. These checks do not prove continuous
+  disk immutability between checkpoints or attest a runtime Python code object/monkeypatch. Torch, Quimb,
+  and SciPy distribution versions are required. The authoritative lock is hash-bound only:
+  `authoritative_lock_conformance_checked=false` and `claims_reproducible_environment=false`. Runtime
+  provenance records `torch.version.cuda` as the PyTorch build CUDA version and explicitly leaves the
+  loaded CUDA runtime `not_attested`. The full seal is revalidated after MCWF and again after staging
+  fsync immediately before the final freshness check and atomic rename. Stage creation/I/O/removal,
+  final rename, and parent fsync remain anchored to the held parent/stage fds. The destination entry is
+  required to match the sealed stage inode immediately after rename and again after parent fsync, after
+  which the pathname-parent identity is rechecked before return. It
+  writes the exact,
+  evaluator-truth-free `axis1_mcwf_mps_carrier_execution.json`; its v1 artifact entry binds file
+  SHA-256, schema, internal content hash, `contains_carrier_program_summary=true`, and explicit
+  restricted-policy, Record-execution, and Carrier-program-summary JSON locators. It separately
+  writes the complete sealed, evaluator-truth-free
+  `axis1_mcwf_mps_carrier_program.json`; that artifact entry binds file SHA-256, schema, internal
+  content hash, and `contains_complete_sealed_program=true`, while
+  `metric_and_gate_policy.program_evidence_locator` points to the file. The public result exposes this
+  second artifact as `carrier_program_evidence`. Offline inspection of the public standalone bundle
+  can check the reported policy metric values, recompute the gate/confidence-interval and acceptance
+  algebra, and verify file/content hashes and locators. The bundle intentionally excludes the
+  evaluator-only declared-basis level law and dense-oracle distribution, so it cannot independently
+  regenerate the multilevel declared-basis TV from raw distributions or fully reproduce the evaluator
+  verdict. The complete direct child must not be persisted in this public bundle. The manifest also
+  binds the sealed layout, any emitted `.b8`
+  names/widths/hashes, run seed/dtypes, package-tree/Git/source identity including resolved import
+  origin, environment-lock identity and its hash-only scope, GPU name/UUID/compute capability, NVIDIA
+  driver, PyTorch build CUDA version, explicit loaded-runtime `not_attested` status, and publication
+  status/protocol. At every seal/revalidation checkpoint, each required staged file is opened through
+  the stage fd with `O_NOFOLLOW|O_NONBLOCK`, required to
+  be regular, and sealed by `st_dev`, `st_ino`, `st_mode`, `st_size`, `st_mtime_ns`, `st_ctime_ns`, and
+  a non-null 64-hex SHA-256; hashing and file fsync use that same open artifact fd. JSON files
+  must match canonical-payload expected hashes, while optional `.b8` files must match chunked expected
+  hashes computed from the in-memory binary rows. The sample manifest is written and fsynced last, then
+  joins the exact sealed whitelist. The final set contains only the two required evidence JSONs, the
+  manifest, and the declared nonzero-width `.b8` files; missing files, symlinks, substitutions, extras,
+  or evaluator-truth files fail closed. File and stage-directory fsync are required. The exact set is
+  revalidated after stage fsync and immediately before rename, then rechecked through the open stage fd
+  after rename and again after parent fsync. Following that final full artifact check, the writer
+  revalidates the sealed build/source/environment/runtime identity, runs a metadata-only exact-set
+  recheck, rechecks the published destination inode, and finally verifies the path-visible parent.
+  The manifest remains only `prepared_for_atomic_publication`: it records the actual-target-FS probe,
+  first post-execution seal check, and the policy
+  `exact_regular_files_bound_by_st_dev_st_ino_st_mode_st_size_st_mtime_ns_st_ctime_ns_sha256`, while setting
+  `artifact_file_fsync_required_at_each_seal_checkpoint=true` and
+  `artifact_file_fsync_success_attested_in_bundle=false`. It also sets
+  `staging_directory_fsync_success_attested_in_bundle`,
+  `staged_artifact_set_revalidation_success_attested_in_bundle`,
+  `published_artifact_set_recheck_after_rename_success_attested_in_bundle`, and
+  `published_artifact_set_recheck_after_parent_fsync_success_attested_in_bundle` to false. It
+  declares `sealed_identity_revalidation_required_after_execution=true`,
+  `sealed_identity_revalidation_required_before_atomic_rename=true`,
+  `sealed_identity_revalidation_required_after_final_artifact_recheck=true`, and
+  `published_destination_identity_recheck_after_final_artifact_recheck_required=true`, but keeps their
+  success-attestation fields false. It likewise declines to attest atomic rename, either earlier
+  destination-inode check, or parent-fsync success. Only successful writer return
+  confirms those later steps; the bundle does not self-attest them. If the no-replace wrapper actually
+  moves the sealed stage and then raises, the writer detects the stage at the destination, preserves it,
+  and propagates the exception. A parent-fsync, destination-inode, or final pathname identity failure
+  after rename likewise preserves the published directory and raises without path cleanup. Only a
+  still-owned unpublished private stage is eligible for best-effort cleanup; cleanup errors are
+  suppressed in favor of the original failure and may leave that private stage behind. Detector-only
+  and observable-only output are supported and omit the zero-width side's optional `.b8`.
+  A missing parent/lock, failed target-FS probe, sealed-identity drift, no-measurement schedule,
+  blocked child, double-zero-width output, noncanonical histogram/projection, over-budget request, or
+  incomplete/unaccepted evidence fails closed. This is a bounded canonical grouped output interface
+  only: it does not preserve trajectory
+  order and does not claim DEM/decoder integration, faithfulness, calibration, production
+  scalability, or a complete QEC Record law.
 - Axis-1 restricted QT/MPS execution:
   `axis1_qt_mps_restricted_execution_manifest(...)` is the first executable
   quimb/torch-CUDA computational-subspace MPS slice for carrier programs with
@@ -582,6 +689,7 @@ Current slice:
   - `error_coupling_simulator.frontend.mcwf_mps_state_record_execution.v8`
   - `error_coupling_simulator.frontend.mcwf_mps_evaluator_only_diagnostics.v2`
   - `error_coupling_simulator.frontend.mcwf_mps_restricted_acceptance_policy.v7`
+  - `error_coupling_simulator.frontend.mcwf_mps_record_sample_summary.v1`
   - `error_coupling_simulator.certify.mcwf_dynamics_artifact_reference_certification.v2`
 
   The normal and blocked MCWF policies use the same v7 policy schema. The direct QT and MCWF
@@ -865,6 +973,13 @@ Representability boundary:
   first slice it delegates to fixed-microstep MCWF/MPS execution when
   supported, and otherwise fails closed with structured execution evidence. It
   performs no dense, qutip-cuquantum, or restricted QT/MPS fallback.
+- `representability="axis1_mcwf_mps_grouped_canonical_record_batch_b8_no_original_trajectory_order"`
+  means the dedicated MCWF output wrapper authenticated a completed measured Carrier child accepted
+  for restricted execution and
+  expanded its exact counts into canonical grouped detector/observable rows. The child remains a
+  non-emitting evidence owner; the wrapper alone owns the bounded `RecordBatch`/`.b8` claim. This
+  representability class explicitly denies original trajectory order, DEM/decoder integration,
+  faithfulness, and production scalability.
 - `representability="axis1_mcwf_mps_fixed_microstep_local_dims_state_record"` means
   `axis1_mcwf_mps_state_record_execution_manifest(...)` executed sampled
   fixed-microstep MCWF trajectories on a local-dimension MPS carrier. Execution

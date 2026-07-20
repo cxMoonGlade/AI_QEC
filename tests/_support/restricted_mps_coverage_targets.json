@@ -30,6 +30,8 @@
     "tests/test_mps_mcwf_measurement_semantics.py",
     "tests/test_mcwf_operator_reference.py",
     "tests/test_axis1_mcwf_dense_certification.py",
+    "tests/test_mcwf_carrier_record_output_units.py",
+    "tests/test_mcwf_carrier_record_output_gpu.py",
     "tests/test_simulator_axis1_schedule.py",
     "tests/test_collective_decay_finite_step_guard.py"
   ],
@@ -96,6 +98,9 @@
     "axis1_qt_mps_restricted_evidence_bundle_manifest",
     "axis1_qt_mps_resource_probe_manifest",
     "axis1_carrier_execution_manifest",
+    "axis1_mcwf_mps_record_batch",
+    "write_axis1_mcwf_mps_record_samples",
+    "_materialize_mcwf_carrier_record_batch",
     "Axis1CarrierTerm.__post_init__",
     "Axis1CarrierTerm.to_manifest",
     "Axis1CarrierSubstep.to_manifest",
@@ -431,6 +436,30 @@
       "module": "src/error_coupling_simulator/frontend/axis1_carrier_execution.py",
       "unit": "axis1_carrier_execution_manifest",
       "qualname": "axis1_carrier_execution_manifest",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "axis1_carrier_execution",
+      "module": "src/error_coupling_simulator/frontend/axis1_carrier_execution.py",
+      "unit": "axis1_mcwf_mps_record_batch",
+      "qualname": "axis1_mcwf_mps_record_batch",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "axis1_carrier_execution",
+      "module": "src/error_coupling_simulator/frontend/axis1_carrier_execution.py",
+      "unit": "write_axis1_mcwf_mps_record_samples",
+      "qualname": "write_axis1_mcwf_mps_record_samples",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "axis1_carrier_execution",
+      "module": "src/error_coupling_simulator/frontend/axis1_carrier_execution.py",
+      "unit": "_materialize_mcwf_carrier_record_batch",
+      "qualname": "_materialize_mcwf_carrier_record_batch",
       "target": {"statement": 1.0, "branch": 1.0},
       "exemptions": []
     },

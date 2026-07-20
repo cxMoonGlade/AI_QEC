@@ -121,7 +121,7 @@ missing test files, duplicate units, stale qualified names, unclassified public 
 unsupported exemption. JSON registries are configuration, not measured test records; measured
 results must be regenerated from the current checkout.
 
-`restricted_mps_coverage_targets.json` reconciles thirteen modules and registers 56 canonical units:
+`restricted_mps_coverage_targets.json` reconciles thirteen modules and registers 59 canonical units:
 53 public units plus three private Record-payload authentication helpers. Every unit has 100%
 statement and branch coverage with no exemptions. The authoritative
 mutation topology is `restricted_mps_mutation_suite.json`: seven CPU-only mechanics/schema modules
@@ -236,7 +236,7 @@ parsing, the hand-written LSB-first Record domain and XOR projection, every sche
 and a static prohibition on late key/target registration inside the two MPS executors. It also
 directly registers and corrupts `_validate_axis1_projected_record_payload`,
 `_require_exact_text_list`, and `_require_exact_binary_record_matrix`; these are the three named
-private authentication units in the 56-unit registry.
+private authentication units in the 59-unit registry.
 `test_mps_phase3_record_layout.py` is the GPU behavior gate for MPS-004/005/012/013. It requires each
 Adapter to parse the sealed layout exactly once, exercises QT two-boundary Records, MCWF grouped
 per-target reset masks, the public mixed-X/Z ordered keys/targets/bases/reset contract, the X-reset
@@ -297,6 +297,101 @@ a real public auto-routed MCWF child with ordered X/Z measurements. Together wit
 availability for the restricted MCWF slice; it does not establish production scalability or a complete
 QEC Record backend.
 
+`test_mcwf_carrier_record_output_units.py` is the CPU contract for the bounded
+Carrier-to-`RecordBatch`/`.b8` adapter. It requires exact integer-count expansion in canonical grouped
+support order with no second draw, immutable `uint8` detector/observable rows, completed evidence
+accepted for restricted execution only, sealed mixed-X/Z XOR
+projection without `s_to_det`, explicit loss of original trajectory order, the
+`mcwf_mps_record_sample_summary.v1` content-hashed manifest, little-endian `.b8`, and cleanup of only
+an unpublished private stage on pre-rename rejection. Its allocation tripwire proves the conservative
+`4 * N * (D + O)` byte guard fires before
+CUDA or output allocation through public parameter `max_record_array_payload_bytes` (default constant
+`AXIS1_MCWF_MPS_RECORD_MAX_ARRAY_PAYLOAD_BYTES == 512 MiB`). The test pins this as an incremental
+NumPy Record-array payload bound only, covering preallocated `uint8` rows plus current `RecordBatch`
+binary-validation/freezing temporaries and excluding Carrier/Python support, canonical JSON,
+array/allocator overhead, build/publication provenance, and process RSS. A separate public preflight
+test drives `max_record_support_cells` below the static histogram/layout cell estimate and proves that
+independent guard also fires before MCWF/CUDA. No-`np.repeat` and aggregate-projection tripwires protect
+the bounded fill and streaming strict-order/row-wise-XOR validation.
+Its corruption table rejects malformed counts/probabilities/support order, duplicated rows, wrong
+projections, evaluator-only truth, unaccepted evidence, and a rehashed self-consistent forged law. The
+private binding is tested only as same-call consistency across Carrier/direct/policy/Record-law hashes;
+it is not asserted as cryptographic authenticity or replay protection. Detector-only and
+observable-only fixtures pin legitimate zero-width sides and optional `.b8` omission, while the
+double-zero case remains rejected.
+The v1 manifest contract pins the exact evaluator-truth-free
+`axis1_mcwf_mps_carrier_execution.json` and binds its file SHA-256, schema, internal content hash,
+`contains_carrier_program_summary=true`, and explicit
+restricted-policy/Record-execution/Carrier-program-summary locators. It separately pins the
+complete sealed, evaluator-truth-free `axis1_mcwf_mps_carrier_program.json`, its file SHA-256/schema/
+internal content hash and `contains_complete_sealed_program=true`, plus the metric/gate
+`program_evidence_locator` and public result's `carrier_program_evidence` path. It also binds the sealed layout,
+optional `.b8` names/widths/hashes, run seed/dtypes, and the sealed build/source/environment/runtime
+identities. Tests pin the source's resolved import origin, equality to the package-import/module-import
+disk digests at every validation checkpoint, and `claims_runtime_code_object_attestation=false`; they do
+not claim continuous immutability between checkpoints. Source or package-tree drift fails before MCWF.
+Git provenance requires a full 40/64-hex `git rev-parse HEAD` and fails closed if unavailable or invalid.
+Required Torch/Quimb/SciPy distribution versions also fail
+closed before execution when unavailable. The environment lock is asserted as hash-bound only, with
+`authoritative_lock_conformance_checked=false` and `claims_reproducible_environment=false`; GPU
+provenance names `torch.version.cuda` as the PyTorch build CUDA version and leaves the loaded runtime
+`not_attested`.
+At every seal/revalidation checkpoint, each required staged artifact must be opened through the stage
+fd with `O_NOFOLLOW|O_NONBLOCK`, remain a regular file, and be sealed by
+`st_dev`/`st_ino`/`st_mode`/`st_size`/`st_mtime_ns`/`st_ctime_ns`/non-null 64-hex SHA-256. Hashing and
+file fsync must use that same artifact fd. JSON files are compared to canonical-payload
+expected hashes; `.b8` files are compared to chunked hashes of the in-memory binary Record rows. The
+manifest is written last and is itself added to the exact whitelist. Missing or symlinked required
+files, post-hash tampering, and extra/evaluator-truth files are RED. The exact set is revalidated after
+stage-directory fsync and again before rename, then rechecked through the retained stage fd after rename
+and after parent fsync. Exact manifest-key assertions require
+`staging_directory_fsync_required_before_rename=true`,
+`staging_directory_fsync_success_attested_in_bundle=false`,
+`staged_artifact_set_policy=exact_regular_files_bound_by_st_dev_st_ino_st_mode_st_size_st_mtime_ns_st_ctime_ns_sha256`,
+`artifact_file_fsync_required_at_each_seal_checkpoint=true`,
+`artifact_file_fsync_success_attested_in_bundle=false`,
+`staged_artifact_set_revalidation_required_after_stage_fsync=true`,
+`staged_artifact_set_revalidation_success_attested_in_bundle=false`,
+`published_artifact_set_recheck_after_rename_required=true`,
+`published_artifact_set_recheck_after_rename_success_attested_in_bundle=false`,
+`published_artifact_set_recheck_after_parent_fsync_required=true`, and
+`published_artifact_set_recheck_after_parent_fsync_success_attested_in_bundle=false`.
+After the post-parent-fsync full artifact recheck, tests require sealed-identity revalidation, a
+metadata-only exact-set recheck, a final destination-inode recheck, and then the path-visible parent
+check. Exact fields are `sealed_identity_revalidation_required_after_execution=true`,
+`sealed_identity_revalidation_required_before_atomic_rename=true`,
+`sealed_identity_revalidation_required_after_final_artifact_recheck=true`,
+`sealed_identity_revalidation_success_attested_in_bundle=false`,
+`published_destination_identity_recheck_after_final_artifact_recheck_required=true`, and
+`published_destination_identity_recheck_after_final_artifact_recheck_success_attested_in_bundle=false`.
+Publication freezes an absolute lexical destination, so a later cwd change cannot retarget it.
+Preflight requires the target parent to pre-exist, opens and holds its directory fd, seals its
+`st_dev`/`st_ino`, and exercises both sacrificial collision-preservation and successful
+`RENAME_NOREPLACE` legs on the actual target filesystem before MCWF. Missing
+parent/lock/primitive/probe tests fail before execution; post-execution drift tests cover parent
+replacement, environment-lock mutation, and fresh build/source/runtime identity changes. The same seal
+must pass again after staging fsync immediately before rename. Stage creation/I/O/removal, rename, and
+parent fsync are exercised relative to the held parent/stage fds. Adversarial injections require the
+destination inode to equal the sealed stage immediately after rename and again after parent fsync, then
+require the path-visible parent to retain its sealed identity. Manifest assertions pin
+`prepared_for_atomic_publication`, the passed target-FS probe, required-but-not-self-attested identity
+checks, and false rename, destination-identity, artifact-recheck, and parent-fsync success fields.
+Manifest-last, unpublished
+stage cleanup, concurrent-destination preservation, and stage-entry substitution tests are also pinned.
+If the no-replace wrapper completes the rename and then raises, the writer must detect and preserve the
+published sealed stage while propagating the exception. Any later destination-identity, parent-identity,
+or parent-fsync failure likewise preserves the published directory, raises, and makes no published-path
+cleanup attempt. Successful writer return is the only durability confirmation; the bundle never
+self-attests those post-manifest steps. Unpublished-stage cleanup is an ownership-bounded, best-effort
+attempt rather than a durability claim; cleanup errors may leave the private stage behind while the
+original failure propagates.
+`test_mcwf_carrier_record_output_gpu.py` runs the same public surface against a real completed and
+accepted CUDA MCWF Carrier child with mixed X/Z measurements, checks that the child keeps
+`claims_b8_artifact=false` while the writer summary owns `true`, and requires a no-measurement run to
+fail without artifacts. These tests establish only the bounded grouped canonical Record interface.
+They do not recover original trajectory order or establish DEM/decoder integration, faithfulness,
+calibration, production scalability, or a complete QEC Record law.
+
 `test_axis1_mcwf_convergence.py` is the restricted MCWF X/Z Record-law convergence gate, not an
 Axis-1 channel gate. A hand-written scalar recurrence over the byte-pinned two-qubit T1 fixture fixes
 joint/Z and X-after TV at `m=10,20,40,80`, requires monotone approximate bias halving on that grid,
@@ -320,7 +415,7 @@ contracts, MCWF dense certification, Carrier auto-routing, and legal index-proto
 The hostile behavior matrix is GREEN in its focused checks. No static pytest count is authoritative:
 the measured result must be regenerated from the current checkout and its exact command/report.
 
-The restricted-MPS coverage gate registers 56 canonical units and requires every unit to reach statement
+The restricted-MPS coverage gate registers 59 canonical units and requires every unit to reach statement
 and branch coverage 1.0 with no exemption. The release-retained clean-HEAD log path is
 `outputs/simulator_validation/logs/mcwf_restricted_mps_coverage_clean_head_20260719.log`; a PASS there is
 current only when generated after the final commit, and any later relevant source, test, registry, or

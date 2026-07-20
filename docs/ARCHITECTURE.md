@@ -26,6 +26,7 @@ PEPS remains the trajectory-carrier frontier, and PEPO remains the retained rese
 | `carrier/pepo/` | two-dimensional density-matrix PEPO | retained `RESEARCH`; not canonical record output |
 | `carrier/peps/` | single-wire two-dimensional PEPS trajectories | `RESEARCH`; full-record truncation faithfulness open |
 | `frontend/` | circuit IR, code specs, compiler, schedules, bounded executors, artifact emission, optional DEM/decoder reduction | one record contract, multiple explicit execution routes |
+| `frontend/axis1_carrier_execution.py` | validated Carrier aggregation plus the bounded MCWF grouped `RecordBatch`/`.b8` output wrapper | canonical X/Z detector/observable records only for completed measured MCWF evidence accepted for restricted execution; no original trajectory order, DEM, decoder, or scaling promotion |
 | `frontend/axis1_record_layout.py` | immutable schedule-derived measurement/Record schema shared by restricted QT/MPS and MCWF/MPS Adapters | frontend schema owner, not a carrier or an independent physical oracle |
 | `certify/` | evaluator-only scoring against independent references; `axis1_mps.py` owns restricted-MPS dense References, metrics, and final acceptance | formal implementation evidence, not hardware truth; execution mechanics do not self-certify |
 | `quantum_bath/` | bounded pseudomode-enlarged GKSL comparisons | feasibility-only `RESEARCH`; not production |
@@ -57,6 +58,9 @@ Restricted MPS verification route
     -> precomputed XOR projection
     -> evaluator-side comparison and acceptance in certify/axis1_mps.py
     -> restricted execution/evidence manifest
+    -> completed measured MCWF accepted for restricted execution only: same-call-bound exact-count expansion in grouped support order
+       -> canonical detector/observable RecordBatch
+       -> Carrier execution JSON + complete sealed-program JSON + optional detection_events.b8/obs_flips_actual.b8 + v1 sample summary
 
 Leakage research routes
   external XZZX schedule + explicit qutrit channel/run specification
@@ -86,6 +90,86 @@ or document must not draw that missing edge as implemented.
   `min(2**measurement_width, trajectory_count)`, and both fail closed before CUDA. Seed and dense
   comparisons align the union of Record supports with missing probabilities set to zero. This
   changes RNG draw order, so old per-trajectory bit identity is not an Interface requirement.
+- The MCWF Carrier child remains an evidence manifest and reports `claims_b8_artifact=false`. The
+  public `axis1_mcwf_mps_record_batch(...)` and
+  `write_axis1_mcwf_mps_record_samples(...)` wrappers own the bounded canonical output seam. They
+  validate a completed measured child accepted for restricted execution, require a compiler-sealed
+  X/Z XOR projection, and expand its
+  sorted unique histogram by exact counts without another sampling draw. The result is exchangeable
+  grouped output; the original trajectory order is explicitly unavailable. Projected detector rows
+  never pass through raw-syndrome `s_to_det`. A private same-call consistency binding rechecks the
+  direct child, Carrier, policy, and Record-law hashes without seeded replay; it is neither a
+  cryptographic authenticity boundary nor a replay boundary. The materializer streams strict-order
+  and row-wise sealed-XOR checks and canonical hashes without an aggregate projection or support-sized
+  `np.repeat` buffer. Before CUDA, `max_record_support_cells` independently caps the static
+  histogram/layout cell estimate. The separate `max_record_array_payload_bytes` guard, whose default
+  is `AXIS1_MCWF_MPS_RECORD_MAX_ARRAY_PAYLOAD_BYTES == 512 MiB`, bounds only the incremental NumPy
+  Record-array payload at `4 * N * (D + O)` bytes: preallocated `uint8` rows plus current
+  `RecordBatch` validation/freezing temporaries. It excludes Carrier/Python support, canonical JSON,
+  array/allocator overhead, build/publication provenance, and whole-process RSS.
+  The writer freezes an absolute lexical destination and requires a fresh destination under an
+  already-existing parent. Before MCWF it opens and holds the parent directory fd, seals its
+  `st_dev`/`st_ino`, environment-lock path/hash, freshly recomputed build/package-tree identity,
+  required full 40/64-hex Git HEAD,
+  source hash, and environment/runtime identity, and a sacrificial probe relative to that fd on the
+  actual target filesystem must pass both collision and successful
+  `renameat2(..., RENAME_NOREPLACE)` cases. The disk package tree/source must still equal their
+  package-import/module-import-time disk digests at each validation checkpoint, and source provenance
+  includes the resolved import origin. This does not prove continuous disk immutability between
+  checkpoints or attest runtime Python code objects/monkeypatches. Required Torch, Quimb, and SciPy
+  distribution versions must exist. The environment lock is hash-bound only, with
+  `authoritative_lock_conformance_checked=false` and `claims_reproducible_environment=false`. Runtime
+  provenance labels `torch.version.cuda` as the PyTorch build CUDA version and leaves the loaded CUDA
+  runtime `not_attested`. It revalidates the complete seal after MCWF and after staging fsync. Stage
+  creation/I/O/removal, final rename, and parent fsync remain anchored to the held parent/stage fds. The
+  destination entry must match the sealed stage inode immediately after rename and again after parent
+  fsync; the pathname-parent identity is then rechecked before return. It writes the exact
+  evaluator-truth-free `axis1_mcwf_mps_carrier_execution.json`; its artifact entry binds file SHA-256,
+  schema, internal content hash, `contains_carrier_program_summary=true`, and explicit
+  restricted-policy, Record-execution, and Carrier-program-summary locators. It separately writes
+  the complete sealed, evaluator-truth-free
+  `axis1_mcwf_mps_carrier_program.json`; its artifact entry binds file SHA-256, schema, internal
+  content hash, and `contains_complete_sealed_program=true`, and
+  `metric_and_gate_policy.program_evidence_locator` points to that file.
+  Detector-only or observable-only `.b8` output is valid and the zero-width side is omitted; only the
+  double-zero case fails. At every seal/revalidation checkpoint, each declared staged file is opened
+  via the stage fd with `O_NOFOLLOW|O_NONBLOCK`, required to
+  be regular, and sealed by
+  `st_dev`/`st_ino`/`st_mode`/`st_size`/`st_mtime_ns`/`st_ctime_ns`/SHA-256; hashing and file fsync use
+  that same open artifact fd. Canonical JSON payloads and chunked
+  in-memory `.b8` rows provide independent expected hashes. The manifest is written last and then joins
+  the exact whitelist; missing, symlinked, substituted, extra, or evaluator-truth files fail closed.
+  File and stage-directory fsync are required. The exact set is revalidated after stage fsync and just
+  before rename, then rechecked through the still-open stage fd after rename and after parent fsync.
+  After the final full artifact recheck, sealed build/source/environment/runtime identity is revalidated,
+  a metadata-only exact-set check runs, the destination inode is checked again, and only then is the
+  path-visible parent identity checked for return.
+  That pre-rename manifest is only `prepared_for_atomic_publication`: it records the target-FS probe and
+  first post-execution seal check, declares
+  `staged_artifact_set_policy=exact_regular_files_bound_by_st_dev_st_ino_st_mode_st_size_st_mtime_ns_st_ctime_ns_sha256`
+  and `artifact_file_fsync_required_at_each_seal_checkpoint=true`. It also declares
+  `sealed_identity_revalidation_required_after_execution=true`,
+  `sealed_identity_revalidation_required_before_atomic_rename=true`,
+  `sealed_identity_revalidation_required_after_final_artifact_recheck=true`, and
+  `published_destination_identity_recheck_after_final_artifact_recheck_required=true`, while all
+  corresponding success attestations, artifact/stage/parent-fsync success, rename success, and earlier
+  destination-inode success remain false. Successful writer return is the only durability confirmation.
+  If the no-replace wrapper performs the rename and then raises, the
+  writer detects the sealed stage at the destination, preserves it, and propagates the exception. A
+  parent-fd fsync, destination-inode, or final pathname identity failure after rename also preserves the
+  published directory and propagates the error; no published-path cleanup is attempted. Only still-owned
+  unpublished staging is eligible for best-effort cleanup, which may leave a private stage behind if
+  cleanup itself fails. The v1 content hash
+  also binds layout names/XOR columns, any optional `.b8`
+  names/widths/hashes, run configuration, seed/dtypes, package-tree/Git/source and environment-lock
+  identity including the resolved import origin, GPU name/UUID/compute capability, NVIDIA driver,
+  PyTorch build CUDA version, explicit loaded-runtime `not_attested` status, and publication
+  status/protocol. Missing parent/lock, failed target-FS probe, sealed-identity drift, no-measurement,
+  blocked, noncanonical, over-budget, incomplete, or unaccepted evidence fails closed.
+  The v1 sample
+  summary preserves execution/certification/diagnostic/acceptance status and owns
+  `claims_b8_artifact=true`; it claims neither DEM/decoder integration, complete-QEC behavior, nor
+  production scalability.
 - PEPO is retained for current density-matrix research and exact bounded comparisons.
 - PEPS is the full-geometry trajectory frontier; its strict-target FET entropy equality currently
   follows an all-identity fallback, so the non-degeneracy gate is RED and finite-truncation record

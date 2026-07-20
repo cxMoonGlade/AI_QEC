@@ -5592,6 +5592,25 @@ def test_mcwf_policy_rejects_corrupted_record_metric_budget(
         _mcwf_policy(certification=certification)
 
 
+def test_mcwf_policy_rejects_gross_decision_gate_below_strict() -> None:
+    trajectory_count = 10**14
+    sampling_halfwidth = 0.5 * math.sqrt(
+        math.log(200.0) / (2.0 * trajectory_count)
+    )
+    certification = _mcwf_metric_certification(
+        gross_gate=0.0,
+        trajectory_count=trajectory_count,
+        sampling_finite_shot_halfwidth=sampling_halfwidth,
+        gross_effective_gate_including_sampling_ci=sampling_halfwidth,
+    )
+
+    with pytest.raises(ValueError, match="gross decision gate"):
+        _mcwf_policy(
+            certification=certification,
+            trajectory_count=trajectory_count,
+        )
+
+
 def _canonical_mcwf_no_measurement_execution() -> dict[str, Any]:
     return {
         "evaluator_only_diagnostics": _mcwf_evaluator_only_diagnostics(),

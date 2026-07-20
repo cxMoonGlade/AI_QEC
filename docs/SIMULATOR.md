@@ -155,6 +155,134 @@ The current routes are deliberately not one universal executor:
     cannot be promoted to a CPTP Choi/process metric. MCWF channel-process gates and their former
     comparison identity are not part of the current policy; only registered X/Z Record metrics may
     authorize restricted MCWF evidence.
+    Only completed, measured MCWF Carrier evidence accepted for restricted execution has this separate
+    bounded canonical-output seam:
+    `axis1_mcwf_mps_record_batch(...)` returns a detector/observable `RecordBatch`, and
+    `write_axis1_mcwf_mps_record_samples(...)` writes whichever of `detection_events.b8` and
+    `obs_flips_actual.b8` has nonzero width, the Carrier and complete sealed-program evidence JSONs,
+    and a
+    `error_coupling_simulator.frontend.mcwf_mps_record_sample_summary.v1` manifest. The
+    restricted Carrier child continues to report `claims_b8_artifact=false`; only the writer-owned
+    sample manifest reports `claims_b8_artifact=true`. The wrapper validates the child and its
+    sealed X/Z XOR projection, then expands the canonical sorted support by exact integer counts.
+    A private same-call consistency binding is derived beside that same validated direct MCWF
+    execution and rechecks the Carrier, direct-child, policy, and Record-law hashes. It prevents the
+    adapter from accepting a separately supplied or subsequently changed Carrier within that call;
+    it is not a cryptographic authenticity boundary or a replay boundary, and it does not rerun the
+    seeded trajectories.
+    It draws no second sample, does not route already projected rows through `s_to_det`, and records
+    that the original trajectory order was not retained; rows are grouped in canonical support
+    order. The materializer validates strict support order and each sealed X/Z XOR row in a streaming
+    pass and computes canonical hashes incrementally; it does not construct an aggregate projection
+    or a support-sized `np.repeat` buffer. Two independent static guards run before CUDA:
+    `max_record_support_cells` caps the estimated histogram/layout support cells, while
+    `max_record_array_payload_bytes` (default
+    `AXIS1_MCWF_MPS_RECORD_MAX_ARRAY_PAYLOAD_BYTES == 512 MiB`) caps exactly
+    `4 * trajectory_count * (detector_width + observable_width)` bytes. The latter is only the
+    incremental NumPy Record-array payload bound for the preallocated `uint8` rows and current
+    `RecordBatch` binary-validation/freezing temporaries. It excludes the already resident Carrier,
+    Python support/layout objects, canonical JSON hashing, array headers and allocator overhead,
+    build provenance, publication buffers, and whole-process RSS.
+    The writer freezes `out_dir` as an absolute lexical path and requires a fresh destination whose
+    parent directory already exists. Before MCWF it opens and holds that parent's directory fd, seals
+    its `st_dev`/`st_ino`, the authoritative environment-lock path/hash, freshly recomputed
+    build/package-tree identity, required full 40/64-hex Git HEAD, source-file hash, and
+    environment/runtime identity. A sacrificial
+    probe relative to the held fd on that actual target filesystem must demonstrate both collision
+    preservation and successful Linux `renameat2(..., RENAME_NOREPLACE)` before MCWF begins. The disk
+    package tree must match the package-import-time digest at each validation checkpoint, and this
+    module's source must match its module-import-time digest at those checkpoints; the source identity
+    records the resolved import origin as well as its package-relative name and SHA-256. These checks do
+    not prove that disk content was continuously unchanged between checkpoints, nor do they attest the
+    runtime Python code object or monkeypatches. Required Torch, Quimb, and SciPy distribution
+    versions must be available. The environment-lock field binds only the lock hash; it records
+    `authoritative_lock_conformance_checked=false` and `claims_reproducible_environment=false` rather
+    than claiming lock conformance or a reproducible environment. Runtime provenance names
+    `torch.version.cuda` as the PyTorch build CUDA version; the loaded CUDA runtime version is explicitly
+    `not_attested`. Missing parent/lock, identity failure, dependency identity, or probe failure closes
+    the writer before execution. The complete seal is revalidated after MCWF and again after
+    staged-file/directory fsync immediately before the final destination-freshness check and atomic
+    rename. Staging I/O is anchored through a stage fd; stage creation/removal, final rename, and parent
+    fsync remain relative to the same held parent fd. The published destination entry must match the
+    sealed stage inode immediately after rename and again after parent fsync, and the pathname-to-parent
+    identity is then checked before a result can return. It persists the exact evaluator-truth-free Carrier
+    manifest as
+    `axis1_mcwf_mps_carrier_execution.json`; its artifact entry binds the file SHA-256, schema,
+    internal content hash, `contains_carrier_program_summary=true`, and locators for
+    `#/restricted_acceptance_policy`, `#/record_execution`, and the Carrier-program summary at
+    `#/carrier_program`. The separate
+    `axis1_mcwf_mps_carrier_program.json` persists the complete sealed `axis1_carrier_program`
+    manifest without evaluator truth. Its artifact entry binds file SHA-256, schema, internal content
+    hash, and `contains_complete_sealed_program=true`, while
+    `metric_and_gate_policy.program_evidence_locator` points to that file; the result exposes it as
+    `carrier_program_evidence`. This public standalone bundle is sufficient to inspect the reported
+    policy metric values, recompute its gate/confidence-interval and acceptance algebra, and verify
+    every persisted file/content hash and locator. It deliberately omits the evaluator-only
+    declared-basis level law and dense-oracle distribution, so an offline reader cannot independently
+    recompute the multilevel declared-basis TV from raw distributions or claim a fully reproduced
+    evaluator verdict. The full direct child is never a standalone artifact and must not be written
+    into this public bundle. Detector-only and observable-only outputs are valid:
+    the zero-width side omits its optional `.b8`, while a double-zero output is rejected.
+    At every seal/revalidation checkpoint, each required staged artifact is opened through the sealed
+    stage fd with `O_NOFOLLOW|O_NONBLOCK`, required to be a
+    regular file, and sealed by `st_dev`, `st_ino`, `st_mode`, `st_size`, `st_mtime_ns`, `st_ctime_ns`,
+    and a non-null 64-hex SHA-256; hashing and file fsync use that same open artifact fd. JSON
+    artifacts must match an independently streamed canonical-JSON expected hash; each `.b8` must match
+    a chunked expected hash computed from the in-memory binary Record rows, rather than trusting a
+    post-write pathname hash. The manifest is written last, fsynced, sealed, and included in the final
+    exact artifact whitelist. That whitelist admits only the two required JSON evidence files, the
+    manifest, and whichever nonzero-width `.b8` files are declared; missing files, symlinks,
+    substitutions, extras, and evaluator-truth files fail closed. Publication requires file fsync and
+    stage-directory fsync, then revalidates the exact sealed artifact set after stage fsync and again
+    immediately before rename. The still-open sealed stage fd rechecks the same set after rename and
+    again after parent fsync. After that final full artifact recheck, the writer revalidates the sealed
+    package/source/environment/runtime identity, performs a metadata-only exact-set recheck, then checks
+    the published destination inode one final time before the parent-path identity check and return.
+    Because the manifest is sealed before stage-directory fsync and all later rechecks, it reports
+    `publication_status="prepared_for_atomic_publication"`,
+    `claims_offline_durability_confirmation=false`,
+    `staging_directory_fsync_required_before_rename=true`,
+    `staging_directory_fsync_success_attested_in_bundle=false`,
+    `staged_artifact_set_policy="exact_regular_files_bound_by_st_dev_st_ino_st_mode_st_size_st_mtime_ns_st_ctime_ns_sha256"`,
+    `artifact_file_fsync_required_at_each_seal_checkpoint=true`,
+    `artifact_file_fsync_success_attested_in_bundle=false`,
+    `staged_artifact_set_revalidation_required_after_stage_fsync=true`,
+    `staged_artifact_set_revalidation_success_attested_in_bundle=false`,
+    `published_artifact_set_recheck_after_rename_required=true`,
+    `published_artifact_set_recheck_after_rename_success_attested_in_bundle=false`,
+    `published_artifact_set_recheck_after_parent_fsync_required=true`,
+    `published_artifact_set_recheck_after_parent_fsync_success_attested_in_bundle=false`,
+    `sealed_identity_revalidation_required_after_execution=true`,
+    `sealed_identity_revalidation_required_before_atomic_rename=true`,
+    `sealed_identity_revalidation_required_after_final_artifact_recheck=true`,
+    `sealed_identity_revalidation_success_attested_in_bundle=false`, and
+    `parent_directory_fsync_success_attested_in_bundle=false`,
+    `published_destination_identity_match_success_attested_in_bundle=false`,
+    `published_destination_identity_recheck_success_attested_in_bundle=false`,
+    `published_destination_identity_recheck_after_final_artifact_recheck_required=true`, and
+    `published_destination_identity_recheck_after_final_artifact_recheck_success_attested_in_bundle=false`.
+    It records the pre-MCWF target-filesystem probe, but none of those required post-manifest checks as
+    successful. Only a successful writer return confirms the stage-fsync/exact-set checks, identity
+    revalidations, dirfd-relative `RENAME_NOREPLACE`, first destination/artifact-set checks, parent-fd
+    fsync, final full artifact recheck, identity revalidation, metadata-only recheck, final destination
+    identity check, and parent-path identity check. If
+    the no-replace wrapper performs the rename and then raises, the writer
+    detects the sealed stage at the destination, preserves it, and propagates the exception. Any later
+    post-rename check or parent-fsync failure likewise preserves the published directory and raises
+    without path cleanup. Cleanup is attempted only for a still-owned unpublished private stage and is
+    best-effort; a cleanup failure may leave that private stage behind while the original publication
+    failure still propagates. None of those post-manifest
+    successes are self-attested by the bundle. The v1 manifest content hash also binds the
+    sealed layout, any
+    emitted `.b8` names/widths/hashes, run configuration and seed/dtypes, package-tree/Git/source
+    identity including the resolved import origin, environment-lock hash and its hash-only scope, GPU
+    name/UUID/compute capability, NVIDIA driver, PyTorch build CUDA version, and the explicit
+    loaded-CUDA-runtime `not_attested` status,
+    and the publication protocol/status. No-measurement, blocked, noncanonical, over-budget,
+    incomplete, or unaccepted evidence fails before publication. Execution, certification,
+    diagnostic, and restricted-acceptance status are preserved rather than promoted. This interface
+    adds no DEM, decoder, faithfulness, calibration, production-scalability, or complete-QEC-Record
+    claim.
     MCWF pre-readout `level_records`/counts/probabilities and `jump_family_counts` are hidden
     unraveling diagnostics under `evaluator_only_diagnostics.v2`; they are not emitted binary Records
     or downstream estimator inputs. Their registered semantics are declared-basis local measurement
@@ -186,8 +314,10 @@ The current routes are deliberately not one universal executor:
    against the evidence bundle, policies, claims, verdicts, and hashes. Their process-memory
    counters are authenticated observations from the producing run, not an independent second
    measurement.
-   These are execution/schema guarantees, not a canonical Record backend or a Record-faithfulness
-    upgrade. The direct QT/MPS manifest is v6 and direct MCWF/MPS is v8; QT bond sweep, seed sweep,
+   These are execution/schema guarantees, not a universal canonical Record backend or a
+    Record-faithfulness upgrade. The bounded MCWF grouped-output wrapper above is the only canonical
+    Record output owned by this restricted service. The direct QT/MPS manifest is v6 and direct
+    MCWF/MPS is v8; QT bond sweep, seed sweep,
     evidence bundle, and resource probe are v4. Carrier execution and auto-routed execution are v5,
     the routing decision remains v3, the MCWF restricted-acceptance policy is v7, and the public frozen
     dynamics-artifact reference-certification packet is v2.
