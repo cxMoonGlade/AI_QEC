@@ -123,6 +123,13 @@ The current routes are deliberately not one universal executor:
     an exact-arithmetic raw-candidate-mass bound evaluated in floating point as a deterministic
     preflight; the separately observed runtime residual remains the final acceptance gate. It is not
     a global convergence-order or production error bound.
+    Separately, each forced Carrier, auto-to-MCWF, grouped-Record, or public-direct parent call compiles
+    the Carrier program exactly once and passes the same dictionary through the private execution seam.
+    The exact schedule-manifest hash, program content hash, and backend identity are revalidated before
+    CUDA/dynamics consumption and at the later Carrier, Record-materialization, publication, and return
+    checkpoints. Seeded replay reuses that program but may independently rebuild certified dynamics
+    artifacts. This compile-once claim excludes auto-to-dense and does not establish atomic protection
+    against concurrent or mutate-consume-restore changes between the explicit checkpoints.
     Before execution, the certifier independently reconstructs every
     frozen term, connected-component partition, group support/order, and group gate using its hand-typed
     NumPy definitions plus SciPy `expm`. Declared structural-zero entries must remain exactly zero;
@@ -342,7 +349,9 @@ The current routes are deliberately not one universal executor:
    radii of the finite-step law. This is fixture-bound Record convergence, not a global order or
     linear-channel convergence claim. The isolated worker binds the
    pristine QuTiP commit/tree, installed-distribution content identity, Python/NumPy/SciPy versions,
-   explicit MCWF integrator controls, worker/protocol hashes, and canonical report hash. The v2 worker
+   explicit MCWF integrator controls, worker/protocol hashes, and canonical report hash. The project-side
+   comparison v3 persists the deterministic recurrence, both public `m=40` sample gates, their corruption
+   controls, source/lock scope, and one canonical outer content hash. The v2 worker
    shape is recursively exact-field checked and its semantic invariants are recomputed. Strict JSON
    parsing rejects duplicate/non-finite values and coercible non-integer Record bits/counts; a separate
    transport envelope binds the immutable worker payload plus its construction-time raw-byte hash/size

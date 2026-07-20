@@ -309,7 +309,7 @@ Current schema families include:
 - `error_coupling_simulator.source.finite_rtn_free_induction_diagnostic.v1`.
 - `ai_qec.external_baseline.qutip_mcwf_xz_record.v2`,
   `ai_qec.external_baseline.qutip_mcwf_xz_worker_envelope.v1`, and
-  `ai_qec.external_baseline.qutip_project_mcwf_xz_comparison.v2`.
+  `ai_qec.external_baseline.qutip_project_mcwf_xz_comparison.v3`.
 
 The QuTiP worker v2 report is recursively exact-field validated and its fixture,
 runtime isolation, selected-source identities, solver controls, histograms, reset
@@ -325,6 +325,12 @@ post-replace directory `fsync`, so presence denotes completion of the current
 invocation rather than survival of an earlier artifact. If the post-replace
 durability step fails, the destination is removed and the directory is synced
 again before the error propagates.
+
+The project-side v3 comparison persists the fixture-bound deterministic finite-step recurrence at
+`m=10,20,40,80`, the public `m=40` direct and Carrier sample gates, both verdict-driving recurrence
+corruptions, exact selected-source and project-lock hashes, the explicitly unavailable QuTiP-baseline
+lock/conformance status, and a canonical outer content hash. This does not upgrade the unchanged worker
+v2 or envelope v1 schemas and does not claim a reproducible isolated QuTiP environment.
 
 Only the registered preset facade may bind `complete_for_registered_preset`; caller-supplied nested
 dictionaries cannot self-promote. Manifests are copied to canonical JSON, value-checked against the

@@ -466,6 +466,26 @@
       "dependencies": {"core": ["torch", "quimb", "numpy", "scipy"], "extras": ["gpu-cu130"]},
       "external_inputs": ["Sealed Axis-1 schedule, local dimensions and explicit approximation controls including max_bond=None or a strict positive integer", "CORR_RELAX only when already present in an internal sealed Carrier program; no public source/schedule compiler lowering currently emits it"],
         "outputs": ["Restricted execution/evidence manifest with immutable schedule-derived ordered Record keys/targets/X-Z bases/reset mask, exact full-support or sampled observed-support Record probabilities, declared-basis evaluator semantics, actual-Quimb-split approximation ledger with explicit symmetric-Hamiltonian pass aggregation, and authenticated v2 frozen-dynamics reference packet binding complete term/group coverage plus program/artifact/current-source hashes", "For completed measured MCWF evidence accepted for restricted execution only: bounded canonical grouped detector/observable RecordBatch, evaluator-truth-free axis1_mcwf_mps_carrier_execution.json, complete sealed evaluator-truth-free axis1_mcwf_mps_carrier_program.json, optional detection_events.b8 and obs_flips_actual.b8, and mcwf_mps_record_sample_summary.v1; exact count expansion draws no second sample and does not preserve original trajectory order"],
+        "mcwf_carrier_program_identity_contract": {
+          "compile_once_paths": [
+            "forced_carrier",
+            "auto_to_mcwf",
+            "grouped_record",
+            "public_direct"
+          ],
+          "same_dictionary_reused_by_private_execution": true,
+          "bound_identities": [
+            "exact_schedule_manifest_sha256",
+            "carrier_program_content_hash",
+            "backend_contract"
+          ],
+          "revalidation_scope": "explicit_pre_cuda_dynamics_carrier_record_publication_return_checkpoints",
+          "seeded_replay_reuses_carrier_program": true,
+          "seeded_replay_may_rebuild_dynamics_artifacts": true,
+          "auto_to_dense_in_scope": false,
+          "concurrent_or_mutate_consume_restore_atomicity_claimed": false,
+          "untrusted_external_precompiled_interface_claimed": false
+        },
         "record_publication_contract": {
           "destination_path_semantics": "absolute_lexical",
           "target_parent_must_preexist": true,
@@ -1232,6 +1252,7 @@
       {"from": "axis1_dense", "to": "records", "label": "analog joint-L canonical records"},
       {"from": "fused", "to": "records", "label": "PackedShotBatch"},
       {"from": "peps", "to": "records", "label": "PackedShotBatch; fidelity boundary retained"},
+      {"from": "mps", "to": "records", "label": "accepted measured MCWF grouped RecordBatch/.b8 only"},
       {"from": "records", "to": "interop", "label": "serialize / explicit DEM reduction"},
       {"from": "interop", "to": "decoder", "label": "optional [hw] baseline"},
       {"from": "mps", "to": "restricted_evidence", "label": "restricted manifest/frequencies"},

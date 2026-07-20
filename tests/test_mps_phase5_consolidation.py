@@ -211,6 +211,28 @@ def test_phase5_registry_keeps_mechanics_inside_existing_restricted_route() -> N
         for owner in service["owners"]
     )
     assert "not a registered scientific carrier" in service["note"].lower()
+    assert service["mcwf_carrier_program_identity_contract"] == {
+        "compile_once_paths": [
+            "forced_carrier",
+            "auto_to_mcwf",
+            "grouped_record",
+            "public_direct",
+        ],
+        "same_dictionary_reused_by_private_execution": True,
+        "bound_identities": [
+            "exact_schedule_manifest_sha256",
+            "carrier_program_content_hash",
+            "backend_contract",
+        ],
+        "revalidation_scope": (
+            "explicit_pre_cuda_dynamics_carrier_record_publication_return_checkpoints"
+        ),
+        "seeded_replay_reuses_carrier_program": True,
+        "seeded_replay_may_rebuild_dynamics_artifacts": True,
+        "auto_to_dense_in_scope": False,
+        "concurrent_or_mutate_consume_restore_atomicity_claimed": False,
+        "untrusted_external_precompiled_interface_claimed": False,
+    }
 
 
 def test_phase5_carrier_execution_rejects_unknown_backend_before_cuda(

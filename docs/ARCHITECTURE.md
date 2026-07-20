@@ -90,6 +90,11 @@ or document must not draw that missing edge as implemented.
   `min(2**measurement_width, trajectory_count)`, and both fail closed before CUDA. Seed and dense
   comparisons align the union of Record supports with missing probabilities set to zero. This
   changes RNG draw order, so old per-trajectory bit identity is not an Interface requirement.
+- For MCWF, a forced Carrier, auto-to-MCWF, grouped-Record, or public-direct parent call compiles one sealed
+  Carrier program and passes that same dictionary through its private child/dynamics path. Exact
+  schedule-manifest, program-content, and backend identities are checked before CUDA and at later
+  consumption/publication checkpoints. Seeded replay may independently rebuild dynamics artifacts;
+  auto-to-dense and concurrent transient mutation are outside this compile-once claim.
 - The MCWF Carrier child remains an evidence manifest and reports `claims_b8_artifact=false`. The
   public `axis1_mcwf_mps_record_batch(...)` and
   `write_axis1_mcwf_mps_record_samples(...)` wrappers own the bounded canonical output seam. They
@@ -192,7 +197,9 @@ those contracts. No local state or truncation metric alone establishes record eq
   finite-circuit state/truncation comparator; YASTN is a product-MPS raw candidate-mass comparator;
   QuTiP is a fixed two-qubit continuous-time MCWF X/Z measurement/reset comparator with joint-Record
   and directed X-after statistical gates. Its exact-field v2 worker artifact remains immutable inside
-  a transport envelope; the project side recomputes its semantic gates, rejects duplicate/non-finite
+  a v1 transport envelope; the project-side v3 comparison additionally persists the finite-step
+  recurrence, public `m=40` direct/Carrier sample gates, corruption controls, and canonical outer hash.
+  The project side recomputes its semantic gates, rejects duplicate/non-finite
   JSON, sanitizes inherited environment markers, and uses stale-safe file-plus-directory-`fsync`
   publication. Quimb's three-leg comparison is wiring evidence against
   the same dependency. None establishes a complete QEC Record law, trajectory-by-trajectory

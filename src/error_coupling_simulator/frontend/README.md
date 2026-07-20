@@ -365,9 +365,16 @@ Current slice:
   certifier recomputes the canonical artifact hash from the exact matrices and metadata it inspected, so a
   merely well-formed caller digest cannot authorize the packet. Restricted acceptance requires that packet
   to validate and pass. Carrier and auto routing independently rebuild the artifact authority from the
-  sealed program and caller controls. For an accepted seeded auto route, the outer seam also replays the
-  public direct MCWF call and exact-compares its direct hash, canonical Record summary, and restricted
-  policy. This deliberate replay closes the transitive Record-binding seam but increases runtime and is not
+  sealed program and caller controls. Each forced Carrier, auto-to-MCWF, grouped-Record, and public-direct
+  parent call compiles its Carrier program exactly once and passes that same dictionary through the private
+  execution seam. The parent binds the exact schedule-manifest hash, program content hash, and backend
+  identity, then revalidates them before CUDA/dynamics consumption and at later Carrier/Record/publication
+  checkpoints. For an accepted seeded auto route, the outer seam independently replays the trajectory call
+  on that same precompiled program and exact-compares its direct hash, canonical Record summary, and
+  restricted policy. The replay may rebuild independently certified dynamics artifacts; the compile-once
+  statement covers only the Carrier program compiler, excludes auto-to-dense, and detects serial persistent
+  mutation at explicit checkpoints rather than concurrent or mutate-consume-restore atomicity. This
+  deliberate replay closes the transitive Record-binding seam but increases runtime and is not
   production-scalability evidence.
 
   `CORR_RELAX` is executable only when already encoded in the internal sealed Carrier program. No public
@@ -436,6 +443,7 @@ Current slice:
   no Choi/process metric or retired channel gate can authorize it.
 - Axis-1 MCWF/MPS canonical grouped Record output:
   `axis1_mcwf_mps_record_batch(...)` executes the public MCWF Carrier once,
+  reuses the preflight's exact sealed Carrier-program object rather than compiling a child copy,
   validates its completed measured child accepted for restricted execution, and expands each canonical
   sorted support row by its
   exact integer count into immutable detector/observable `RecordBatch` arrays. A private same-call

@@ -1,13 +1,18 @@
 # Restricted MPS repair and consolidation plan v3 — 2026-07-17
 
+> **Historical phase plan.** Its phase packets remain evidence for the 2026-07-17 implementation
+> sequence, but its current counts, artifact list, and terminal-gate status were superseded on
+> 2026-07-20 by
+> [`HANDOFF_RESTRICTED_MPS_MCWF_2026-07-20.md`](HANDOFF_RESTRICTED_MPS_MCWF_2026-07-20.md).
+
 ## Status and authority
 
-Status: **active phased implementation plan**. Phases 0 through 7 are GREEN at their scoped
-implementation and falsifier boundaries. The repaired current registry contains 51 canonical units
+Historical status at the 2026-07-17 checkpoint: phases 0 through 7 were GREEN at their scoped
+implementation and falsifier boundaries. The repaired registry then contained 51 canonical units
 across twelve Modules with no exemptions: 48 public units and three deliberately registered private
 Record-payload authentication helpers. External comparator execution, the hardened
 engineering benchmark, and one CPU-only immutable-matrix cache have also been exercised; the final
-current-provenance package/map, aggregate acceptance, and mutation reruns remain the closing gates.
+current-provenance package/map, aggregate acceptance, and mutation reruns remained the closing gates.
 On 2026-07-17 the user explicitly authorized
 changes to every `src/**` file directly related to restricted MPS execution, certification,
 contracts, Carrier routing/mechanics, and a future `carrier/mps/**` owner. This does not authorize

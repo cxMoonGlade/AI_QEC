@@ -292,8 +292,15 @@ or evaluator-only fields recursively at every public Carrier summary seam, inclu
 values of the joint label/binary certification. It also recomputes the frozen-dynamics authority from
 sealed inputs and, for accepted seeded evidence, independently replays direct MCWF and exact-binds its
 hash, Record summary, and policy. A self-consistent alternate histogram is therefore rejected even when
-its shape, counts, probabilities, policy, and outer hashes are internally valid. The file also exercises
-a real public auto-routed MCWF child with ordered X/Z measurements. Together with the direct and Carrier tests, this establishes public X/Z
+its shape, counts, probabilities, policy, and outer hashes are internally valid. Forced Carrier,
+auto-to-MCWF, grouped-Record, and public-direct tests require exactly one Carrier-program compilation per
+parent call and require every private execution/dynamics consumer to receive the identical precompiled
+dictionary. Exact schedule-manifest, program-content, and backend identities are checked before CUDA and
+again across selector, replay, Record materialization, publication, and return checkpoints. The accepted
+seeded auto path still performs an independent trajectory replay, but it reuses the sealed Carrier program;
+this does not cover auto-to-dense, dynamics-artifact recompilation, concurrent mutation, or
+mutate-consume-restore atomicity. The file also exercises a real public auto-routed MCWF child with ordered
+X/Z measurements. Together with the direct and Carrier tests, this establishes public X/Z
 availability for the restricted MCWF slice; it does not establish production scalability or a complete
 QEC Record backend.
 
@@ -416,10 +423,11 @@ The hostile behavior matrix is GREEN in its focused checks. No static pytest cou
 the measured result must be regenerated from the current checkout and its exact command/report.
 
 The restricted-MPS coverage gate registers 59 canonical units and requires every unit to reach statement
-and branch coverage 1.0 with no exemption. The release-retained clean-HEAD log path is
+and branch coverage 1.0 with no exemption. The 2026-07-19 release-retained clean-HEAD log path is
 `outputs/simulator_validation/logs/mcwf_restricted_mps_coverage_clean_head_20260719.log`; a PASS there is
-current only when generated after the final commit, and any later relevant source, test, registry, or
-contract change makes it stale. The gate intentionally does not publish a static pytest count. Coverage
+historical and was invalidated by later MCWF Carrier-program and QuTiP-v3 commits. A new retained log is
+current only when generated after the final source/test/catalog/contract commit; any later relevant change
+makes it stale. The gate intentionally does not publish a static pytest count. Coverage
 remains structural evidence only; the corruption falsifiers,
 independent dense references, external comparisons, and mutation gate remain separate requirements.
 
