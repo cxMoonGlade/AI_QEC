@@ -1,606 +1,343 @@
-"""MCWF finite-step convergence against the dense joint-Lindbladian reference.
+"""MCWF finite-step X/Z Record-law convergence on the frozen QuTiP fixture.
 
-Pin that the carrier's realized first-order-MCWF channel converges to the INDEPENDENT
-oracle ``carrier.joint_lindbladian.assemble_substep_channel`` (term-based, never the
-carrier grouping) as microsteps refine, with the correct convergence orders:
-
-  first_order:        process infidelity 1-F_e  ∝ 1/m^2  (ratio ~4 per doubling)
-  strang_second_order: 1-F_e ∝ 1/m^4 (ratio ~16 per doubling)
-                       and Strang(m) < first_order(m) at matched m
-
-NON-COMMUTING SUBSTEP (measurement-free):
-  DR+T1: CTRL_X drive (sx/2) + T1 sigma^- on the SAME qubit.
-  [sx, |1><1|] != 0, so the H-vs-collapse Lie-Trotter split is observable.
-  At m=1, dt=30ns: 1-F_e ≈ O(dt * omega * gamma) — a real, visible finite-step defect.
-
-COMMUTING POSITIVE CONTROL:
-  ZZ + T2 (both diagonal) => exact commuting, no Trotter split => 1-F_e ~ 0 at all m.
-
-ORACLE: carrier.joint_lindbladian.assemble_substep_channel builds H + c into ONE
-expm(L*dt) — term-based, NEVER the carrier's _hamiltonian_group_gates. Anti-circular.
-
-CHANNEL RECONSTRUCTION: the carrier's realized CPTP map is reconstructed exactly
-by branch enumeration through ``_hamiltonian_group_gates``,
-``_nojump_first_order_kraus``, and ``_collapse_operator``.
-
-GPU-GATED: the oracle stack is hard CUDA-only (_require_cuda). Collection fails loudly
-without CUDA rather than producing a false green skip (same idiom as test_joint_lindbladian).
-
-FROZEN COMPARISON BANDS (epistemic class in square brackets):
-  [a] exact/theorem: ZZ+T2 positive control 1-F_e <= 1e-6 at every m (diagonal ops commute,
-      no Trotter defect, no no-jump-product defect; exact statement, not a band).
-  [b] prediction band: first_order 1-F_e ratio per ×2 microstep doubling in [3, 5].
-      Derivation: leading Trotter defect G ~ [H, sum c^dag c] * dt_micro^2 per microstep,
-      accumulated over m microsteps -> net G_total ~ m * (dt/m)^2 = dt^2/m, so
-      1-F_e ~ ||G_total||^2/D ~ 1/m^2; ratio per doubling = 2^2 = 4, band [3, 5] around it.
-  [b] prediction band: Strang ratio per ×2 doubling >= 10 and Strang(m) < first_order(m)
-      for the same m. Strang reduces the per-microstep error by one additional order =>
-      1-F_e_Strang ~ 1/m^4, ratio per doubling = 2^4 = 16, band >= 10.
-
-Standard metrics (docs/METRICS.md): process (entanglement) infidelity 1-F_e via
-Choi-state Uhlmann fidelity (trace-normalised Choi matrices J/D), /d convention.
-Choi trace distance companion 1/2 * ||J_ref - J_carrier||_1.
-
-Run: conda run -n ecs python -m pytest -q tests/test_axis1_mcwf_convergence.py
+This file deliberately makes no linear-channel, Choi, CPTP, or global
+convergence-order claim.  The deterministic reference below is a hand-written
+scalar recurrence for the normalized finite-step candidate law used by this
+one frozen T1 fixture.  The public GPU test compares sampled Records with that
+finite-step law; the continuous-time law comes from the neutral QuTiP protocol.
 """
+
 from __future__ import annotations
 
+import importlib.util
 import math
+from pathlib import Path
+from typing import Any
+
 import pytest
 import torch
 
-from error_coupling_simulator.carrier.joint_lindbladian import (
-    assemble_substep_channel,
-    _choi_state_from_kraus,
-    _state_fidelity,
+from error_coupling_simulator.frontend import (
+    Axis1LocalLindbladContextSpec,
+    CircuitBuilder,
+    axis1_mcwf_mps_state_record_execution_manifest,
+    circuit_ir_to_substep_schedule,
 )
-from error_coupling_simulator.frontend.axis1_mcwf_mps_execution import (
-    _hamiltonian_matrix_for_term,
-    _collapse_operator,
-    _nojump_first_order_kraus,
-    _hamiltonian_group_gates,
-)
+from error_coupling_simulator.numerics import NUMERICAL_ZERO
 
-# --------------------------------------------------------------------------- #
-# GPU gate (module-level, fail not skip — CUDA-MISSING is not a release basis) #
-# --------------------------------------------------------------------------- #
-_cuda_ok = torch.cuda.is_available()
-if not _cuda_ok:
-    pytest.fail(
-        "CONVERGENCE-REGRESSION tests are GPU-gated; "
-        "CUDA-MISSING is NOT A RELEASE BASIS — run on the CUDA workstation.",
-        pytrace=False,
+
+REPO = Path(__file__).resolve().parents[1]
+PROTOCOL = REPO / "scripts" / "external_baselines" / "qutip_mcwf_xz_protocol.py"
+FIXTURE = (
+    REPO
+    / "scripts"
+    / "external_baselines"
+    / "fixtures"
+    / "qutip_mcwf_xz_two_qubit_t1.json"
+)
+MICROSTEP_COUNTS = (10, 20, 40, 80)
+EXPECTED_FIXTURE_TV = {
+    10: (0.023409825026091874, 0.010275861041313533),
+    20: (0.011859662816100847, 0.005088283414417721),
+    40: (0.005967971464909766, 0.002531793804892407),
+    80: (0.0029934385472444314, 0.0012628170724109378),
+}
+RATIO_BAND = (1.85, 2.15)
+FINAL_JOINT_Z_TV_CAP = 0.0031
+FINAL_X_TV_CAP = 0.0013
+EXPECTED_JOINT_RADIUS = 0.0640322086265546
+EXPECTED_MARGINAL_RADIUS = 0.039518987893233104
+
+
+def _load_protocol():
+    spec = importlib.util.spec_from_file_location(
+        "qutip_mcwf_xz_protocol_for_convergence",
+        PROTOCOL,
     )
-
-DEV = "cuda"
-CDT = torch.complex128
-
-# Physical scales (all in rad/ns or ns^{-1}).
-_DT_NS = 30.0                             # substep duration: large enough to see m=1 defect
-_OMEGA_PI = math.pi / _DT_NS             # area-preserving pi-pulse: drives 1-F_e ~ O(1e-3)
-_GAMMA_1 = 1.0 / 30_000.0               # T1 rate (ns^-1)
-_ZETA = 2.0 * math.pi * 0.37e-3         # ZZ (rad/ns), static-ZZ; commutes with T2
-_GAMMA_PHI = 1.0 / 30_000.0             # T2 dephasing rate (ns^-1)
-
-# Microstep doublings for convergence sweep (m=1 -> 64 covers 6 doublings).
-_MICROSTEPS = [1, 2, 4, 8, 16, 32, 64]
-# Minimum microstep count at which we start measuring ratios (need prev available).
-_RATIO_START_M = 2
-
-# Tolerance thresholds (epistemic class c — heuristic gates; go/no-go only):
-_COMMUTING_INFIDELITY_GATE = 1.0e-6    # [a] theorem-grade: diagonal commute => exact
-_FO_RATIO_LO = 3.0                      # [b] prediction band lower bound: ratio ~4
-_FO_RATIO_HI = 6.0                      # [b] band upper bound (loose at small m)
-_STRANG_RATIO_MIN = 10.0                # [b] Strang per-doubling ratio >= 10
-_STRANG_BEATS_FO_GATE = 1.0e-4         # [b] Strang(m) < first_order(m) at m >= this infidelity
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
-# --------------------------------------------------------------------------- #
-# Dense Choi builder: carrier's own microstep channel.                         #
-# (Reuses the pattern from cert1: branch-enumerated, uses carrier primitives.) #
-# --------------------------------------------------------------------------- #
-
-def _lift_op(op_small: torch.Tensor, support: tuple[int, ...], local_dims: tuple[int, ...]) -> torch.Tensor:
-    """Lift a per-support operator to the full product space via kron with identities."""
-    n = len(local_dims)
-    factors = []
-    for i in range(n):
-        if i == support[0] and len(support) == 1:
-            factors.append(op_small.to(dtype=CDT, device=DEV))
-        elif len(support) == 2 and i == support[0]:
-            # two-site: op_small covers (support[0], support[1])
-            # handled by kron-left then kron with remaining I's
-            pass
-        else:
-            factors.append(torch.eye(local_dims[i], dtype=CDT, device=DEV))
-    # Simplified: for 1-site and 2-adjacent-site cases only.
-    if len(support) == 1:
-        out = factors[0]
-        idx = 0
-        for i in range(n):
-            if i == support[0]:
-                out = op_small.to(dtype=CDT, device=DEV) if idx == 0 else torch.kron(out, op_small.to(dtype=CDT, device=DEV))
-                # rebuild properly
-                break
-        # Correct implementation: kron product of per-site factors.
-        site = support[0]
-        result = torch.eye(1, dtype=CDT, device=DEV)
-        for i in range(n):
-            if i == site:
-                result = torch.kron(result, op_small.to(dtype=CDT, device=DEV))
-            else:
-                result = torch.kron(result, torch.eye(local_dims[i], dtype=CDT, device=DEV))
-        return result
-    if len(support) == 2:
-        assert support[1] == support[0] + 1, "cert: adjacent 2-site only"
-        result = torch.eye(1, dtype=CDT, device=DEV)
-        i = 0
-        while i < n:
-            if i == support[0]:
-                result = torch.kron(result, op_small.to(dtype=CDT, device=DEV))
-                i += 2
-            else:
-                result = torch.kron(result, torch.eye(local_dims[i], dtype=CDT, device=DEV))
-                i += 1
-        return result
-    raise AssertionError(f"unsupported support length {len(support)}: {support}")
-
-
-def _carrier_choi(
-    substep: dict,
-    local_dims: tuple[int, ...],
-    dt: float,
+def _finite_step_record_law(
+    fixture: dict[str, Any],
     microstep_count: int,
-    finite_step_order: str,
-) -> torch.Tensor:
-    """Deterministic dense Choi state of the carrier's realized CPTP map.
+    *,
+    no_jump_linear_factor: float = 0.5,
+    divide_duration_by_microsteps: bool = True,
+) -> dict[tuple[int, int, int, int], float]:
+    """Hand-written normalized-candidate recurrence for the frozen T1 fixture."""
 
-    Branch-enumerates every microstep (H gate then collapse competition) exactly as
-    the MCWF sampler does, accumulating rho_out = sum_branches K rho K^dag.
-    Uses the carrier's own primitives (_hamiltonian_group_gates per H cluster,
-    _nojump_first_order_kraus per collapse term, _collapse_operator for jumps).
-    Returns the trace-normalised Choi STATE (J/D), shape (D^2, D^2).
-    """
-    Dtot = 1
-    for d in local_dims:
-        Dtot *= d
-    dt_micro = float(dt) / int(microstep_count)
-
-    # Gather collapse terms once.
-    c_terms = []
-    for term in substep.get("terms", ()):
-        if str(term["kind"]) != "collapse":
-            continue
-        if abs(float(term.get("coefficient", 0.0))) <= 0.0:
-            continue
-        support = tuple(int(q) for q in term["support"])
-        c_small = _collapse_operator(term, local_dim=local_dims[support[0]], device=DEV)
-        c_terms.append((term, support, c_small))
-
-    def _h_step(rho: torch.Tensor, frac: float) -> torch.Tensor:
-        """Apply the carrier's connected-cluster H gates sequentially for frac * dt_micro."""
-        groups = _hamiltonian_group_gates(
-            substep, dt_ns=frac * dt_micro, local_dims=local_dims, device=DEV
-        )
-        for g in groups:
-            gate = _lift_op(g["gate"], tuple(int(q) for q in g["support"]), local_dims)
-            rho = gate @ rho @ gate.conj().transpose(-1, -2)
-        return rho
-
-    def _collapse_step(rho: torch.Tensor) -> torch.Tensor:
-        """Apply the first-order no-jump + jump Kraus set for one microstep."""
-        if not c_terms:
-            return rho
-        # No-jump Kraus: sequential product over terms.
-        K0 = torch.eye(Dtot, dtype=CDT, device=DEV)
-        for term, support, _c_small in c_terms:
-            k0_small = _nojump_first_order_kraus(
-                term, dt_micro, local_dim=local_dims[support[0]], device=DEV
-            )
-            K0 = _lift_op(k0_small, support, local_dims) @ K0
-        # Jump Kraus: sqrt(dt_micro) * c per term.
-        kraus_set = [K0]
-        for _term, support, c_small in c_terms:
-            kraus_set.append((dt_micro ** 0.5) * _lift_op(c_small, support, local_dims))
-        out = torch.zeros_like(rho)
-        for K in kraus_set:
-            out = out + K @ rho @ K.conj().transpose(-1, -2)
-        return out
-
-    def _one_microstep(rho: torch.Tensor) -> torch.Tensor:
-        if finite_step_order == "strang_second_order":
-            rho = _h_step(rho, 0.5)
-            rho = _collapse_step(rho)
-            rho = _h_step(rho, 0.5)
-        else:
-            rho = _h_step(rho, 1.0)
-            rho = _collapse_step(rho)
-        return rho
-
-    def _channel_rho(rho: torch.Tensor) -> torch.Tensor:
-        for _ in range(int(microstep_count)):
-            rho = _one_microstep(rho)
-        return rho
-
-    # Build Choi: J = sum_{p,q} E(|p><q|) kron |p><q|.
-    J = torch.zeros((Dtot * Dtot, Dtot * Dtot), dtype=CDT, device=DEV)
-    for p in range(Dtot):
-        for q in range(Dtot):
-            rho_pq = torch.zeros((Dtot, Dtot), dtype=CDT, device=DEV)
-            rho_pq[p, q] = 1.0
-            E_pq = _channel_rho(rho_pq)
-            e_pq = torch.zeros((Dtot, Dtot), dtype=CDT, device=DEV)
-            e_pq[p, q] = 1.0
-            J = J + torch.kron(E_pq.contiguous(), e_pq.contiguous())
-    J = 0.5 * (J + J.conj().transpose(-1, -2))
-    return J / torch.trace(J).real
-
-
-def _oracle_choi(
-    substep: dict,
-    local_dims: tuple[int, ...],
-    dt: float,
-) -> torch.Tensor:
-    """Independent oracle Choi: ALL H summed into one H_list, all c lifted to c_list,
-    then assemble_substep_channel => one expm(L dt). NEVER uses _hamiltonian_group_gates."""
-    Dtot = 1
-    for d in local_dims:
-        Dtot *= d
-
-    H_list_gpu = []
-    c_list_gpu = []
-    for term in substep.get("terms", ()):
-        kind = str(term["kind"])
-        support = tuple(int(q) for q in term["support"])
-        if kind == "hamiltonian":
-            h_small = _hamiltonian_matrix_for_term(
-                term, support=support, local_dims=local_dims, device=DEV
-            )
-            H_list_gpu.append(_lift_op(h_small, support, local_dims))
-        elif kind == "collapse" and abs(float(term.get("coefficient", 0.0))) > 0.0:
-            c_small = _collapse_operator(term, local_dim=local_dims[support[0]], device=DEV)
-            c_list_gpu.append(_lift_op(c_small, support, local_dims))
-
-    # Sum all H into one for the joint oracle (retains cross-terms).
-    if H_list_gpu:
-        H_joint = H_list_gpu[0]
-        for Hk in H_list_gpu[1:]:
-            H_joint = H_joint + Hk
-        H_joint_list = [H_joint]
-    else:
-        H_joint_list = []
-
-    if not H_joint_list and not c_list_gpu:
-        raise ValueError("oracle_choi: substep has no generators")
-    if not H_joint_list:
-        H_joint_list = [torch.zeros((Dtot, Dtot), dtype=CDT, device=DEV)]
-    if not c_list_gpu:
-        c_list_gpu = []
-
-    kraus = assemble_substep_channel(H_joint_list, c_list_gpu, dt, device=DEV)
-    return _choi_state_from_kraus(kraus, device=DEV)
-
-
-def _choi_infidelity(J_ref: torch.Tensor, J_carrier: torch.Tensor) -> float:
-    """1 - F_e (process infidelity): 1 - Uhlmann fidelity of trace-normalised Choi states."""
-    F = _state_fidelity(J_ref, J_carrier, device=DEV)
-    return float(max(0.0, 1.0 - F))
-
-
-def _choi_trace_distance(J_ref: torch.Tensor, J_carrier: torch.Tensor) -> float:
-    """1/2 * ||J_ref - J_carrier||_1 (trace distance of trace-normalised Choi states)."""
-    diff = J_ref - J_carrier
-    diff = 0.5 * (diff + diff.conj().transpose(-1, -2))
-    ev = torch.linalg.eigvalsh(diff)
-    return float(0.5 * torch.sum(torch.abs(ev)).item())
-
-
-# --------------------------------------------------------------------------- #
-# Substep definitions                                                           #
-# --------------------------------------------------------------------------- #
-
-def _dr_t1_substep() -> tuple[dict, tuple[int, ...]]:
-    """DR+T1: non-commuting CTRL_X drive and T1 sigma^- on one qubit."""
-    substep = {
-        "substep_id": "DR_T1_NONCOMMUTING",
-        "terms": [
-            {
-                "kind": "hamiltonian",
-                "support": [0],
-                "operator_family": "CTRL_X",
-                "coefficient": _OMEGA_PI / 2.0,
-            },
-            {
-                "kind": "collapse",
-                "support": [0],
-                "operator_family": "T1",
-                "coefficient": _GAMMA_1 ** 0.5,
-            },
-        ],
-    }
-    local_dims = (2,)
-    return substep, local_dims
-
-
-def _zz_t2_substep() -> tuple[dict, tuple[int, ...]]:
-    """ZZ+T2: diagonal H + diagonal collapse on 2-qubit window (commuting control)."""
-    substep = {
-        "substep_id": "ZZ_T2_COMMUTING",
-        "terms": [
-            {
-                "kind": "hamiltonian",
-                "support": [0, 1],
-                "operator_family": "ZZ",
-                "coefficient": _ZETA,
-            },
-            {
-                "kind": "collapse",
-                "support": [0],
-                "operator_family": "T2",
-                "coefficient": (2.0 * _GAMMA_PHI) ** 0.5,
-            },
-            {
-                "kind": "collapse",
-                "support": [1],
-                "operator_family": "T2",
-                "coefficient": (2.0 * _GAMMA_PHI) ** 0.5,
-            },
-        ],
-    }
-    local_dims = (2, 2)
-    return substep, local_dims
-
-
-# --------------------------------------------------------------------------- #
-# Test: commuting positive control (ZZ + T2) — 1-F_e ~ 0 at all m             #
-# Epistemic class [a]: exact/theorem, no Trotter defect for commuting ops.     #
-# --------------------------------------------------------------------------- #
-
-def test_commuting_positive_control_infidelity_near_zero():
-    """[a] ZZ+T2 (all diagonal) positive control: 1-F_e <= 1e-6 at all tested microstep counts.
-
-    Theorem: diagonal operators commute, so the Lie-Trotter split has zero leading
-    commutator and the no-jump-product defect vanishes for diagonal c^dag c. The carrier
-    channel is exact vs the joint oracle at every m — m-independent. This is a hard exact
-    assertion (class [a]): if it fails, the Choi reconstruction or oracle wiring is broken
-    and the convergence test results are meaningless.
-    """
-    substep, local_dims = _zz_t2_substep()
-    J_ref = _oracle_choi(substep, local_dims, _DT_NS)
-
-    infidelities = {}
-    for m in _MICROSTEPS:
-        J_c = _carrier_choi(substep, local_dims, _DT_NS, m, "first_order")
-        infid = _choi_infidelity(J_ref, J_c)
-        infidelities[m] = infid
-
-    failing = {m: v for m, v in infidelities.items() if v > _COMMUTING_INFIDELITY_GATE}
-    assert not failing, (
-        f"[a] EXACT FAILURE — commuting ZZ+T2 positive control: 1-F_e must be <= "
-        f"{_COMMUTING_INFIDELITY_GATE:.0e} at ALL m (no Trotter defect for diagonal ops); "
-        f"exceeding entries: {failing}. If this fails, the Choi builder or oracle wiring "
-        f"is broken — stop, do not proceed with convergence tests."
+    gamma = float(fixture["gamma_1_per_ns"])
+    duration = float(fixture["evolution_duration_ns"])
+    dt_micro = (
+        duration / float(microstep_count)
+        if divide_duration_by_microsteps
+        else duration
     )
+    jump_weight = gamma * dt_micro
+    no_jump_excited_amplitude = 1.0 - no_jump_linear_factor * jump_weight
+    amplitude_squared = no_jump_excited_amplitude**2
 
+    z_survival = (
+        amplitude_squared / (amplitude_squared + jump_weight)
+    ) ** microstep_count
 
-# --------------------------------------------------------------------------- #
-# Helper: convergence ratio table builder                                       #
-# --------------------------------------------------------------------------- #
-
-def _convergence_sweep(
-    substep: dict,
-    local_dims: tuple[int, ...],
-    dt: float,
-    microsteps: list[int],
-    finite_step_order: str,
-) -> dict[int, tuple[float, float]]:
-    """Run the carrier vs oracle at each microstep count.
-
-    Returns {m: (1-F_e, choi_td)}.
-    """
-    J_ref = _oracle_choi(substep, local_dims, dt)
-    results = {}
-    for m in microsteps:
-        J_c = _carrier_choi(substep, local_dims, dt, m, finite_step_order)
-        infid = _choi_infidelity(J_ref, J_c)
-        td = _choi_trace_distance(J_ref, J_c)
-        results[m] = (infid, td)
-    return results
-
-
-def _doubling_ratios(
-    results: dict[int, tuple[float, float]],
-    microsteps: list[int],
-) -> list[tuple[int, int, float, float]]:
-    """Return list of (m_prev, m_curr, infid_ratio, td_ratio) for consecutive doublings.
-
-    Only includes pairs where m_curr == 2 * m_prev (strict doublings).
-    Skips pairs where the infidelity is < 1e-14 (floored to machine zero).
-    """
-    pairs = []
-    for i in range(1, len(microsteps)):
-        m_prev = microsteps[i - 1]
-        m_curr = microsteps[i]
-        if m_curr != 2 * m_prev:
-            continue
-        infid_prev, td_prev = results[m_prev]
-        infid_curr, td_curr = results[m_curr]
-        if infid_curr < 1e-14 or infid_prev < 1e-14:
-            # Floored to machine zero — ratio undefined; skip.
-            continue
-        ri = infid_prev / infid_curr
-        rt = td_prev / td_curr if td_curr > 1e-18 else float("nan")
-        pairs.append((m_prev, m_curr, ri, rt))
-    return pairs
-
-
-# --------------------------------------------------------------------------- #
-# Test: first_order DR+T1 — 1-F_e > 0 at m=1, convergence ratio ~4 per ×2    #
-# Epistemic class [b]: prediction band.                                        #
-# --------------------------------------------------------------------------- #
-
-def test_first_order_dr_t1_convergence_ratio():
-    """[b] first_order carrier DR+T1: 1-F_e ratio per ×2 microstep doubling in [3, 5].
-
-    Frozen derivation:
-      * m=1 infidelity > 1e-5 at dt=30ns (real finite-step defect, not machine noise).
-      * Monotone decrease with m.
-      * Each doubling: infid_prev / infid_curr in [3, 5] (theoretical ~4 from 1/m^2 scaling).
-    Standard metric: process infidelity 1-F_e = 1 - F_pro, Choi-state Uhlmann fidelity.
-    """
-    substep, local_dims = _dr_t1_substep()
-    results = _convergence_sweep(substep, local_dims, _DT_NS, _MICROSTEPS, "first_order")
-
-    # Assert m=1 has a real, visible finite-step error.
-    infid_m1, _ = results[1]
-    assert infid_m1 > 1.0e-5, (
-        f"[b] first_order DR+T1 at m=1, dt={_DT_NS}ns: expected 1-F_e > 1e-5 "
-        f"(real finite-step defect from the H-vs-collapse split); got {infid_m1:.3e}. "
-        f"If 1-F_e is machine-zero at m=1, the split is absent or the substep is wrong."
+    no_jump_path_weight = 1.0
+    for k in range(microstep_count):
+        prior_excited_weight = no_jump_excited_amplitude ** (2 * k)
+        numerator = 1.0 + no_jump_excited_amplitude ** (2 * k + 2)
+        denominator = 1.0 + (
+            amplitude_squared + jump_weight
+        ) * prior_excited_weight
+        no_jump_path_weight *= numerator / denominator
+    x_coherence = (
+        no_jump_path_weight
+        * 2.0
+        * no_jump_excited_amplitude**microstep_count
+        / (1.0 + no_jump_excited_amplitude ** (2 * microstep_count))
     )
+    p_x_after_zero = 0.5 * (1.0 + x_coherence)
 
-    # Assert monotone decrease (1-F_e(m+1) <= 1-F_e(m)).
-    ms_sorted = sorted(results)
-    for i in range(1, len(ms_sorted)):
-        m_prev = ms_sorted[i - 1]
-        m_curr = ms_sorted[i]
-        infid_prev, _ = results[m_prev]
-        infid_curr, _ = results[m_curr]
-        if infid_prev < 1e-12:
-            break  # floored; stop monotone check
-        assert infid_curr <= infid_prev * 1.05, (
-            f"[b] first_order DR+T1: 1-F_e must decrease with m; "
-            f"m={m_prev}: {infid_prev:.3e}, m={m_curr}: {infid_curr:.3e} (increased by > 5%)."
-        )
-
-    # Assert convergence ratios per doubling are in [3, 5].
-    doubling_pairs = _doubling_ratios(results, _MICROSTEPS)
-    assert doubling_pairs, (
-        "[b] first_order: no valid doubling pairs found (infidelities all floored?). "
-        "Need at least one m -> 2m pair with infid > 1e-14."
-    )
-
-    bad_ratios = [(m_p, m_c, ri) for m_p, m_c, ri, _ in doubling_pairs
-                  if not (_FO_RATIO_LO <= ri <= _FO_RATIO_HI)]
-    # At very small m the leading pre-asymptotic terms affect the ratio; only gate
-    # on m >= 2 -> m=4 transitions (asymptotic regime).
-    bad_asymptotic = [(m_p, m_c, ri) for m_p, m_c, ri in bad_ratios if m_p >= 2]
-    assert not bad_asymptotic, (
-        f"[b] first_order DR+T1 convergence: 1-F_e ratio per ×2 must be in "
-        f"[{_FO_RATIO_LO}, {_FO_RATIO_HI}] for m >= 2; "
-        f"out-of-band: {bad_asymptotic}. "
-        f"All doubling ratios: {[(m_p, m_c, f'{ri:.2f}') for m_p, m_c, ri, _ in doubling_pairs]}"
-    )
-
-
-# --------------------------------------------------------------------------- #
-# Test: strang_second_order DR+T1 — ratios >= 10, Strang < first_order        #
-# Epistemic class [b]: prediction band.                                        #
-# --------------------------------------------------------------------------- #
-
-def test_strang_dr_t1_faster_than_first_order():
-    """[b] strang_second_order carrier DR+T1: ratio per ×2 >= 10 and Strang(m) < first_order(m).
-
-    Pre-registered derivation: Strang splitting reduces per-microstep error by one order =>
-    1-F_e_Strang ~ 1/m^4, ratio per doubling = 2^4 = 16 (>> 10). Also, at matched m,
-    Strang channel is strictly closer to the oracle than first_order.
-    Standard metric: process infidelity 1-F_e.
-    """
-    substep, local_dims = _dr_t1_substep()
-    results_strang = _convergence_sweep(substep, local_dims, _DT_NS, _MICROSTEPS, "strang_second_order")
-    results_fo = _convergence_sweep(substep, local_dims, _DT_NS, _MICROSTEPS, "first_order")
-
-    # Assert Strang ratios per doubling >= 10.
-    doubling_pairs_strang = _doubling_ratios(results_strang, _MICROSTEPS)
-    assert doubling_pairs_strang, (
-        "[b] strang: no valid doubling pairs (infidelities all floored?). "
-        "Need at least one m -> 2m pair with infid > 1e-14."
-    )
-    bad_strang = [(m_p, m_c, ri) for m_p, m_c, ri, _ in doubling_pairs_strang
-                  if ri < _STRANG_RATIO_MIN and m_p >= 2]
-    assert not bad_strang, (
-        f"[b] strang_second_order DR+T1: 1-F_e ratio per ×2 must be >= {_STRANG_RATIO_MIN} "
-        f"for m >= 2; out-of-band: {bad_strang}. "
-        f"All Strang doubling ratios: {[(m_p, m_c, f'{ri:.2f}') for m_p, m_c, ri, _ in doubling_pairs_strang]}"
-    )
-
-    # Assert Strang(m) < first_order(m) at matched m (wherever both are above machine floor).
-    violations = []
-    for m in _MICROSTEPS:
-        infid_strang, _ = results_strang[m]
-        infid_fo, _ = results_fo[m]
-        if infid_fo < _STRANG_BEATS_FO_GATE:
-            continue  # both floored; skip
-        if infid_strang >= infid_fo:
-            violations.append((m, infid_strang, infid_fo))
-    assert not violations, (
-        f"[b] strang_second_order must be strictly better than first_order at matched m "
-        f"(both > {_STRANG_BEATS_FO_GATE:.0e}); violations: "
-        f"{[(m, f'{s:.3e}', f'{f:.3e}') for m, s, f in violations]}"
-    )
-
-
-# --------------------------------------------------------------------------- #
-# Test: monotone convergence of trace distance (companion metric)               #
-# Epistemic class [b].                                                          #
-# --------------------------------------------------------------------------- #
-
-def test_choi_trace_distance_decreases_first_order():
-    """[b] first_order DR+T1 Choi trace distance 1/2*||J_ref - J_carrier||_1 decreases with m.
-
-    Companion metric to process infidelity. Both -> 0 as m -> inf only if the carrier is a
-    correct finite-step scheme for this substep. Standard metric: Choi trace distance.
-    """
-    substep, local_dims = _dr_t1_substep()
-    results = _convergence_sweep(substep, local_dims, _DT_NS, _MICROSTEPS, "first_order")
-    ms_sorted = sorted(results)
-    for i in range(1, len(ms_sorted)):
-        m_prev = ms_sorted[i - 1]
-        m_curr = ms_sorted[i]
-        _, td_prev = results[m_prev]
-        _, td_curr = results[m_curr]
-        if td_prev < 1e-10:
-            break
-        assert td_curr <= td_prev * 1.05, (
-            f"[b] first_order DR+T1 Choi trace distance must decrease with m; "
-            f"m={m_prev}: {td_prev:.3e}, m={m_curr}: {td_curr:.3e} (increased by > 5%)."
-        )
-
-
-# --------------------------------------------------------------------------- #
-# Summary printout (visible with pytest -s)                                    #
-# --------------------------------------------------------------------------- #
-
-def test_print_convergence_summary(capsys):
-    """Print the full convergence table for both orders and both metrics (informational)."""
-    substep_dr, local_dims_dr = _dr_t1_substep()
-    substep_zz, local_dims_zz = _zz_t2_substep()
-    J_ref_dr = _oracle_choi(substep_dr, local_dims_dr, _DT_NS)
-    J_ref_zz = _oracle_choi(substep_zz, local_dims_zz, _DT_NS)
-
-    with capsys.disabled():
-        print(f"\n=== MCWF convergence: DR+T1 (non-commuting) + ZZ+T2 (commuting) dt={_DT_NS}ns ===")
-        print(f"{'m':>6} {'order':>22} {'1-F_e(DR+T1)':>16} {'td(DR+T1)':>14} "
-              f"{'1-F_e ratio':>13} {'1-F_e(ZZ+T2)':>16}")
-
-        for order in ("first_order", "strang_second_order"):
-            results_dr = _convergence_sweep(substep_dr, local_dims_dr, _DT_NS, _MICROSTEPS, order)
-            results_zz = _convergence_sweep(substep_zz, local_dims_zz, _DT_NS, _MICROSTEPS, order)
-            prev_infid = None
-            for m in _MICROSTEPS:
-                infid_dr, td_dr = results_dr[m]
-                infid_zz, _ = results_zz[m]
-                ratio = (prev_infid / infid_dr) if (prev_infid is not None and infid_dr > 1e-15) else float("nan")
-                print(
-                    f"{m:>6} {order:>22} {infid_dr:>16.3e} {td_dr:>14.3e} "
-                    f"{ratio:>13.3f} {infid_zz:>16.3e}"
+    law: dict[tuple[int, int, int, int], float] = {}
+    for x_before in (0, 1):
+        for z_before in (0, 1):
+            p_z_before = z_survival if z_before == 1 else 1.0 - z_survival
+            for x_after in (0, 1):
+                p_x_after = (
+                    p_x_after_zero if x_after == 0 else 1.0 - p_x_after_zero
                 )
-                prev_infid = infid_dr
-            print()
+                law[(x_before, z_before, x_after, 0)] = (
+                    0.5 * p_z_before * p_x_after
+                )
+    assert math.fsum(law.values()) == pytest.approx(1.0, abs=NUMERICAL_ZERO)
+    return law
 
-        print("Doubling ratios (1-F_e prev/curr per ×2) — first_order should be ~4, Strang ~16:")
-        for order in ("first_order", "strang_second_order"):
-            results = _convergence_sweep(substep_dr, local_dims_dr, _DT_NS, _MICROSTEPS, order)
-            pairs = _doubling_ratios(results, _MICROSTEPS)
-            row = "  ".join(f"m={m_p}→{m_c}: {ri:.2f}" for m_p, m_c, ri, _ in pairs)
-            print(f"  {order}: {row}")
+
+def _fixture_tvs(protocol, fixture, finite_step_law):
+    continuous_law = protocol.analytic_binary_distribution(fixture)
+    joint = protocol.total_variation(finite_step_law, continuous_law)
+    z_before = protocol.total_variation(
+        protocol.binary_column_marginal(finite_step_law, column=1),
+        protocol.binary_column_marginal(continuous_law, column=1),
+    )
+    x_after = protocol.total_variation(
+        protocol.binary_column_marginal(finite_step_law, column=2),
+        protocol.binary_column_marginal(continuous_law, column=2),
+    )
+    return joint, z_before, x_after
+
+
+def _schedule_from_fixture(fixture: dict[str, Any]):
+    builder = CircuitBuilder(num_qubits=int(fixture["num_qubits"]))
+    builder.declare_axis1_local_lindblad_context(
+        Axis1LocalLindbladContextSpec(
+            gamma_phi_per_ns=float(fixture["gamma_phi_per_ns"]),
+            gamma_1_per_ns=float(fixture["gamma_1_per_ns"]),
+            gamma_readout_phi_per_ns=0.0,
+        )
+    )
+    duration = float(fixture["evolution_duration_ns"])
+    builder.idle((0, 1), duration_ns=duration)
+    builder.tick()
+    builder.measure(0, key="mx_before", basis="X", reset=True)
+    builder.measure(1, key="mz_before", basis="Z", reset=True)
+    builder.tick()
+    builder.idle((0, 1), duration_ns=duration)
+    builder.tick()
+    builder.measure(0, key="mx_after", basis="X", reset=False)
+    builder.measure(1, key="mz_after", basis="Z", reset=False)
+    return circuit_ir_to_substep_schedule(builder.build())
+
+
+def _empirical_law(execution: dict[str, Any]):
+    return {
+        tuple(int(value) for value in row): float(probability)
+        for row, probability in zip(
+            execution["measurement_records"],
+            execution["record_probabilities"],
+            strict=True,
+        )
+    }
+
+
+def test_frozen_fixture_record_tv_bias_approximately_halves_on_this_grid():
+    protocol = _load_protocol()
+    fixture = protocol.load_fixture(FIXTURE)
+    observed: dict[int, tuple[float, float, float]] = {}
+
+    for microstep_count in MICROSTEP_COUNTS:
+        law = _finite_step_record_law(fixture, microstep_count)
+        assert all(row[3] == 0 for row in law)
+        joint, z_before, x_after = _fixture_tvs(protocol, fixture, law)
+        observed[microstep_count] = (joint, z_before, x_after)
+        expected_joint_z, expected_x = EXPECTED_FIXTURE_TV[microstep_count]
+        assert joint == pytest.approx(expected_joint_z, abs=NUMERICAL_ZERO)
+        assert z_before == pytest.approx(expected_joint_z, abs=NUMERICAL_ZERO)
+        assert x_after == pytest.approx(expected_x, abs=NUMERICAL_ZERO)
+
+    joint_values = [observed[m][0] for m in MICROSTEP_COUNTS]
+    z_values = [observed[m][1] for m in MICROSTEP_COUNTS]
+    x_values = [observed[m][2] for m in MICROSTEP_COUNTS]
+    for values in (joint_values, z_values, x_values):
+        assert all(current < previous for previous, current in zip(values, values[1:]))
+        ratios = [
+            previous / current
+            for previous, current in zip(values, values[1:])
+        ]
+        assert all(RATIO_BAND[0] <= ratio <= RATIO_BAND[1] for ratio in ratios)
+
+    assert joint_values[-1] <= FINAL_JOINT_Z_TV_CAP
+    assert z_values[-1] <= FINAL_JOINT_Z_TV_CAP
+    assert x_values[-1] <= FINAL_X_TV_CAP
+
+
+def test_corrupted_scalar_recurrences_have_power_on_the_frozen_fixture():
+    """Power checks only; the semantic mutation service must kill source mutants."""
+
+    protocol = _load_protocol()
+    fixture = protocol.load_fixture(FIXTURE)
+    continuous = protocol.analytic_binary_distribution(fixture)
+
+    correct_40 = _finite_step_record_law(fixture, 40)
+    doubled_no_jump_40 = _finite_step_record_law(
+        fixture,
+        40,
+        no_jump_linear_factor=1.0,
+    )
+    joint_half_mutation = protocol.total_variation(
+        doubled_no_jump_40,
+        correct_40,
+    )
+    x_half_mutation = protocol.total_variation(
+        protocol.binary_column_marginal(doubled_no_jump_40, column=2),
+        protocol.binary_column_marginal(correct_40, column=2),
+    )
+    assert joint_half_mutation == pytest.approx(
+        0.08111612211053276,
+        abs=NUMERICAL_ZERO,
+    )
+    assert x_half_mutation == pytest.approx(
+        0.08111612211053276,
+        abs=NUMERICAL_ZERO,
+    )
+    assert joint_half_mutation > EXPECTED_JOINT_RADIUS
+    assert x_half_mutation > EXPECTED_MARGINAL_RADIUS
+
+    doubled_no_jump_80 = _finite_step_record_law(
+        fixture,
+        80,
+        no_jump_linear_factor=1.0,
+    )
+    assert protocol.total_variation(
+        doubled_no_jump_80,
+        continuous,
+    ) == pytest.approx(0.08106347555070871, abs=NUMERICAL_ZERO)
+
+    wrong_dt = _finite_step_record_law(
+        fixture,
+        40,
+        divide_duration_by_microsteps=False,
+    )
+    wrong_dt_joint = protocol.total_variation(wrong_dt, correct_40)
+    wrong_dt_z = protocol.total_variation(
+        protocol.binary_column_marginal(wrong_dt, column=1),
+        protocol.binary_column_marginal(correct_40, column=1),
+    )
+    wrong_dt_x = protocol.total_variation(
+        protocol.binary_column_marginal(wrong_dt, column=2),
+        protocol.binary_column_marginal(correct_40, column=2),
+    )
+    assert wrong_dt_joint == pytest.approx(
+        0.30909405210692065,
+        abs=NUMERICAL_ZERO,
+    )
+    assert wrong_dt_z == pytest.approx(
+        0.24403202853509015,
+        abs=NUMERICAL_ZERO,
+    )
+    assert wrong_dt_x == pytest.approx(
+        0.24746820619510762,
+        abs=NUMERICAL_ZERO,
+    )
+
+
+def test_public_gpu_xz_records_match_the_finite_step_fixture_law():
+    if not torch.cuda.is_available():
+        pytest.fail(
+            "MCWF X/Z Record convergence is GPU-gated; CUDA-MISSING is not a release basis",
+            pytrace=False,
+        )
+
+    protocol = _load_protocol()
+    fixture = protocol.load_fixture(FIXTURE)
+    microstep_count = int(fixture["microstep_count"])
+    trajectory_count = int(fixture["trajectory_count"])
+    manifest = axis1_mcwf_mps_state_record_execution_manifest(
+        _schedule_from_fixture(fixture),
+        device="cuda",
+        local_dims=fixture["local_dims"],
+        initial_levels=fixture["initial_levels"],
+        microstep_count=microstep_count,
+        finite_step_order="first_order",
+        trajectory_count=trajectory_count,
+        rng_seed=int(fixture["project_rng_seed"]),
+        mass_residual_budget=0.1,
+    )
+
+    assert manifest["execution_status"] == "completed"
+    assert manifest["claims_dense_channel_evidence"] is False
+    execution = manifest["mps_execution"]
+    assert execution["measurement_keys"] == fixture["measurement_keys"]
+    assert execution["measurement_targets"] == fixture["measurement_targets"]
+    assert execution["measurement_bases"] == fixture["measurement_bases"]
+    assert execution["reset_after"] == fixture["reset_after"]
+    assert execution["finite_step_policy"]["order"] == "first_order"
+    assert all(row[3] == 0 for row in execution["measurement_records"])
+    assert sum(execution["record_counts"]) == trajectory_count
+    assert math.fsum(execution["record_probabilities"]) == pytest.approx(
+        1.0,
+        abs=NUMERICAL_ZERO,
+    )
+    for count, probability in zip(
+        execution["record_counts"],
+        execution["record_probabilities"],
+        strict=True,
+    ):
+        assert probability == pytest.approx(
+            count / trajectory_count,
+            abs=NUMERICAL_ZERO,
+        )
+
+    empirical = _empirical_law(execution)
+    finite_step = _finite_step_record_law(fixture, microstep_count)
+    alpha_each = float(fixture["comparison_alpha"]) / 3.0
+    joint_radius = protocol.multinomial_tv_radius(
+        sample_count=trajectory_count,
+        alphabet_size=16,
+        alpha=alpha_each,
+    )
+    marginal_radius = protocol.multinomial_tv_radius(
+        sample_count=trajectory_count,
+        alphabet_size=2,
+        alpha=alpha_each,
+    )
+    assert joint_radius == pytest.approx(EXPECTED_JOINT_RADIUS, abs=NUMERICAL_ZERO)
+    assert marginal_radius == pytest.approx(
+        EXPECTED_MARGINAL_RADIUS,
+        abs=NUMERICAL_ZERO,
+    )
+
+    joint_tv = protocol.total_variation(empirical, finite_step)
+    z_tv = protocol.total_variation(
+        protocol.binary_column_marginal(empirical, column=1),
+        protocol.binary_column_marginal(finite_step, column=1),
+    )
+    x_tv = protocol.total_variation(
+        protocol.binary_column_marginal(empirical, column=2),
+        protocol.binary_column_marginal(finite_step, column=2),
+    )
+    assert joint_tv <= joint_radius
+    assert z_tv <= marginal_radius
+    assert x_tv <= marginal_radius

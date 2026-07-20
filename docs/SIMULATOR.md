@@ -73,9 +73,12 @@ The current routes are deliberately not one universal executor:
     helper: both dense-to-MPO decomposition and MPS/MPO compression carry an explicit zero cutoff,
     the source is changed only after a finite unitary candidate preserves its norm, and support is
     rejected before dense allocation above five sites, Hilbert dimension 256, or 65,536 dense
-    elements. Those ceilings are numerical-only resource guards. Strang MCWF evolution records its
-    two Hamiltonian half-passes separately and in order as `hamiltonian_pass_index=0,1`; both carry
-    the scheduled half-step duration and must be present in the authenticated occurrence ledger.
+    elements. Those ceilings are numerical-only resource guards. MCWF option
+    `symmetric_hamiltonian_first_order_collapse` records two Hamiltonian half-passes separately and
+    in order as `hamiltonian_pass_index=0,1`; both carry the scheduled half-step duration and must be
+    present in the authenticated occurrence ledger. The intervening normalized collapse update is
+    first-order, so this option is neither named nor claimed as Strang or second-order. The retired
+    MCWF value is rejected before CUDA; QT retains its separate genuine Strang option.
     Both restricted MPS
     Adapters parse the compiler-sealed schedule once, before CUDA or trajectory execution, into an
     immutable Record layout that fixes boundaries, keys, targets, bases, per-target reset flags,
@@ -90,8 +93,8 @@ The current routes are deliberately not one universal executor:
     rebind those fields to the sealed schedule, so a reordered and rehashed payload is rejected.
     The auto-router also requires exact Carrier/state/Record/direct-summary field sets, binds caller
     options, initial levels, local Hilbert dimensions, declared-basis readout policy, sampling seed,
-    state machine, policy v6, and transitive direct
-    v7 schema/hash, and accepts only a sorted unique normalized empirical histogram with canonical
+    state machine, policy v7, and transitive direct
+    v8 schema/hash, and accepts only a sorted unique normalized empirical histogram with canonical
     blocked summaries. Evaluator-only field families are rejected recursively at the public seam.
     Before the dense comparator may authorize restricted execution, it compares every present
     production Hamiltonian/collapse term against the isolated hand-typed NumPy/Pauli definitions in
@@ -108,7 +111,7 @@ The current routes are deliberately not one universal executor:
     The execution Adapter now compiles each production Hamiltonian and collapse tensor once, before
     mass-residual evaluation or trajectories, and constructs every connected Hamiltonian group gate from
     those same frozen term tensors. The first-order mass preflight, no-jump/jump competition, and both
-    Strang Hamiltonian passes consume that immutable artifact set; no later production-builder call may
+    symmetric Hamiltonian passes consume that immutable artifact set; no later production-builder call may
     redefine the executed dynamics. The preflight bounds the sampler's actual sequential no-jump
     product, including multi-collapse cross terms, rather than replacing it by one factor built from
     the summed collapse rate. Its diagnostic recommendation search is capped at signed 64-bit for
@@ -125,7 +128,7 @@ The current routes are deliberately not one universal executor:
     NumPy definitions plus SciPy `expm`. Declared structural-zero entries must remain exactly zero;
     per-term floating differences use `NUMERICAL_ZERO`, while cross-backend group-gate comparison uses
     `1000 * NUMERICAL_ZERO` to cover the measured Torch-CUDA/SciPy matrix-exponential floor. The
-    `mcwf_dynamics_artifact_reference_certification.v1` packet binds complete substep/term/group counts,
+    `mcwf_dynamics_artifact_reference_certification.v2` packet binds complete substep/term/group counts,
     local dimensions, microstep/order policy, Carrier-program and artifact hashes, and five current
     source hashes: reference operator, certifier, carrier operator, transitive ideal-control generator,
     and transitive selection-family owner. It also requires a post-execution artifact-integrity check.
@@ -144,6 +147,14 @@ The current routes are deliberately not one universal executor:
     exact structural zero,
     normalizes every finite positive post-measurement reset trace, and fails closed on negative or
     non-finite branch mass and nonpositive or non-finite reset trace.
+    When a schedule has no measurement columns, the executor still validates the canonical
+    `[[]]` Record sentinel and its count/probability identity, but certification is exactly
+    `unavailable` with
+    `mcwf_normalized_candidate_law_has_no_registered_linear_channel_metric`. The normalized
+    finite-step candidate law has input-state-dependent total mass and is generally nonlinear, so it
+    cannot be promoted to a CPTP Choi/process metric. MCWF channel-process gates and their former
+    comparison identity are not part of the current policy; only registered X/Z Record metrics may
+    authorize restricted MCWF evidence.
     MCWF pre-readout `level_records`/counts/probabilities and `jump_family_counts` are hidden
     unraveling diagnostics under `evaluator_only_diagnostics.v2`; they are not emitted binary Records
     or downstream estimator inputs. Their registered semantics are declared-basis local measurement
@@ -176,10 +187,10 @@ The current routes are deliberately not one universal executor:
    counters are authenticated observations from the producing run, not an independent second
    measurement.
    These are execution/schema guarantees, not a canonical Record backend or a Record-faithfulness
-    upgrade. The direct QT/MPS manifest is v6 and direct MCWF/MPS is v7; QT bond sweep, seed sweep,
-    evidence bundle, and resource probe are v4. Carrier execution and auto-routed execution are v4,
-    the routing decision remains v3, the MCWF restricted-acceptance policy is v6, and the public frozen
-    dynamics-artifact reference-certification packet is v1.
+    upgrade. The direct QT/MPS manifest is v6 and direct MCWF/MPS is v8; QT bond sweep, seed sweep,
+    evidence bundle, and resource probe are v4. Carrier execution and auto-routed execution are v5,
+    the routing decision remains v3, the MCWF restricted-acceptance policy is v7, and the public frozen
+    dynamics-artifact reference-certification packet is v2.
    No earlier
    direct-execution or aggregate compatibility fallback is retained. A completed true-over-cap run
    with no registered independent Record oracle remains diagnostic execution
@@ -194,7 +205,12 @@ The current routes are deliberately not one universal executor:
    marginals must pass; the fixture fixes survival to `s=0.25`, so the load-bearing
    `sqrt(s) -> s` coherence-rate mutation lies outside the registered simultaneous radius and must
    fail. That QuTiP fixture also requires real jumps, independently verifies X reset to `|+>` and Z
-   reset to `|0>`, and includes a verdict-driving final-Z-bit corruption. Its worker binds the
+    reset to `|0>`, and includes a verdict-driving final-Z-bit corruption. The same neutral fixture
+    also has a certifier-local finite-step scalar recurrence at
+   `m=10,20,40,80`: joint/Z and X-after TV biases must decrease and approximately halve on that
+   frozen grid, and the public `m=40`, `n=2048` GPU histogram must lie within one-sample Weissman
+   radii of the finite-step law. This is fixture-bound Record convergence, not a global order or
+    linear-channel convergence claim. The isolated worker binds the
    pristine QuTiP commit/tree, installed-distribution content identity, Python/NumPy/SciPy versions,
    explicit MCWF integrator controls, worker/protocol hashes, and canonical report hash. The v2 worker
    shape is recursively exact-field checked and its semantic invariants are recomputed. Strict JSON

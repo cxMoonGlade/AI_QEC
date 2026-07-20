@@ -60,7 +60,7 @@ from .axis1_qutip_cuquantum_probe import (
 )
 
 
-AXIS1_CARRIER_EXECUTION_SCHEMA = "error_coupling_simulator.frontend.carrier_execution.v4"
+AXIS1_CARRIER_EXECUTION_SCHEMA = "error_coupling_simulator.frontend.carrier_execution.v5"
 AXIS1_CARRIER_EXECUTION_REPRESENTABILITY = (
     "axis1_carrier_execution_dense_jointL_probe_no_scalable_overcap"
 )
@@ -85,12 +85,12 @@ AXIS1_CARRIER_MCWF_MPS_EXECUTION_BACKEND_CONTRACT = (
 )
 AXIS1_CARRIER_AUTO_BACKEND_CONTRACT = "auto"
 AXIS1_CARRIER_AUTO_EXECUTION_SCHEMA = (
-    "error_coupling_simulator.frontend.carrier_auto_routed_execution.v4"
+    "error_coupling_simulator.frontend.carrier_auto_routed_execution.v5"
 )
 _RESTRICTED_POLICY_SCHEMAS = {
     "mcwf": (
         "error_coupling_simulator.frontend."
-        "mcwf_mps_restricted_acceptance_policy.v6"
+        "mcwf_mps_restricted_acceptance_policy.v7"
     ),
     "qt": (
         "error_coupling_simulator.frontend."
@@ -100,7 +100,7 @@ _RESTRICTED_POLICY_SCHEMAS = {
 _RESTRICTED_EXECUTION_SCHEMAS = {
     "mcwf": (
         "error_coupling_simulator.frontend."
-        "mcwf_mps_state_record_execution.v7"
+        "mcwf_mps_state_record_execution.v8"
     ),
     "qt": (
         "error_coupling_simulator.frontend."
@@ -420,7 +420,6 @@ _MCWF_POLICY_DENSE_CERTIFICATION_FIELDS = frozenset(
         "component_values",
         "gate",
         "gross_gate",
-        "choi_trace_distance",
         "effective_gate_including_sampling_ci",
         "gross_effective_gate_including_sampling_ci",
         "gross_gate_ceiling",
@@ -2965,7 +2964,10 @@ def _validate_mcwf_mps_execution_options(options: dict[str, Any]) -> dict[str, A
         out["finite_step_order"] = normalize_mps_choice(
             out["finite_step_order"],
             name="finite_step_order",
-            choices=("first_order", "strang_second_order"),
+            choices=(
+                "first_order",
+                "symmetric_hamiltonian_first_order_collapse",
+            ),
         )
     for name in (
         "mass_residual_budget",

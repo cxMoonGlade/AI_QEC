@@ -608,7 +608,10 @@ def test_mcwf_carrier_rejects_child_from_wrong_source_hash(
         ("device", "cuda:1"),
         ("max_bond", 3),
         ("microstep_count", 2),
-        ("finite_step_order", "strang_second_order"),
+        (
+            "finite_step_order",
+            "symmetric_hamiltonian_first_order_collapse",
+        ),
         ("trajectory_count", 5),
         ("rng_seed", 18),
     ),
@@ -825,7 +828,11 @@ def test_mcwf_carrier_rejects_wrong_nested_trajectory_count(
     ("container", "field", "bad_value"),
     (
         ("trajectory_sampling", "rng_seed", 18),
-        ("finite_step_policy", "order", "strang_second_order"),
+        (
+            "finite_step_policy",
+            "order",
+            "symmetric_hamiltonian_first_order_collapse",
+        ),
         ("finite_step_policy", "microstep_count", 2),
         (
             "multilevel_measurement_policy",
@@ -1690,7 +1697,7 @@ def test_auto_router_rejects_rehashed_child_from_wrong_source_hash(
 @pytest.mark.parametrize(
     ("field", "bad_value"),
     [
-        ("schema", "error_coupling_simulator.frontend.carrier_execution.v1"),
+        ("schema", "error_coupling_simulator.frontend.carrier_execution.v4"),
         ("source_kind", "stim_circuit"),
         ("schedule_representability", "shadow_schedule"),
         ("representability", "shadow_carrier"),
@@ -1900,7 +1907,7 @@ def test_auto_router_rejects_self_consistent_histogram_not_emitted_by_direct(
     ("path", "bad_value"),
     [
         (("restricted_acceptance_policy", "schema"),
-         "error_coupling_simulator.frontend.mcwf_mps_restricted_acceptance_policy.v5"),
+         "error_coupling_simulator.frontend.mcwf_mps_restricted_acceptance_policy.v6"),
         (("restricted_acceptance_policy", "accepted_for_production_scalable_backend"), True),
         (("restricted_acceptance_policy", "probability",
           "runtime_candidate_mass_residual_budget"), 0.2),
@@ -1917,7 +1924,7 @@ def test_auto_router_rejects_self_consistent_histogram_not_emitted_by_direct(
         (("mcwf_mps_execution", "claims_production_scalable_backend"), True),
         (("state_execution", "evidence_schema"), "forged_schema"),
         (("mcwf_mps_execution", "schema"),
-         "error_coupling_simulator.frontend.mcwf_mps_state_record_execution.v6"),
+         "error_coupling_simulator.frontend.mcwf_mps_state_record_execution.v7"),
         (("mcwf_mps_execution", "content_hash"), "f" * 64),
         (("state_execution", "evidence_content_hash"), "e" * 64),
         (("state_execution", "level_records"), [[2]]),

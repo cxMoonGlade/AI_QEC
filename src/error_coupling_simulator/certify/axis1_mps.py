@@ -5,16 +5,16 @@ from __future__ import annotations
 The reference route builds every Hamiltonian and collapse matrix from isolated,
 hand-typed NumPy/Pauli definitions and assembles each substep with
 :func:`carrier.joint_lindbladian.assemble_substep_channel`; it reuses neither
-the carrier's term builders nor its Hamiltonian grouping. Depending on the available
-output, the comparison uses process infidelity, Choi trace distance, record
-total variation, or declared-basis measurement-eigenlabel total variation.
+the carrier's term builders nor its Hamiltonian grouping. Registered comparisons
+use emitted-Record or declared-basis measurement-eigenlabel total variation.
 
-The restricted and exact-evidence verdicts use separate project gates because
-a one-microstep quantum-jump execution has a declared finite-step error. A
-dense-checkable run that exceeds the restricted gate is rejected. A run may be
-marked unverified only when its Hilbert-space dimension exceeds the declared
-dense-reference cap or it explicitly requires a scalable backend. Sampling
-allowances and every threshold are reported with the result; they are software
+The strict numerical tripwire and restricted verdict use separate project gates
+because a one-microstep quantum-jump execution has a declared finite-step error. A
+dense-checkable run that exceeds the restricted gate is rejected. Runs beyond
+the declared dense-reference cap or requiring a scalable backend remain
+unverified; measurement-free runs are unavailable because no Record metric is
+registered. Sampling allowances and every threshold are reported with the
+result; they are software
 decision rules rather than physical error bounds.
 
 The dense joint-Lindbladian reference is CUDA-only, so claim-bearing
@@ -44,14 +44,6 @@ from .mcwf_operator_reference import (
 # Module-default tolerances. Epistemic class (c): heuristic certification gates /
 # tripwires ONLY (go/no-go), never a premise, definition, derivation, or error bound.
 #
-# Channel path STRICT tau (exact-dense evidence): the carrier's per-substep first-order
-# quantum-jump MCWF unraveling (no-jump Kraus I - 1/2 dt c^dag c + jump Kraus sqrt(dt) c) is
-# an O(dt^2) Euler approximation to the joint expm(L dt); for a PURE-HAMILTONIAN / closed
-# substep the carrier's connected-cluster joint matrix_exp is exact-vs-oracle to the
-# matrix_exp floor. So the STRICT gate certifies the exact-dense branch; the GROSS gate
-# gates restricted acceptance. Anti-circular: the JOINT oracle is the reference; the carrier
-# channel is the object under test.
-_PROCESS_INFIDELITY_GATE = 1.0e-6
 # Torch CUDA ``matrix_exp`` and SciPy CPU ``expm`` can disagree at ~1.8e-10
 # for an otherwise identical diagonal ZZ gate.  Group-gate validation therefore
 # uses a cross-backend multiple of the shared numerical constant.  Term matrices
@@ -59,7 +51,7 @@ _PROCESS_INFIDELITY_GATE = 1.0e-6
 _MCWF_GROUP_GATE_REFERENCE_TOLERANCE = 1000.0 * NUMERICAL_ZERO
 MCWF_DYNAMICS_ARTIFACT_REFERENCE_CERTIFICATION_SCHEMA = (
     "error_coupling_simulator.certify."
-    "mcwf_dynamics_artifact_reference_certification.v1"
+    "mcwf_dynamics_artifact_reference_certification.v2"
 )
 _MCWF_DYNAMICS_ARTIFACT_REFERENCE_CERTIFICATION_FIELDS = frozenset(
     {
@@ -97,22 +89,12 @@ _MCWF_DYNAMICS_ARTIFACT_REFERENCE_CERTIFICATION_FIELDS = frozenset(
         "content_hash",
     }
 )
-# CHANNEL GROSS gate tau_gross (restricted-acceptance gate, process infidelity 1-F_e).
-# Epistemic class (c): the realized first-order channel finite-step
-# error at ``microstep_count=1`` is at most a few times ``1e-2`` in the current
-# non-commuting certification fixture, which is
-# << a no-op's O(1) channel disagreement (1-F_e ~ 0.42 for an identity-vs-real-dynamics
-# channel). tau_gross sits one order ABOVE the worst correct channel finite-step error and
-# well BELOW the no-op floor, so a correct m=1 channel run PASSES while a no-op /
-# wrong-generator FAILS. A go/no-go tripwire ONLY -- never a premise, derivation, definition,
-# or error bound.
-_GROSS_GATE = 1.0e-1
 # RECORD/EIGENLABEL GROSS gate tau_gross_records (restricted-acceptance gate, TV distance).
-# Epistemic class (c) -- justified separately from the channel gate because a single
-# first-order MCWF microstep can replace a partial Lindblad decay with a FULL deterministic
-# jump, so the worst-correct declared-basis eigenlabel TV vs the exact joint-L oracle at m=1 is larger
-# than the channel 1-F_e: across the leakage fixtures it is <= ~0.14 (the seepage full-jump
-# vs exact partial-decay over dt*gamma=2 gives TV = 1 - e^{-dt*gamma}/... = 0.135), while a
+# Epistemic class (c) -- a single first-order MCWF microstep can replace a partial
+# Lindblad decay with a FULL deterministic jump.  Across the leakage fixtures the
+# worst-correct declared-basis eigenlabel TV vs the exact joint-L oracle at m=1 is
+# <= ~0.14 (the seepage full-jump vs exact partial-decay over dt*gamma=2 gives
+# TV = 1 - e^{-dt*gamma}/... = 0.135), while a
 # no-op leaves the population at the initial level (TV = 1) and a wrong-generator splits it
 # (TV ~ 0.5). tau_gross_records sits ABOVE the worst correct finite-step systematic (with
 # margin) and BELOW the smallest incorrect-run TV. A go/no-go tripwire ONLY.
@@ -202,19 +184,8 @@ _MULTILEVEL_MEASUREMENT_BIT_MAPPING = (
     "eigenlabel_0_to_bit_0_eigenlabel_1_to_bit_1_"
     "eigenlabel_ge_2_to_bit_1_with_probability_leaked_readout_b"
 )
+_NO_MEASUREMENT_RECORD_LAW = "no_measurement_record_law"
 _MCWF_METRIC_IDENTITIES = {
-    "within_substep_window_channel": (
-        "process_infidelity_one_minus_Fe",
-        (
-            "1 - F_pro; F_pro = Uhlmann fidelity of trace-normalised "
-            "Choi states J/D (composed_vs_joint_infidelity convention)"
-        ),
-        (
-            "error_coupling_simulator.carrier.joint_lindbladian."
-            "assemble_substep_channel"
-        ),
-        False,
-    ),
     "record_probabilities": (
         "total_variation_distance",
         (
@@ -249,14 +220,12 @@ def dense_jointL_record_certification(
     *,
     declared_local_dims: list[Any] | tuple[Any, ...] | None = None,
     device: str = "cuda",
-    process_infidelity_gate: float = _PROCESS_INFIDELITY_GATE,
     record_tv_gate: float = _RECORD_TV_GATE,
-    gross_gate: float = _GROSS_GATE,
     record_gross_tv_gate: float = _GROSS_RECORD_TV_GATE,
     record_sampling_confidence: float = _RECORD_SAMPLING_CONFIDENCE,
     dense_channel_max_dim: int = _DENSE_CHANNEL_MAX_DIM,
 ) -> dict[str, Any]:
-    """Certify the MCWF carrier's within-substep output vs the INDEPENDENT joint-L oracle.
+    """Certify an MCWF carrier's emitted measurement law vs an independent joint-L oracle.
 
     Routing (fail-closed honest ``executed: False`` reasons FIRST), then ONE metric
     comparison vs an oracle independent of the carrier's grouping, returning
@@ -267,7 +236,8 @@ def dense_jointL_record_certification(
       2. LEVEL records present (leakage qudit outcomes)  -> ``_certify_level_path``
          (readout-independent declared-basis eigenlabel reference).
       3. qubit measurement records present               -> ``_certify_record_path``.
-      4. no records (Hamiltonian + collapse substep)     -> ``_certify_channel_path``.
+      4. no records                                      -> unavailable: the normalized
+         raw-candidate trajectory law has no registered linear-channel metric.
 
     Args:
       schedule  : the ``SubstepSchedule`` (the same object the carrier consumed). Used to
@@ -289,24 +259,14 @@ def dense_jointL_record_certification(
         name="dense_channel_max_dim",
         minimum=1,
     )
-    process_infidelity_gate = _normalize_required_nonnegative_real(
-        process_infidelity_gate,
-        name="process_infidelity_gate",
-    )
     record_tv_gate = _normalize_required_nonnegative_real(
         record_tv_gate,
         name="record_tv_gate",
-    )
-    gross_gate = _normalize_required_nonnegative_real(
-        gross_gate,
-        name="gross_gate",
     )
     record_gross_tv_gate = _normalize_required_nonnegative_real(
         record_gross_tv_gate,
         name="record_gross_tv_gate",
     )
-    if process_infidelity_gate > gross_gate:
-        raise ValueError("process_infidelity_gate must not exceed gross_gate")
     if record_tv_gate > min(record_gross_tv_gate, _GROSS_RECORD_TV_CEILING):
         raise ValueError(
             "record_tv_gate must not exceed the effective record gross gate"
@@ -315,10 +275,6 @@ def dense_jointL_record_certification(
         record_sampling_confidence,
         name="record_sampling_confidence",
     )
-    if process_infidelity_gate > _PROCESS_INFIDELITY_GATE:
-        raise ValueError("process_infidelity_gate may only tighten the registered default")
-    if gross_gate > _GROSS_GATE:
-        raise ValueError("gross_gate may only tighten the registered default")
     if record_tv_gate > _RECORD_TV_GATE:
         raise ValueError("record_tv_gate may only tighten the registered default")
     if record_gross_tv_gate > _GROSS_RECORD_TV_GATE:
@@ -441,15 +397,32 @@ def dense_jointL_record_certification(
             trajectory_count=trajectory_count,
         )
 
-    # --- (4) no measurement records => channel-checkable substep. ------------------ #
-    return _certify_channel_path(
-        schedule,
+    # --- (4) no measurement records => no registered linear channel. --------------- #
+    # Each MCWF trajectory normalizes its raw no-jump/jump candidate by a
+    # state-dependent total mass.  That normalized law is nonlinear in the input
+    # density operator, so it cannot be represented by one state-independent CPTP
+    # superoperator or scored by a Choi metric.  Operator/artifact certification and
+    # runtime candidate-mass gates remain valid, but neither authorizes a no-Record
+    # process metric.
+    execution_family, _, _ = _validate_metric_family_execution_payload(
         execution,
-        device=device,
-        process_infidelity_gate=float(process_infidelity_gate),
-        gross_gate=float(gross_gate),
-        dense_channel_max_dim=dense_channel_max_dim,
+        sampled=sampled,
+        trajectory_count=trajectory_count,
+        declared_local_dims=declared_local_dims,
+        program=program,
     )
+    if execution_family != _NO_MEASUREMENT_RECORD_LAW:  # pragma: no cover - defensive.
+        raise ValueError("no-measurement MCWF payload route changed during validation")
+    return {
+        "executed": False,
+        "passed": False,
+        "passed_gross": False,
+        "reason": (
+            "mcwf_normalized_candidate_law_has_no_registered_linear_channel_metric"
+        ),
+        "comparison_outcome_is_metric": False,
+        "epistemic_class": "c",
+    }
 
 
 # --------------------------------------------------------------------------- #
@@ -722,9 +695,9 @@ def _certify_level_path(
     passed_gross = bool(tv <= gross_effective_gate)
     return {
         "executed": True,
-        # ``passed`` carries the STRICT decision (exact-dense evidence); ``passed_gross`` the
-        # GROSS decision (restricted acceptance). The gate reads ``passed_gross`` for
-        # restricted acceptance and ``passed`` for the exact-dense evidence flag.
+        # ``passed`` carries the STRICT numerical tripwire; ``passed_gross`` carries
+        # the GROSS decision used for restricted acceptance.  Neither upgrades this
+        # sampled MCWF result to exact dense probability evidence.
         "passed": passed_strict,
         "passed_gross": passed_gross,
         "comparison_object": _JOINT_LEVEL_BINARY_COMPARISON_OBJECT,
@@ -953,92 +926,6 @@ def _certify_record_path(
     }
 
 
-def _certify_channel_path(
-    schedule: Any,
-    execution: dict[str, Any],
-    *,
-    device: str,
-    process_infidelity_gate: float,
-    gross_gate: float,
-    dense_channel_max_dim: int = _DENSE_CHANNEL_MAX_DIM,
-) -> dict[str, Any]:
-    """Channel-checkable substep cert: carrier realized within-substep window superop vs
-    the INDEPENDENT joint-L oracle ``assemble_substep_channel``, scored by process
-    infidelity ``1-F_e`` (Choi-state Uhlmann fidelity, the project's
-    ``composed_vs_joint_infidelity`` convention) + Choi trace distance.
-
-    ``passed`` = STRICT gate (``1-F_e <= 1e-6``, exact-dense evidence); ``passed_gross`` =
-    GROSS gate (``1-F_e <= tau_gross``, restricted acceptance) so a correct ``m=1`` run with
-    a real finite-step error passes restricted acceptance while a no-op/wrong-generator
-    fails.
-
-    Both channels are built from the current schedule and execution manifest.
-    """
-    try:
-        window = _build_carrier_channel_window(
-            schedule, execution, device=device, dense_channel_max_dim=int(dense_channel_max_dim)
-        )
-    except _ChannelNotDenseCheckable as exc:
-        return {
-            "executed": False,
-            "passed": False,
-            "passed_gross": False,
-            "reason": str(exc),
-            "comparison_outcome_is_metric": False,
-            "epistemic_class": "c",
-        }
-    except Exception as exc:  # pragma: no cover - defensive.
-        return {
-            "executed": False,
-            "passed": False,
-            "passed_gross": False,
-            "reason": "dense_jointL_channel_oracle_unavailable",
-            "error_type": type(exc).__name__,
-            "error": str(exc),
-            "comparison_outcome_is_metric": False,
-            "epistemic_class": "c",
-        }
-    carrier_superop = window["carrier_superop"]
-    oracle_kraus = window["oracle_kraus"]
-    oracle_dim = int(window["dim"])
-
-    one_minus_fe, choi_tv = _process_infidelity_and_choi_distance(
-        carrier_superop, oracle_kraus, dim=oracle_dim
-    )
-    one_minus_fe = _normalize_unit_interval_metric(
-        one_minus_fe,
-        name="process_infidelity",
-    )
-    choi_tv = _normalize_unit_interval_metric(
-        choi_tv,
-        name="choi_trace_distance",
-    )
-    passed_strict = bool(one_minus_fe <= float(process_infidelity_gate))
-    passed_gross = bool(one_minus_fe <= float(gross_gate))
-    return {
-        "executed": True,
-        "passed": passed_strict,
-        "passed_gross": passed_gross,
-        "comparison_object": "within_substep_window_channel",
-        "oracle": (
-            "error_coupling_simulator.carrier.joint_lindbladian."
-            "assemble_substep_channel"
-        ),
-        "oracle_independent_of_carrier_grouping": True,
-        "metric": "process_infidelity_one_minus_Fe",
-        "metric_convention": "1 - F_pro; F_pro = Uhlmann fidelity of trace-normalised Choi states J/D (composed_vs_joint_infidelity convention)",
-        "value": float(one_minus_fe),
-        "gate": float(process_infidelity_gate),
-        "gross_gate": float(gross_gate),
-        "choi_trace_distance": float(choi_tv),
-        "choi_trace_distance_convention": "1/2 * ||J_carrier/D - J_oracle/D||_1 (trace norm of difference of trace-normalised Choi states)",
-        "comparison_outcome_is_metric": True,
-        "metric_epistemic_class": "b",
-        "gate_epistemic_class": "c",
-        "epistemic_class": "a/c",
-    }
-
-
 # --------------------------------------------------------------------------- #
 # Restricted-acceptance policy (gross/strict split).                            #
 # --------------------------------------------------------------------------- #
@@ -1063,20 +950,24 @@ def restricted_acceptance_policy(
             AND runtime_mass_residual_within_budget
             AND dense_executed AND dense_passed_gross
             AND (seed_explicit if the sampled path is being accepted as evidence)
-        accepted_for_exact_dense_probability_evidence =
-            accepted AND not sampled AND dense_executed AND dense_passed (STRICT gate).
+        accepted_for_exact_dense_probability_evidence = False.
 
-    A correct ``microstep_count=1`` run (real finite-step error, channel ``1-F_e ~ 1e-2`` /
-    sampled-level ``TV`` small) PASSES the GROSS gate => restricted-accepted. A no-op /
-    wrong-branch / wrong-generator FAILS the gross gate => rejected. A genuinely-uncheckable
-    TRUE-OVERCAP run remains useful diagnostic evidence but cannot pass restricted acceptance.
-    A cert that EXECUTED and FAILED the gross gate => REJECT (no fallback).
+    A sampled X/Z Record comparison may pass the GROSS gate and become restricted
+    empirical evidence.  A no-Record MCWF run has no registered linear-channel metric
+    and remains unavailable/diagnostic.  A no-op / wrong-branch / wrong-generator fails
+    the Record gross gate.  A genuinely-uncheckable TRUE-OVERCAP run remains useful
+    diagnostic evidence but cannot pass restricted acceptance.  A cert that EXECUTED
+    and FAILED the gross gate is rejected (no fallback).
 
     Keeps ``total_probability_residual`` but RENAMES its ROLE to ``normalization_invariant``
     (a sum-frequencies sanity invariant, NOT a distinguishability metric). Sets
-    ``comparison_outcome_is_metric: True`` ONLY where a real TV / 1-F_e / Choi metric was
-    computed.
+    ``comparison_outcome_is_metric: True`` ONLY where a real Record TV metric was computed.
     """
+    if "choi_trace_distance" in certification:
+        raise ValueError(
+            "retired MCWF Choi companion field is not accepted"
+        )
+
     if mass_residual_budget is not None:
         if isinstance(mass_residual_budget, bool):
             raise TypeError("mass_residual_budget must be a real threshold, not bool")
@@ -1376,10 +1267,6 @@ def restricted_acceptance_policy(
             certification,
             "gross_gate",
         )
-    certification_choi_trace_distance = _normalize_optional_unit_metric_field(
-        certification,
-        "choi_trace_distance",
-    )
     certification_effective_gate = _normalize_optional_metric_field(
         certification,
         "effective_gate_including_sampling_ci",
@@ -1433,133 +1320,103 @@ def restricted_acceptance_policy(
         "gate_epistemic_class",
     )
     if cert_metric_real:
-        if certification_comparison_object == "within_substep_window_channel":
-            if certification_gate > _PROCESS_INFIDELITY_GATE:
-                raise ValueError(
-                    "channel certification gate may only tighten the registered default"
-                )
-            if certification_gross_gate > _GROSS_GATE:
-                raise ValueError(
-                    "channel certification gross gate may only tighten the registered default"
-                )
-            if any(
-                value is not None
-                for value in (
-                    certification_effective_gate,
-                    certification_gross_effective_gate,
-                    certification_gross_gate_ceiling,
-                    certification_sampling_halfwidth,
-                    certification_sampling_support_size,
-                    certification_sampling_method,
-                    certification_sampling_confidence,
-                    certification_trajectory_count,
-                    certification_dense_schema,
-                    certification_dense_hash,
-                )
-            ):
-                raise ValueError(
-                    "channel certification must not carry Record sampling overrides"
-                )
-            strict_decision_gate = certification_gate
-            gross_decision_gate = certification_gross_gate
-        else:
-            if certification_gate > _RECORD_TV_GATE:
-                raise ValueError(
-                    "Record certification gate may only tighten the registered default"
-                )
-            if certification_gross_gate > _GROSS_RECORD_TV_GATE:
-                raise ValueError(
-                    "Record certification gross gate may only tighten the registered default"
-                )
-            if certification_effective_gate is None:
-                raise ValueError("Record certification requires an effective strict gate")
-            if certification_gross_effective_gate is None:
-                raise ValueError("Record certification requires an effective gross gate")
-            if certification_gross_gate_ceiling is None:
-                raise ValueError("Record certification requires a gross gate ceiling")
-            if certification_sampling_halfwidth is None:
-                raise ValueError("Record certification requires a sampling halfwidth")
-            if certification_sampling_support_size is None:
-                raise ValueError("Record certification requires a sampling support size")
-            expected_sampling_method = (
+        if certification_gate > _RECORD_TV_GATE:
+            raise ValueError(
+                "Record certification gate may only tighten the registered default"
+            )
+        if certification_gross_gate > _GROSS_RECORD_TV_GATE:
+            raise ValueError(
+                "Record certification gross gate may only tighten the registered default"
+            )
+        if certification_effective_gate is None:
+            raise ValueError("Record certification requires an effective strict gate")
+        if certification_gross_effective_gate is None:
+            raise ValueError("Record certification requires an effective gross gate")
+        if certification_gross_gate_ceiling is None:
+            raise ValueError("Record certification requires a gross gate ceiling")
+        if certification_sampling_halfwidth is None:
+            raise ValueError("Record certification requires a sampling halfwidth")
+        if certification_sampling_support_size is None:
+            raise ValueError("Record certification requires a sampling support size")
+        expected_sampling_method = (
                 _JOINT_LEVEL_BINARY_SAMPLING_CI_METHOD
                 if certification_comparison_object
                 == _JOINT_LEVEL_BINARY_COMPARISON_OBJECT
                 else _RECORD_SAMPLING_CI_METHOD
             )
-            if certification_sampling_method != expected_sampling_method:
-                raise ValueError(
-                    "Record certification sampling method is not registered"
-                )
-            if certification_sampling_confidence is None:
-                raise ValueError("Record certification requires sampling confidence")
-            if certification_sampling_confidence > _RECORD_SAMPLING_CONFIDENCE:
-                raise ValueError(
-                    "Record certification sampling confidence may not loosen the "
-                    "registered allowance"
-                )
-            if certification_trajectory_count != normalized_trajectory_count:
-                raise ValueError(
-                    "certification.trajectory_count must match the execution trajectory count"
-                )
-            if certification_gross_gate_ceiling != _GROSS_RECORD_TV_CEILING:
-                raise ValueError("Record certification gross gate ceiling is not registered")
-            if abs(certification_effective_gate - certification_gate) > NUMERICAL_ZERO:
-                raise ValueError(
-                    "Record certification effective strict gate must equal its base gate"
-                )
-            if not (
-                execution_support_minimum
-                <= certification_sampling_support_size
-                <= execution_support_maximum
-            ):
-                raise ValueError(
-                    "Record certification sampling support size does not match the execution"
-                )
-            if (
-                certification_comparison_object
-                == _JOINT_LEVEL_BINARY_COMPARISON_OBJECT
-            ):
-                expected_halfwidth = _joint_level_binary_sampling_tv_halfwidth(
-                    sampled=sampled,
-                    support_size=certification_sampling_support_size,
-                    trajectory_count=normalized_trajectory_count,
-                    confidence=certification_sampling_confidence,
-                )
-            else:
-                expected_halfwidth = _sampling_tv_halfwidth(
-                    sampled=sampled,
-                    support_size=certification_sampling_support_size,
-                    trajectory_count=normalized_trajectory_count,
-                    confidence=certification_sampling_confidence,
-                )
-            if abs(certification_sampling_halfwidth - expected_halfwidth) > NUMERICAL_ZERO:
-                raise ValueError(
-                    "Record certification sampling halfwidth does not match its declared inputs"
-                )
-            expected_gross_effective_gate = _gross_record_tv_budget(
-                expected_halfwidth,
-                gross_gate=certification_gross_gate,
+        if certification_sampling_method != expected_sampling_method:
+            raise ValueError(
+                "Record certification sampling method is not registered"
             )
-            if (
-                abs(
-                    certification_gross_effective_gate
-                    - expected_gross_effective_gate
-                )
-                > NUMERICAL_ZERO
-            ):
-                raise ValueError(
-                    "Record certification effective gross gate does not match its sampling budget"
-                )
-            if certification_comparison_object == "record_probabilities":
-                if certification_dense_schema != _RECORD_EVIDENCE_SCHEMA:
-                    raise ValueError("Record certification dense evidence schema is not registered")
-                if certification_dense_hash is None:
-                    raise ValueError("Record certification requires a dense evidence hash")
-            elif certification_dense_schema != _LEVEL_EVIDENCE_SCHEMA:
-                raise ValueError("level certification dense evidence schema is not registered")
-            strict_decision_gate = certification_effective_gate
-            gross_decision_gate = certification_gross_effective_gate
+        if certification_sampling_confidence is None:
+            raise ValueError("Record certification requires sampling confidence")
+        if certification_sampling_confidence > _RECORD_SAMPLING_CONFIDENCE:
+            raise ValueError(
+                "Record certification sampling confidence may not loosen the "
+                "registered allowance"
+            )
+        if certification_trajectory_count != normalized_trajectory_count:
+            raise ValueError(
+                "certification.trajectory_count must match the execution trajectory count"
+            )
+        if certification_gross_gate_ceiling != _GROSS_RECORD_TV_CEILING:
+            raise ValueError("Record certification gross gate ceiling is not registered")
+        if abs(certification_effective_gate - certification_gate) > NUMERICAL_ZERO:
+            raise ValueError(
+                "Record certification effective strict gate must equal its base gate"
+            )
+        if not (
+            execution_support_minimum
+            <= certification_sampling_support_size
+            <= execution_support_maximum
+        ):
+            raise ValueError(
+                "Record certification sampling support size does not match the execution"
+            )
+        if (
+            certification_comparison_object
+            == _JOINT_LEVEL_BINARY_COMPARISON_OBJECT
+        ):
+            expected_halfwidth = _joint_level_binary_sampling_tv_halfwidth(
+                sampled=sampled,
+                support_size=certification_sampling_support_size,
+                trajectory_count=normalized_trajectory_count,
+                confidence=certification_sampling_confidence,
+            )
+        else:
+            expected_halfwidth = _sampling_tv_halfwidth(
+                sampled=sampled,
+                support_size=certification_sampling_support_size,
+                trajectory_count=normalized_trajectory_count,
+                confidence=certification_sampling_confidence,
+            )
+        if abs(certification_sampling_halfwidth - expected_halfwidth) > NUMERICAL_ZERO:
+            raise ValueError(
+                "Record certification sampling halfwidth does not match its declared inputs"
+            )
+        expected_gross_effective_gate = _gross_record_tv_budget(
+            expected_halfwidth,
+            gross_gate=certification_gross_gate,
+        )
+        if (
+            abs(
+                certification_gross_effective_gate
+                - expected_gross_effective_gate
+            )
+            > NUMERICAL_ZERO
+        ):
+            raise ValueError(
+                "Record certification effective gross gate does not match its sampling budget"
+            )
+        if certification_comparison_object == "record_probabilities":
+            if certification_dense_schema != _RECORD_EVIDENCE_SCHEMA:
+                raise ValueError("Record certification dense evidence schema is not registered")
+            if certification_dense_hash is None:
+                raise ValueError("Record certification requires a dense evidence hash")
+        elif certification_dense_schema != _LEVEL_EVIDENCE_SCHEMA:
+            raise ValueError("level certification dense evidence schema is not registered")
+        strict_decision_gate = certification_effective_gate
+        gross_decision_gate = certification_gross_effective_gate
         if gross_decision_gate < strict_decision_gate:
             raise ValueError(
                 "certification gross decision gate must not be below strict decision gate"
@@ -1582,11 +1439,6 @@ def restricted_acceptance_policy(
     dense_evidence_gross = bool(
         dense_executed and dense_passed_gross and cert_metric_real
     )
-    # The STRICT exact-dense evidence path: the same comparison passed the STRICT gate.
-    dense_evidence_strict = bool(
-        dense_executed and dense_passed_strict and cert_metric_real
-    )
-
     # A genuinely uncheckable run may retain diagnostic evidence, but it is not a
     # positive restricted-certification path. A cert that executed and failed its gross gate
     # is likewise rejected rather than routed through an unavailable-oracle fallback.
@@ -1774,7 +1626,7 @@ def restricted_acceptance_policy(
         diagnostic_only = False
 
     return {
-        "schema": "error_coupling_simulator.frontend.mcwf_mps_restricted_acceptance_policy.v6",
+        "schema": "error_coupling_simulator.frontend.mcwf_mps_restricted_acceptance_policy.v7",
         "policy_role": "restricted_execution_acceptance_not_metric",
         "execution_status": "completed",
         "certification_status": certification_status,
@@ -1783,11 +1635,10 @@ def restricted_acceptance_policy(
         "accepted_for_sampled_execution_evidence": bool(
             accepted and sampled and dense_evidence_gross
         ),
-        # Exact-dense evidence is possible only for a registered un-sampled
-        # comparison (currently the no-Record channel path, not level/Record).
-        "accepted_for_exact_dense_probability_evidence": bool(
-            accepted and not sampled and dense_evidence_strict
-        ),
+        # The MCWF seam currently registers only sampled X/Z Record metrics.
+        # A no-Record normalized-candidate law is not a linear channel, so it
+        # cannot create exact dense probability evidence.
+        "accepted_for_exact_dense_probability_evidence": False,
         "accepted_for_production_scalable_backend": False,
         "accepted_as_restricted_overcap_execution": False,
         "blocked_reason": None if accepted else (blockers[0] if blockers else None),
@@ -1801,7 +1652,9 @@ def restricted_acceptance_policy(
                 "restricted_acceptance_gate_catches_gross_disagreement_"
                 "no_op_wrong_branch"
             ),
-            "strict_gate_role": "exact_dense_probability_evidence_gate",
+            "strict_gate_role": (
+                "strict_record_tv_numerical_tripwire_not_exact_evidence"
+            ),
             "dense_passed_gross": dense_passed_gross if dense_executed else None,
             "dense_passed_strict": dense_passed_strict if dense_executed else None,
             "comparison_outcome_is_metric": False,
@@ -1819,7 +1672,6 @@ def restricted_acceptance_policy(
             "component_values": certification_component_values,
             "gate": certification_gate,
             "gross_gate": certification_gross_gate,
-            "choi_trace_distance": certification_choi_trace_distance,
             "effective_gate_including_sampling_ci": certification_effective_gate,
             "gross_effective_gate_including_sampling_ci": (
                 certification_gross_effective_gate
@@ -1838,7 +1690,7 @@ def restricted_acceptance_policy(
                 certification_oracle_independent
             ),
             "readout_model_independent": certification_readout_independent,
-            # True ONLY where a real TV / 1-F_e / Choi metric was computed.
+            # True ONLY where a registered Record TV metric was computed.
             "comparison_outcome_is_metric": cert_metric_real,
             "metric_epistemic_class": certification_metric_epistemic_class,
             "gate_epistemic_class": certification_gate_epistemic_class,
@@ -1908,27 +1760,29 @@ def restricted_acceptance_policy(
             "epistemic_class": "c",
         },
         "production_blockers": blockers,
-        "scored_quantity_policy": "policy ledger only; the cert metric (1-F_e / Choi / TV) is field-standard, reported not newly defined",
+        "scored_quantity_policy": (
+            "policy ledger only; registered Record total variation is reported, "
+            "not newly defined"
+        ),
         "comparison_outcome_is_metric": False,
         "epistemic_class": "a/c",
     }
 
 
 def _dense_certification_status(certification: dict[str, Any]) -> str:
-    """Ported from ``axis1_qt_mps_execution._dense_certification_status`` (lines 1432-1444),
-    extended for the MCWF reasons. ``passed`` here reflects the STRICT decision; the gate's
-    GROSS decision is read separately via ``passed_gross``. A cert that EXECUTED reports
-    ``passed``/``failed`` (the STRICT verdict) for transparency, but restricted acceptance is
-    decided by ``passed_gross`` upstream -- ``failed`` (strict) does NOT block restricted
-    acceptance when ``passed_gross`` is True; what blocks is only a non-executed (overcap /
-    unseeded / unavailable) status or an executed-and-gross-failed cert."""
+    """Normalize the MCWF Record-certification status.
+
+    ``passed`` is the STRICT numerical tripwire and ``passed_gross`` is the
+    restricted-acceptance decision.  Neither denotes exact dense probability
+    evidence.  A non-executed (overcap, unseeded, or unavailable) certification
+    and an executed gross failure both block restricted acceptance.
+    """
     executed = _require_exact_bool(
         certification["executed"], name="executed"
     )
     if executed:
-        # Executed: report the STRICT verdict for the ledger. The gate's restricted-
-        # acceptance path keys off ``executed AND passed_gross`` directly (not this string);
-        # the exact-dense-evidence path keys off ``executed AND passed`` (strict).
+        # Report the STRICT verdict for the ledger. Restricted acceptance keys
+        # off ``executed AND passed_gross`` directly, not this string.
         passed_gross = _require_exact_bool(
             certification["passed_gross"], name="passed_gross"
         )
@@ -1949,7 +1803,6 @@ def _dense_certification_status(certification: dict[str, Any]) -> str:
     }:
         return "skipped_sampled_record_rng_seed_not_explicit"
     if reason in {
-        "channel_checkable_substep_too_large_to_densely_check",
         "level_checkable_program_too_large_to_densely_check",
         "record_checkable_program_too_large_to_densely_check",
     }:
@@ -2183,19 +2036,6 @@ def _normalize_optional_metric_field(
     if value is None:
         return None
     return _normalize_required_nonnegative_real(
-        value,
-        name=f"certification.{field}",
-    )
-
-
-def _normalize_optional_unit_metric_field(
-    certification: dict[str, Any],
-    field: str,
-) -> float | None:
-    value = certification.get(field)
-    if value is None:
-        return None
-    return _normalize_unit_interval_metric(
         value,
         name=f"certification.{field}",
     )
@@ -2847,16 +2687,18 @@ def _validate_metric_family_execution_payload(
     if not isinstance(measurement_targets, (list, tuple)):
         raise TypeError("measurement_targets must be a list or tuple")
     if measurement_targets:
-        raise ValueError("no-measurement channel payload cannot carry measurement_targets")
+        raise ValueError(
+            "no-measurement Record sentinel cannot carry measurement_targets"
+        )
     for field in ("level_record_counts", "level_record_probabilities"):
         residue = evaluator_diagnostics.get(field, ())
         if not isinstance(residue, (list, tuple)):
             raise TypeError(
-                f"no-measurement channel payload {field} must be a list or tuple"
+                f"no-measurement Record sentinel {field} must be a list or tuple"
             )
         if residue:
             raise ValueError(
-                "no-measurement channel payload cannot carry level-record residue"
+                "no-measurement Record sentinel cannot carry level-record residue"
             )
 
     measurement_records = execution.get("measurement_records")
@@ -2867,7 +2709,7 @@ def _validate_metric_family_execution_payload(
         and len(measurement_records[0]) == 0
     ):
         raise ValueError(
-            "no-measurement channel payload requires measurement_records=[[]]"
+            "no-measurement Record sentinel requires measurement_records=[[]]"
         )
     record_counts = _normalize_count_vector(
         execution.get("record_counts", ()),
@@ -2876,7 +2718,7 @@ def _validate_metric_family_execution_payload(
     )
     if record_counts != [trajectory_count]:
         raise ValueError(
-            "no-measurement channel payload requires record_counts=[trajectory_count]"
+            "no-measurement Record sentinel requires record_counts=[trajectory_count]"
         )
     record_probabilities = _normalize_probability_vector(
         execution.get("record_probabilities", ()),
@@ -2884,9 +2726,9 @@ def _validate_metric_family_execution_payload(
     )
     if record_probabilities != [1.0]:
         raise ValueError(
-            "no-measurement channel payload requires record_probabilities=[1.0]"
+            "no-measurement Record sentinel requires record_probabilities=[1.0]"
         )
-    return "within_substep_window_channel", None, None
+    return _NO_MEASUREMENT_RECORD_LAW, None, None
 
 
 def _validate_level_record_layout(
@@ -3104,91 +2946,8 @@ def _total_variation_distance_dict(p: dict, q: dict) -> float:
     return _normalize_unit_interval_metric(value, name="total_variation_distance")
 
 
-def _process_infidelity_and_choi_distance(carrier_superop, oracle_kraus, *, dim: int):
-    """Process infidelity ``1 - F_e`` (Choi-state Uhlmann fidelity) + Choi trace distance
-    between the carrier window superoperator and the reference Kraus channel.
-
-    numpy implementation that REPRODUCES the project's GPU convention EXACTLY
-    (``joint_lindbladian._choi_state_from_kraus`` / ``_state_fidelity`` /
-    ``composed_vs_joint_infidelity``, lines 494-573): column-stacking superop -> channel
-    action; trace-normalised Choi states ``J/D``; Uhlmann fidelity via eigendecomposition;
-    return ``max(0, 1 - F_pro)`` and ``1/2 ||J_c - J_o||_1`` (trace norm = sum|eigvals| of a
-    Hermitian difference). The calculation is performed in NumPy after channel
-    construction.
-    """
-    import numpy as np
-
-    D = int(dim)
-    carrier_superop = np.asarray(carrier_superop, dtype=np.complex128)
-    if carrier_superop.shape != (D * D, D * D):
-        raise ValueError(
-            f"carrier superop shape {carrier_superop.shape} != ({D * D}, {D * D})"
-        )
-
-    def _channel_action_superop(S, rho):
-        # column-stacking: vec(rho) stacks COLUMNS (Fortran order); E(rho) = unvec(S @ vec(rho)).
-        v = np.asarray(rho, dtype=np.complex128).reshape(D * D, order="F")
-        out = S @ v
-        return out.reshape(D, D, order="F")
-
-    def _channel_action_kraus(kraus, rho):
-        acc = np.zeros((D, D), dtype=np.complex128)
-        for K in kraus:
-            K = np.asarray(K, dtype=np.complex128)
-            acc = acc + K @ rho @ K.conj().T
-        return acc
-
-    def _choi_state(apply_fn):
-        J = np.zeros((D * D, D * D), dtype=np.complex128)
-        for p in range(D):
-            for qd in range(D):
-                rho = np.zeros((D, D), dtype=np.complex128)
-                rho[p, qd] = 1.0
-                Epq = apply_fn(rho)
-                epq = np.zeros((D, D), dtype=np.complex128)
-                epq[p, qd] = 1.0
-                J = J + np.kron(Epq, epq)
-        J = 0.5 * (J + J.conj().T)
-        tr = np.trace(J).real
-        return J / tr
-
-    J_carrier = _choi_state(lambda rho: _channel_action_superop(carrier_superop, rho))
-    J_oracle = _choi_state(lambda rho: _channel_action_kraus(oracle_kraus, rho))
-
-    # Uhlmann fidelity of the two trace-normalised Choi states.
-    F_pro = _uhlmann_fidelity(J_carrier, J_oracle)
-    one_minus_fe = float(max(0.0, 1.0 - F_pro))
-
-    # Choi trace distance = 1/2 * trace-norm(J_carrier - J_oracle); trace-norm of a Hermitian
-    # matrix is sum|eigenvalues|.
-    diff = J_carrier - J_oracle
-    diff = 0.5 * (diff + diff.conj().T)
-    eig = np.linalg.eigvalsh(diff)
-    choi_tv = float(0.5 * np.sum(np.abs(eig)))
-    return one_minus_fe, choi_tv
-
-
-def _uhlmann_fidelity(rho, sigma) -> float:
-    """Uhlmann state fidelity ``F = (Tr sqrt( sqrt(rho) sigma sqrt(rho) ))^2`` between two
-    PSD trace-1 matrices (the ``joint_lindbladian._state_fidelity`` convention, numpy/CPU).
-    Returns a real float in [0, 1]."""
-    import numpy as np
-
-    rho = 0.5 * (rho + rho.conj().T)
-    sigma = 0.5 * (sigma + sigma.conj().T)
-    wr, Vr = np.linalg.eigh(rho)
-    wr = np.clip(wr.real, 0.0, None)
-    sqrt_rho = (Vr * np.sqrt(wr)) @ Vr.conj().T
-    inner = sqrt_rho @ sigma @ sqrt_rho
-    inner = 0.5 * (inner + inner.conj().T)
-    wi = np.linalg.eigvalsh(inner)
-    wi = np.clip(wi.real, 0.0, None)
-    sqrt_sum = float(np.sum(np.sqrt(wi)))
-    return float(sqrt_sum * sqrt_sum)
-
-
 # --------------------------------------------------------------------------- #
-# Channel-window builder (GPU production path; raises if not dense-checkable).  #
+# Dense declared-basis oracle guard.                                           #
 # --------------------------------------------------------------------------- #
 class _ChannelNotDenseCheckable(Exception):
     """Raised when a substep/program cannot be densely certified (over-cap / record-bearing /
@@ -3783,7 +3542,10 @@ def _mcwf_dynamics_artifact_reference_failure(
         return "mcwf_dynamics_artifact_coverage_mismatch:substeps"
     if type(microstep_count) is not int or microstep_count < 1:
         return "mcwf_dynamics_artifact_unavailable:microstep_count"
-    if finite_step_order not in {"first_order", "strang_second_order"}:
+    if finite_step_order not in {
+        "first_order",
+        "symmetric_hamiltonian_first_order_collapse",
+    }:
         return "mcwf_dynamics_artifact_unavailable:finite_step_order"
 
     for substep_index, (substep, artifact) in enumerate(
@@ -3809,7 +3571,9 @@ def _mcwf_dynamics_artifact_reference_failure(
         )
         expected_hamiltonian_dt = (
             0.5 * expected_microstep_dt
-            if hamiltonian_terms and finite_step_order == "strang_second_order"
+            if hamiltonian_terms
+            and finite_step_order
+            == "symmetric_hamiltonian_first_order_collapse"
             else expected_microstep_dt if hamiltonian_terms else 0.0
         )
         if artifact.get("microstep_dt_ns") != expected_microstep_dt:
@@ -3975,98 +3739,10 @@ def _mcwf_dynamics_artifact_reference_failure(
     return None
 
 
-def _build_carrier_channel_window(
-    schedule: Any,
-    execution: dict[str, Any],
-    *,
-    device: str,
-    dense_channel_max_dim: int = _DENSE_CHANNEL_MAX_DIM,
-):
-    """Build the carrier's REALIZED within-substep window superop (first-order MCWF
-    unraveling: no-jump Kraus ``I - 1/2 dt c^dag c`` + jump Kraus ``sqrt(dt) c``, on the
-    connected-cluster joint-Hamiltonian gate) AND the INDEPENDENT oracle Kraus
-    ``assemble_substep_channel(H_list, c_list, dt)`` for the ONE channel-checkable substep.
-
-    The carrier superoperator uses the production grouping and term builders, while the
-    oracle operators come from certifier-local hand-typed NumPy definitions before the
-    sum-all joint ``expm(L dt)``. Thus neither the operator source nor the grouping is shared
-    across the comparison. Raises ``_ChannelNotDenseCheckable`` when the schedule is not a
-    single small Hamiltonian+collapse substep.
-
-    This path requires CUDA because it calls ``assemble_substep_channel`` and
-    the carrier's torch helpers.
-    """
-    import torch
-
-    from ..carrier.joint_lindbladian import assemble_substep_channel
-    from ..frontend.axis1_carrier_program import (
-        AXIS1_CARRIER_MCWF_MPS_BACKEND_CONTRACT,
-        axis1_carrier_program_manifest,
-    )
-
-    program = axis1_carrier_program_manifest(
-        schedule, backend_contract=AXIS1_CARRIER_MCWF_MPS_BACKEND_CONTRACT
-    )
-    substeps = [
-        s
-        for s in program["program"]["substeps"]
-        if str(s.get("substep_kind")) not in {"measurement", "reset"}
-        and any(
-            str(t["kind"]) in {"hamiltonian", "collapse"} for t in s.get("terms", ())
-        )
-    ]
-    if len(substeps) != 1:
-        raise _ChannelNotDenseCheckable(
-            "channel_certification_requires_exactly_one_hamiltonian_collapse_substep"
-        )
-    substep = substeps[0]
-    if any(str(s.get("substep_kind")) in {"measurement", "reset"} for s in program["program"]["substeps"]):
-        raise _ChannelNotDenseCheckable("channel_certification_excludes_record_bearing_substeps")
-
-    local_dims = tuple(int(d) for d in execution["local_dims"])
-    dt_ns = float(substep["dt_ns"])
-
-    # --- gather the window support and dimension -------------------------------- #
-    support: set[int] = set()
-    for term in substep.get("terms", ()):
-        for q in term.get("support", ()):
-            support.add(int(q))
-    window_qubits = tuple(sorted(support))
-    dim = 1
-    for q in window_qubits:
-        dim *= int(local_dims[q])
-    if dim > int(dense_channel_max_dim):
-        raise _ChannelNotDenseCheckable("channel_checkable_substep_too_large_to_densely_check")
-
-    lift_fn = _make_lift_fn(window_qubits, local_dims, dim)
-
-    # --- oracle H_list / c_list on the window (sum-all joint expm) -------------- #
-    H_list, c_list = _window_oracle_operators(
-        substep, window_qubits, local_dims, dt_ns, lift_fn, device=device
-    )
-    if not H_list and not c_list:
-        raise _ChannelNotDenseCheckable("channel_certification_substep_has_no_generators")
-
-    oracle_kraus = [
-        k.detach().cpu().numpy()
-        for k in assemble_substep_channel(H_list, c_list, dt_ns, device=device)
-    ]
-
-    # --- carrier realized first-order MCWF window superop ----------------------- #
-    carrier_superop = _carrier_first_order_window_superop(
-        substep, window_qubits, local_dims, dt_ns, dim, lift_fn, device=device
-    )
-    return {
-        "carrier_superop": carrier_superop,
-        "oracle_kraus": oracle_kraus,
-        "dim": int(dim),
-    }
-
-
 def _make_lift_fn(window_qubits, local_dims, dim):
     """Return a closure that lifts a |op_support|-site operator to the window via kron with
     identities, then permutes legs into window order (mirrors the carrier's own lift logic).
-    Shared by the channel-window builder and declared-basis eigenlabel oracle."""
+    Used by the independent declared-basis eigenlabel oracle."""
     import numpy as np
 
     def _lift(op_small, op_support):
@@ -4130,79 +3806,6 @@ def _window_oracle_operators(
             c_full = lift_fn(c_small, tsupport)
             c_list.append(torch.as_tensor(c_full, dtype=torch.complex128, device=device))
     return H_list, c_list
-
-
-def _carrier_first_order_window_superop(
-    substep, window_qubits, local_dims, dt_ns, dim, lift_fn, *, device: str
-):
-    """The carrier's REALIZED within-substep CPTP map as a column-stacking superop, built
-    EXACTLY as the MCWF trajectory ensemble realizes it: the connected-cluster joint
-    Hamiltonian unitary U, then the first-order quantum-jump Kraus set
-    ``{ U_nojump = I - 1/2 dt sum_k c_k^dag c_k , sqrt(dt) c_k }`` (this is the ensemble-
-    averaged channel the sampled trajectories estimate; averaging over outcomes gives the
-    deterministic CPTP map, NO sampling). Returns the (D^2, D^2) column-stacking superop S
-    with ``vec(E(rho)) = S vec(rho)``.
-    """
-    import numpy as np
-
-    from ..frontend.axis1_mcwf_mps_execution import (
-        _collapse_operator,
-        _hamiltonian_group_gates,
-        _joint_collapse_operator,
-    )
-
-    # Hamiltonian: product of the connected-cluster joint gates (they act on disjoint
-    # clusters => commute => ordered product is the window unitary).
-    U = np.eye(dim, dtype=np.complex128)
-    for gate_rec in _hamiltonian_group_gates(
-        substep, dt_ns=dt_ns, local_dims=local_dims, device=device
-    ):
-        g = gate_rec["gate"].detach().cpu().numpy()
-        cluster = tuple(int(q) for q in gate_rec["support"])
-        U = lift_fn(g, cluster) @ U
-
-    # First-order quantum-jump Kraus on the window.
-    kraus = []
-    sum_cdc = np.zeros((dim, dim), dtype=np.complex128)
-    jump_ops = []
-    for term in substep.get("terms", ()):
-        if str(term["kind"]) != "collapse":
-            continue
-        if abs(float(term.get("coefficient", 0.0))) <= 0.0:
-            continue
-        tsupport = tuple(int(q) for q in term["support"])
-        if len(tsupport) == 1:
-            c_small = _collapse_operator(
-                term,
-                local_dim=local_dims[tsupport[0]],
-                device=device,
-            )
-        elif len(tsupport) == 2:
-            c_small = _joint_collapse_operator(
-                term,
-                tsupport,
-                local_dims=local_dims,
-                device=device,
-            )
-        else:
-            raise _ChannelNotDenseCheckable(
-                "carrier_window_collapse_support_must_be_one_or_two_sites"
-            )
-        c_full = lift_fn(c_small.detach().cpu().numpy(), tsupport)
-        jump_ops.append(c_full)
-        sum_cdc = sum_cdc + c_full.conj().T @ c_full
-    K_nojump = np.eye(dim, dtype=np.complex128) - 0.5 * float(dt_ns) * sum_cdc
-    # The Hamiltonian unitary precedes the jump structure in the microstep (state evolved
-    # under U, then jump competition); compose the channel as jumps . U.
-    kraus.append(K_nojump @ U)
-    for c_full in jump_ops:
-        kraus.append((float(dt_ns) ** 0.5) * c_full @ U)
-
-    # Build the column-stacking superop S = sum_k conj(K) (x) K.
-    S = np.zeros((dim * dim, dim * dim), dtype=np.complex128)
-    for K in kraus:
-        S = S + np.kron(K.conj(), K)
-    return S
 
 
 # --------------------------------------------------------------------------- #

@@ -208,30 +208,6 @@ def _record_metric_certification() -> dict[str, Any]:
     }
 
 
-def _channel_metric_certification() -> dict[str, Any]:
-    return {
-        "executed": True,
-        "passed": True,
-        "passed_gross": True,
-        "comparison_outcome_is_metric": True,
-        "comparison_object": "within_substep_window_channel",
-        "metric": "process_infidelity_one_minus_Fe",
-        "metric_convention": (
-            "1 - F_pro; F_pro = Uhlmann fidelity of trace-normalised "
-            "Choi states J/D (composed_vs_joint_infidelity convention)"
-        ),
-        "oracle": (
-            "error_coupling_simulator.carrier.joint_lindbladian."
-            "assemble_substep_channel"
-        ),
-        "oracle_independent_of_carrier_grouping": True,
-        "value": 0.0,
-        "gate": 1.0e-6,
-        "gross_gate": 0.1,
-        "choi_trace_distance": 0.0,
-    }
-
-
 def _policy(
     execution: dict[str, Any],
     certification: dict[str, Any],
@@ -365,10 +341,13 @@ def test_policy_rejects_deleted_compiled_measurement_layout() -> None:
         }
     )
 
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError,
+        match="execution measurement keys must match carrier program",
+    ):
         CERTIFICATION.restricted_acceptance_policy(
             execution=execution,
-            certification=_channel_metric_certification(),
+            certification=_record_metric_certification(),
             program=_carrier_program(
                 measurement_keys=["m0"],
                 measurement_targets=[0],
@@ -678,9 +657,7 @@ def test_dense_certification_retains_registered_qubit_binary_record_path(
     )
 
 
-def test_multilevel_no_measurement_channel_path_does_not_require_level_records(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_no_measurement_mcwf_path_is_unavailable_without_registered_linear_metric() -> None:
     execution = _measured_execution(
         local_dim=3,
         diagnostics_case="container_omitted",
@@ -697,13 +674,6 @@ def test_multilevel_no_measurement_channel_path_does_not_require_level_records(
             "record_probabilities": [1.0],
         }
     )
-    sentinel = {"route": "registered no-measurement channel path"}
-    monkeypatch.setattr(
-        CERTIFICATION,
-        "_certify_channel_path",
-        lambda *_args, **_kwargs: sentinel,
-    )
-
     result = CERTIFICATION.dense_jointL_record_certification(
         SimpleNamespace(),
         execution,
@@ -711,17 +681,71 @@ def test_multilevel_no_measurement_channel_path_does_not_require_level_records(
         declared_local_dims=[3],
     )
 
-    assert result is sentinel
+    assert result == {
+        "executed": False,
+        "passed": False,
+        "passed_gross": False,
+        "reason": (
+            "mcwf_normalized_candidate_law_has_no_registered_linear_channel_metric"
+        ),
+        "comparison_outcome_is_metric": False,
+        "epistemic_class": "c",
+    }
+    assert "within_substep_window_channel" not in CERTIFICATION._MCWF_METRIC_IDENTITIES
+    for retired_name in (
+        "_certify_channel_path",
+        "_build_carrier_channel_window",
+        "_carrier_first_order_window_superop",
+        "_process_infidelity_and_choi_distance",
+    ):
+        assert not hasattr(CERTIFICATION, retired_name)
+
     policy = _policy(
         execution,
-        _channel_metric_certification(),
+        result,
         declared_local_dims=[3],
         program=_carrier_program(),
     )
-    assert policy["accepted_for_restricted_execution"] is True
-    assert policy["dense_jointL_record_certification"]["comparison_object"] == (
-        "within_substep_window_channel"
+    assert policy["certification_status"] == "unavailable"
+    assert policy["diagnostic_only"] is True
+    assert policy["accepted_for_restricted_execution"] is False
+    assert policy["accepted_for_sampled_execution_evidence"] is False
+    assert policy["accepted_for_exact_dense_probability_evidence"] is False
+    assert policy["dense_jointL_record_certification"]["reason"] == result["reason"]
+
+
+def test_mcwf_policy_rejects_and_does_not_emit_retired_choi_companion() -> None:
+    execution = _measured_execution(
+        local_dim=2,
+        diagnostics_case="container_omitted",
     )
+    certification = _record_metric_certification()
+    policy = _policy(
+        execution,
+        certification,
+        program=_carrier_program(
+            measurement_keys=["m0"],
+            measurement_targets=[0],
+        ),
+    )
+    assert "choi_trace_distance" not in policy[
+        "dense_jointL_record_certification"
+    ]
+    assert policy["gross_strict_gate_split"]["strict_gate_role"] == (
+        "strict_record_tv_numerical_tripwire_not_exact_evidence"
+    )
+
+    forged = dict(certification)
+    forged["choi_trace_distance"] = 0.0
+    with pytest.raises(ValueError, match="retired.*Choi"):
+        _policy(
+            execution,
+            forged,
+            program=_carrier_program(
+                measurement_keys=["m0"],
+                measurement_targets=[0],
+            ),
+        )
 
 
 def _joint_level_binary_metric_certification() -> dict[str, Any]:

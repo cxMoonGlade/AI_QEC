@@ -195,7 +195,8 @@ false-green repair slice. It corrupts numerical evidence, mandatory truncation f
 certification identities and empirical count/probability bindings, Carrier child-state tuples,
 resource probes, and the QT Record-materialization budget while replacing CUDA, Record enumeration,
 and MPS execution with must-not-run sentinels. The restricted MPS source slice must keep these
-falsifiers passing. It also corrupts the direct MCWF policy booleans and raw-payload serialization;
+falsifiers passing. It also requires canonical no-measurement Records to remain non-metric
+`unavailable`, corrupts the direct MCWF policy booleans and raw-payload serialization;
 the direct manifest must reject non-boolean state and nonfinite JSON before emitting a content hash.
 
 `test_mps_quimb_cutoff_static_gate.py` is the package-wide negative gate for the Quimb default-cutoff
@@ -266,7 +267,7 @@ public MCWF seam to reject zero before CUDA.
 once, group gates to be derived from those exact frozen tensors, and the mass preflight and trajectory
 to consume the same artifact inventory. It independently reconstructs connected grouping and group
 gates with SciPy `expm`, checks exact structural zeros, fires stateful-builder TOCTOU and
-state-insensitive wrong-grouping corruptions, and authenticates the public v1 packet's complete
+state-insensitive wrong-grouping corruptions, and authenticates the public v2 packet's complete
 substep/term/group coverage, program/artifact hashes, the reference/certifier/carrier-operator sources,
 the transitive ideal-control-generator and selection-family sources, and post-execution integrity.
 The packet tests require the certifier to recompute the canonical artifact hash from the inspected
@@ -276,14 +277,17 @@ collapse sources, including outcome-insensitive `CTRL_Z` and dark-state `T2`, pl
 substituted for the Torch X-basis rotation and a damaged production level-to-bit mapping. The last
 case covers qubit Z and multilevel X/Z leakage with readout `b=0`:
 the declared-basis label TV can remain zero while the emitted-binary TV forces rejection. The dense
-reference must reject all of them. `test_mps_actual_split_helper.py` additionally binds a
-public five-qubit Strang execution to ordered half-pass indices `[0, 1]`, half-step durations, and
+reference must reject all of them. A public no-measurement direct/Carrier pair must execute the
+state path while remaining unavailable for positive certification; the removed normalized-candidate
+Choi helper surface cannot be reintroduced. `test_mps_actual_split_helper.py` additionally binds a
+public five-qubit `symmetric_hamiltonian_first_order_collapse` execution to ordered half-pass indices
+`[0, 1]`, half-step durations, and
 complete occurrence aggregation. `test_mps_phase6_evaluator_metric_binding.py` rejects reordered
 bases/reset masks before policy or dense certification even when the multiset is unchanged.
 `test_mps_carrier_child_authentication.py` rejects reordered-and-rehashed direct and auto-routed
 Record summaries, rechecks Record width/count/probability and XOR projections, verifies honest
 ordered measurement/readout-policy forwarding, requires sorted unique normalized histograms and canonical blocked summaries,
-binds caller options/state/policy/direct-v7 provenance through the auto-router, and rejects unknown
+binds caller options/state/policy/direct-v8 provenance through the auto-router, and rejects unknown
 or evaluator-only fields recursively at every public Carrier summary seam, including both component
 values of the joint label/binary certification. It also recomputes the frozen-dynamics authority from
 sealed inputs and, for accepted seeded evidence, independently replays direct MCWF and exact-binds its
@@ -292,6 +296,16 @@ its shape, counts, probabilities, policy, and outer hashes are internally valid.
 a real public auto-routed MCWF child with ordered X/Z measurements. Together with the direct and Carrier tests, this establishes public X/Z
 availability for the restricted MCWF slice; it does not establish production scalability or a complete
 QEC Record backend.
+
+`test_axis1_mcwf_convergence.py` is the restricted MCWF X/Z Record-law convergence gate, not an
+Axis-1 channel gate. A hand-written scalar recurrence over the byte-pinned two-qubit T1 fixture fixes
+joint/Z and X-after TV at `m=10,20,40,80`, requires monotone approximate bias halving on that grid,
+and preserves the final Z column as an exact structural zero. Its public GPU leg runs `m=40`,
+`n=2048`, seed `19073` and compares the empirical ordered `[X,Z,X,Z]` Record with the finite-step law
+under one-sample Weissman radii. Helper-level `0.5 -> 1` no-jump and `dt/m -> dt` corruptions are power
+checks; only the canonical semantic mutation suite may claim the corresponding production mutants
+are killed. The file makes no global convergence-order, linear-channel, Choi/CPTP, calibration,
+scalability, or production claim.
 
 `test_mps_phase4a_probability_and_norm.py` is the CPU Phase-4A gate for MPS-006/007/011. It checks
 Decimal-reconstructed tiny T1/T2 probabilities, exact structural zero versus positive-subnormal

@@ -1817,7 +1817,7 @@ def test_mcwf_expected_occurrence_inventory_matches_connected_group_identity() -
             }
         },
         microstep_count=2,
-        finite_step_order="strang_second_order",
+        finite_step_order="symmetric_hamiltonian_first_order_collapse",
     )
 
     assert len(occurrences) == 4
@@ -1829,6 +1829,28 @@ def test_mcwf_expected_occurrence_inventory_matches_connected_group_identity() -
     assert {row["microstep_index"] for row in occurrences} == {0, 1}
     assert {row["hamiltonian_pass_index"] for row in occurrences} == {0, 1}
     assert {row["dt_ns_effective"] for row in occurrences} == {0.5}
+
+
+def test_mcwf_symmetric_split_name_is_honest_and_old_strang_is_rejected() -> None:
+    from error_coupling_simulator.frontend.axis1_mcwf_mps_execution import (
+        _mcwf_finite_step_policy_name,
+        _normalize_finite_step_order,
+    )
+    from error_coupling_simulator.frontend.axis1_qt_mps_execution import (
+        _normalize_finite_step_order as _normalize_qt_finite_step_order,
+    )
+
+    order = "symmetric_hamiltonian_first_order_collapse"
+    assert _normalize_finite_step_order(order) == order
+    assert _mcwf_finite_step_policy_name(order) == (
+        "connected_support_cluster_hamiltonian_sum_"
+        "symmetric_first_order_collapse_mcwf_split_v3"
+    )
+    with pytest.raises(ValueError, match="finite_step_order"):
+        _normalize_finite_step_order("strang_second_order")
+    assert _normalize_qt_finite_step_order("strang_second_order") == (
+        "strang_second_order"
+    )
 
 
 def test_mcwf_production_seam_uses_actual_split_only_for_two_site_unitary() -> None:
@@ -2145,7 +2167,7 @@ def test_mcwf_public_manifest_wires_real_finite_bond_split_events() -> None:
     assert aggregation["not_a_global_error_bound"] is True
 
 
-def test_mcwf_public_strang_manifest_orders_both_half_step_split_events() -> None:
+def test_mcwf_public_symmetric_hamiltonian_manifest_orders_both_half_steps() -> None:
     import torch
 
     if not torch.cuda.is_available():
@@ -2173,16 +2195,24 @@ def test_mcwf_public_strang_manifest_orders_both_half_step_split_events() -> Non
         max_bond=1,
         worst_cut_discarded_weight_gate=1.0,
         total_discarded_weight_gate=1.0,
-        finite_step_order="strang_second_order",
+        finite_step_order="symmetric_hamiltonian_first_order_collapse",
         trajectory_count=1,
         rng_seed=123,
     )
 
     assert manifest["execution_status"] == "completed"
-    assert manifest["finite_step_order"] == "strang_second_order"
+    assert manifest["finite_step_order"] == (
+        "symmetric_hamiltonian_first_order_collapse"
+    )
     execution = manifest["mps_execution"]
     assert execution is not None
-    assert execution["finite_step_policy"]["order"] == "strang_second_order"
+    assert execution["finite_step_policy"]["order"] == (
+        "symmetric_hamiltonian_first_order_collapse"
+    )
+    assert execution["finite_step_policy"]["name"] == (
+        "connected_support_cluster_hamiltonian_sum_"
+        "symmetric_first_order_collapse_mcwf_split_v3"
+    )
 
     ledger = execution["mps_truncation_ledger"]
     assert ledger["discarded_weight_ledger_complete"] is True

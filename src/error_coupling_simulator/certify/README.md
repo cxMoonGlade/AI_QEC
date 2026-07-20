@@ -39,7 +39,7 @@ scale and never allocates the infeasible density matrix. Closed-form identities 
   SciPy `expm`. Reference-declared structural-zero entries remain exact; term differences use
   `NUMERICAL_ZERO`, while the Torch-CUDA/SciPy group-gate comparison uses
   `1000 * NUMERICAL_ZERO`. The public
-  `error_coupling_simulator.certify.mcwf_dynamics_artifact_reference_certification.v1` packet binds full
+  `error_coupling_simulator.certify.mcwf_dynamics_artifact_reference_certification.v2` packet binds full
   substep/term/group coverage, local dimensions, microstep/order controls, Carrier-program and frozen
   artifact hashes, all current reference/certifier/carrier source hashes, and the post-execution artifact
   integrity result. The packet builder independently recomputes the canonical artifact hash from the
@@ -67,6 +67,12 @@ scale and never allocates the infeasible density matrix. Closed-form identities 
   certifier-local hand-typed readout kernel marginalizes leaked labels with the declared `b`, so this
   gate does not reuse the production label-to-bit sampler. It neither reinterprets X outcomes as
   computational local-level occupation nor claims complete QEC Record faithfulness.
+  A schedule with no measurement columns is validated only as the canonical `[[]]` Record sentinel
+  and then returns non-metric `unavailable` certification with reason
+  `mcwf_normalized_candidate_law_has_no_registered_linear_channel_metric`. Normalizing the
+  finite-step candidate family introduces input-state-dependent total mass, so the result is
+  generally nonlinear and cannot be represented by an input-independent CPTP Choi/process metric.
+  The retired no-measurement comparison identity and channel gates are not accepted by policy v7.
 
 **Invariants.** Negative controls are first-class + non-optional (an inert control forces FAIL);
 feasibility is data (cannot OOM); every row carries its epistemic class (a)/(b)/(c) (METRICS.md);

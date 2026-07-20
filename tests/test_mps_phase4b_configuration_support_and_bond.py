@@ -779,13 +779,12 @@ _DENSE_CERTIFICATION_HOSTILE_CONTROLS = (
 )
 
 
-@pytest.mark.parametrize("route", ["overcap", "channel"])
+@pytest.mark.parametrize("route", ["overcap", "no_measurement"])
 @pytest.mark.parametrize(
     ("control", "invalid", "error_type"),
     _DENSE_CERTIFICATION_HOSTILE_CONTROLS,
 )
 def test_mps008_dense_certification_rejects_controls_before_route_or_overcap_return(
-    monkeypatch: pytest.MonkeyPatch,
     route: str,
     control: str,
     invalid: Any,
@@ -793,7 +792,6 @@ def test_mps008_dense_certification_rejects_controls_before_route_or_overcap_ret
 ) -> None:
     import error_coupling_simulator.certify.axis1_mps as dense
 
-    monkeypatch.setattr(dense, "_certify_channel_path", _unexpected_cuda_or_child)
     execution = {
         "trajectory_sampling": {
             "mode": "exact_branch_enumeration",

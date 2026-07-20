@@ -76,18 +76,23 @@ from ..carrier.mps.truncation import (
     build_mps_truncation_ledger,
 )
 AXIS1_MCWF_MPS_EXECUTION_SCHEMA = (
-    "error_coupling_simulator.frontend.mcwf_mps_state_record_execution.v7"
+    "error_coupling_simulator.frontend.mcwf_mps_state_record_execution.v8"
 )
 AXIS1_MCWF_MPS_EXECUTION_REPRESENTABILITY = (
     "axis1_mcwf_mps_fixed_microstep_local_dims_state_record"
 )
 AXIS1_MCWF_MPS_EXECUTION_BACKEND_CONTRACT = AXIS1_CARRIER_MCWF_MPS_BACKEND_CONTRACT
 _FINITE_STEP_ORDER_FIRST = "first_order"
-_FINITE_STEP_ORDER_STRANG = "strang_second_order"
-_FINITE_STEP_ORDERS = (_FINITE_STEP_ORDER_FIRST, _FINITE_STEP_ORDER_STRANG)
+_FINITE_STEP_ORDER_SYMMETRIC_HAMILTONIAN_FIRST_ORDER_COLLAPSE = (
+    "symmetric_hamiltonian_first_order_collapse"
+)
+_FINITE_STEP_ORDERS = (
+    _FINITE_STEP_ORDER_FIRST,
+    _FINITE_STEP_ORDER_SYMMETRIC_HAMILTONIAN_FIRST_ORDER_COLLAPSE,
+)
 _RESTRICTED_ACCEPTANCE_POLICY_SCHEMA = (
     "error_coupling_simulator.frontend."
-    "mcwf_mps_restricted_acceptance_policy.v6"
+    "mcwf_mps_restricted_acceptance_policy.v7"
 )
 _RESTRICTED_ACCEPTANCE_POLICY_ROLE = (
     "restricted_execution_acceptance_not_metric"
@@ -239,7 +244,7 @@ def axis1_mcwf_mps_state_record_execution_manifest(
     per-microstep probability-mass residual bound exceeds the budget); the fail payload reports the
     smallest required ``microstep_count`` within the preflight's signed-64-bit recommendation
     search. A request whose positive budget needs a larger count is rejected rather than changing
-    the v7 blocked-payload integer field. This is a reporting cap, not an input maximum. Pass
+    the v8 blocked-payload integer field. This is a reporting cap, not an input maximum. Pass
     ``None`` as the budget only for a deliberate
     convergence study; such a
     run may execute and emit diagnostics but cannot pass restricted acceptance.
@@ -1023,7 +1028,9 @@ def _mcwf_microstep(
     dynamics_artifact: dict[str, Any] | None = None,
 ) -> tuple[Any, dict[str, Any]]:
     state = mps.copy()
-    if finite_step_order == _FINITE_STEP_ORDER_STRANG:
+    if finite_step_order == (
+        _FINITE_STEP_ORDER_SYMMETRIC_HAMILTONIAN_FIRST_ORDER_COLLAPSE
+    ):
         _apply_hamiltonian_terms_multilevel(
             state,
             substep,
@@ -1261,7 +1268,12 @@ def _mcwf_expected_actual_split_occurrences(
     if count < 1:
         raise ValueError("microstep_count must be positive")
     step_order = _normalize_finite_step_order(finite_step_order)
-    pass_indices = (0, 1) if step_order == _FINITE_STEP_ORDER_STRANG else (0,)
+    pass_indices = (
+        (0, 1)
+        if step_order
+        == _FINITE_STEP_ORDER_SYMMETRIC_HAMILTONIAN_FIRST_ORDER_COLLAPSE
+        else (0,)
+    )
     occurrences: list[dict[str, Any]] = []
     for substep in program["program"]["substeps"]:
         if str(substep["substep_kind"]) == "reset":
@@ -1317,7 +1329,8 @@ def _mcwf_expected_actual_split_occurrences(
         dt_micro = float(substep["dt_ns"]) / float(count)
         dt_effective = (
             0.5 * dt_micro
-            if step_order == _FINITE_STEP_ORDER_STRANG
+            if step_order
+            == _FINITE_STEP_ORDER_SYMMETRIC_HAMILTONIAN_FIRST_ORDER_COLLAPSE
             else dt_micro
         )
         for microstep_index in range(count):
@@ -1516,7 +1529,8 @@ def _compile_mcwf_dynamics_artifacts(
             microstep_dt_ns = float(substep["dt_ns"]) / float(microstep_count)
             hamiltonian_dt_ns = (
                 0.5 * microstep_dt_ns
-                if step_order == _FINITE_STEP_ORDER_STRANG
+                if step_order
+                == _FINITE_STEP_ORDER_SYMMETRIC_HAMILTONIAN_FIRST_ORDER_COLLAPSE
                 else microstep_dt_ns
             )
             hamiltonian_groups = tuple(
@@ -3288,8 +3302,13 @@ def _normalize_finite_step_order(value: str) -> str:
 
 def _mcwf_finite_step_policy_name(order: str) -> str:
     step_order = _normalize_finite_step_order(order)
-    if step_order == _FINITE_STEP_ORDER_STRANG:
-        return "connected_support_cluster_hamiltonian_sum_strang_mcwf_split_v2"
+    if step_order == (
+        _FINITE_STEP_ORDER_SYMMETRIC_HAMILTONIAN_FIRST_ORDER_COLLAPSE
+    ):
+        return (
+            "connected_support_cluster_hamiltonian_sum_"
+            "symmetric_first_order_collapse_mcwf_split_v3"
+        )
     return "connected_support_cluster_hamiltonian_sum_first_order_mcwf_split_v2"
 
 

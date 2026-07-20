@@ -1,8 +1,9 @@
 """Independent dense-reference certification of the restricted MCWF/MPS route.
 
-The acceptance path compares the carrier output with
-``carrier.joint_lindbladian.assemble_substep_channel`` using channel or record
-metrics. Its corruption falsifiers replace either the carrier's Hamiltonian gates
+The acceptance path compares emitted X/Z Record laws with
+``carrier.joint_lindbladian.assemble_substep_channel`` using Record metrics.
+No-measurement normalized-candidate MCWF runs are diagnostic-only because they
+do not define a registered linear channel. Corruption falsifiers replace either the carrier's Hamiltonian gates
 or its X-basis rotation with identities while leaving the independent dense
 reference unchanged, so shared-code agreement cannot produce a pass. This is a
 GPU-only scientific acceptance file.
@@ -29,8 +30,10 @@ if not cuda_ok:
 import error_coupling_simulator.frontend.axis1_mcwf_mps_execution as execmod  # noqa: E402
 import error_coupling_simulator.certify.axis1_mps as certmod  # noqa: E402
 from error_coupling_simulator.frontend import (  # noqa: E402
+    AXIS1_CARRIER_MCWF_MPS_EXECUTION_BACKEND_CONTRACT,
     CircuitBuilder,
     Axis1LocalLindbladContextSpec,
+    axis1_carrier_execution_manifest,
     axis1_mcwf_mps_state_record_execution_manifest,
     circuit_ir_to_substep_schedule,
 )
@@ -593,17 +596,89 @@ def test_dense_reference_rejects_corrupted_multilevel_xz_readout_mapping(
 
 
 def test_certification_surfaces_declared_metric():
-    """A matching run reports TV or process infidelity, not a policy-only flag."""
+    """A matching measurement run reports a registered Record TV metric."""
     manifest = _run(_ququart_transport_schedule())
     cert = manifest["restricted_acceptance_policy"]["dense_jointL_record_certification"]
     assert cert["executed"] is True
     assert cert["comparison_outcome_is_metric"] is True
     assert cert.get("metric") in {
         "total_variation_distance",
-        "process_infidelity_one_minus_Fe",
         "level_record_total_variation_distance",
-    } or "variation" in str(cert.get("metric", "")) or "Fe" in str(cert.get("metric", ""))
+    } or "variation" in str(cert.get("metric", ""))
     assert isinstance(cert.get("value"), float)
+
+
+def _no_measurement_t1_schedule():
+    builder = CircuitBuilder(num_qubits=1)
+    builder.declare_axis1_local_lindblad_context(
+        Axis1LocalLindbladContextSpec(
+            gamma_phi_per_ns=0.0,
+            gamma_1_per_ns=0.01,
+        )
+    )
+    builder.idle(0, duration_ns=1.0)
+    return circuit_ir_to_substep_schedule(builder.build())
+
+
+def _assert_no_measurement_mcwf_is_unavailable(manifest):
+    reason = "mcwf_normalized_candidate_law_has_no_registered_linear_channel_metric"
+    assert manifest["execution_status"] == "completed"
+    assert manifest["passed"] is False
+    assert manifest["diagnostic_only"] is True
+    policy = manifest["restricted_acceptance_policy"]
+    assert policy["certification_status"] == "unavailable"
+    assert policy["accepted_for_restricted_execution"] is False
+    assert policy["accepted_for_sampled_execution_evidence"] is False
+    assert policy["accepted_for_exact_dense_probability_evidence"] is False
+    certification = policy["dense_jointL_record_certification"]
+    assert certification["executed"] is False
+    assert certification["comparison_outcome_is_metric"] is False
+    assert certification["reason"] == reason
+
+
+def test_direct_no_measurement_mcwf_executes_but_cannot_claim_channel_evidence():
+    manifest = axis1_mcwf_mps_state_record_execution_manifest(
+        _no_measurement_t1_schedule(),
+        local_dims=[2],
+        initial_levels=[1],
+        microstep_count=4,
+        trajectory_count=8,
+        rng_seed=19079,
+        mass_residual_budget=0.1,
+    )
+
+    _assert_no_measurement_mcwf_is_unavailable(manifest)
+    execution = manifest["mps_execution"]
+    assert execution["measurement_keys"] == []
+    assert execution["measurement_records"] == [[]]
+    assert execution["record_counts"] == [8]
+    assert execution["record_probabilities"] == [1.0]
+
+
+def test_carrier_cannot_promote_no_measurement_mcwf_to_positive_evidence():
+    manifest = axis1_carrier_execution_manifest(
+        _no_measurement_t1_schedule(),
+        device="cuda",
+        execution_backend_contract=(
+            AXIS1_CARRIER_MCWF_MPS_EXECUTION_BACKEND_CONTRACT
+        ),
+        execution_backend_options={
+            "local_dims": [2],
+            "initial_levels": [1],
+            "microstep_count": 4,
+            "trajectory_count": 8,
+            "rng_seed": 19079,
+            "mass_residual_budget": 0.1,
+        },
+    )
+
+    _assert_no_measurement_mcwf_is_unavailable(manifest)
+    assert manifest["state_execution"]["executed"] is True
+    assert manifest["mcwf_mps_backend_executed"] is True
+    assert manifest["record_execution"]["executed"] is False
+    assert manifest["record_execution"]["reason"] == (
+        "schedule_has_no_measurement_substep"
+    )
 
 
 def test_missing_seed_not_accepted_as_sampled_evidence(monkeypatch):
@@ -708,6 +783,46 @@ def _passing_empty_artifact_packet():
 
 def _rehash_artifact_packet(packet):
     packet["content_hash"] = certmod._mcwf_reference_packet_content_hash(packet)
+
+
+def test_artifact_gate_accepts_honest_symmetric_name_and_rejects_old_strang():
+    program = _empty_hashed_program()
+    order = "symmetric_hamiltonian_first_order_collapse"
+    artifact_hash = certmod._mcwf_reference_dynamics_artifacts_content_hash(
+        program,
+        (),
+        local_dims=(2,),
+        microstep_count=1,
+        finite_step_order=order,
+    )
+    packet = certmod.mcwf_dynamics_artifact_reference_certification(
+        program,
+        dynamics_artifacts=(),
+        dynamics_artifact_content_hash=artifact_hash,
+        local_dims=(2,),
+        microstep_count=1,
+        finite_step_order=order,
+        post_execution_integrity_verified=True,
+    )
+    assert packet["schema"] == (
+        "error_coupling_simulator.certify."
+        "mcwf_dynamics_artifact_reference_certification.v2"
+    )
+    assert packet["passed"] is True
+
+    retired = certmod.mcwf_dynamics_artifact_reference_certification(
+        program,
+        dynamics_artifacts=(),
+        dynamics_artifact_content_hash="0" * 64,
+        local_dims=(2,),
+        microstep_count=1,
+        finite_step_order="strang_second_order",
+        post_execution_integrity_verified=False,
+    )
+    assert retired["passed"] is False
+    assert retired["reason"] == (
+        "mcwf_dynamics_artifact_unavailable:finite_step_order"
+    )
 
 
 def test_public_artifact_packet_recomputes_instead_of_trusting_supplied_hash():
@@ -863,7 +978,10 @@ def test_artifact_packet_validator_rejects_non_mapping_and_field_drift():
             finite_step_order="first_order",
         )
     stale_schema = copy.deepcopy(packet)
-    stale_schema["schema"] = "stale"
+    stale_schema["schema"] = (
+        "error_coupling_simulator.certify."
+        "mcwf_dynamics_artifact_reference_certification.v1"
+    )
     with pytest.raises(ValueError, match="schema is stale"):
         certmod.validate_mcwf_dynamics_artifact_reference_certification(
             stale_schema,
@@ -925,7 +1043,9 @@ def test_artifact_packet_validator_rejects_authenticated_state_drift(case, match
     elif case == "microstep_count":
         packet["microstep_count"] = 2
     elif case == "finite_step_order":
-        packet["finite_step_order"] = "strang_second_order"
+        packet["finite_step_order"] = (
+            "symmetric_hamiltonian_first_order_collapse"
+        )
     elif case == "substep_count":
         packet["substep_count"] = 1
     elif case == "hamiltonian_count":

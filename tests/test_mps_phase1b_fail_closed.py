@@ -158,6 +158,49 @@ def honest_carrier_mcwf_child(carrier_measurement_schedule):
     )
 
 
+def test_retired_mcwf_strang_order_is_rejected_by_public_seams_before_cuda(
+    monkeypatch: pytest.MonkeyPatch,
+    carrier_measurement_schedule,
+) -> None:
+    import error_coupling_simulator.frontend.axis1_carrier_execution as carrier
+    import error_coupling_simulator.frontend.axis1_mcwf_mps_execution as mcwf
+
+    cuda_calls = {"direct": 0, "carrier": 0}
+
+    def direct_cuda_sentinel(_device: str) -> str:
+        cuda_calls["direct"] += 1
+        raise AssertionError("direct MCWF CUDA validation was reached")
+
+    def carrier_cuda_sentinel(_device: str) -> str:
+        cuda_calls["carrier"] += 1
+        raise AssertionError("Carrier MCWF CUDA validation was reached")
+
+    monkeypatch.setattr(mcwf, "_require_cuda_device", direct_cuda_sentinel)
+    monkeypatch.setattr(carrier, "_require_cuda_device", carrier_cuda_sentinel)
+
+    with pytest.raises(ValueError, match="finite_step_order"):
+        mcwf.axis1_mcwf_mps_state_record_execution_manifest(
+            carrier_measurement_schedule,
+            finite_step_order="strang_second_order",
+            trajectory_count=2,
+            rng_seed=17,
+        )
+    with pytest.raises(ValueError, match="finite_step_order"):
+        carrier.axis1_carrier_execution_manifest(
+            carrier_measurement_schedule,
+            execution_backend_contract=(
+                carrier.AXIS1_CARRIER_MCWF_MPS_EXECUTION_BACKEND_CONTRACT
+            ),
+            execution_backend_options={
+                "finite_step_order": "strang_second_order",
+                "trajectory_count": 2,
+                "rng_seed": 17,
+            },
+        )
+
+    assert cuda_calls == {"direct": 0, "carrier": 0}
+
+
 def _six_bit_measurement_schedule():
     from error_coupling_simulator.frontend import (
         CircuitBuilder,
@@ -351,7 +394,6 @@ def _mcwf_channel_certification(**overrides: Any) -> dict[str, Any]:
         "value": 0.0,
         "gate": 1.0e-6,
         "gross_gate": 0.1,
-        "choi_trace_distance": 0.0,
     }
     certification.update(overrides)
     return certification
@@ -917,7 +959,7 @@ def test_mcwf_policy_rejects_injected_effective_gates(
 def test_mcwf_metric_family_must_match_execution_payload() -> None:
     with pytest.raises(ValueError):
         _mcwf_policy(
-            execution_overrides=_canonical_mcwf_channel_execution(),
+            execution_overrides=_canonical_mcwf_no_measurement_execution(),
         )
 
 
@@ -1497,7 +1539,7 @@ def test_auto_router_fails_toward_mcwf_on_invalid_free_vram(
     assert "invalid_available_vram_bytes" in decision["route_reasons"]
 
 
-def test_auto_routed_carrier_envelope_uses_v4_schema(
+def test_auto_routed_carrier_envelope_uses_v5_schema(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     import error_coupling_simulator.frontend.axis1_carrier_execution as carrier
@@ -1517,18 +1559,18 @@ def test_auto_routed_carrier_envelope_uses_v4_schema(
     )
 
     assert manifest["schema"] == (
-        "error_coupling_simulator.frontend.carrier_auto_routed_execution.v4"
+        "error_coupling_simulator.frontend.carrier_auto_routed_execution.v5"
     )
 
 
-def test_mcwf_completed_and_blocked_acceptance_policies_use_v6_schema(
+def test_mcwf_completed_and_blocked_acceptance_policies_use_v7_schema(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     import error_coupling_simulator.frontend.axis1_mcwf_mps_execution as mcwf_execution
 
     expected_schema = (
         "error_coupling_simulator.frontend."
-        "mcwf_mps_restricted_acceptance_policy.v6"
+        "mcwf_mps_restricted_acceptance_policy.v7"
     )
     completed_policy = _mcwf_policy()
 
@@ -1645,7 +1687,7 @@ def _completed_direct_mcwf_policy(**overrides: Any) -> dict[str, Any]:
     policy = {
         "schema": (
             "error_coupling_simulator.frontend."
-            "mcwf_mps_restricted_acceptance_policy.v6"
+            "mcwf_mps_restricted_acceptance_policy.v7"
         ),
         "policy_role": "restricted_execution_acceptance_not_metric",
         "execution_status": "completed",
@@ -2210,7 +2252,7 @@ def _carrier_route_policy(
         "schema": (
             "error_coupling_simulator.frontend."
             + (
-                "mcwf_mps_restricted_acceptance_policy.v6"
+                "mcwf_mps_restricted_acceptance_policy.v7"
                 if route_kind == "mcwf"
                 else "qt_mps_restricted_acceptance_policy.v2"
             )
@@ -2277,7 +2319,8 @@ def test_carrier_accepts_only_route_bound_policy_identity_and_tier(
             "mcwf",
             "sampled_fixed_microstep_mcwf_trajectories",
             "schema",
-            "corrupted.mcwf.policy.v99",
+            "error_coupling_simulator.frontend."
+            "mcwf_mps_restricted_acceptance_policy.v6",
         ),
         (
             "mcwf",
@@ -2535,7 +2578,7 @@ def test_mcwf_dense_certification_rejects_truthy_nonboolean_seed_flag(
     [
         ("record_tv_gate", float("nan"), ValueError),
         ("record_gross_tv_gate", float("nan"), ValueError),
-        ("process_infidelity_gate", float("inf"), ValueError),
+        ("process_infidelity_gate", float("inf"), TypeError),
         ("gross_gate", True, TypeError),
         ("record_sampling_confidence", float("nan"), ValueError),
     ],
@@ -3105,54 +3148,38 @@ def test_mcwf_sampled_level_certification_binds_counts_to_trajectory_count(
         )
 
 
-@pytest.mark.parametrize(
-    ("metric_result", "invalid_field"),
-    [
-        ((float("nan"), 0.0), "process_infidelity"),
-        ((-1.0, 0.0), "process_infidelity"),
-        ((1.1, 0.0), "process_infidelity"),
-        ((0.0, float("inf")), "choi_trace_distance"),
-    ],
-)
-def test_mcwf_dense_channel_certification_rejects_invalid_metric_postcondition(
-    monkeypatch: pytest.MonkeyPatch,
-    metric_result: tuple[float, float],
-    invalid_field: str,
-) -> None:
+def test_mcwf_dense_no_measurement_certification_is_nonmetric_unavailable() -> None:
     import error_coupling_simulator.certify.axis1_mps as mcwf
 
-    monkeypatch.setattr(
-        mcwf,
-        "_build_carrier_channel_window",
-        lambda *_args, **_kwargs: {
-            "carrier_superop": None,
-            "oracle_kraus": None,
-            "dim": 2,
-        },
-    )
-    monkeypatch.setattr(
-        mcwf,
-        "_process_infidelity_and_choi_distance",
-        lambda *_args, **_kwargs: metric_result,
-    )
-    with pytest.raises(ValueError):
-        mcwf.dense_jointL_record_certification(
-            SimpleNamespace(),
-            {
-                "trajectory_sampling": {
-                    "mode": "exact_branch_enumeration",
-                    "rng_seed_was_explicit": False,
-                    "trajectory_count": 1,
-                },
-                "evaluator_only_diagnostics": (
-                    _mcwf_evaluator_only_diagnostics()
-                ),
-                "measurement_keys": [],
-                "measurement_targets": [],
-                **_mcwf_ordered_measurement_metadata(()),
+    certification = mcwf.dense_jointL_record_certification(
+        SimpleNamespace(),
+        {
+            "trajectory_sampling": {
+                "mode": "exact_branch_enumeration",
+                "rng_seed_was_explicit": False,
+                "trajectory_count": 1,
             },
-            {"requires_scalable_backend": False},
-        )
+            "evaluator_only_diagnostics": _mcwf_evaluator_only_diagnostics(),
+            "measurement_keys": [],
+            "measurement_targets": [],
+            **_mcwf_ordered_measurement_metadata(()),
+            "measurement_records": [[]],
+            "record_counts": [1],
+            "record_probabilities": [1.0],
+        },
+        {"requires_scalable_backend": False},
+    )
+
+    assert certification == {
+        "executed": False,
+        "passed": False,
+        "passed_gross": False,
+        "reason": (
+            "mcwf_normalized_candidate_law_has_no_registered_linear_channel_metric"
+        ),
+        "comparison_outcome_is_metric": False,
+        "epistemic_class": "c",
+    }
 
 
 def test_mcwf_policy_rejects_nonstring_nonmetric_reason() -> None:
@@ -3470,8 +3497,6 @@ def test_qt_record_materialization_preflight_uses_registered_schema() -> None:
 @pytest.mark.parametrize(
     ("field", "value"),
     [
-        ("process_infidelity_gate", 2.0e-6),
-        ("gross_gate", 0.11),
         ("record_tv_gate", 2.0e-6),
         ("record_gross_tv_gate", 0.21),
         ("record_sampling_confidence", 0.9999),
@@ -4156,9 +4181,19 @@ def test_mcwf_policy_rejects_invalid_exact_bond_sufficient_dimension(
         _mcwf_policy(ledger=ledger)
 
 
-def test_mcwf_channel_policy_accepts_canonical_no_measurement_sentinel() -> None:
+def test_mcwf_policy_keeps_canonical_no_measurement_sentinel_unavailable() -> None:
+    certification = {
+        "executed": False,
+        "passed": False,
+        "passed_gross": False,
+        "reason": (
+            "mcwf_normalized_candidate_law_has_no_registered_linear_channel_metric"
+        ),
+        "comparison_outcome_is_metric": False,
+        "epistemic_class": "c",
+    }
     policy = _mcwf_policy(
-        certification=_mcwf_channel_certification(),
+        certification=certification,
         execution_overrides={
             "evaluator_only_diagnostics": _mcwf_evaluator_only_diagnostics(),
             "measurement_keys": [],
@@ -4169,10 +4204,12 @@ def test_mcwf_channel_policy_accepts_canonical_no_measurement_sentinel() -> None
         },
     )
 
-    assert policy["accepted_for_restricted_execution"] is True
-    assert policy["dense_jointL_record_certification"]["comparison_object"] == (
-        "within_substep_window_channel"
-    )
+    assert policy["certification_status"] == "unavailable"
+    assert policy["diagnostic_only"] is True
+    assert policy["accepted_for_restricted_execution"] is False
+    assert policy["accepted_for_sampled_execution_evidence"] is False
+    assert policy["accepted_for_exact_dense_probability_evidence"] is False
+    assert policy["dense_jointL_record_certification"]["reason"] == certification["reason"]
 
 
 @pytest.mark.parametrize(
@@ -5295,10 +5332,6 @@ def test_qt_seed_sweep_unevaluated_gate_cannot_accept_regardless_of_passed_field
     "gate_overrides",
     [
         pytest.param(
-            {"process_infidelity_gate": 1.0e-6, "gross_gate": 0.0},
-            id="process_before_gross",
-        ),
-        pytest.param(
             {"record_tv_gate": 1.0e-6, "record_gross_tv_gate": 0.0},
             id="record_before_gross",
         ),
@@ -5429,7 +5462,6 @@ def test_mcwf_policy_rejects_corrupted_controls_before_certification(
         "metric_not_executed",
         "unknown_comparison_object",
         "wrong_oracle",
-        "metric_family_execution_mismatch",
     ],
 )
 def test_mcwf_policy_rejects_corrupted_metric_identity(
@@ -5453,10 +5485,8 @@ def test_mcwf_policy_rejects_corrupted_metric_identity(
             comparison_object="forged_comparison_object",
             metric_convention="forged_convention",
         )
-    elif case == "wrong_oracle":
-        certification = _mcwf_metric_certification(oracle="forged.oracle")
     else:
-        certification = _mcwf_channel_certification()
+        certification = _mcwf_metric_certification(oracle="forged.oracle")
 
     with pytest.raises(ValueError):
         _mcwf_policy(certification=certification)
@@ -5562,7 +5592,7 @@ def test_mcwf_policy_rejects_corrupted_record_metric_budget(
         _mcwf_policy(certification=certification)
 
 
-def _canonical_mcwf_channel_execution() -> dict[str, Any]:
+def _canonical_mcwf_no_measurement_execution() -> dict[str, Any]:
     return {
         "evaluator_only_diagnostics": _mcwf_evaluator_only_diagnostics(),
         "measurement_keys": [],
@@ -5573,36 +5603,11 @@ def _canonical_mcwf_channel_execution() -> dict[str, Any]:
     }
 
 
-@pytest.mark.parametrize(
-    "certification_overrides",
-    [
-        pytest.param(
-            {"gate": 2.0e-6},
-            id="strict_gate_loosened",
-        ),
-        pytest.param(
-            {"gross_gate": 0.11},
-            id="gross_gate_loosened",
-        ),
-        pytest.param(
-            {"sampling_support_size": 1},
-            id="record_override_present",
-        ),
-        pytest.param(
-            {"gross_gate": 0.0},
-            id="gross_below_strict",
-        ),
-    ],
-)
-def test_mcwf_policy_rejects_corrupted_channel_metric_budget(
-    certification_overrides: dict[str, Any],
-) -> None:
-    certification = _mcwf_channel_certification(**certification_overrides)
-
-    with pytest.raises(ValueError):
+def test_mcwf_policy_rejects_retired_channel_metric_identity() -> None:
+    with pytest.raises(ValueError, match="not an allowed MCWF metric identity"):
         _mcwf_policy(
-            certification=certification,
-            execution_overrides=_canonical_mcwf_channel_execution(),
+            certification=_mcwf_channel_certification(),
+            execution_overrides=_canonical_mcwf_no_measurement_execution(),
         )
 
 

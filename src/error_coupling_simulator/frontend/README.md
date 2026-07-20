@@ -318,9 +318,12 @@ Current slice:
   terms still compete jointly per microstep as jump candidates from the same
   compiler-generated substep; Hamiltonian-vs-collapse splitting is a finite-step
   MCWF approximation, not exact dense joint-L channel evidence. Under
-  `strang_second_order`, the two Hamiltonian half-passes are separately and
+  `symmetric_hamiltonian_first_order_collapse`, the two Hamiltonian half-passes are separately and
   schedule-ordered as `hamiltonian_pass_index=0,1`, both with half-step duration;
-  the truncation occurrence ledger fails closed if either pass is absent. Measurement records are
+  the truncation occurrence ledger fails closed if either pass is absent. The collapse update
+  between them remains first-order, so this MCWF option is not a Strang/second-order claim. The
+  retired MCWF name is rejected before CUDA; QT keeps its distinct genuine Strang option.
+  Measurement records are
   accumulated across all measurement substeps. Public `measurement_keys`,
   `measurement_targets`, `measurement_bases`, and `reset_after` are equal-length,
   schedule-ordered lists with one entry per Record column; `measurement_basis` is one of
@@ -350,12 +353,13 @@ Current slice:
   software implementation-definition guard, not mechanism literature closure or calibration.
   The Adapter freezes the realized dynamics before either the first-order mass preflight or any
   trajectory: each production Hamiltonian/collapse builder is called once, connected group gates are
-  constructed from those same term tensors, and no-jump/jump candidates plus both Strang passes consume
+  constructed from those same term tensors, and no-jump/jump candidates plus both symmetric
+  Hamiltonian passes consume
   the resulting immutable artifact set. Certification independently reconstructs every term, connected
   group partition/support/order, and group gate from the isolated NumPy formulas and SciPy `expm`.
   Reference-declared structural zeros must be exact; term comparisons use `NUMERICAL_ZERO`, while
   group-gate comparison uses `1000 * NUMERICAL_ZERO` for the measured Torch-CUDA/SciPy exponential
-  floor. The public `mcwf_dynamics_artifact_reference_certification.v1` packet binds complete
+  floor. The public `mcwf_dynamics_artifact_reference_certification.v2` packet binds complete
   substep/term/group coverage, local dimensions, microstep/order controls, Carrier-program/frozen-artifact
   hashes, current reference/certifier/carrier source hashes, and post-execution artifact integrity. The
   certifier recomputes the canonical artifact hash from the exact matrices and metadata it inspected, so a
@@ -411,11 +415,10 @@ Current slice:
   `claims_production_scalable_backend=false`.
   `certify/axis1_mps.py` consumes the immutable execution evidence and owns the
   dense References, scientific metrics, and final restricted-acceptance policy;
-  the executor does not certify itself. The certification builder keeps channel
-  and Record gross controls
-  separate: `gross_gate` applies to channel process infidelity, while
-  `record_gross_tv_gate` (default `0.2`) applies to Record and level-record total
-  variation. Public gate overrides may tighten but not loosen registered defaults.
+  the executor does not certify itself. MCWF certification registers only the
+  declared-basis-label and emitted-binary Record metric family.
+  `record_gross_tv_gate` (default `0.2`) applies to both Record components, and public
+  gate overrides may tighten but not loosen registered defaults.
   The strict Record gate may not exceed the effective Record gross gate, and the
   finite-shot gross allowance remains capped by the registered Record-TV ceiling.
   On sampled Record and level-record paths, count vectors must sum exactly to
@@ -426,6 +429,11 @@ Current slice:
   dense provenance, and recomputes sampling allowances and strict/gross verdicts
   from their declared inputs. The same fail-closed discipline extends through the
   direct MCWF raw-payload/hash boundary.
+  A no-measurement schedule must still carry canonical `[[]]` records, aligned counts,
+  and probabilities, but its certification is `unavailable` with
+  `mcwf_normalized_candidate_law_has_no_registered_linear_channel_metric`. The
+  normalized finite-step candidate law has input-dependent mass and is generally nonlinear;
+  no Choi/process metric or retired channel gate can authorize it.
 - Axis-1 restricted QT/MPS execution:
   `axis1_qt_mps_restricted_execution_manifest(...)` is the first executable
   quimb/torch-CUDA computational-subspace MPS slice for carrier programs with
@@ -511,7 +519,7 @@ Current slice:
   schedule binding, Record-width/count/probability checks, and detector/logical projection
   reconstruction on the rehashed Carrier child. It requires exact public child/state/Record/direct
   summary field sets; binds the caller options, local Hilbert dimensions, seed, state machine,
-  policy v6, and transitive direct-v7 schema/hash; requires sorted unique normalized empirical
+  policy v7, and transitive direct-v8 schema/hash; requires sorted unique normalized empirical
   histograms and canonical blocked summaries; and recursively rejects evaluator-only field
   families at that public seam. The dense comparator reconstructs X/Z projectors and reset instruments
   independently instead of importing the MPS helper. QT sampled reset metadata is
@@ -560,8 +568,8 @@ Current slice:
 
   Current restricted-MPS schema identities are part of this contract:
 
-  - `error_coupling_simulator.frontend.carrier_execution.v4`
-  - `error_coupling_simulator.frontend.carrier_auto_routed_execution.v4`
+  - `error_coupling_simulator.frontend.carrier_execution.v5`
+  - `error_coupling_simulator.frontend.carrier_auto_routed_execution.v5`
   - `error_coupling_simulator.frontend.carrier_auto_routing_decision.v3`
   - `error_coupling_simulator.frontend.axis1_schedule_record_layout.v1`
   - `error_coupling_simulator.frontend.qt_mps_restricted_execution.v6`
@@ -571,12 +579,12 @@ Current slice:
   - `error_coupling_simulator.frontend.qt_mps_resource_probe.v4`
   - `error_coupling_simulator.frontend.qt_mps_restricted_acceptance_policy.v2`
   - `error_coupling_simulator.frontend.qt_mps_record_materialization_preflight.v2`
-  - `error_coupling_simulator.frontend.mcwf_mps_state_record_execution.v7`
+  - `error_coupling_simulator.frontend.mcwf_mps_state_record_execution.v8`
   - `error_coupling_simulator.frontend.mcwf_mps_evaluator_only_diagnostics.v2`
-  - `error_coupling_simulator.frontend.mcwf_mps_restricted_acceptance_policy.v6`
-  - `error_coupling_simulator.certify.mcwf_dynamics_artifact_reference_certification.v1`
+  - `error_coupling_simulator.frontend.mcwf_mps_restricted_acceptance_policy.v7`
+  - `error_coupling_simulator.certify.mcwf_dynamics_artifact_reference_certification.v2`
 
-  The normal and blocked MCWF policies use the same v6 policy schema. The direct QT and MCWF
+  The normal and blocked MCWF policies use the same v7 policy schema. The direct QT and MCWF
   execution schemas changed from v2 to v3 when the Phase-3 Record layout, reset, and
   metadata behavior changed, then from v3 to v4 when the Phase-4 probability,
   configuration/route-support, and exact-bond semantics changed. The MCWF direct
@@ -595,7 +603,11 @@ Current slice:
   Evaluator-only diagnostics changed from v1 to v2 and the MCWF policy from v5 to v6 because
   the canonical comparison now names declared-basis eigenlabels instead of misclassifying X
   outcomes as computational-level populations; this is a policy-payload change, not a child-only
-  schema bump. The Record-materialization preflight changed from v1 to v2. There is no earlier
+  schema bump. Direct MCWF changed from v7 to v8, MCWF policy from v6 to v7, the frozen-artifact
+  packet from v1 to v2, and Carrier wrapper/auto execution from v4 to v5 when the false linear
+  no-measurement channel identity was removed and the symmetric-Hamiltonian/first-order-collapse
+  algorithm received an honest, fail-closed name. The Record-materialization preflight changed
+  from v1 to v2. There is no earlier
   direct-execution or aggregate compatibility fallback. Acceptance-policy schemas do
   not change merely because their execution children change. Schema/content-hash changes are
   intentional consequences of the stricter interface, Record, probability, routing,

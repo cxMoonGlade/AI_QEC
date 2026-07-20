@@ -549,7 +549,7 @@ def test_structural_zero_mask_defensively_rejects_wrong_computational_arity(
         )
 
 
-def test_corr_relax_dense_oracle_and_carrier_window_use_two_site_operator():
+def test_corr_relax_dense_oracle_uses_two_site_operator():
     term = _collapse_term("CORR_RELAX")
     term["support"] = [0, 1]
     substep = {
@@ -579,18 +579,6 @@ def test_corr_relax_dense_oracle_and_carrier_window_use_two_site_operator():
         local_dims=dims,
     )
     _assert_same_operator(collapses[0], expected)
-
-    superop = certification._carrier_first_order_window_superop(
-        substep,
-        window,
-        dims,
-        substep["dt_ns"],
-        dim,
-        lift,
-        device=DEVICE,
-    )
-    assert superop.shape == (dim * dim, dim * dim)
-    assert np.all(np.isfinite(superop))
 
 
 @pytest.mark.parametrize("family", ("T1", "T1_UP", "T2", "RD"))

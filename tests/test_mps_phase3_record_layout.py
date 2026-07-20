@@ -227,7 +227,7 @@ def test_mps005_mcwf_public_payload_preserves_ordered_xz_basis_and_reset_law():
     )
 
     assert manifest["schema"] == (
-        "error_coupling_simulator.frontend.mcwf_mps_state_record_execution.v7"
+        "error_coupling_simulator.frontend.mcwf_mps_state_record_execution.v8"
     )
     assert manifest["verdict"] == "pass"
     execution = manifest["mps_execution"]
@@ -274,7 +274,7 @@ def test_mps005_mcwf_public_payload_preserves_ordered_xz_basis_and_reset_law():
     acceptance = manifest["restricted_acceptance_policy"]
     assert acceptance["schema"] == (
         "error_coupling_simulator.frontend."
-        "mcwf_mps_restricted_acceptance_policy.v6"
+        "mcwf_mps_restricted_acceptance_policy.v7"
     )
     assert acceptance["dense_jointL_record_certification"][
         "comparison_object"
