@@ -1071,3 +1071,72 @@ def test_mps007_mcwf_reset_mutation_accepts_minimum_positive_subnormal_norm(
     assert returned is state
     assert state.multiply_factors == [1.0 / math.sqrt(_MIN_SUBNORMAL)]
     assert math.isfinite(state.multiply_factors[0])
+
+
+@pytest.mark.parametrize(
+    ("finite_step_order", "expected_hamiltonian_passes"),
+    [
+        pytest.param("first_order", 1, id="first-order"),
+        pytest.param(
+            "symmetric_hamiltonian_first_order_collapse",
+            2,
+            id="symmetric-hamiltonian-first-order-collapse",
+        ),
+    ],
+)
+def test_mcwf_microstep_consumes_trajectory_owned_state_without_clone(
+    monkeypatch: pytest.MonkeyPatch,
+    finite_step_order: str,
+    expected_hamiltonian_passes: int,
+) -> None:
+    import torch
+
+    import error_coupling_simulator.frontend.axis1_mcwf_mps_execution as mcwf
+
+    class OwnedTrajectoryState:
+        def copy(self):
+            raise AssertionError("trajectory-owned microstep state was cloned")
+
+    state = OwnedTrajectoryState()
+    hamiltonian_passes: list[int] = []
+
+    def apply_hamiltonian(candidate, *_args, **kwargs) -> None:
+        assert candidate is state
+        hamiltonian_passes.append(int(kwargs["hamiltonian_pass_index"]))
+
+    def sample_jump(candidate, *_args, **_kwargs):
+        assert candidate is state
+        return candidate, {"selected_branch": "no_jump"}
+
+    monkeypatch.setattr(
+        mcwf,
+        "_apply_hamiltonian_terms_multilevel",
+        apply_hamiltonian,
+    )
+    monkeypatch.setattr(
+        mcwf,
+        "_sample_joint_jump_or_nojump",
+        sample_jump,
+    )
+    generator = torch.Generator(device="cpu")
+    generator.manual_seed(1401)
+
+    returned, record = mcwf._mcwf_microstep(
+        state,
+        {},
+        device="cpu",
+        generator=generator,
+        max_bond=None,
+        truncation_events=[],
+        uncapped_nonlocal_events=[],
+        dt_ns=0.25,
+        finite_step_order=finite_step_order,
+        microstep_index=0,
+        microstep_count=1,
+        branch_bits=(),
+        local_dims=(2,),
+    )
+
+    assert returned is state
+    assert record == {"selected_branch": "no_jump"}
+    assert hamiltonian_passes == list(range(expected_hamiltonian_passes))

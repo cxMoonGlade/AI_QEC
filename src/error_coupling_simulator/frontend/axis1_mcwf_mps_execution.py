@@ -1027,7 +1027,7 @@ def _mcwf_microstep(
     trajectory_index: int | None = None,
     dynamics_artifact: dict[str, Any] | None = None,
 ) -> tuple[Any, dict[str, Any]]:
-    state = mps.copy()
+    state = mps
     if finite_step_order == (
         _FINITE_STEP_ORDER_SYMMETRIC_HAMILTONIAN_FIRST_ORDER_COLLAPSE
     ):
