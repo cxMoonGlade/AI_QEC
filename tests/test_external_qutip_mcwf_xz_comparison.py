@@ -737,6 +737,7 @@ def test_optional_isolated_qutip_worker_emits_ordered_xz_reset_artifact(
     environment = comparator._worker_launch_environment(
         os.environ,
         baseline_python=baseline_python,
+        cache_root=tmp_path / "private-runtime",
     )
     ran = proc.run(
         [
