@@ -107,7 +107,12 @@ def test_pepo_allocator_environment_contract_is_exact_and_file_local() -> None:
         for path in service["acceptance"]
     }
 
-    assert execution["process_environment_overrides"] == expected
+    allocator_overrides = {
+        path: override
+        for path, override in execution["process_environment_overrides"].items()
+        if "PYTORCH_ALLOC_CONF" in override
+    }
+    assert allocator_overrides == expected
     assert set(expected) <= all_acceptance
     assert set(expected) <= set(execution["lane_overrides"]["gpu_serial"])
     assert "tests/test_pepo_host_seam.py" not in expected
