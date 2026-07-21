@@ -44,9 +44,33 @@ EXPECTED_QUTIP_TREE = "f09c4126447d8d77b66f2da39dca759a606346dd"
 REPO = Path(__file__).resolve().parents[2]
 QUTIP_WORKER = Path(__file__).with_name("qutip_mcwf_xz_worker.py")
 QUTIP_BASELINE_REPO = REPO / "external" / "baselines" / "qutip"
-QUTIP_BASELINE_LOCK = REPO / "baseline-environment-qutip-linux-64.lock.json"
+# Authoritative per-platform QuTiP baseline locks. Each entry is
+# (repository-relative lock filename, expected lock "platform" field). The
+# conformance gate compares the FULL ordered conda explicit sha256 URL list, so
+# an execution machine without a registered lock fails closed here.
+QUTIP_BASELINE_LOCKS_BY_MACHINE = {
+    "x86_64": ("baseline-environment-qutip-linux-64.lock.json", "linux-64"),
+    "aarch64": ("baseline-environment-qutip-linux-aarch64.lock.json", "linux-aarch64"),
+}
+
+
+def _qutip_baseline_lock_for_machine() -> tuple[Path, str]:
+    machine = platform.machine()
+    try:
+        name, lock_platform = QUTIP_BASELINE_LOCKS_BY_MACHINE[machine]
+    except KeyError:
+        raise RuntimeError(
+            "no authoritative QuTiP baseline lock is registered for machine "
+            f"{machine!r}; registered machines: "
+            f"{sorted(QUTIP_BASELINE_LOCKS_BY_MACHINE)}"
+        ) from None
+    return REPO / name, lock_platform
+
+
+QUTIP_BASELINE_LOCK, QUTIP_BASELINE_LOCK_PLATFORM = _qutip_baseline_lock_for_machine()
 PROJECT_EVIDENCE_SOURCE_PATHS = (
     "baseline-environment-qutip-linux-64.lock.json",
+    "baseline-environment-qutip-linux-aarch64.lock.json",
     "scripts/external_baselines/mcwf_xz_dense_worker.py",
     "scripts/external_baselines/qutip_mcwf_xz_protocol.py",
     "scripts/external_baselines/qutip_mcwf_xz_worker.py",
@@ -268,7 +292,7 @@ def _qutip_baseline_lock_provenance() -> dict[str, Any]:
     observed_commit = _git_at(QUTIP_BASELINE_REPO, "rev-parse", "HEAD")
     observed_tree = _git_at(QUTIP_BASELINE_REPO, "rev-parse", "HEAD^{tree}")
     if (
-        lock.get("platform") != "linux-64"
+        lock.get("platform") != QUTIP_BASELINE_LOCK_PLATFORM
         or installed.get("python_version") != lock.get("python_version")
         or qutip_vcs.get("source_relative_to_repository")
         != "external/baselines/qutip"

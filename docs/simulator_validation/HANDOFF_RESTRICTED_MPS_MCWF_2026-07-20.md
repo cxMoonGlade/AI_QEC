@@ -52,6 +52,18 @@ that the pending clean-head artifact, coverage, service, mutation, or full scien
 | F3 thermal down/up | `6f1691b833036201fdfcf524e3ddd52d845fc4359fac1cc9d0a0230c74621de1` |
 | 15-entry registry | `3cd654e798a4c45d3bbebf51665ecffbc109f89ccb3a9eb776904236b5525d62` |
 | QuTiP Linux-64 lock | `ea45011e3b8f13299cc37fb1dbed25fb988ff19963658a479a80eb787454a355` |
+| QuTiP Linux-aarch64 lock (Spark) | `62506552aaa05221d88a326b0a801314556dec3732219482e9a82ea966ca0f2e` |
+
+Platform-parallel lock supplement (2026-07-20, late): terminal execution moved to the aarch64
+GB10 Spark host after the local x86_64 host's unresolved hard-reset fault (see
+`outputs/simulator_validation/runtime_reset_watch/DIAGNOSTIC_LEDGER_20260720.md`). The Linux-64
+explicit conda lock is unsatisfiable on aarch64 by construction, so a platform-parallel
+37-package Linux-aarch64 lock was generated from the live conformant environment and registered
+as the machine-selected authority in `run_qutip_mcwf_xz_comparison.py`. The QuTiP VCS identity
+(pristine `external/baselines/qutip` at commit `f343ee3c…`, tree `f09c4126…`, version
+`5.4.0.dev0+f343ee3`) is unchanged and identical in both locks; the exact ordered-URL
+conformance gate is unchanged; unregistered machines fail closed. The Linux-64 lock remains the
+authority for x86_64 execution.
 
 All fixtures use two qubits, `n=2048`, project microstep count 40, ordered
 `[X,Z,X,Z]` measurement keys `[mx_before,mz_before,mx_after,mz_after]`, and reset mask

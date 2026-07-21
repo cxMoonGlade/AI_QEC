@@ -9,6 +9,7 @@ import json
 import math
 import os
 from pathlib import Path
+import platform
 import shutil
 import subprocess
 import sys
@@ -275,9 +276,12 @@ def test_project_evidence_provenance_binds_clean_sources_and_honest_lock_scope(
         for identity in source["selected_sources"].values()
     )
     baseline_lock = locks["baseline_environment_lock"]
-    assert baseline_lock["path"] == (
-        "baseline-environment-qutip-linux-64.lock.json"
-    )
+    # The authoritative lock is per-platform; an unregistered machine fails
+    # closed at comparator import, so this table names every legal answer.
+    assert baseline_lock["path"] == {
+        "x86_64": "baseline-environment-qutip-linux-64.lock.json",
+        "aarch64": "baseline-environment-qutip-linux-aarch64.lock.json",
+    }[platform.machine()]
     assert baseline_lock["conda_explicit_package_count"] > 0
     assert baseline_lock["qutip_commit"] == comparator.EXPECTED_QUTIP_COMMIT
     assert baseline_lock["qutip_tree"] == comparator.EXPECTED_QUTIP_TREE
