@@ -24,7 +24,9 @@
     "docs/service_status.json",
     "tests/_support/restricted_mps_coverage_targets.json",
     "scripts/mps_actual_split_diagnostic.py",
-    "scripts/mps_three_leg_comparator.py"
+    "scripts/mps_three_leg_comparator.py",
+    "core-environment-cu130.lock",
+    "uv.lock"
   ],
   "reconcile_modules": [
     "src/error_coupling_simulator/carrier/mps/uncapped_nonlocal.py",

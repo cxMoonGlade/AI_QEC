@@ -11,6 +11,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from conftest import requires_cuda
+
 
 SCRIPT = Path(__file__).parents[1] / "scripts" / "mps_three_leg_comparator.py"
 SPEC = importlib.util.spec_from_file_location("mps_three_leg_comparator", SCRIPT)
@@ -217,6 +219,7 @@ def test_publishable_report_binds_gate_provenance_and_atomic_protocol(
     )
 
 
+@requires_cuda
 def test_three_leg_provenance_binds_transitive_sources_runtime_locks_and_gpu() -> None:
     provenance = COMPARATOR.build_provenance(require_clean=False)
 
