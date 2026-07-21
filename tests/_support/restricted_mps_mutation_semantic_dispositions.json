@@ -3,24 +3,8 @@
   "classifier_policy": "conservative_exception_prose_ast.v2",
   "reviewed": [
     {
-      "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x__assert_quimb_contract__mutmut_7",
-      "mutation_diff_sha256": "0c7f256aec22f77613d2ddf7ad2d3b9ced4a6d33445dfc2c5d04c1ebb7be9da0",
-      "disposition": "reviewed_noncontractual",
-      "reviewer": "restricted-mps-semantic-review-2026-07-18",
-      "rationale": "The exact diff changes only noncontractual exception diagnostics; the guard and exception class are unchanged.",
-      "evidence_locator": "src/error_coupling_simulator/carrier/mps/capped_two_site.py#_assert_quimb_contract"
-    },
-    {
-      "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x__assert_quimb_contract__mutmut_8",
-      "mutation_diff_sha256": "3f0d7fd996143cdf44311006913ba9432c3af9d8f3357cd92cc46f2fcc3e9ec9",
-      "disposition": "reviewed_noncontractual",
-      "reviewer": "restricted-mps-semantic-review-2026-07-18",
-      "rationale": "The exact diff changes only noncontractual exception diagnostics; the guard and exception class are unchanged.",
-      "evidence_locator": "src/error_coupling_simulator/carrier/mps/capped_two_site.py#_assert_quimb_contract"
-    },
-    {
       "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x__frobenius_weight__mutmut_13",
-      "mutation_diff_sha256": "195f841155a16d7d7668eb233a0ac3e7921ad0797b42ccd3ae96daa4df0c775c",
+      "mutation_diff_sha256": "9cb58902bcdd471e2cfa6103ef806f265f102e086dc9bf06bb6ff7e466833ad8",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only exception diagnostic labels or prose; the scalar result and failure class are unchanged.",
@@ -28,7 +12,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x__frobenius_weight__mutmut_14",
-      "mutation_diff_sha256": "ceafa2dd9b8ff3cc24c7ffeaf56dfe7d2ceb4a89b553cd15403361ebcbc1faa9",
+      "mutation_diff_sha256": "ea4a6f831dd9b428b1b42f8b003b1b092326543b8c9c2df8a2f31dd027b4dad7",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only exception diagnostic labels or prose; the scalar result and failure class are unchanged.",
@@ -36,7 +20,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x__frobenius_weight__mutmut_15",
-      "mutation_diff_sha256": "35e45b1e3bca187d20010b0f4b3d2c2df5131378def8a594fd5b07f0d32338d9",
+      "mutation_diff_sha256": "2e8532386a2351afeb4d37c85e34b40282ecccd0a47be7f07d2dcb564ddbb457",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only exception diagnostic labels or prose; the scalar result and failure class are unchanged.",
@@ -44,7 +28,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x__frobenius_weight__mutmut_6",
-      "mutation_diff_sha256": "9329f3d5a172a5770376460d27e5f86a95c3795193f28501a9eeb2d7acd6a4b9",
+      "mutation_diff_sha256": "86868335f9412c6f39fb999807149a525eeab04c2b114706fb10c11355f40f98",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only exception diagnostic labels or prose; the scalar result and failure class are unchanged.",
@@ -52,7 +36,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x__preflight__mutmut_100",
-      "mutation_diff_sha256": "cd1b70792107eca61a3a0c743b80cd338b452154339530be1dc87cabd142f9bf",
+      "mutation_diff_sha256": "ac343be08a1401a8be43bc45bf466fce6383e8f7f0bf33d31c50fe30f26f00bf",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only noncontractual preflight diagnostics; acceptance guards and validated outputs are unchanged.",
@@ -60,7 +44,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x__preflight__mutmut_101",
-      "mutation_diff_sha256": "9b8f00f0edfabd1359f9e91a044461f988b3bec9badd4c47ff2521c07b83324e",
+      "mutation_diff_sha256": "b4a9ed7c77823e5848f969db0696fb4bac3eac9d54f50e3acf9833be3e7db3da",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only noncontractual preflight diagnostics; acceptance guards and validated outputs are unchanged.",
@@ -68,7 +52,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x__preflight__mutmut_104",
-      "mutation_diff_sha256": "0eaf94e164fb19d74ed96a9bbc8b25542495197160ad6782259476583f1bd724",
+      "mutation_diff_sha256": "d010044cfcd560babf723bf18b4b5554e36c728dca7c0077710eda6e3bb030bb",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only noncontractual preflight diagnostics; acceptance guards and validated outputs are unchanged.",
@@ -76,7 +60,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x__preflight__mutmut_105",
-      "mutation_diff_sha256": "802da746c308b003309d08e5fa5f743a0e934552e15c22e8d608c2977864312a",
+      "mutation_diff_sha256": "20880c11b3ed15fdf6475456e220dbb8924d4306bd426a5fc4dc2c6c97d4b08d",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only noncontractual preflight diagnostics; acceptance guards and validated outputs are unchanged.",
@@ -84,7 +68,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x__preflight__mutmut_4",
-      "mutation_diff_sha256": "0e48064fc3c638da7d0f8022cfffe7077594a3c875b68990f631fd4c3e23a30c",
+      "mutation_diff_sha256": "2745c65d61a9d0ab375f22f6626cae2321afc98520ab54c6317fb6376dcbcf8a",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "Already-validated open-MPS, two-site, and device invariants make the mutated optional/default comparison unreachable or identical.",
@@ -92,7 +76,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x__preflight__mutmut_49",
-      "mutation_diff_sha256": "85c85445aab6bb1a36b4e8f169a326326f2379f73319f9ba1d197a85819a71b1",
+      "mutation_diff_sha256": "fd88e80b66879e4e3cf1be62ef95797b78f0e78cde9f0c7263776e55c96a8a85",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "Already-validated open-MPS, two-site, and device invariants make the mutated optional/default comparison unreachable or identical.",
@@ -100,7 +84,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x__preflight__mutmut_65",
-      "mutation_diff_sha256": "283fe84531122df6e5e0cb381b70a38eb2c321996ca9cc16d90dcfffb7f63311",
+      "mutation_diff_sha256": "07ca89ab21baf1c2e9367ff97aa217a3b93ebfea25b528ffecc8f011a9dea765",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only noncontractual preflight diagnostics; acceptance guards and validated outputs are unchanged.",
@@ -108,7 +92,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x__preflight__mutmut_66",
-      "mutation_diff_sha256": "0452a1fcde2b154eb493d8810eb450406815bb3c40f3b79730a75511bc3237b0",
+      "mutation_diff_sha256": "c321195deda2781ecdf48581b0a37487a70931a6a1eff0d81af36726efe1f286",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only noncontractual preflight diagnostics; acceptance guards and validated outputs are unchanged.",
@@ -116,7 +100,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x__preflight__mutmut_87",
-      "mutation_diff_sha256": "861045fa9302f914ec553034f3e0f51df4107e3a5e2ea656eb13e2770ce5da42",
+      "mutation_diff_sha256": "df9977e9a430e0c0ac593bcd8b92435e2509aa1a2aaf0fb3eb931851298a2409",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "Already-validated open-MPS, two-site, and device invariants make the mutated optional/default comparison unreachable or identical.",
@@ -124,7 +108,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x__preflight__mutmut_90",
-      "mutation_diff_sha256": "21915cbd355ea9d2f8b77710c427c071d57c52b9a71a92134751b732905384a0",
+      "mutation_diff_sha256": "cefbb641ce03b9b261101fd2ec2eae456138022039574522f32a0da966ecc972",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "Already-validated open-MPS, two-site, and device invariants make the mutated optional/default comparison unreachable or identical.",
@@ -132,31 +116,15 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x__preflight__mutmut_95",
-      "mutation_diff_sha256": "213812ad3e6dfba4ecc1c0121f0d11a54a6f35ee4a7ad66d429bc4b5eb038c86",
+      "mutation_diff_sha256": "cc2c2df03a58323ce9ba1d02841e317975aa6107f43828b9835b90920f048d22",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only noncontractual preflight diagnostics; acceptance guards and validated outputs are unchanged.",
       "evidence_locator": "src/error_coupling_simulator/carrier/mps/capped_two_site.py#_preflight"
     },
     {
-      "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x__split_with_event__mutmut_108",
-      "mutation_diff_sha256": "269f553d9aaa1ef4e572d04fd579da56316d0f83055568c7e875d1ab08f97c48",
-      "disposition": "reviewed_noncontractual",
-      "reviewer": "restricted-mps-semantic-review-2026-07-18",
-      "rationale": "The exact diff changes only split failure diagnostics; split validation, event fields, and exception class are unchanged.",
-      "evidence_locator": "src/error_coupling_simulator/carrier/mps/capped_two_site.py#_split_with_event"
-    },
-    {
-      "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x__split_with_event__mutmut_109",
-      "mutation_diff_sha256": "3f89f006fa24e01db16ece79291fce8dfe3af7fcde31dcbd77ffee2835a9aec9",
-      "disposition": "reviewed_noncontractual",
-      "reviewer": "restricted-mps-semantic-review-2026-07-18",
-      "rationale": "The exact diff changes only split failure diagnostics; split validation, event fields, and exception class are unchanged.",
-      "evidence_locator": "src/error_coupling_simulator/carrier/mps/capped_two_site.py#_split_with_event"
-    },
-    {
       "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x__split_with_event__mutmut_65",
-      "mutation_diff_sha256": "02141c10bd2b62e55ff821e80fdf3b8b33d9ad1f2a1188396261d09c841810db",
+      "mutation_diff_sha256": "7e11698c30ba5e73f4b7eb25027cf2f226759952d69e7dc606d94388c7185733",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only split failure diagnostics; split validation, event fields, and exception class are unchanged.",
@@ -164,7 +132,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x__split_with_event__mutmut_70",
-      "mutation_diff_sha256": "5448bc53e517147e2d5afa25006f2cd97ed883c6992981c0c5748e5cb64f001e",
+      "mutation_diff_sha256": "74c4807b8e277f93e736d7254124d465125a1f162251b6774c2cf2813355fbaa",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only split failure diagnostics; split validation, event fields, and exception class are unchanged.",
@@ -172,31 +140,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x__split_with_event__mutmut_71",
-      "mutation_diff_sha256": "fa6406ffd2f02d5d11037285bb11a66045c1df4a151eecb090a5089cd7171f14",
-      "disposition": "reviewed_noncontractual",
-      "reviewer": "restricted-mps-semantic-review-2026-07-18",
-      "rationale": "The exact diff changes only split failure diagnostics; split validation, event fields, and exception class are unchanged.",
-      "evidence_locator": "src/error_coupling_simulator/carrier/mps/capped_two_site.py#_split_with_event"
-    },
-    {
-      "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x__split_with_event__mutmut_89",
-      "mutation_diff_sha256": "12e5e0142d080dcde571e2d158b7e835c260d1f68bd11013a1917ac16809104e",
-      "disposition": "reviewed_noncontractual",
-      "reviewer": "restricted-mps-semantic-review-2026-07-18",
-      "rationale": "The exact diff changes only split failure diagnostics; split validation, event fields, and exception class are unchanged.",
-      "evidence_locator": "src/error_coupling_simulator/carrier/mps/capped_two_site.py#_split_with_event"
-    },
-    {
-      "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x__split_with_event__mutmut_90",
-      "mutation_diff_sha256": "eeb36c76e1d6e932323ec37820981d1c979d45bccd3b9643ba08c3143e48bde6",
-      "disposition": "reviewed_noncontractual",
-      "reviewer": "restricted-mps-semantic-review-2026-07-18",
-      "rationale": "The exact diff changes only split failure diagnostics; split validation, event fields, and exception class are unchanged.",
-      "evidence_locator": "src/error_coupling_simulator/carrier/mps/capped_two_site.py#_split_with_event"
-    },
-    {
-      "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x__split_with_event__mutmut_91",
-      "mutation_diff_sha256": "efc8e92817e09304d656c73c1514a20de6561cb8ab0c89385af75ba28d19d6e1",
+      "mutation_diff_sha256": "1d28561a72d7c2a4a27e0080a0f8e0ea9ed8ebbafbaf4857734dbf94631ae5f8",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only split failure diagnostics; split validation, event fields, and exception class are unchanged.",
@@ -204,7 +148,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x_apply_capped_two_site_unitary__mutmut_11",
-      "mutation_diff_sha256": "5bfc92c1d6003bf8745be2bcbc7eab7bd9e0bfba2b9cea034fc5232aa1621458",
+      "mutation_diff_sha256": "c16333f8b846d77461de4a210c28bb6f6dc662f65a7984655ec3ad3a73578345",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only noncontractual failure diagnostics or diagnostic names; transaction and ledger payload semantics are unchanged.",
@@ -212,7 +156,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x_apply_capped_two_site_unitary__mutmut_12",
-      "mutation_diff_sha256": "f9aa030b2d56a5b7dbc1477473d59ea763119eed9507bb4f9956df8a34fc3114",
+      "mutation_diff_sha256": "9a89276cb4f4bde34ec6420d9eab57f33d2e04887234b9cb611ecc359ebbb32d",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only noncontractual failure diagnostics or diagnostic names; transaction and ledger payload semantics are unchanged.",
@@ -220,7 +164,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x_apply_capped_two_site_unitary__mutmut_13",
-      "mutation_diff_sha256": "21449d20805c233a2f32c85084555643b09f84199471b666072254e7e01165e2",
+      "mutation_diff_sha256": "de4e66353090b7dbb656262b7145b7f174cec76707f08960efef381696bcb4d8",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only noncontractual failure diagnostics or diagnostic names; transaction and ledger payload semantics are unchanged.",
@@ -228,23 +172,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x_apply_capped_two_site_unitary__mutmut_16",
-      "mutation_diff_sha256": "ed3a6fdb68ed614580d3ea9983db7154bcf114d820e5a29b996b368b9f8fe5e4",
-      "disposition": "reviewed_noncontractual",
-      "reviewer": "restricted-mps-semantic-review-2026-07-18",
-      "rationale": "The exact diff changes only noncontractual failure diagnostics or diagnostic names; transaction and ledger payload semantics are unchanged.",
-      "evidence_locator": "src/error_coupling_simulator/carrier/mps/capped_two_site.py#apply_capped_two_site_unitary"
-    },
-    {
-      "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x_apply_capped_two_site_unitary__mutmut_166",
-      "mutation_diff_sha256": "733e91c0595eac41b2ace9e427dd654db81e4c69ea6be49a0bcd80e725b34ee3",
-      "disposition": "reviewed_noncontractual",
-      "reviewer": "restricted-mps-semantic-review-2026-07-18",
-      "rationale": "The exact diff changes only noncontractual failure diagnostics or diagnostic names; transaction and ledger payload semantics are unchanged.",
-      "evidence_locator": "src/error_coupling_simulator/carrier/mps/capped_two_site.py#apply_capped_two_site_unitary"
-    },
-    {
-      "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x_apply_capped_two_site_unitary__mutmut_167",
-      "mutation_diff_sha256": "f8e993594d3cfa8116c50f1e418f823124861282b82d3a8917139821c46df609",
+      "mutation_diff_sha256": "420a12d5bbe83093180364fccd12735f8f5471f6090dba14dfc0377d0a8bf76c",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only noncontractual failure diagnostics or diagnostic names; transaction and ledger payload semantics are unchanged.",
@@ -252,7 +180,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x_apply_capped_two_site_unitary__mutmut_17",
-      "mutation_diff_sha256": "6bdde3ee5ee5236fdae611954b8fbb00b217b2cbecb5efc43601fc60b4909379",
+      "mutation_diff_sha256": "6c79de1a9caf5087be5b5b956ff56ec718fb11f2fe5cdaa09c653c0ddaa48813",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only noncontractual failure diagnostics or diagnostic names; transaction and ledger payload semantics are unchanged.",
@@ -260,7 +188,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x_apply_capped_two_site_unitary__mutmut_18",
-      "mutation_diff_sha256": "00bb958ef3eb084d88873cf88bbf2e13f0fb4f9d60324de919d385cc45871f01",
+      "mutation_diff_sha256": "609fcb88f74710fe7bee5359fbe8dd2d08dd0c95ce664b7dedb61a3bff08f05e",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only noncontractual failure diagnostics or diagnostic names; transaction and ledger payload semantics are unchanged.",
@@ -268,7 +196,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x_apply_capped_two_site_unitary__mutmut_189",
-      "mutation_diff_sha256": "091001906892df589065167cb64a8f1f83c895369ff31aef2777f1f10a7217a4",
+      "mutation_diff_sha256": "8323d669e1ad2ca5506d33c07780b71a5445fb4fe17d380450f7ea04dd45a3ef",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The only real-valued tolerance difference is second order below binary64 spacing under observed_loss <= input_norm.",
@@ -276,7 +204,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x_apply_capped_two_site_unitary__mutmut_19",
-      "mutation_diff_sha256": "1ae4ab018cde3ec78b1db959e0a652335b28cf74f21daa8b20e44700805ac711",
+      "mutation_diff_sha256": "13923ab097c8ee4428a20a1d97c0dafbb81c08373da7af701cb72607e9199307",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only noncontractual failure diagnostics or diagnostic names; transaction and ledger payload semantics are unchanged.",
@@ -284,7 +212,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x_apply_capped_two_site_unitary__mutmut_198",
-      "mutation_diff_sha256": "8cb7928b2f4aa1c53ca9139f1acee86440ae9b2a533054f6ac3f3acd27c32698",
+      "mutation_diff_sha256": "43c2b161cba4139733dabfc70d306c96448a6c87ef51159e6590d54629ee0bdf",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only noncontractual failure diagnostics or diagnostic names; transaction and ledger payload semantics are unchanged.",
@@ -292,7 +220,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x_apply_capped_two_site_unitary__mutmut_199",
-      "mutation_diff_sha256": "5246e4fb5c192724552c585d3102e28098b36196121f2c8eebadad2bf238f54f",
+      "mutation_diff_sha256": "591bd07f71f51d9c6ebacae24db957b9c7626bce47b93d6d1223339e56d44442",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only noncontractual failure diagnostics or diagnostic names; transaction and ledger payload semantics are unchanged.",
@@ -300,7 +228,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x_apply_capped_two_site_unitary__mutmut_200",
-      "mutation_diff_sha256": "f710d87b1784a1ec4260e845cbc755fde4d6dbf71140da6bcc7960961b19df7a",
+      "mutation_diff_sha256": "1e1a900ca6ff4f9ec7953d1c22e88244eec47ccca2b6b58567f42dc41fe9b094",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only noncontractual failure diagnostics or diagnostic names; transaction and ledger payload semantics are unchanged.",
@@ -308,7 +236,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x_apply_capped_two_site_unitary__mutmut_201",
-      "mutation_diff_sha256": "e5f4523290a1230f95d4de36736e95262863eb320425ba1fbe39dd8cfaf133c0",
+      "mutation_diff_sha256": "cf4943daef36df2dab10288114ed9fe446ebdf53b7f499e4170ad2cc14b6f25f",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only noncontractual failure diagnostics or diagnostic names; transaction and ledger payload semantics are unchanged.",
@@ -316,31 +244,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x_apply_capped_two_site_unitary__mutmut_21",
-      "mutation_diff_sha256": "a7e9d3715489f19663cd049d5ac683ba10ab8fad22e450110846f82a95ac88e0",
-      "disposition": "reviewed_noncontractual",
-      "reviewer": "restricted-mps-semantic-review-2026-07-18",
-      "rationale": "The exact diff changes only noncontractual failure diagnostics or diagnostic names; transaction and ledger payload semantics are unchanged.",
-      "evidence_locator": "src/error_coupling_simulator/carrier/mps/capped_two_site.py#apply_capped_two_site_unitary"
-    },
-    {
-      "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x_apply_capped_two_site_unitary__mutmut_228",
-      "mutation_diff_sha256": "c0312f0e7f8844ec599008d87d5d45e46b8f854d90a53828eb2fe49fbda83b16",
-      "disposition": "reviewed_noncontractual",
-      "reviewer": "restricted-mps-semantic-review-2026-07-18",
-      "rationale": "The exact diff changes only noncontractual failure diagnostics or diagnostic names; transaction and ledger payload semantics are unchanged.",
-      "evidence_locator": "src/error_coupling_simulator/carrier/mps/capped_two_site.py#apply_capped_two_site_unitary"
-    },
-    {
-      "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x_apply_capped_two_site_unitary__mutmut_229",
-      "mutation_diff_sha256": "2c24fc75877cfa041825d2009e8f8a9053de6414782d2a3b6676268c9aeaebd8",
-      "disposition": "reviewed_noncontractual",
-      "reviewer": "restricted-mps-semantic-review-2026-07-18",
-      "rationale": "The exact diff changes only noncontractual failure diagnostics or diagnostic names; transaction and ledger payload semantics are unchanged.",
-      "evidence_locator": "src/error_coupling_simulator/carrier/mps/capped_two_site.py#apply_capped_two_site_unitary"
-    },
-    {
-      "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x_apply_capped_two_site_unitary__mutmut_230",
-      "mutation_diff_sha256": "4ff994a8131f159ba2823eab4f9c2caa9b505d58998271bf0444e9850cbd8df5",
+      "mutation_diff_sha256": "29f7aa6e4738beb88ff1dd2b4c5d9b8bb1606e616cfa03ff10f05819010c6534",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only noncontractual failure diagnostics or diagnostic names; transaction and ledger payload semantics are unchanged.",
@@ -348,7 +252,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x_apply_capped_two_site_unitary__mutmut_283",
-      "mutation_diff_sha256": "a86fd1c8997b1058a76cd27473937cbbd93ecaa76262a120537c72de1025f2b6",
+      "mutation_diff_sha256": "d5d98f3555d42e75d3220d0bff77e69199b9f047fc2570d94cf504eec43065fc",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The operator split unconditionally emits a row, so the mutated empty-default branch is unreachable.",
@@ -356,7 +260,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x_apply_capped_two_site_unitary__mutmut_285",
-      "mutation_diff_sha256": "2a6a44ec87b29791185d1b75414c62c41e4776fdd204c4da6172cbfe5d97d84e",
+      "mutation_diff_sha256": "83ef7886eb508a69948503249c2dd08b05d475fa51e6c73d63a1ead90ea26f03",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The operator split unconditionally emits a row, so the mutated empty-default branch is unreachable.",
@@ -364,7 +268,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x_apply_capped_two_site_unitary__mutmut_286",
-      "mutation_diff_sha256": "9043959925ac3c58e4148b171edff49e6b5c72ff31224c45193b26c3bcb9416c",
+      "mutation_diff_sha256": "cd7a4c008c33f9e8dac489eb603b05e6b7bd15dcd6dd03530ac5f8b1c7896ba0",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The operator split unconditionally emits a row, so the mutated empty-default branch is unreachable.",
@@ -372,7 +276,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x_apply_capped_two_site_unitary__mutmut_4",
-      "mutation_diff_sha256": "48f15b81f27352b559b7b3c743bfb2f400a4358561f0dead7ab439ae60ef5516",
+      "mutation_diff_sha256": "cfc82cc293f0cfbc071c03703080021d034189f5cf91c25b716d8f9e99ef62b0",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The prior exact preflight invariants make the mutated optional/default branch observationally identical.",
@@ -380,7 +284,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.capped_two_site.x_apply_capped_two_site_unitary__mutmut_43",
-      "mutation_diff_sha256": "813042ced52639eefba938dbeba00b31b4ca855da6cc3fa9d157b49676e8b45b",
+      "mutation_diff_sha256": "a7b0c47731e30420b1d19a64af234467ce783e3f51db981b50efd0b507280aed",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The prior exact preflight invariants make the mutated optional/default branch observationally identical.",
@@ -388,7 +292,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.controls.x_normalize_mps_choice__mutmut_4",
-      "mutation_diff_sha256": "bd4ad38aee1355e00703523e5ef029da3846d1d9cc77f99b8d8f133374486dca",
+      "mutation_diff_sha256": "061f9c2e2cc2c03e90b32c7061198e67479ff13304d41dbcee56893cd572c085",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only noncontractual exception diagnostics; normalized choices and guards are unchanged.",
@@ -396,7 +300,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.controls.x_normalize_mps_choice__mutmut_6",
-      "mutation_diff_sha256": "47e56f6ff243abcd5287a8469ed792a60174a415d5950254ad986850b3f1ea60",
+      "mutation_diff_sha256": "5f97d0ecbf881ec7ef465b13a161c8ba2be7920b4889d0a4277b6bdec8545a7c",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only noncontractual exception diagnostics; normalized choices and guards are unchanged.",
@@ -404,7 +308,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.controls.x_normalize_mps_device__mutmut_1",
-      "mutation_diff_sha256": "0ad8387134604b8881596a835679da2a14cb23e743b0be28de874fc5be55ea20",
+      "mutation_diff_sha256": "a16779d9eb89055b7b2ba8e81010aa0e7c7c62b0fdecba3d5f7cd9a2b0987afa",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only noncontractual exception diagnostics; device normalization behavior is unchanged.",
@@ -412,7 +316,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.controls.x_normalize_mps_device__mutmut_2",
-      "mutation_diff_sha256": "04dd44e2ddf92860a7f9e3b689cb9353f96d84996864766e0012553596089a04",
+      "mutation_diff_sha256": "7e96657bcc3b238eb4ab047c26c39a84fc87d858e5a460ebfac40a4ca7814cdf",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only noncontractual exception diagnostics; device normalization behavior is unchanged.",
@@ -420,7 +324,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.controls.x_normalize_mps_index__mutmut_11",
-      "mutation_diff_sha256": "60da4b92e73ed960211552365a6721f02f5a2f29f3d4dbbd3556c66bc673756c",
+      "mutation_diff_sha256": "516914c73b8edd3a26bc2f60cbba99482966387bfb64faef3937b00500fb6403",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only diagnostic labels or prose; exact-index validation and return value are unchanged.",
@@ -428,7 +332,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.controls.x_normalize_mps_index__mutmut_12",
-      "mutation_diff_sha256": "e0379f1feb24a24d1852a740e1fc1983ad14fe748336a4c9d94c00a20a5add24",
+      "mutation_diff_sha256": "11e08e9111ce02c71b19869ceb99ee5ddba5937bfb8432787b84661f6a4b177f",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only diagnostic labels or prose; exact-index validation and return value are unchanged.",
@@ -436,7 +340,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.controls.x_normalize_mps_index__mutmut_13",
-      "mutation_diff_sha256": "29e882d6dfbef50aefdaacce33714c0a2a80f9d7b9f3eab359f8e29ead76d637",
+      "mutation_diff_sha256": "7210be2a5ab199ce1e2eb9744c36ced69fef6e214a3626663a056b65f505d1e6",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only diagnostic labels or prose; exact-index validation and return value are unchanged.",
@@ -444,7 +348,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.controls.x_normalize_mps_index__mutmut_14",
-      "mutation_diff_sha256": "9d76b8a0d8586d174ecbf9aea757a0edb483e501bb57b56bbd8923675cc5a2db",
+      "mutation_diff_sha256": "cb2594c3cd88fee5d5d92c26814553229e21c0440b3dddb0ad2216f34e6fd13c",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only diagnostic labels or prose; exact-index validation and return value are unchanged.",
@@ -452,7 +356,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.controls.x_normalize_mps_index__mutmut_15",
-      "mutation_diff_sha256": "943b10d2a3383f3a27d6d6062afcef584da79c8ac81b80293f4cf94150e29e2b",
+      "mutation_diff_sha256": "318c819928e12f85b10b36b9bea51beaf0b548526649d73e9aa7b74e44e6295a",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only diagnostic labels or prose; exact-index validation and return value are unchanged.",
@@ -460,7 +364,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.controls.x_normalize_mps_index_sequence__mutmut_11",
-      "mutation_diff_sha256": "de86743ee6cd47693a94ac7382e9c5e7d4d80af4aaf7da536be99fa20f6eefc5",
+      "mutation_diff_sha256": "6b8761f83fe25335a6b22055b844e4976882ed2f353ee79f0db8b374da1bb470",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only an exception diagnostic label; sequence validation and return value are unchanged.",
@@ -468,7 +372,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.controls.x_normalize_mps_max_bond__mutmut_13",
-      "mutation_diff_sha256": "56e8c4136afa39ee7b49844327627e19f04a6cd11255c40ae0747a4a3879f160",
+      "mutation_diff_sha256": "4fceb732b2e29f36998fa1cb703636c3cb5087265a45a0854912dc87d1ce2954",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only diagnostic labels or prose; max-bond validation and return value are unchanged.",
@@ -476,7 +380,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.controls.x_normalize_mps_max_bond__mutmut_14",
-      "mutation_diff_sha256": "0878b48f38274dc25eeaaf6888a724d5b92d02b19488567255a85817868db633",
+      "mutation_diff_sha256": "81c84ef78abbb4fa6622262ec62877090b5ca399f4c54ff1028c8da26dfb963f",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only diagnostic labels or prose; max-bond validation and return value are unchanged.",
@@ -484,7 +388,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.controls.x_normalize_mps_max_bond__mutmut_8",
-      "mutation_diff_sha256": "04e5e9a7b66d3a3e61177093f505e2eb1ea184e8001feb01c9606b43d9f8982e",
+      "mutation_diff_sha256": "f8e0f71844a1c04e4f0915cc1b572570d1eb5de6490849ae3d88b75bd5b5f3ae",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only diagnostic labels or prose; max-bond validation and return value are unchanged.",
@@ -492,7 +396,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.controls.x_normalize_optional_mps_index__mutmut_3",
-      "mutation_diff_sha256": "9178c4f86c884516d6cfb718c2420ad0201a30f300bbce97516c00f11d23ca7f",
+      "mutation_diff_sha256": "9c26e6f941b7cb85788072339614261c458d4f6cb6548b9116e11ced8a924157",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only an exception diagnostic label; optional-index semantics are unchanged.",
@@ -500,7 +404,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.controls.x_normalize_optional_mps_nonnegative_real__mutmut_3",
-      "mutation_diff_sha256": "366ef258c54c2d3ca23f94aa7ca0b058fb58b8935a1fdf55721c5d3cad862045",
+      "mutation_diff_sha256": "b373b6616e58a6f84c22a56d501cba42d63f91f9cb2a8b8b112dd076169eb136",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only an exception diagnostic label; optional-real semantics are unchanged.",
@@ -508,7 +412,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.probability.x_multiply_probability_values__mutmut_20",
-      "mutation_diff_sha256": "0d724b217f3b15a1462927a00c6d34a2e282dc50d69b5c05a943d4060551643f",
+      "mutation_diff_sha256": "78ea78ede98d01888bfb87f1e2bfe87ad6b308b275b2fa88d9fc7814f91a9ff3",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only exception diagnostic names or prose; probability values, guards, and exception class are unchanged.",
@@ -516,7 +420,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.probability.x_multiply_probability_values__mutmut_3",
-      "mutation_diff_sha256": "d6d38a67e1335bd6ca01d2f19f7f4fb24eceafe23f121469ac05ed4507257a31",
+      "mutation_diff_sha256": "fbd675096426926776f0d21d57476610b92975a17da82f86debbc10adba67aae",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only exception diagnostic names or prose; probability values, guards, and exception class are unchanged.",
@@ -524,7 +428,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.probability.x_multiply_probability_values__mutmut_8",
-      "mutation_diff_sha256": "9864c7d74977ae974a0e009363b8bc07e32d7e1879f30e43b3744f4ced9ce5fa",
+      "mutation_diff_sha256": "2f6a75bd88599771d8e16a7130876803dbbec285043733aa408ef0b17b06aa17",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only exception diagnostic names or prose; probability values, guards, and exception class are unchanged.",
@@ -532,7 +436,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.probability.x_one_minus_exp_neg_probability__mutmut_3",
-      "mutation_diff_sha256": "5bb7685686c031de95685919e9f21500ebd4b1cecb2eb9c6cf0cfb9e6719e543",
+      "mutation_diff_sha256": "70cbac60fb116c925137341fa4b9c9506d12881694f71129e5cbdd919ae391f9",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only exception diagnostic prose; numerical output and fail-closed class are unchanged.",
@@ -540,7 +444,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.probability.x_validate_raw_probability_mass__mutmut_10",
-      "mutation_diff_sha256": "efcc1882f09b0c7f65cdb580af71efcf5eb63f2ced9296d6fb46af6fcfd34ebb",
+      "mutation_diff_sha256": "c6f34190de77edb186e755ac0abcb4e7eb58c870975d71622920a1e36da5e680",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only an exception diagnostic label; the interval guard and returned float are unchanged.",
@@ -548,7 +452,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.state.x_commit_mps_candidate___mutmut_28",
-      "mutation_diff_sha256": "1c40833b9ee2163b68de8ce6a363489a5eaa599acce1ab8ed70b0cc3f773100b",
+      "mutation_diff_sha256": "6da714e8055c5ceaab4f62988c4390c6863b9aa70b35045012c4d4d3b46c4f56",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "Commit targets and candidate arrays are appended by the same site loop, so zip strictness cannot change behavior.",
@@ -556,7 +460,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.state.x_commit_mps_candidate___mutmut_31",
-      "mutation_diff_sha256": "e87c383a3e6d3f9c2536a027249037ede83506e957c7c9ceb5b2491c0d90d86d",
+      "mutation_diff_sha256": "0bb6944edd96a444905811fc27ff80b85f0cb132b7a9b5d37548f7237e9aba65",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "Commit targets and candidate arrays are appended by the same site loop, so zip strictness cannot change behavior.",
@@ -564,7 +468,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.state.x_commit_mps_candidate___mutmut_32",
-      "mutation_diff_sha256": "aaeca8a4b9512c048d30e4a0ea46e8fe20b6b42a257d0a8c8695ecaf94e5ddcd",
+      "mutation_diff_sha256": "f76146edfced87790fb97c55bbb0c8dafe1f2af97351635d9ddec3411cc8ca7a",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "Commit targets and candidate arrays are appended by the same site loop, so zip strictness cannot change behavior.",
@@ -572,7 +476,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.state.x_commit_mps_candidate___mutmut_38",
-      "mutation_diff_sha256": "c1305f051fdce23244d1ef848cecac0cdbcb8b5ef1915a33e68cb299834ee6eb",
+      "mutation_diff_sha256": "a976487907d1df6403f21ca806cd379963f9db08fbeaea516426849c8b50c11f",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "Rollback targets and saved arrays are appended together, so zip strictness cannot change behavior.",
@@ -580,7 +484,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.state.x_commit_mps_candidate___mutmut_41",
-      "mutation_diff_sha256": "b996b004cf5697ef3aec79cd05b7da3a323628fbec9065676af7ff66623a5a3f",
+      "mutation_diff_sha256": "5931332964806ea6926864acb58fd350c8890655825f7996f4a95b2463ab5a90",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "Rollback targets and saved arrays are appended together, so zip strictness cannot change behavior.",
@@ -588,7 +492,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.state.x_commit_mps_candidate___mutmut_42",
-      "mutation_diff_sha256": "4fad4b4721fd886d88721893021a3ad2b00006c94563877fa9690c8463b6f8ca",
+      "mutation_diff_sha256": "770a0981ca8e78cef650dc26c9738674c35d7677ad15ff866fb6ebd49921041d",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "Rollback targets and saved arrays are appended together, so zip strictness cannot change behavior.",
@@ -596,7 +500,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.state.x_commit_mps_candidate___mutmut_45",
-      "mutation_diff_sha256": "e5275561ea591f7529cfca2d7b1a62f8ed9ccae9cba52b518c822c40f9225106",
+      "mutation_diff_sha256": "56f45cdaa934d9775937dc02d6a4f3c63d6d76192afca9a33de28ab5aa200ee5",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only rollback exception diagnostics; commit, rollback state, and exception class are unchanged.",
@@ -604,7 +508,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.state.x_commit_mps_candidate___mutmut_47",
-      "mutation_diff_sha256": "86ccd130e75d5f65faef25e35d50bc70d98225e52543affb6197affcedf55428",
+      "mutation_diff_sha256": "b7100681fd5d51098d8125c9bc7335e2058b35564b03a01c0ffd8cd1433e64b2",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only rollback exception diagnostics; commit, rollback state, and exception class are unchanged.",
@@ -612,7 +516,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.state.x_commit_mps_candidate___mutmut_48",
-      "mutation_diff_sha256": "5efcb67830f26fddbada5506be87a4a0020a8b5870a1702a0c8210b1fe6cfa7c",
+      "mutation_diff_sha256": "bbeb8a45b85dc4732fe1e31124c533aafc7684dc582e2cc52d946471d334f233",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only rollback exception diagnostics; commit, rollback state, and exception class are unchanged.",
@@ -620,7 +524,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.state.x_exact_mps_bond_dimension__mutmut_26",
-      "mutation_diff_sha256": "f65daf309b31375840d10961c4b2a718a6049136f2d2df0d81c19583b3a43499",
+      "mutation_diff_sha256": "c1e6a84dcbe0d921b23620e5ffcd44b615f724b755a327e57c66108a063ba100",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The added cut-zero candidate is exactly one, while positive local dimensions already make the original maximum at least one.",
@@ -628,7 +532,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.state.x_mps_norm_squared__mutmut_2",
-      "mutation_diff_sha256": "de26d7b4151102018ab7eeb226ee6dce85dcb9b28dbdd31827bb3da67a7da728",
+      "mutation_diff_sha256": "1fb8cd8ad1179376de3dcc1d373ddd1b7db383a8e11e197198dd4e29fe01a4af",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only norm failure diagnostic labels or prose; computed norms and guards are unchanged.",
@@ -636,7 +540,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.state.x_mps_norm_squared__mutmut_7",
-      "mutation_diff_sha256": "d881b492a6964ccda312b67d33f8a7d4ae079c105bccea24d54fa29c7944db81",
+      "mutation_diff_sha256": "6daab83dd7e9203d64d8566844afc256ef87d78485e88d2cd2358b6f7177c08f",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only norm failure diagnostic labels or prose; computed norms and guards are unchanged.",
@@ -644,7 +548,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.state.x_mps_norm_squared__mutmut_8",
-      "mutation_diff_sha256": "0ba63b46385e15cf9d40272ea0c4f49f1df0e58f814344fb9fdaf18aba4e1a80",
+      "mutation_diff_sha256": "7ebb4c6e881267d92821b6f849964853ddc2839306ef34e249ec6ae8d3fba7b5",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only norm failure diagnostic labels or prose; computed norms and guards are unchanged.",
@@ -652,7 +556,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.state.x_mps_norm_squared__mutmut_9",
-      "mutation_diff_sha256": "6bc56b10f59248163a0ee5c9e873741aadb88923328a6e49eea0f545d9b41556",
+      "mutation_diff_sha256": "3a288d4f58b26da055c61ff4e84f172cbe2fbc5a03d44357901dfcc98d7b3f9e",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only norm failure diagnostic labels or prose; computed norms and guards are unchanged.",
@@ -660,7 +564,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__aggregate_truncation_events__mutmut_106",
-      "mutation_diff_sha256": "d760d6ba368d6c11cb97739a19b38e3e737b482b7fdeb5ee4deec0eea63992ea",
+      "mutation_diff_sha256": "568f9eb86c58ccee0203e285be7cee525d1180172279f77a98fa3cdb7c195885",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The later exact range check with microstep_count at least one already implies the mutated lower-bound condition.",
@@ -668,7 +572,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__aggregate_truncation_events__mutmut_225",
-      "mutation_diff_sha256": "7b160d6c2810c6e118dae6f78dba3f6681fd3685b6c5dab4432dffaf4a74e4cb",
+      "mutation_diff_sha256": "0f2ac27809ac09493933f9ece005258589f256ede54241d769d9362970b14942",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "Each mutated zip consumes collections constructed from the same source traversal and therefore of equal length.",
@@ -676,7 +580,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__aggregate_truncation_events__mutmut_228",
-      "mutation_diff_sha256": "df1a078bfdbb33a317a6e0ea84c58b2bc9ad30b204bcfb9b3458bc7207fd4003",
+      "mutation_diff_sha256": "1bb637cd5673e9550e58f4191db0b0de124e5331141073e107ab9671f5fdacce",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "Each mutated zip consumes collections constructed from the same source traversal and therefore of equal length.",
@@ -684,7 +588,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__aggregate_truncation_events__mutmut_229",
-      "mutation_diff_sha256": "61e22e83c6b83aa57ae2643655204a4126fae153506eff94f2e8734a6f74f578",
+      "mutation_diff_sha256": "fadfff1b8ad18fd857298ac1bdf5a91250d6af1b68d778727d2df970ce6d7824",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "Each mutated zip consumes collections constructed from the same source traversal and therefore of equal length.",
@@ -692,15 +596,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__aggregate_truncation_events__mutmut_248",
-      "mutation_diff_sha256": "e184fa52d3ef20c610aaa6afd8f337b48f9a5304f07609760a66fb3f7611bc23",
-      "disposition": "reviewed_noncontractual",
-      "reviewer": "restricted-mps-semantic-review-2026-07-18",
-      "rationale": "The exact diff changes only aggregation exception diagnostics; weights, coverage rows, guards, and exception class are unchanged.",
-      "evidence_locator": "src/error_coupling_simulator/carrier/mps/truncation.py#_aggregate_truncation_events"
-    },
-    {
-      "mutant": "error_coupling_simulator.carrier.mps.truncation.x__aggregate_truncation_events__mutmut_249",
-      "mutation_diff_sha256": "46d1d37817a216aaf3a49d6029b4567ff9948225dca53f8a870885a7db0c7d7d",
+      "mutation_diff_sha256": "4129eabeaa6d930c46acb35b8552a3007f772e52fd05ec1f794fe087e6661a84",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only aggregation exception diagnostics; weights, coverage rows, guards, and exception class are unchanged.",
@@ -708,7 +604,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__aggregate_truncation_events__mutmut_270",
-      "mutation_diff_sha256": "9c173e1ab8362b3a67105e3c9f2e407815f76b1f9e305b404a30b03d4964e6a1",
+      "mutation_diff_sha256": "be6ff7bb9d82afd8d96dd9949fa8caea7ad8a3791136e37c7369c734836473c2",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "Only the first per-trajectory accumulator slot feeds the max-path value, so mutations to the other slots cannot affect output.",
@@ -716,7 +612,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__aggregate_truncation_events__mutmut_271",
-      "mutation_diff_sha256": "2a517fa8f8bcd880089edd3a1108d15a1aef72a3ab7d43e1da78898e0d8b802b",
+      "mutation_diff_sha256": "acaef2a97188961700e69853f04c0bec8d7459d9b6cf6c882afcc11cc91e0160",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "Only the first per-trajectory accumulator slot feeds the max-path value, so mutations to the other slots cannot affect output.",
@@ -724,7 +620,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__aggregate_truncation_events__mutmut_32",
-      "mutation_diff_sha256": "55b645910722c5fb9f93e2df16ef7f7597132a807932f521c2c4fbcdf163c3ba",
+      "mutation_diff_sha256": "b433268e1a40a6fec4c3deaced657a4f7d13001353912ffc5020302042882f76",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only aggregation exception diagnostics; weights, coverage rows, guards, and exception class are unchanged.",
@@ -732,7 +628,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__aggregate_truncation_events__mutmut_351",
-      "mutation_diff_sha256": "edb8dac734504ffd0210999d5edd889359da059845010e46b66c7185e28bb4b9",
+      "mutation_diff_sha256": "4409073b2f22f19a506696e6b805d59952aa10002195911741308e5ff5aa88a5",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "Each mutated zip consumes collections constructed from the same source traversal and therefore of equal length.",
@@ -740,7 +636,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__aggregate_truncation_events__mutmut_354",
-      "mutation_diff_sha256": "b493cedb3aeff5b4eaf1f0caebfdbbd73ff81afb220ac883c49a07f01778fb95",
+      "mutation_diff_sha256": "40a4553b0833ba6636cacaa9a067da264a8a0333491259473a560cc5a8439b04",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "Each mutated zip consumes collections constructed from the same source traversal and therefore of equal length.",
@@ -748,7 +644,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__aggregate_truncation_events__mutmut_355",
-      "mutation_diff_sha256": "2381bf266acd9e146c6891b944163d73829dfada88b60ee901fd618c665bb8c1",
+      "mutation_diff_sha256": "589917164bc2567f9d85099041694453f38f5b2127fc545caf1e75d5c756a452",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "Each mutated zip consumes collections constructed from the same source traversal and therefore of equal length.",
@@ -756,7 +652,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__aggregate_truncation_events__mutmut_377",
-      "mutation_diff_sha256": "3e4fabfc4f2c005091de85e0dcc5b4408ed89e3e82d0ac31484dafd7be932659",
+      "mutation_diff_sha256": "2b26877f89925ca22ad16353fb4175ee4dbbd1bee532d0d6a65197eb7ebf95c3",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only aggregation exception diagnostics; weights, coverage rows, guards, and exception class are unchanged.",
@@ -764,7 +660,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__aggregate_truncation_events__mutmut_378",
-      "mutation_diff_sha256": "ca217d042cfe7da3a4bdf53223fc851ac114ab027aeb430fc5c14b6886c7d4e8",
+      "mutation_diff_sha256": "1e3ece16e1a619cacffa40ebeec072679e8c5c8c508ce7d5df14fe4334373055",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only aggregation exception diagnostics; weights, coverage rows, guards, and exception class are unchanged.",
@@ -772,7 +668,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__aggregate_truncation_events__mutmut_440",
-      "mutation_diff_sha256": "ef15aa605cfc142ce94a77866ccec84fa5b614947fe6a3e746dad6e85bce4f80",
+      "mutation_diff_sha256": "89e4d7fb380cd3b69c623ffd39a1eec657242b2ef915f4667317456aeb2c0410",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "Binary64 branch-mass differences in the Sterbenz interval cannot equal the odd-numerator float tolerance, making the boundary operator mutation unreachable.",
@@ -780,7 +676,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__payloads_match_exactly__mutmut_21",
-      "mutation_diff_sha256": "07eda4383dba474c9cf14fc77a6fcda54c53392727c09362a3c24b080f7ca686",
+      "mutation_diff_sha256": "0ff166815cf8b0c8d654081a1fbab04840cf58290443b0b122218007caf89f79",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "Exact container-length equality is checked before the mutated zip, so zip strictness cannot affect the comparison.",
@@ -788,7 +684,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__payloads_match_exactly__mutmut_24",
-      "mutation_diff_sha256": "d92a217afeb32362ee0c502191e0cd6ba8fb59e92489d0f34fb80864a6ac783c",
+      "mutation_diff_sha256": "2abc3174336741a342ea014c245d91777f5e17f7f3772ce608cbebd73deb79d0",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "Exact container-length equality is checked before the mutated zip, so zip strictness cannot affect the comparison.",
@@ -796,7 +692,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__payloads_match_exactly__mutmut_25",
-      "mutation_diff_sha256": "f0f14f02cbb8c47833d929dffc0a60a9924e28c254ec598a1c6c0062bfee0e9c",
+      "mutation_diff_sha256": "6997b1a48f7690fa7621306613e72254435398717446b4ea14ac9de8bf662c5d",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "Exact container-length equality is checked before the mutated zip, so zip strictness cannot affect the comparison.",
@@ -804,7 +700,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_105",
-      "mutation_diff_sha256": "3b4a8f502f139d6616f51d8c4127a164ca223fdb91bcc51112137c329880d7cb",
+      "mutation_diff_sha256": "44bbefbb7f2a4bbf521ede2fdad9092853c7adfc4b9dff7906ecca13fa18e9c8",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only event-validation diagnostic names, context, or prose; guards and exception classes are unchanged.",
@@ -812,7 +708,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_111",
-      "mutation_diff_sha256": "d3934566f5a341adb95d32578c6bec27b1805de9fd967c471a2708e1c0a6f81b",
+      "mutation_diff_sha256": "fd0b23b0e996b19de3d3c057168e813a754a30c66d2bcbf94995122546d87104",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only event-validation diagnostic names, context, or prose; guards and exception classes are unchanged.",
@@ -820,7 +716,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_135",
-      "mutation_diff_sha256": "24cee4c37a8770ea2f6b08f65037d9b2724837591ab7bfbcbd1c827df57115c5",
+      "mutation_diff_sha256": "bb092a705d6c081e5847cff580333edb4938f64f63fe1c312b86b0e0bf9ac4e3",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only event-validation diagnostic names, context, or prose; guards and exception classes are unchanged.",
@@ -828,7 +724,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_144",
-      "mutation_diff_sha256": "85ae71ec4166cb2abde80964573527680fa4b3ba0fca79e39aae09282c0c8bbd",
+      "mutation_diff_sha256": "3486e862d77784160aa5a2e0cc3d43762ad29a87c3a220a6923ca25acb251884",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only event-validation diagnostic names, context, or prose; guards and exception classes are unchanged.",
@@ -836,7 +732,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_158",
-      "mutation_diff_sha256": "af60b01e25f185300bfd247256c33b5a2bca99449e8334cec2fae48ad67842dd",
+      "mutation_diff_sha256": "0441861709197fad173e1c5721e82c28aa6b66d1200ff2586ca04d64b52980ca",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only event-validation diagnostic names, context, or prose; guards and exception classes are unchanged.",
@@ -844,7 +740,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_173",
-      "mutation_diff_sha256": "c6e608fe84c69ee1e0340320654c978ae6a767babb91688480e95fbaca6dc5f7",
+      "mutation_diff_sha256": "d9255182599922d52a85d49349cee832a59c06f4739668762871837b74c60106",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only event-validation diagnostic names, context, or prose; guards and exception classes are unchanged.",
@@ -852,7 +748,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_180",
-      "mutation_diff_sha256": "176b8fb01591246316303d9af797c602a2255b8a9c60ce82f01794589cac100b",
+      "mutation_diff_sha256": "415acf4cb347c3b6999bad40454adadbbc02b159d2b02fb5954eb08fe8a52a5a",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only event-validation diagnostic names, context, or prose; guards and exception classes are unchanged.",
@@ -860,7 +756,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_196",
-      "mutation_diff_sha256": "483e32195c80592b1a43d6b66580db97a379c4c555cf162c508574caea8792ca",
+      "mutation_diff_sha256": "ff8e690ab53c44b2032a3e583797d56486eafd65223be55f1f5b21be9d7c42b8",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only event-validation diagnostic names, context, or prose; guards and exception classes are unchanged.",
@@ -868,7 +764,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_203",
-      "mutation_diff_sha256": "19e7dc1b959e8345489fe34c2bc27a62c22ab2cb5df9c0900cb9d73ffff1a8d8",
+      "mutation_diff_sha256": "b7528c32ef15e035ef5254502be995908e6503f90cb6ec94e8f13b5a2cb20e7d",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only event-validation diagnostic names, context, or prose; guards and exception classes are unchanged.",
@@ -876,7 +772,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_207",
-      "mutation_diff_sha256": "c4c6fcc91456e171b2a8a2a772b238fc5a0cd0941af3e01cd1f302111d581de7",
+      "mutation_diff_sha256": "56cf86d0d801bc9d896f9d601149a68407e14a3126726648738f1e6d9bcb6fe5",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "Later exact structural constraints already imply the mutated positive lower bound.",
@@ -884,7 +780,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_213",
-      "mutation_diff_sha256": "13471f6b1159a4dd69fb09a034c6897f82ce3211cc6411a32a3ff525be258f5d",
+      "mutation_diff_sha256": "da51bb600cdb10070f8f2740b36755dffb004f80831ca0168fa398332b71911b",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only event-validation diagnostic names, context, or prose; guards and exception classes are unchanged.",
@@ -892,7 +788,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_221",
-      "mutation_diff_sha256": "1ede13cc4db4f6a89156e3c529e72cee3ac9e5fbd185e1cdf6c6a346295ccab2",
+      "mutation_diff_sha256": "c04249765e5cb3f06eddc9a0902873bb2da5c650e68a7445092d93bc72c01219",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only event-validation diagnostic names, context, or prose; guards and exception classes are unchanged.",
@@ -900,7 +796,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_249",
-      "mutation_diff_sha256": "8e9f6870d003ab1f516bf14cdd6832d2ab36922ea8a96be8e06d7f61d2b72d6b",
+      "mutation_diff_sha256": "74abf7fe1faed7d1dfc26ffc25b4edf8b983607580d793bf5e95ab3de7857693",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only event-validation diagnostic names, context, or prose; guards and exception classes are unchanged.",
@@ -908,7 +804,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_313",
-      "mutation_diff_sha256": "df913657dfbfac0ff4c27dacacdd8c52ec462190c2be08f99e4cd4b488e13e75",
+      "mutation_diff_sha256": "f3e210aae73dbd6d8eb5c0b0b3cfe8f52c3ed36ad58f5ace014224c0e0b5ee45",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "Distinct two-site support already implies the mutated strict direction comparison on the ordered path.",
@@ -916,7 +812,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_323",
-      "mutation_diff_sha256": "41a109f5582cc8d8bff35cd7e9ff437e76b07ea20c32b5bc05024e4b3acbcd23",
+      "mutation_diff_sha256": "d5dc1291e9bbf3aeaa9d9128a0a7f31febdbe1e63acb42ae1ccb6dfaf39e8795",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only event-validation diagnostic names, context, or prose; guards and exception classes are unchanged.",
@@ -924,7 +820,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_331",
-      "mutation_diff_sha256": "3d825dbd0c6992b1d10cbea4bd035f4fd20e6ef8503a6b9f0e2cbf169db4734b",
+      "mutation_diff_sha256": "c4dfb84dad7e2a272e24c30bc29ab16d74f634b1c91f5e21b085953eb68d98c7",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only event-validation diagnostic names, context, or prose; guards and exception classes are unchanged.",
@@ -932,7 +828,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_34",
-      "mutation_diff_sha256": "48707f356b7ffce3ff77286c08c41a85a2be05e5866c09e63bf2394813e0590d",
+      "mutation_diff_sha256": "1beca4457c8199dc19861427baecd4a703c8ce1d259b7e7c70a8d39de0c4ddde",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only event-validation diagnostic names, context, or prose; guards and exception classes are unchanged.",
@@ -940,7 +836,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_35",
-      "mutation_diff_sha256": "3d68c6e15f845ef8f036eea8470cd19f803a5cc513177fededb83bd60d761d64",
+      "mutation_diff_sha256": "7c005dc1c50c319f25153fed2a971741f10aba691e784cb039769f96a7cb038f",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only event-validation diagnostic names, context, or prose; guards and exception classes are unchanged.",
@@ -948,7 +844,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_36",
-      "mutation_diff_sha256": "5c878444525ba237f25b05ff4cfe6f4d1006b4bad2b89ad07ac3dde32b3a0d3c",
+      "mutation_diff_sha256": "504246b7a24d7f3bde6d8529d17f2568affe01819d6f76cf60d5a2711c9af164",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only event-validation diagnostic names, context, or prose; guards and exception classes are unchanged.",
@@ -956,7 +852,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_365",
-      "mutation_diff_sha256": "460cfe33baeab96c7251091c776823faf82ec89d555d4e494163a201ba6f89ef",
+      "mutation_diff_sha256": "4e980f08669e80b4deade280fe4c6b94394721bc87b3d7a3ae478a356d1ab430",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only event-validation diagnostic names, context, or prose; guards and exception classes are unchanged.",
@@ -964,7 +860,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_369",
-      "mutation_diff_sha256": "677cf619df2473614b5c021dab45213c195b8c0fd68bcf7d976b7a7b50eff787",
+      "mutation_diff_sha256": "9a1d43ead4911d75357e310477fb27f7c0955b6205d2bd3cf69cb35c314d6e02",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "Later exact structural constraints already imply the mutated positive lower bound.",
@@ -972,7 +868,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_37",
-      "mutation_diff_sha256": "34a591e93e7c4ac1d9725a39bfe96837d0c01247da1da51de56ccf8178a7ce90",
+      "mutation_diff_sha256": "e486794fc473dc8556e9f01eaebbdaa51962ff8b722c975fe4ded033e613a84e",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only event-validation diagnostic names, context, or prose; guards and exception classes are unchanged.",
@@ -980,7 +876,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_38",
-      "mutation_diff_sha256": "5f2f629f7a3fe7faeea418c2d2a25e8fcb86b609dada051b47ef3e7989d02121",
+      "mutation_diff_sha256": "c72990a0a0e866c76de4e93f206b4ce91be7b4a1ce7774a5234427c0a57989a7",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only event-validation diagnostic names, context, or prose; guards and exception classes are unchanged.",
@@ -988,7 +884,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_397",
-      "mutation_diff_sha256": "2b43cf03df38eca30095268255edc0015ae4a62c89f69d1a3524eec2ee499aa5",
+      "mutation_diff_sha256": "25c41c10cd227fdf1662a4bba9d6a12294f5155a510e6e0ddff7b3fe00b553b1",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only event-validation diagnostic names, context, or prose; guards and exception classes are unchanged.",
@@ -996,7 +892,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_407",
-      "mutation_diff_sha256": "13ab589ada168fa5ed9d4d45c7cd5a6566ac48f14f12339786b899f55e81835a",
+      "mutation_diff_sha256": "bd596d7b0dc905088f454bb83bfc2b7648d9ab9498a1163fdfa71f12d4e614a4",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only event-validation diagnostic names, context, or prose; guards and exception classes are unchanged.",
@@ -1004,7 +900,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_419",
-      "mutation_diff_sha256": "00d29283ea3bf580942c85d0d4e5913dc825c2b09ea463b2845ee542082bb629",
+      "mutation_diff_sha256": "2f606535c1aad43e4b4197f5af3a21e8258349836ef7b8df2f037d48cbf97b9c",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only event-validation diagnostic names, context, or prose; guards and exception classes are unchanged.",
@@ -1012,7 +908,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_437",
-      "mutation_diff_sha256": "2ea0845ec98b2e8a4892de92e47a1e7360fd58ec8adf98560f1cd8320eb4ca58",
+      "mutation_diff_sha256": "4ddd7e1e15e6d9dbcee72465756c0dc295392525046b9c213be31de3c5afe9eb",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only event-validation diagnostic names, context, or prose; guards and exception classes are unchanged.",
@@ -1020,7 +916,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_442",
-      "mutation_diff_sha256": "75d2a8cfca0177a3155d638bfb7990c14f8956f9e272691937fbd03f85c53457",
+      "mutation_diff_sha256": "72fd542b6669b60deebd2a799d314a98e23c3aa22f531f94c7676cdd210c4b03",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only event-validation diagnostic names, context, or prose; guards and exception classes are unchanged.",
@@ -1028,7 +924,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_443",
-      "mutation_diff_sha256": "133fd8b6cd07ac34702f07025dc762650a5215c7f7047cf0905028efd779952f",
+      "mutation_diff_sha256": "067513b2660c0cf06940e3091ca3cf281c96cb5aa68b344094e8b97f889e90a3",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only event-validation diagnostic names, context, or prose; guards and exception classes are unchanged.",
@@ -1036,7 +932,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_456",
-      "mutation_diff_sha256": "5715861e9057b6bc5a0c99be00bb994e5eafd47dd2f48c46308a197f29d1abbd",
+      "mutation_diff_sha256": "7fd9e4be7cac1746b482a2c4a63a6f09f5e0fde71182b35e327725dd95140448",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only event-validation diagnostic names, context, or prose; guards and exception classes are unchanged.",
@@ -1044,7 +940,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_457",
-      "mutation_diff_sha256": "603023f907c560b761b7545ab2eb0fcef785068eae0ffc2f9e95441284c4b62e",
+      "mutation_diff_sha256": "604953f554602288113da00b1c5ce126993add9acbab223bb6dd313c61eea770",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "A zero admitted by the mutated local check is still rejected by the exact norm-restore identity, so no reachable behavior changes.",
@@ -1052,7 +948,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_460",
-      "mutation_diff_sha256": "e1969f9afc42a50cb36f6a955b4796ed88c01da82a9be45ff4af06ead9d6c5f0",
+      "mutation_diff_sha256": "2fb696943142c1b9668f2bf54733d0bafa2a6328259ce9b40ea7a12ea1f18c0e",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "A zero admitted by the mutated local check is still rejected by the exact norm-restore identity, so no reachable behavior changes.",
@@ -1060,7 +956,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_463",
-      "mutation_diff_sha256": "a4de3d6ae63267ea59ae8f84f4f572db386c7c27ac6161b38851750268dc62df",
+      "mutation_diff_sha256": "a7eac4fa35b3b250f77f7b53c72315a0d14e7b9c47f115564e43dedd6b38dc12",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "A zero admitted by the mutated local check is still rejected by the exact norm-restore identity, so no reachable behavior changes.",
@@ -1068,7 +964,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_466",
-      "mutation_diff_sha256": "bc2571acd8eae6f612a2cdf23645c7abac34b1a9bba9f2ccdd41b20415f80e7f",
+      "mutation_diff_sha256": "bb818bda9724aa98126f8f3766356a06064db83344ca221b27d2b8a750c1336a",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only event-validation diagnostic names, context, or prose; guards and exception classes are unchanged.",
@@ -1076,7 +972,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_47",
-      "mutation_diff_sha256": "44ab8c4b84012c26d6a8e370045d406913e46b958056b83f70ea3598965c228b",
+      "mutation_diff_sha256": "e29e40a3869870424a1d50a3cbc5c018865d19b277cea5e397112ca097babb5c",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only event-validation diagnostic names, context, or prose; guards and exception classes are unchanged.",
@@ -1084,7 +980,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_492",
-      "mutation_diff_sha256": "823e8396dcb36801cbe61cddc264153b02da3b484bcef1ee805c10bfe1271598",
+      "mutation_diff_sha256": "593c00270434f9472b6df5f434b68dc93eb3493e3bc1331b183c4752dc246d4b",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only event-validation diagnostic names, context, or prose; guards and exception classes are unchanged.",
@@ -1092,7 +988,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_503",
-      "mutation_diff_sha256": "414136fed7a7b1379ca1eb4be3a744e00392a921203dfdb206542dfbe09631d6",
+      "mutation_diff_sha256": "fe685c084ebf540a215fdace1ee483f09b103cecf07c1c07419c2e1ce602e362",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only event-validation diagnostic names, context, or prose; guards and exception classes are unchanged.",
@@ -1100,7 +996,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_51",
-      "mutation_diff_sha256": "bc5338454985cad56ef69fe1f7368536c4717cfa3c9ce047c2a0991ef192cfac",
+      "mutation_diff_sha256": "9024c3a257da9a4438d16758a0fb32345348d3bb92d4af1ef1265cce118fbbd0",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "Later exact structural constraints already imply the mutated positive lower bound.",
@@ -1108,7 +1004,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_526",
-      "mutation_diff_sha256": "58e00c220e01dd34b6e3d94fb2ca932ceee24207f006d0ddfe32602068c1f99b",
+      "mutation_diff_sha256": "71a9546df0749210fa0f55fc09f06eafa2f572a483968230433546aab6215674",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only event-validation diagnostic names, context, or prose; guards and exception classes are unchanged.",
@@ -1116,7 +1012,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_527",
-      "mutation_diff_sha256": "dd64bef368057c90549e8ac5b916434541e860e17b08473e1cb16b79e8611c28",
+      "mutation_diff_sha256": "4c749211a72ffd9846de89401bf07b4a6aee51a090f877528d225ba2949e6c97",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "A zero admitted by the mutated local check is still rejected by the exact norm-restore identity, so no reachable behavior changes.",
@@ -1124,7 +1020,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_530",
-      "mutation_diff_sha256": "9e4d345a6ca80599cb58991bbbbf5ddfea5c519fab487e73df7aa0b364359ea6",
+      "mutation_diff_sha256": "b427a44fb307af1fd08f517374721a0a9489ae92ba6544a07b3f23ede45ce9e0",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "A zero admitted by the mutated local check is still rejected by the exact norm-restore identity, so no reachable behavior changes.",
@@ -1132,7 +1028,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_533",
-      "mutation_diff_sha256": "0fd98f286295ebbcbd1c45c3246384d09b8b62ca6eaf0eab33742c03871431c4",
+      "mutation_diff_sha256": "65f9f84311ab99841d15b39c6bacb6230b3f22686f25b05dde60bd998dac6e29",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "A zero admitted by the mutated local check is still rejected by the exact norm-restore identity, so no reachable behavior changes.",
@@ -1140,7 +1036,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_540",
-      "mutation_diff_sha256": "58479ae85f24c22c1bc753faadde64e32ec12f506c1d5862856611f51e4e1755",
+      "mutation_diff_sha256": "fd464bd5d05ac64ba8505023c07ba490878e2a803f3dd3748ccf7f226d1bb2f7",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only event-validation diagnostic names, context, or prose; guards and exception classes are unchanged.",
@@ -1148,7 +1044,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_564",
-      "mutation_diff_sha256": "1673969ec0df2e2ff0a8f760375fb27aee95e7b2da0087bc6e7c0b2e0bf37fd9",
+      "mutation_diff_sha256": "f4878a192e21485a41d3b79e59a431077db0c0f1d0581b83d1a8b52667050c1c",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact split-count and adjacent/nonlocal path inventory guarantees a nonempty split list before the mutated default is reached.",
@@ -1156,7 +1052,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_566",
-      "mutation_diff_sha256": "18d98587f9d9860b0a06cca4e47d7b82cafae0ada082d6fef5f2da2e2e5ec809",
+      "mutation_diff_sha256": "da4df135248fd685ef5990f29821c236d4956be400d8212e56e8cecbba6a35dd",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact split-count and adjacent/nonlocal path inventory guarantees a nonempty split list before the mutated default is reached.",
@@ -1164,7 +1060,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_567",
-      "mutation_diff_sha256": "1e98cfacb032b503317391f8bcc76b1362b23fbf6142652bf5827325fadacd84",
+      "mutation_diff_sha256": "f1680a4597269aa0444792e191b15662114f76c9b669afb9d0e86763e24efa1d",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact split-count and adjacent/nonlocal path inventory guarantees a nonempty split list before the mutated default is reached.",
@@ -1172,7 +1068,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_577",
-      "mutation_diff_sha256": "507395bfc4059d6b897e0844b014057b3e3764b40497cbe6ddfe9a44b1d979dc",
+      "mutation_diff_sha256": "1c19fcf3bc50cbeef798a7b8240a4654308f5cce253e990a902d91ea401402a2",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only event-validation diagnostic names, context, or prose; guards and exception classes are unchanged.",
@@ -1180,7 +1076,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_618",
-      "mutation_diff_sha256": "483d7ec7d69bb86c8c2a315f665ad3b7372736310da153088ec71add4a636ebf",
+      "mutation_diff_sha256": "f346d2f0e084a5e1c295bae850bac0a6076b33045580a2ad1c95daa733e7ffb0",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only event-validation diagnostic names, context, or prose; guards and exception classes are unchanged.",
@@ -1188,7 +1084,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_86",
-      "mutation_diff_sha256": "9d6878084d0f13270df33731fbb990080b3ae100c1bf4c1da7ecef9cbaa6fc3a",
+      "mutation_diff_sha256": "035e15ef5f55020724b228c8e82d25801fe51c9e4893d29c6c30c436016101b0",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "Distinct two-site support already implies the mutated strict direction comparison on the ordered path.",
@@ -1196,7 +1092,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_93",
-      "mutation_diff_sha256": "7590c16536dfa3861cbe303d11bf0b3fb2e1dd27da1e90cd51fab9c58b7de335",
+      "mutation_diff_sha256": "8daba7be237cd95209bd3d4055462f5bfc894ada79d54823b8c4cba219b8a0f4",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only event-validation diagnostic names, context, or prose; guards and exception classes are unchanged.",
@@ -1204,7 +1100,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_actual_split_event__mutmut_99",
-      "mutation_diff_sha256": "d17f6ccd84921f2959f957555cf2c7b98de2c510752fc0d12e6443d35f7e17f7",
+      "mutation_diff_sha256": "34d8666fa160fea55981bfa3ddd58cc371525d54250382e244cc81ffb1ba171b",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only event-validation diagnostic names, context, or prose; guards and exception classes are unchanged.",
@@ -1212,7 +1108,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x__validate_aggregation_result__mutmut_12",
-      "mutation_diff_sha256": "f7de90e46865022e4ec533fe763d774925be4f37ae85a5e0a65b5c496e50cc0e",
+      "mutation_diff_sha256": "5f30827de70557bfa9d8ed40a965967f19919f432ea7d4ca366dac3074c4a1f3",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only an exception diagnostic label; aggregation schema validation is unchanged.",
@@ -1220,7 +1116,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x_build_mps_truncation_ledger__mutmut_17",
-      "mutation_diff_sha256": "fcca822dd756d7b3a0549be409f37377517f4778c0d98a2d7736eb62252f48f3",
+      "mutation_diff_sha256": "be54fa9b1e90beb274f6fe04dd5955ad932dd321d79592554cf24026c0864015",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only ledger failure diagnostics; authentication, returned ledger fields, and exception class are unchanged.",
@@ -1228,7 +1124,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x_build_mps_truncation_ledger__mutmut_174",
-      "mutation_diff_sha256": "bff9303148061c0a6b52b783f4c6c22c491e1ffd8380acc7073a6481ee0a8983",
+      "mutation_diff_sha256": "2e1390b113ca1bfc7261333911a127836fe8bc39af3e62ea48d1df6d12a7cd59",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only ledger failure diagnostics; authentication, returned ledger fields, and exception class are unchanged.",
@@ -1236,7 +1132,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x_build_mps_truncation_ledger__mutmut_179",
-      "mutation_diff_sha256": "376b5599a501757f0d0bbde03ae74794044e70c0635a0df0fbeac74ed8b41e7c",
+      "mutation_diff_sha256": "d336ca1e20ae91f5281fb5013d69886a74e6a25e91f59635b85156573560231c",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only ledger failure diagnostics; authentication, returned ledger fields, and exception class are unchanged.",
@@ -1244,7 +1140,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x_build_mps_truncation_ledger__mutmut_180",
-      "mutation_diff_sha256": "705ff602d1dc97a9028778f68929edecd87f3d3459cf98c9417c6e7a0431c769",
+      "mutation_diff_sha256": "c8476901ad99f48ce1e2fb3b5820c52dbc71c458f9ad5bc1542a8722b57024ef",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only ledger failure diagnostics; authentication, returned ledger fields, and exception class are unchanged.",
@@ -1252,7 +1148,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x_build_mps_truncation_ledger__mutmut_183",
-      "mutation_diff_sha256": "a6854ebc72eef10f84df5d290689014609525c87d756af8becf4a0f627880431",
+      "mutation_diff_sha256": "90f5f7348930bf3a6f19e1e30c90c1d52627560913d70eccaf7d611859c89061",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only ledger failure diagnostics; authentication, returned ledger fields, and exception class are unchanged.",
@@ -1260,7 +1156,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x_build_mps_truncation_ledger__mutmut_188",
-      "mutation_diff_sha256": "daa84f1457f938c006043a63acaf3a9bca1ce5089f9c21364539977a478c10ce",
+      "mutation_diff_sha256": "fb5e3476881a1db089a60aaa45f80ed88ab9bf32042607a6aa1baa9d73e7b9d9",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only ledger failure diagnostics; authentication, returned ledger fields, and exception class are unchanged.",
@@ -1268,7 +1164,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x_build_mps_truncation_ledger__mutmut_189",
-      "mutation_diff_sha256": "d41e9e3185964d3fa6c8361e9bf83ed1792c3a4b2e2a967b85d3eb0932666c75",
+      "mutation_diff_sha256": "e96a3e6dd11504e209cc81fd8b3081e518a3bc3700ec4cafb80f52fced4b859f",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only ledger failure diagnostics; authentication, returned ledger fields, and exception class are unchanged.",
@@ -1276,7 +1172,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x_build_mps_truncation_ledger__mutmut_191",
-      "mutation_diff_sha256": "5e9aca914707443fa248e69a0417cf27d8de7e36a929691fc6bb5a98218f293c",
+      "mutation_diff_sha256": "2938daab7aad2feb842281e0008a80170cb2c0c3498b703e365705eb33e0fdd1",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "Strict event-key and split-record list validation makes the mutated missing-record default branch unreachable.",
@@ -1284,7 +1180,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x_build_mps_truncation_ledger__mutmut_193",
-      "mutation_diff_sha256": "7209a4479b57f669764a8e63c70189f42a10e72589cdb9155641535ca325fc14",
+      "mutation_diff_sha256": "e8495821e145b95f7b640b76c755cd4a2cfb1863c79883fe3da71057e506d091",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "Strict event-key and split-record list validation makes the mutated missing-record default branch unreachable.",
@@ -1292,7 +1188,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x_build_mps_truncation_ledger__mutmut_198",
-      "mutation_diff_sha256": "330f7766526f288de9290ab70194d3de5ebe13988ec87c31fd9a58ad1f8c110e",
+      "mutation_diff_sha256": "39fda2c81146a2f9c93a52607e818240f515026dc1d6b354fe7208481b082538",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only ledger failure diagnostics; authentication, returned ledger fields, and exception class are unchanged.",
@@ -1300,7 +1196,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x_build_mps_truncation_ledger__mutmut_203",
-      "mutation_diff_sha256": "27a3a0fd922a1e3ad71ad5eb3dc548083934d61dc29c860ca837ff4d7a8abd2c",
+      "mutation_diff_sha256": "3d167272ba3cb191b02098fba6e18f3f527ec5d3ef353db34d8a9060a804d420",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only ledger failure diagnostics; authentication, returned ledger fields, and exception class are unchanged.",
@@ -1308,7 +1204,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x_build_mps_truncation_ledger__mutmut_204",
-      "mutation_diff_sha256": "3ff0cc0503f916377fb2186afa4c7b079b29081b7fddf58a376ef41a73b378f9",
+      "mutation_diff_sha256": "ef36374ac0f384dc83ab1cf424d5e7293f8a3f56f0849e5fc0f119f91afcea80",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only ledger failure diagnostics; authentication, returned ledger fields, and exception class are unchanged.",
@@ -1316,7 +1212,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x_build_mps_truncation_ledger__mutmut_206",
-      "mutation_diff_sha256": "7ffcc0ca255fac07714523b219e932a76b842d5aa5571f7eb7aaed0a8714c575",
+      "mutation_diff_sha256": "1fd347b9fe9c0527b1e1a51c0c0eb4bbfb32628be6aa93fc069ab8cc8e0aa294",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "Strict event-key and split-record list validation makes the mutated missing-record default branch unreachable.",
@@ -1324,7 +1220,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x_build_mps_truncation_ledger__mutmut_208",
-      "mutation_diff_sha256": "3308e1dc7bc9580226ff94daaf2769f23981739e3c7675bcda68b2723e7834b5",
+      "mutation_diff_sha256": "a34b15cdad72218d4a1f25fa62180b7df4b452ad977197bffe0e50953f927e0f",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "Strict event-key and split-record list validation makes the mutated missing-record default branch unreachable.",
@@ -1332,7 +1228,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x_build_mps_truncation_ledger__mutmut_213",
-      "mutation_diff_sha256": "cdb58c22d0f10e010462e9349924e1c6152f1fce829c1bbbac3ce1b77ec497ff",
+      "mutation_diff_sha256": "c79f94df258e0d7418b88897f8f20981c0738acc6306d8de7c0ae5e4a0cbea7a",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only ledger failure diagnostics; authentication, returned ledger fields, and exception class are unchanged.",
@@ -1340,7 +1236,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x_build_mps_truncation_ledger__mutmut_218",
-      "mutation_diff_sha256": "1ecb9a48fd310ef6aebf4bd673b8f1ce5b92dfdf0aaf4b00d55c1f5f07674866",
+      "mutation_diff_sha256": "6c47bd698e8b03a163c64c3807da1d458eaf5487d33bc263fdc7b931e43fc926",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only ledger failure diagnostics; authentication, returned ledger fields, and exception class are unchanged.",
@@ -1348,31 +1244,15 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.truncation.x_build_mps_truncation_ledger__mutmut_219",
-      "mutation_diff_sha256": "8a04f87664f7978a97024427ea0088bb3b84ddd00b4300ca282a886603dad386",
+      "mutation_diff_sha256": "784b148ae639e0973bab0568234f38bdcb279e42f97a259059e9be6a081e5194",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only ledger failure diagnostics; authentication, returned ledger fields, and exception class are unchanged.",
       "evidence_locator": "src/error_coupling_simulator/carrier/mps/truncation.py#build_mps_truncation_ledger"
     },
     {
-      "mutant": "error_coupling_simulator.carrier.mps.uncapped_nonlocal.x__assert_quimb_contract__mutmut_7",
-      "mutation_diff_sha256": "d72a4d2b3a9861944dd9f61189cc4926cba944ee8bb06e46799eef8d6d6d8192",
-      "disposition": "reviewed_noncontractual",
-      "reviewer": "restricted-mps-semantic-review-2026-07-18",
-      "rationale": "The exact diff changes only noncontractual exception diagnostics; the guard and exception class are unchanged.",
-      "evidence_locator": "src/error_coupling_simulator/carrier/mps/uncapped_nonlocal.py#_assert_quimb_contract"
-    },
-    {
-      "mutant": "error_coupling_simulator.carrier.mps.uncapped_nonlocal.x__assert_quimb_contract__mutmut_8",
-      "mutation_diff_sha256": "24bb3a885deb1c14952ae2be8bc39699aa24c723cceb6801a1a71ffbeb6e6dfd",
-      "disposition": "reviewed_noncontractual",
-      "reviewer": "restricted-mps-semantic-review-2026-07-18",
-      "rationale": "The exact diff changes only noncontractual exception diagnostics; the guard and exception class are unchanged.",
-      "evidence_locator": "src/error_coupling_simulator/carrier/mps/uncapped_nonlocal.py#_assert_quimb_contract"
-    },
-    {
       "mutant": "error_coupling_simulator.carrier.mps.uncapped_nonlocal.x__finite_real_scalar__mutmut_13",
-      "mutation_diff_sha256": "9c68250821485ceb6774b771f363be732c7d9106532066408642b0395fa44344",
+      "mutation_diff_sha256": "f844626bd1587159ada8ebcb3267d8488de3d60291f91fb5bd7e8ac09ba222c4",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "After the exact scalar-size guard, the mutated reshape form yields the same scalar item.",
@@ -1380,7 +1260,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.uncapped_nonlocal.x__validate_gate__mutmut_45",
-      "mutation_diff_sha256": "53936c522877220f1de6f26b2ce3d78f79ffd83a8c91530eef17a21ee22c2e49",
+      "mutation_diff_sha256": "0f9c61ed191912e9aeb54f726c2f56a2eaf14a2acbf6beb71ec43e82e3231030",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "Validated complex128 shape and single-device invariants make the mutated identity/device branch observationally identical.",
@@ -1388,7 +1268,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.uncapped_nonlocal.x__validate_gate__mutmut_48",
-      "mutation_diff_sha256": "9d59182c9e185d7aaeca7d4bdf590382778b84cfa1211138076a7b55ad26bd84",
+      "mutation_diff_sha256": "5d9692045a20453ee443f32434abe132893bf9c517b99b4d54b7c7bd451956ec",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "Validated complex128 shape and single-device invariants make the mutated identity/device branch observationally identical.",
@@ -1396,7 +1276,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.uncapped_nonlocal.x__validate_gate__mutmut_52",
-      "mutation_diff_sha256": "532e4d53ac7cd776944b39e22453ad7099e058ff30d4b12ecb504b62845b0a91",
+      "mutation_diff_sha256": "a78c397a507bd9b93cc89b1de4de395b6e2b3ceebe2e070ca660e89008b369a7",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only an exception diagnostic name or text; successful validation and fail-closed type are unchanged.",
@@ -1404,7 +1284,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.uncapped_nonlocal.x__validate_gate__mutmut_57",
-      "mutation_diff_sha256": "6c17062a151560422332687467cf6e9c3b3f09fc502e2114f379b0d7806c08ad",
+      "mutation_diff_sha256": "b46083bac1bfb08ec37cb7b9930e9a108aca84a1f02f14aeb2d409a83de78465",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only an exception diagnostic name or text; successful validation and fail-closed type are unchanged.",
@@ -1412,7 +1292,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.uncapped_nonlocal.x__validate_gate__mutmut_58",
-      "mutation_diff_sha256": "09fab700377c92231a2aa951719c09a527b8d9506ad690cc61251b80b2c4b3a6",
+      "mutation_diff_sha256": "cc3432c7c3362e7ff2dadfc2a1a500af5fb0e8c2e3d8cd60e57d904389aafde8",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only an exception diagnostic name or text; successful validation and fail-closed type are unchanged.",
@@ -1420,7 +1300,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.uncapped_nonlocal.x__validate_gate__mutmut_61",
-      "mutation_diff_sha256": "80449ce8af3bfeeee03ef2b26a25a9b465f6995ada1c259caf8de14d2bd40a5e",
+      "mutation_diff_sha256": "edc4d64a0ec2efc9b8e515ad872d53818af6aa757c3d10898cd00048c7ac935e",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "Validated complex128 shape and single-device invariants make the mutated identity/device branch observationally identical.",
@@ -1428,7 +1308,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.uncapped_nonlocal.x__validate_gate__mutmut_63",
-      "mutation_diff_sha256": "977578946caac07ebd9c3893b8f6b87baa4c5e344f41bc31418e98de5e1ca2f1",
+      "mutation_diff_sha256": "46a9b9fed5befdb98eda07aa520d3169de5ff8e213ecb7eba8cdf5c896fa9ee5",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "Validated complex128 shape and single-device invariants make the mutated identity/device branch observationally identical.",
@@ -1436,7 +1316,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.uncapped_nonlocal.x__validate_source_mps__mutmut_4",
-      "mutation_diff_sha256": "5c343ca490dc4cb94b8c9b055c574136481995541aad27a8eebfeec6ba82b96f",
+      "mutation_diff_sha256": "9ef523090dcb03451084d077100449aef0938b537b3ea38a2bc2bac0611c7002",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The optional cyclic marker defaults to a falsy value, so None and False select the same open-MPS path.",
@@ -1444,15 +1324,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.uncapped_nonlocal.x_apply_uncapped_nonlocal_unitary__mutmut_100",
-      "mutation_diff_sha256": "4ccd005a4293b616b10730fade98896adddfd749f9f672795e3e5713ef4c6080",
-      "disposition": "reviewed_noncontractual",
-      "reviewer": "restricted-mps-semantic-review-2026-07-18",
-      "rationale": "The exact diff changes only noncontractual failure diagnostics; candidate semantics, transaction guard, and event payload are unchanged.",
-      "evidence_locator": "src/error_coupling_simulator/carrier/mps/uncapped_nonlocal.py#apply_uncapped_nonlocal_unitary"
-    },
-    {
-      "mutant": "error_coupling_simulator.carrier.mps.uncapped_nonlocal.x_apply_uncapped_nonlocal_unitary__mutmut_119",
-      "mutation_diff_sha256": "e2e7081c80ce23fe85b005fb36c34b569d504f89d271eab491592d3a721bcb53",
+      "mutation_diff_sha256": "ae02c0b402302022b1cd2905c00da3fff56cacb1e09e2e561441ea040c7ea99c",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only noncontractual failure diagnostics; candidate semantics, transaction guard, and event payload are unchanged.",
@@ -1460,23 +1332,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.uncapped_nonlocal.x_apply_uncapped_nonlocal_unitary__mutmut_12",
-      "mutation_diff_sha256": "faa5d5505d29ba9a40538af3419e35312abffab43798d39cf9cbae1d606e495a",
-      "disposition": "reviewed_noncontractual",
-      "reviewer": "restricted-mps-semantic-review-2026-07-18",
-      "rationale": "The exact diff changes only noncontractual failure diagnostics; candidate semantics, transaction guard, and event payload are unchanged.",
-      "evidence_locator": "src/error_coupling_simulator/carrier/mps/uncapped_nonlocal.py#apply_uncapped_nonlocal_unitary"
-    },
-    {
-      "mutant": "error_coupling_simulator.carrier.mps.uncapped_nonlocal.x_apply_uncapped_nonlocal_unitary__mutmut_120",
-      "mutation_diff_sha256": "021b2d782b375867d1904fe68224e9306f7d38a825f1bfc84ec5ee7e6d0afffa",
-      "disposition": "reviewed_noncontractual",
-      "reviewer": "restricted-mps-semantic-review-2026-07-18",
-      "rationale": "The exact diff changes only noncontractual failure diagnostics; candidate semantics, transaction guard, and event payload are unchanged.",
-      "evidence_locator": "src/error_coupling_simulator/carrier/mps/uncapped_nonlocal.py#apply_uncapped_nonlocal_unitary"
-    },
-    {
-      "mutant": "error_coupling_simulator.carrier.mps.uncapped_nonlocal.x_apply_uncapped_nonlocal_unitary__mutmut_121",
-      "mutation_diff_sha256": "8cf7afade292ca87fdd0f83acb8fb066ce6ad653475a8a806ee8da2b335519a6",
+      "mutation_diff_sha256": "7bf2f3747174e1c74ce513391228bf7385e08711526fa43e9d0a627b142cbe1e",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only noncontractual failure diagnostics; candidate semantics, transaction guard, and event payload are unchanged.",
@@ -1484,7 +1340,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.uncapped_nonlocal.x_apply_uncapped_nonlocal_unitary__mutmut_15",
-      "mutation_diff_sha256": "f83da52a3d273d58fcc09f70344d162cd824dc80e5b61521944b97ab85dd67bc",
+      "mutation_diff_sha256": "9a09c48182b28aad3b4fb776d620efced952cb22e40237ea45542d6b2a52a7b1",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only noncontractual failure diagnostics; candidate semantics, transaction guard, and event payload are unchanged.",
@@ -1492,7 +1348,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.uncapped_nonlocal.x_apply_uncapped_nonlocal_unitary__mutmut_16",
-      "mutation_diff_sha256": "7723a819e074746f9d82ef44df1fa78ecebf693d378f876273f0abd220ee7bdc",
+      "mutation_diff_sha256": "c84276badbee6fb10c71ea51fc203c6163f12aab91d5c8b2e795912e4e12c475",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only noncontractual failure diagnostics; candidate semantics, transaction guard, and event payload are unchanged.",
@@ -1500,7 +1356,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.uncapped_nonlocal.x_preflight_uncapped_nonlocal_resource__mutmut_10",
-      "mutation_diff_sha256": "f67e59f5eb35151dec6013695fac7371c5053c9ad56b886119fe81b91aa2d3f9",
+      "mutation_diff_sha256": "0badf42590f1663ced92e774343dbbdf2670ab127d5bc8234e6b9896485b5541",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only exception diagnostic labels or prose; resource guards and returned machine payload are unchanged.",
@@ -1508,7 +1364,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.uncapped_nonlocal.x_preflight_uncapped_nonlocal_resource__mutmut_13",
-      "mutation_diff_sha256": "041616d5339df4534083df255d1f25c8492348ad5dc5a5c6035de9d5908e8bbe",
+      "mutation_diff_sha256": "799d9d07785db197ba7435be058d67d2a30d3937f6ebb26cd8d54255b2d0714a",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only exception diagnostic labels or prose; resource guards and returned machine payload are unchanged.",
@@ -1516,23 +1372,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.uncapped_nonlocal.x_preflight_uncapped_nonlocal_resource__mutmut_14",
-      "mutation_diff_sha256": "9bda7abaa5834069593019e812e0ef5bbd16a8c761711ddc828a40efbab6e8d8",
-      "disposition": "reviewed_noncontractual",
-      "reviewer": "restricted-mps-semantic-review-2026-07-18",
-      "rationale": "The exact diff changes only exception diagnostic labels or prose; resource guards and returned machine payload are unchanged.",
-      "evidence_locator": "src/error_coupling_simulator/carrier/mps/uncapped_nonlocal.py#preflight_uncapped_nonlocal_resource"
-    },
-    {
-      "mutant": "error_coupling_simulator.carrier.mps.uncapped_nonlocal.x_preflight_uncapped_nonlocal_resource__mutmut_22",
-      "mutation_diff_sha256": "39558b4369bd8a7802e07e4d071dad2c26afbe4de28ece631f055a8905278cf0",
-      "disposition": "reviewed_noncontractual",
-      "reviewer": "restricted-mps-semantic-review-2026-07-18",
-      "rationale": "The exact diff changes only exception diagnostic labels or prose; resource guards and returned machine payload are unchanged.",
-      "evidence_locator": "src/error_coupling_simulator/carrier/mps/uncapped_nonlocal.py#preflight_uncapped_nonlocal_resource"
-    },
-    {
-      "mutant": "error_coupling_simulator.carrier.mps.uncapped_nonlocal.x_preflight_uncapped_nonlocal_resource__mutmut_23",
-      "mutation_diff_sha256": "0396ece7cc8835683f5335b352f19dfcdb99587240806a65ee9b3c5438583c59",
+      "mutation_diff_sha256": "7a632c26f0ce52e7dd632e00545f19d540dfcfaa5bc25d9141bc65832a3f9c59",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only exception diagnostic labels or prose; resource guards and returned machine payload are unchanged.",
@@ -1540,7 +1380,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.uncapped_nonlocal.x_preflight_uncapped_nonlocal_resource__mutmut_3",
-      "mutation_diff_sha256": "bae2bf3a569f94e3be90a162ce6447b79ed643ba39850e80186ed093a0f0978f",
+      "mutation_diff_sha256": "d6afa0b89b4b14c89517d4413429bb38f3f13bfa93675935654182c375ff57b6",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only exception diagnostic labels or prose; resource guards and returned machine payload are unchanged.",
@@ -1548,39 +1388,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.uncapped_nonlocal.x_preflight_uncapped_nonlocal_resource__mutmut_6",
-      "mutation_diff_sha256": "9cbcdbfc473ea652d3c2aaecfbbad39d737ac459f0955d4aab39fe4d322e706e",
-      "disposition": "reviewed_noncontractual",
-      "reviewer": "restricted-mps-semantic-review-2026-07-18",
-      "rationale": "The exact diff changes only exception diagnostic labels or prose; resource guards and returned machine payload are unchanged.",
-      "evidence_locator": "src/error_coupling_simulator/carrier/mps/uncapped_nonlocal.py#preflight_uncapped_nonlocal_resource"
-    },
-    {
-      "mutant": "error_coupling_simulator.carrier.mps.uncapped_nonlocal.x_preflight_uncapped_nonlocal_resource__mutmut_64",
-      "mutation_diff_sha256": "ad0b24c8450fe2826b8175fb1fb8d54707ce42ad5a87ed8443392ceb5de5e3d1",
-      "disposition": "reviewed_noncontractual",
-      "reviewer": "restricted-mps-semantic-review-2026-07-18",
-      "rationale": "The exact diff changes only exception diagnostic labels or prose; resource guards and returned machine payload are unchanged.",
-      "evidence_locator": "src/error_coupling_simulator/carrier/mps/uncapped_nonlocal.py#preflight_uncapped_nonlocal_resource"
-    },
-    {
-      "mutant": "error_coupling_simulator.carrier.mps.uncapped_nonlocal.x_preflight_uncapped_nonlocal_resource__mutmut_65",
-      "mutation_diff_sha256": "48008d58b77e0172799c04aa0e31a3f171d76e49246babf98a4313b5266a403e",
-      "disposition": "reviewed_noncontractual",
-      "reviewer": "restricted-mps-semantic-review-2026-07-18",
-      "rationale": "The exact diff changes only exception diagnostic labels or prose; resource guards and returned machine payload are unchanged.",
-      "evidence_locator": "src/error_coupling_simulator/carrier/mps/uncapped_nonlocal.py#preflight_uncapped_nonlocal_resource"
-    },
-    {
-      "mutant": "error_coupling_simulator.carrier.mps.uncapped_nonlocal.x_preflight_uncapped_nonlocal_resource__mutmut_66",
-      "mutation_diff_sha256": "efbe5fff53557be8dba988c2b6a654e6dba428f47e7fbff8dbcebaa11802e079",
-      "disposition": "reviewed_noncontractual",
-      "reviewer": "restricted-mps-semantic-review-2026-07-18",
-      "rationale": "The exact diff changes only exception diagnostic labels or prose; resource guards and returned machine payload are unchanged.",
-      "evidence_locator": "src/error_coupling_simulator/carrier/mps/uncapped_nonlocal.py#preflight_uncapped_nonlocal_resource"
-    },
-    {
-      "mutant": "error_coupling_simulator.carrier.mps.uncapped_nonlocal.x_preflight_uncapped_nonlocal_resource__mutmut_69",
-      "mutation_diff_sha256": "491618ec8a6aef01d35f489ec9e3f1825dfd19f9a2c02282a829ec7cb503a491",
+      "mutation_diff_sha256": "29d8d60e564daf8be11384f48d53c87e0a87e00ecd274168fd81cf7a3c8572bd",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only exception diagnostic labels or prose; resource guards and returned machine payload are unchanged.",
@@ -1588,15 +1396,7 @@
     },
     {
       "mutant": "error_coupling_simulator.carrier.mps.uncapped_nonlocal.x_preflight_uncapped_nonlocal_resource__mutmut_7",
-      "mutation_diff_sha256": "529ebb934a32d831c9dc77a174cd69a1f0ca677a88459492fc749644ba146522",
-      "disposition": "reviewed_noncontractual",
-      "reviewer": "restricted-mps-semantic-review-2026-07-18",
-      "rationale": "The exact diff changes only exception diagnostic labels or prose; resource guards and returned machine payload are unchanged.",
-      "evidence_locator": "src/error_coupling_simulator/carrier/mps/uncapped_nonlocal.py#preflight_uncapped_nonlocal_resource"
-    },
-    {
-      "mutant": "error_coupling_simulator.carrier.mps.uncapped_nonlocal.x_preflight_uncapped_nonlocal_resource__mutmut_70",
-      "mutation_diff_sha256": "e9b133f406d946dc54e6f917a0e23acad8baac1b3adf7be54575788655c3f292",
+      "mutation_diff_sha256": "0c4e4a3ff1d936ac3979abe050b8bebd5f50ae5885ba096d7d735e1cbac68afa",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only exception diagnostic labels or prose; resource guards and returned machine payload are unchanged.",
@@ -1604,7 +1404,7 @@
     },
     {
       "mutant": "error_coupling_simulator.frontend.axis1_record_layout.x__require_exact_binary_record_matrix__mutmut_16",
-      "mutation_diff_sha256": "a5f1487a8dc92dbd84927eb4f12801a771e1bfd0719974e3d641f8e03c834053",
+      "mutation_diff_sha256": "96437f978837777ed08bad240fbe4790215147ad10de43018bf31d4caf51c267",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only noncontractual matrix error diagnostics; shape/value guards and exception class are unchanged.",
@@ -1612,7 +1412,7 @@
     },
     {
       "mutant": "error_coupling_simulator.frontend.axis1_record_layout.x__require_exact_binary_record_matrix__mutmut_17",
-      "mutation_diff_sha256": "ba6ed69b1eff5ca218aa5ac115c88a4635cc62a471df9eb32c71426756abc615",
+      "mutation_diff_sha256": "9a1919578d0e73103cd11a1bd2199f2b6baefa85535805957359f34cd8990d81",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only noncontractual matrix error diagnostics; shape/value guards and exception class are unchanged.",
@@ -1620,7 +1420,7 @@
     },
     {
       "mutant": "error_coupling_simulator.frontend.axis1_record_layout.x__validate_axis1_projected_record_payload__mutmut_11",
-      "mutation_diff_sha256": "c726f86a50285c7a57f1278872a483574525a4414facee94f131f8775963b898",
+      "mutation_diff_sha256": "353662d2d0679db65c01698828fa033b7b110c30a0cfd1753dcef6d4f782eb01",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only projected-payload diagnostic names or prose; payload validation and machine fields are unchanged.",
@@ -1628,7 +1428,7 @@
     },
     {
       "mutant": "error_coupling_simulator.frontend.axis1_record_layout.x__validate_axis1_projected_record_payload__mutmut_12",
-      "mutation_diff_sha256": "52928123c1eaabfe1bd6a52185b91d0d8c07e83399a5f20b913213ba35a0b330",
+      "mutation_diff_sha256": "6fdd844244653ce4bd364eb5b61defb6fc82de123608c3fece450518dfc66a86",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only projected-payload diagnostic names or prose; payload validation and machine fields are unchanged.",
@@ -1636,7 +1436,7 @@
     },
     {
       "mutant": "error_coupling_simulator.frontend.axis1_record_layout.x__validate_axis1_projected_record_payload__mutmut_19",
-      "mutation_diff_sha256": "d36322cf66ddb4f7b5205dd41de40f51ad62af7d15d34389a67ffa70acdbb707",
+      "mutation_diff_sha256": "fa7baab9d5b49faa4a737a6261cb769a03f1cf6680ffe52a50a7367e53f61802",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only projected-payload diagnostic names or prose; payload validation and machine fields are unchanged.",
@@ -1644,7 +1444,7 @@
     },
     {
       "mutant": "error_coupling_simulator.frontend.axis1_record_layout.x__validate_axis1_projected_record_payload__mutmut_20",
-      "mutation_diff_sha256": "1ec9d70bd62b2eee839bd6aa7cf346029b34f20ccc453384c857656866c37a1d",
+      "mutation_diff_sha256": "449e3a7e7b17e5f69a3b151a242dc56bce5836abf24c37b87a940743a4ec0867",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only projected-payload diagnostic names or prose; payload validation and machine fields are unchanged.",
@@ -1652,7 +1452,7 @@
     },
     {
       "mutant": "error_coupling_simulator.frontend.axis1_record_layout.x__validate_axis1_projected_record_payload__mutmut_29",
-      "mutation_diff_sha256": "37815f192cc164f743de8aa7aadd7f6f84a846ffaf223296294a2fb20660d6b9",
+      "mutation_diff_sha256": "470b66c8fe001e8535123ee350eb02b6cf6102766f9b81665f7ebb39dc649531",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only projected-payload diagnostic names or prose; payload validation and machine fields are unchanged.",
@@ -1660,7 +1460,7 @@
     },
     {
       "mutant": "error_coupling_simulator.frontend.axis1_record_layout.x__validate_axis1_projected_record_payload__mutmut_3",
-      "mutation_diff_sha256": "291d7952e9dafe9c2b4088203ccb34ea215f38076efedc10aff81b528f742411",
+      "mutation_diff_sha256": "7bf64c7a4dd7b7cd57244525a761a6c75e05a8db8677270c737bd7e988916c3c",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only projected-payload diagnostic names or prose; payload validation and machine fields are unchanged.",
@@ -1668,7 +1468,7 @@
     },
     {
       "mutant": "error_coupling_simulator.frontend.axis1_record_layout.x__validate_axis1_projected_record_payload__mutmut_30",
-      "mutation_diff_sha256": "f322dc796517b643e7c6f432d37c94e55506f646db6aac971156dd73298e35cd",
+      "mutation_diff_sha256": "aa331d6b00b7cddd9d671cd2400c7ed5c06d86e539872eb75d2a642677df3ba9",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only projected-payload diagnostic names or prose; payload validation and machine fields are unchanged.",
@@ -1676,7 +1476,7 @@
     },
     {
       "mutant": "error_coupling_simulator.frontend.axis1_record_layout.x__validate_axis1_projected_record_payload__mutmut_4",
-      "mutation_diff_sha256": "e22bc619db6a5183e4580adc319242f86e997e612e0a316e9d5516a027412268",
+      "mutation_diff_sha256": "bc58680fe9601a50885acabf7e8a9315931c047647bf6e11b1cbd20f2fb6d365",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only projected-payload diagnostic names or prose; payload validation and machine fields are unchanged.",
@@ -1684,7 +1484,7 @@
     },
     {
       "mutant": "error_coupling_simulator.frontend.axis1_record_layout.x__validate_axis1_projected_record_payload__mutmut_41",
-      "mutation_diff_sha256": "e075430ad322e7b03e9155d9927fe4b2c1c731cffdc6ca1023427a1e98c541f6",
+      "mutation_diff_sha256": "b0491b21a434689cadb39af94ccea4e45b08c803ac2ac1c941bcda3b35934160",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only projected-payload diagnostic names or prose; payload validation and machine fields are unchanged.",
@@ -1692,7 +1492,7 @@
     },
     {
       "mutant": "error_coupling_simulator.frontend.axis1_record_layout.x__validate_axis1_projected_record_payload__mutmut_42",
-      "mutation_diff_sha256": "508194e7fc041a464ca575a352563a237502a9260594fe4855f7489ea371c6d0",
+      "mutation_diff_sha256": "238b20e79981b714aa689e24d33c5afe2f9764beeb6291aa92405fc04d418bff",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only projected-payload diagnostic names or prose; payload validation and machine fields are unchanged.",
@@ -1700,7 +1500,7 @@
     },
     {
       "mutant": "error_coupling_simulator.frontend.axis1_record_layout.x__validate_axis1_projected_record_payload__mutmut_51",
-      "mutation_diff_sha256": "7b117a6f154f9d7e54a573ffe6beceaf97d9079a72042f4195dc0c1736425f6e",
+      "mutation_diff_sha256": "64b66682c74af9c4395cdf5cfeea7b30b0d1f5639005c8bafa847e558ef0a607",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only projected-payload diagnostic names or prose; payload validation and machine fields are unchanged.",
@@ -1708,7 +1508,7 @@
     },
     {
       "mutant": "error_coupling_simulator.frontend.axis1_record_layout.x__validate_axis1_projected_record_payload__mutmut_52",
-      "mutation_diff_sha256": "19bf3d20b898d648629773119e6d5c9bfe6b47940eed92b77ba9b998c3436eaa",
+      "mutation_diff_sha256": "0833f5ffbc56349e573db914d73f199bd16361437c477f2e1e5f50a60818daf6",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only projected-payload diagnostic names or prose; payload validation and machine fields are unchanged.",
@@ -1716,7 +1516,7 @@
     },
     {
       "mutant": "error_coupling_simulator.frontend.axis1_record_layout.x_axis1_record_layout_from_schedule__mutmut_120",
-      "mutation_diff_sha256": "a0e6fc002d8a4bd72532b638ed2f70d94a80076afb7560e0b6ce4ea62b6d0d9c",
+      "mutation_diff_sha256": "c26084398c9310030f2813701ecaf00e94a6948b6c3dcddb53bf3aec72e6b83a",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only schedule failure diagnostics, including duplicate-key display data; the uniqueness guard, exception class, and layout payload are unchanged.",
@@ -1724,7 +1524,7 @@
     },
     {
       "mutant": "error_coupling_simulator.frontend.axis1_record_layout.x_axis1_record_layout_from_schedule__mutmut_122",
-      "mutation_diff_sha256": "12adc624a0a76862abd7b3baf6426347c5f06e2cc8603b7a7d788380f91e8971",
+      "mutation_diff_sha256": "6216576a681b5bd1309ca440337df01bc947dbc2ee62a8a3649b88b934139b32",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only schedule failure diagnostics, including duplicate-key display data; the uniqueness guard, exception class, and layout payload are unchanged.",
@@ -1732,7 +1532,7 @@
     },
     {
       "mutant": "error_coupling_simulator.frontend.axis1_record_layout.x_axis1_record_layout_from_schedule__mutmut_123",
-      "mutation_diff_sha256": "d3b34cec30313d2d987e3f4a7e316f8a81a24d7e1f9e3357222df5de57af7cd0",
+      "mutation_diff_sha256": "fb75b813e1c614ecb2b80c27ea0e8b35a3e43f2d9154e581844ff8c4b3782f60",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only schedule failure diagnostics, including duplicate-key display data; the uniqueness guard, exception class, and layout payload are unchanged.",
@@ -1740,7 +1540,7 @@
     },
     {
       "mutant": "error_coupling_simulator.frontend.axis1_record_layout.x_axis1_record_layout_from_schedule__mutmut_124",
-      "mutation_diff_sha256": "3acdb536ca07fc0dddab86560c1a4cf014351bc9deb63600d798e0b7e60cd9cd",
+      "mutation_diff_sha256": "22cde00b89c6e10ff7817b6e1581c62c8a82f16cbd0d1b2d8074ece233dbe468",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only schedule failure diagnostics, including duplicate-key display data; the uniqueness guard, exception class, and layout payload are unchanged.",
@@ -1748,7 +1548,7 @@
     },
     {
       "mutant": "error_coupling_simulator.frontend.axis1_record_layout.x_axis1_record_layout_from_schedule__mutmut_155",
-      "mutation_diff_sha256": "0e1a372d54053de047bba8461f1d337bcdcb3192d360abeb53b4c6fa92db04fc",
+      "mutation_diff_sha256": "54616b442a65f5771dcbb8a8723f759fd959b0b76e609c0cd04e5fa9cbb895a4",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only schedule failure diagnostics, including duplicate-key display data; the uniqueness guard, exception class, and layout payload are unchanged.",
@@ -1756,7 +1556,7 @@
     },
     {
       "mutant": "error_coupling_simulator.frontend.axis1_record_layout.x_axis1_record_layout_from_schedule__mutmut_172",
-      "mutation_diff_sha256": "128ddce8226b5466b5fb50816f7b795273e1ac57982df489de1ce2a956e692c6",
+      "mutation_diff_sha256": "2222691ec3288b34bc116daee8b37f1af7a52dd148e2ef988e7d29c5f6af6328",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only schedule failure diagnostics, including duplicate-key display data; the uniqueness guard, exception class, and layout payload are unchanged.",
@@ -1764,7 +1564,7 @@
     },
     {
       "mutant": "error_coupling_simulator.frontend.axis1_record_layout.x_axis1_record_layout_from_schedule__mutmut_173",
-      "mutation_diff_sha256": "8aa4dd5bb5d9f229ae50aafef70e697d9a0f9da6073c3a07d7da18f6ca79a88b",
+      "mutation_diff_sha256": "92e4f4828e5a5cb437278e679fbe9bdd341bfc2f4218eb2c57e9db51a567c753",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only schedule failure diagnostics, including duplicate-key display data; the uniqueness guard, exception class, and layout payload are unchanged.",
@@ -1772,7 +1572,7 @@
     },
     {
       "mutant": "error_coupling_simulator.frontend.axis1_record_layout.x_axis1_record_layout_from_schedule__mutmut_178",
-      "mutation_diff_sha256": "15d32837eeab5d9b37897b12510b5693e569b390a473b82b9f60e88e0d95bfaa",
+      "mutation_diff_sha256": "b556881d00db9614ee3a774c61ca252096d4e22ade52c7c8834e4a094003f57b",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only schedule failure diagnostics, including duplicate-key display data; the uniqueness guard, exception class, and layout payload are unchanged.",
@@ -1780,7 +1580,7 @@
     },
     {
       "mutant": "error_coupling_simulator.frontend.axis1_record_layout.x_axis1_record_layout_from_schedule__mutmut_195",
-      "mutation_diff_sha256": "ff6234ca67133713c38a33a54a2fb8023320321051690d7d13c7a57892df7c53",
+      "mutation_diff_sha256": "eb30b18a8303f7eb0b94f5756e36ab181684975b60242a394d96513d50ccaeef",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only schedule failure diagnostics, including duplicate-key display data; the uniqueness guard, exception class, and layout payload are unchanged.",
@@ -1788,7 +1588,7 @@
     },
     {
       "mutant": "error_coupling_simulator.frontend.axis1_record_layout.x_axis1_record_layout_from_schedule__mutmut_196",
-      "mutation_diff_sha256": "05f0c925bc82514729d3fcb107bbddc6a58d2391734a30eb43d0dc22d32f18d0",
+      "mutation_diff_sha256": "a018008ee57d561457cbbd40fd7659319bb135bff35bd502266f1f983289e241",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only schedule failure diagnostics, including duplicate-key display data; the uniqueness guard, exception class, and layout payload are unchanged.",
@@ -1796,7 +1596,7 @@
     },
     {
       "mutant": "error_coupling_simulator.frontend.axis1_record_layout.x_axis1_record_layout_from_schedule__mutmut_30",
-      "mutation_diff_sha256": "bae25f5eec07fb9a50da5b8e7e988581d0de3e3155bf02a016a518de6184d793",
+      "mutation_diff_sha256": "fef088da6f402b26840c9b627a1eb9e26fa7f188e8f49134f25ca8f51e798150",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only schedule failure diagnostics, including duplicate-key display data; the uniqueness guard, exception class, and layout payload are unchanged.",
@@ -1804,7 +1604,7 @@
     },
     {
       "mutant": "error_coupling_simulator.frontend.axis1_record_layout.x_axis1_record_layout_from_schedule__mutmut_31",
-      "mutation_diff_sha256": "ea70184259f52f6eb0dd0dd163aeda63fcd9f2532c36c20a0ffc94d337dc7ca7",
+      "mutation_diff_sha256": "0049caba6ad2c78e6364f6d41657fe58c848677975d69d6ecd7fbe6726c9aeb5",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only schedule failure diagnostics, including duplicate-key display data; the uniqueness guard, exception class, and layout payload are unchanged.",
@@ -1812,7 +1612,7 @@
     },
     {
       "mutant": "error_coupling_simulator.frontend.axis1_record_layout.x_axis1_record_layout_from_schedule__mutmut_47",
-      "mutation_diff_sha256": "17ffa4abd4e4dbc215fe18987ad01ffdbb33e11037f8ccc0032def4876ee744e",
+      "mutation_diff_sha256": "7f2e6269ecda158e6a90d4491b44fd4a1dbd32eed21b5d2d549460eaf7d394ed",
       "disposition": "reviewed_equivalent",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The mutated lowercase Z fallback is immediately uppercased, so the machine basis value remains exactly Z.",
@@ -1820,7 +1620,7 @@
     },
     {
       "mutant": "error_coupling_simulator.frontend.axis1_record_layout.x_axis1_record_layout_from_schedule__mutmut_83",
-      "mutation_diff_sha256": "331aff60f02fd0139ae6b6c1027ce6421468963c8fba5fc1713268378659cebf",
+      "mutation_diff_sha256": "0df7cc6145ee6ca3046fce821e50c33055eb8466e54b6273872e1edc4252284a",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only schedule failure diagnostics, including duplicate-key display data; the uniqueness guard, exception class, and layout payload are unchanged.",
@@ -1828,7 +1628,7 @@
     },
     {
       "mutant": "error_coupling_simulator.frontend.axis1_record_layout.x_axis1_record_layout_from_schedule__mutmut_84",
-      "mutation_diff_sha256": "f5ef2e15153e787030fa3668691ed611165f21dc15ce22a1427e321dac132b60",
+      "mutation_diff_sha256": "def9b004e5172b2f0162a3b3845654c7fc6c5ad81ababd65eedc0aa886cc5134",
       "disposition": "reviewed_noncontractual",
       "reviewer": "restricted-mps-semantic-review-2026-07-18",
       "rationale": "The exact diff changes only schedule failure diagnostics, including duplicate-key display data; the uniqueness guard, exception class, and layout payload are unchanged.",
