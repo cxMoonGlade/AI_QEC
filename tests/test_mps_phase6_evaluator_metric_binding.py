@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 
 import error_coupling_simulator.certify.axis1_mps as CERTIFICATION
-from tests._support.mcwf_artifact_certification import (
+from _support.mcwf_artifact_certification import (
     passing_mcwf_artifact_certification,
 )
 

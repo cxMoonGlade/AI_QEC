@@ -14,7 +14,7 @@ from typing import Any
 
 import pytest
 
-from tests._support.mcwf_artifact_certification import (
+from _support.mcwf_artifact_certification import (
     passing_mcwf_artifact_certification,
 )
 
