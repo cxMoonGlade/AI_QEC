@@ -188,16 +188,38 @@ def _apply_superop_to_dyad(S, i, j, D):
 
 
 def _robust_eigh(M):
-    """Hermitian eigendecomposition with a CPU-LAPACK fallback. cuSOLVER's Hermitian eigensolve can
-    fail to converge (error code 2) on highly-degenerate PSD matrices at the dense 5q carrier size;
-    CPU LAPACK is robust. Returns (w, V) on M's device (a genuine failure re-raises from the CPU path)."""
+    """Hermitian eigendecomposition with finiteness-validated layered fallbacks.
+
+    cuSOLVER's Hermitian eigensolve can fail to converge (error codes 2/37/46/52) on
+    highly-degenerate PSD matrices at the dense 5q carrier size, and the aarch64 torch
+    build's NVPL CPU LAPACK can SILENTLY return NaN on the same degenerate inputs
+    (observed 2026-07-20 on GB10/torch 2.12.0+cu130: a 1024x1024 complex128 Choi with
+    841/1024 near-zero eigenvalues), so an exception-only fallback is not sufficient.
+    Each backend's result is accepted only if finite: torch on M's device, then torch
+    CPU, then numpy LAPACK (verified robust on the failing input). A genuine failure
+    re-raises from the numpy path. Returns (w, V) on M's device."""
+    import numpy as np
     import torch
 
+    def _finite(w, V):
+        return bool(torch.isfinite(w).all()) and bool(torch.isfinite(V).all())
+
     try:
-        return torch.linalg.eigh(M)
+        w, V = torch.linalg.eigh(M)
+        if _finite(w, V):
+            return w, V
     except RuntimeError:
+        pass
+    try:
         w, V = torch.linalg.eigh(M.detach().to("cpu"))
-        return w.to(M.device), V.to(M.device)
+        if _finite(w, V):
+            return w.to(M.device), V.to(M.device)
+    except RuntimeError:
+        pass
+    wn, Vn = np.linalg.eigh(M.detach().to("cpu").numpy())
+    w = torch.from_numpy(np.ascontiguousarray(wn)).to(M.device)
+    V = torch.from_numpy(np.ascontiguousarray(Vn)).to(M.device, dtype=M.dtype)
+    return w, V
 
 
 def superop_to_kraus(S, *, device="cuda", tol: float = 0.0,

@@ -48,6 +48,61 @@ _NTU_MAX_SWEEPS = 20
 _NTU_REL_STOP = 1e-12
 _NTU_PINV_RTOL = 1e-12  # the seed's pinv rtol
 
+# Diagnostic-only hook installed by the isolated reset probe.  Normal PEPO
+# execution leaves this as ``None`` and retains the original unsynchronized
+# ``pinv(G) @ J`` path.  A diagnostic hook receives the stage name, the live
+# tensor, and non-value solver context; it must persist its own evidence.
+_NTU_STAGE_LOGGER = None
+
+
+def _synchronize_ntu_stage_device(tensor: torch.Tensor) -> None:
+    """Synchronize only the CUDA device used by an instrumented NTU solve."""
+    if tensor.device.type == "cuda":
+        torch.cuda.synchronize(tensor.device)
+
+
+def _ntu_pinv_solve(
+    matrix: torch.Tensor,
+    rhs: torch.Tensor,
+    *,
+    bond: str,
+    sites: tuple[int, int],
+    sweep_index: int,
+    solver_side: str,
+    re: int,
+    D_kept: int,
+) -> torch.Tensor:
+    """Solve one NTU alternating update with optional durable stage markers.
+
+    The logger is deliberately absent from normal execution.  When the
+    isolated diagnostic installs it, the three markers distinguish a failure
+    before CUDA synchronization, inside the default SVD-backed pseudoinverse,
+    and after the pseudoinverse returns.
+    """
+    logger = _NTU_STAGE_LOGGER
+    if logger is None:
+        return torch.linalg.pinv(matrix, rtol=_NTU_PINV_RTOL) @ rhs
+
+    side = str(solver_side)
+    if side not in {"A", "B"}:
+        raise ValueError(f"unsupported NTU solver side {solver_side!r}")
+    context = {
+        "bond": str(bond),
+        "sites": tuple(int(site) for site in sites),
+        "sweep_index": int(sweep_index),
+        "solver_side": side,
+        "re": int(re),
+        "D_kept": int(D_kept),
+        "rtol": float(_NTU_PINV_RTOL),
+        "tensor_role": f"G{side}",
+    }
+    logger("before_pre_pinv_sync", matrix, context)
+    _synchronize_ntu_stage_device(matrix)
+    logger("pre_pinv_synced", matrix, context)
+    matrix_pinv = torch.linalg.pinv(matrix, rtol=_NTU_PINV_RTOL)
+    logger("post_pinv", matrix_pinv, {**context, "tensor_role": f"G{side}_pinv"})
+    return matrix_pinv @ rhs
+
 
 # --------------------------------------------------------------------------- #
 # Single-qutrit gate matrices with leaked |2> inert                           #
@@ -780,14 +835,32 @@ def ntu_truncate(state, bond: str, D_cap: int) -> dict:
         # Alternating pinv updates on both sides. g4 uses axes [i, j, I, J],
         # where i,j are the bra insertion and I,J are the ket insertion.
         eps_prev = eps_of(MA, MB)
-        for _ in range(_NTU_MAX_SWEEPS):
+        for sweep_index in range(1, _NTU_MAX_SWEEPS + 1):
             n_sweeps += 1
             GA = torch.einsum("ijIJ,jb,Jd->ibId", g4, MB.conj(), MB).reshape(re * D_kept, re * D_kept)
             JA = torch.einsum("ijIJ,jb,IJ->ib", g4, MB.conj(), Rm).reshape(re * D_kept)
-            MA = (torch.linalg.pinv(GA, rtol=_NTU_PINV_RTOL) @ JA).reshape(re, D_kept)
+            MA = _ntu_pinv_solve(
+                GA,
+                JA,
+                bond=bond,
+                sites=(pos_a, pos_b),
+                sweep_index=sweep_index,
+                solver_side="A",
+                re=re,
+                D_kept=D_kept,
+            ).reshape(re, D_kept)
             GB = torch.einsum("ijIJ,ia,Ic->jaJc", g4, MA.conj(), MA).reshape(re * D_kept, re * D_kept)
             JB = torch.einsum("ijIJ,ia,IJ->ja", g4, MA.conj(), Rm).reshape(re * D_kept)
-            MB = (torch.linalg.pinv(GB, rtol=_NTU_PINV_RTOL) @ JB).reshape(re, D_kept)
+            MB = _ntu_pinv_solve(
+                GB,
+                JB,
+                bond=bond,
+                sites=(pos_a, pos_b),
+                sweep_index=sweep_index,
+                solver_side="B",
+                re=re,
+                D_kept=D_kept,
+            ).reshape(re, D_kept)
             eps_now = eps_of(MA, MB)
             if eps_prev - eps_now <= _NTU_REL_STOP * max(abs(eps_prev), NUMERICAL_ZERO):
                 eps_prev = eps_now
