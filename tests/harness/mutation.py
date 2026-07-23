@@ -2354,7 +2354,10 @@ def _read_pytest_completion_sentinel(
 
     if not sentinel_path.is_file():
         if required:
-            raise RuntimeError("fresh pytest completion sentinel is missing")
+            raise RuntimeError(
+                "fresh pytest completion sentinel is missing "
+                f"(returncode={ran.returncode}, timed_out={ran.timed_out})"
+            )
         return None
     try:
         raw = sentinel_path.read_bytes()
@@ -3449,6 +3452,25 @@ def _run_gpu_fresh_exec(
     return rows, evidence
 
 
+def _precompile_mutant_tree(root: Path) -> None:
+    """Write bytecode for the instrumented tree once so every fresh-exec child
+    imports .pyc instead of recompiling the mutant sources inside its own test
+    timeout. An instrumented module can reach 10^8 bytes (12,745 mutants of
+    axis1_qt_mps_execution exceed 15 minutes of solo compile), while the
+    per-child budget scales only with estimated test time; children run with
+    PYTHONDONTWRITEBYTECODE=1, which disables writing but not reading."""
+
+    import compileall
+
+    started = time.monotonic()
+    if not compileall.compile_dir(str(root), quiet=1):
+        raise RuntimeError(f"fresh-exec preparation failed to precompile {root}")
+    print(
+        f"precompiled mutant tree {root} in {time.monotonic() - started:.1f}s",
+        flush=True,
+    )
+
+
 def prepare_fresh_exec_plan(
     plan_path: Path,
     *,
@@ -3470,6 +3492,7 @@ def prepare_fresh_exec_plan(
     mutmut_main.setup_source_paths()
     mutmut_main.store_lines_covered_by_tests()
     mutmut_main.create_mutants(1)
+    _precompile_mutant_tree(REPO / "mutants" / "src")
 
     runner = mutmut_main.PytestRunner()
     runner.prepare_main_test_run()
