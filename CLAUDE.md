@@ -42,7 +42,12 @@ conda run -n aiqec python -m pytest -q tests/test_simulator_cudaq_grover.py
 
 python tests/harness/gate.py tests/_support/<batch>_targets.json
 python tests/harness/mutation.py tests/_support/<batch>_targets.json
+python tests/harness/mutation.py tests/_support/restricted_mps_mutation_suite.json
 python tools/gen_code_map.py --check
+
+python scripts/external_baselines/build_itensor_baseline_environment.py
+python scripts/external_baselines/build_mps_baseline_environment_locks.py
+ECS_RUN_ITENSOR_MPS_COMPARISON=1 conda run -n ecs python -m pytest -q tests/test_external_itensor_mps_comparison.py
 
 python tools/literature_rag.py audit
 python tools/literature_rag.py query "<mechanism or observable>" --top-k 12
@@ -79,6 +84,17 @@ gate.
 
 `pytest tests/` is an engineering regression surface, not a scientific certification claim.
 Scientific acceptance is subsystem-owned and listed in `tests/CODEBOOK.md` and the service catalog.
+
+The restricted-MPS mutation suite declares six batches but runs only the in-scope ones by default.
+The default scope is the `certify` shard alone: the evaluator judges every external comparison, so
+no baseline leg can validate it, and its fail-closed guards are invisible to green tests because a
+guard that never fires looks like one that cannot fire. The numerical modules are deferred to the
+external comparison legs and can still be run explicitly by their own registry. Every batch declares
+`default_scope` and a `scope_rationale`, and a suite run publishes its executed and deferred batches,
+so a narrowed score never reads as a complete one. Each GPU shard also declares its own worker count
+for the host that runs it, bounded by `mutation._GPU_MAX_FRESH_WORKERS`; that is a throughput
+decision only, because the per-mutant timeout scales by the same concurrency and a real timeout or
+resource exhaustion aborts the shard rather than being scored.
 
 ## Architecture
 
@@ -121,7 +137,13 @@ Read the owning module README before changing a module. Do not add flat modules 
 - Every retained scientific claim needs a physical name, formula, implementation owner, current
   falsifier, and exact primary-source or complete-derivation locator. A missing item is a gap.
 - External baseline repositories are pristine. Adaptors live in this repository, not in vendored
-  upstream code.
+  upstream code. Each isolated baseline environment has a committed root lock
+  (`baseline-environment-{aer,yastn,qutip,itensor}-linux-64.lock.json`); rebuild and leg
+  instructions are in `docs/external_baselines/BASELINE_ENVIRONMENTS.md`. Bind a source
+  install by `git+file://<clone>@<commit>`, never a bare directory path, which records
+  `dir_info` and binds nothing. Check clone cleanliness with
+  `git status --porcelain --untracked-files=all --ignored`: a directory install writes
+  gitignored build artefacts that the ordinary status hides.
 - Every `src/**` change requires explicit user confirmation and a reviewed phase diff.
 - Every nontrivial execution is a committed script with preconditions, printed evidence, flushed
   output, and a `__main__` guard when multiprocessing is involved. Inline shell is for trivial

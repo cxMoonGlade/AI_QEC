@@ -59,6 +59,13 @@ and serial GPU lanes. The parent imports no CUDA runtime, and only the GPU lane 
 cross-process GPU lock. Repository-wide pytest is an engineering regression surface, not a
 scientific certification claim.
 
+Four external comparison legs run in their own isolated environments (`ecs-baseline-aer`,
+`ecs-baseline-yastn`, `ecs-baseline-qutip`, `ecs-baseline-itensor`), each with a committed lock at
+the repository root. Their contract tests run in `ecs` without the external runtime present; the
+isolated runs are opt-in. See
+[`docs/external_baselines/BASELINE_ENVIRONMENTS.md`](docs/external_baselines/BASELINE_ENVIRONMENTS.md)
+for how to rebuild an environment and run a leg.
+
 ## Documentation
 
 - [`docs/SIMULATOR.md`](docs/SIMULATOR.md) — binding contract.
@@ -70,4 +77,6 @@ scientific certification claim.
 - [`docs/METRICS.md`](docs/METRICS.md),
   [`docs/FAITHFULNESS_PROTOCOL.md`](docs/FAITHFULNESS_PROTOCOL.md), and
   [`docs/NUMERICAL_PROVENANCE.md`](docs/NUMERICAL_PROVENANCE.md) — scientific disciplines.
+- [`docs/external_baselines/BASELINE_ENVIRONMENTS.md`](docs/external_baselines/BASELINE_ENVIRONMENTS.md)
+  — rebuilding the baseline environments and running the comparison legs.
 - [`docs/simulator_validation/`](docs/simulator_validation/) — current cleanup and carrier status.
