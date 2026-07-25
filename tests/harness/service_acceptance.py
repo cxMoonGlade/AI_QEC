@@ -63,11 +63,13 @@ _SNAPSHOT_DIRECTORY_INPUTS = (
     "external/baselines/qiskit-aer",
     "external/baselines/yastn",
     "external/baselines/qutip",
+    "external/baselines/ITensorMPS.jl",
 )
 _SNAPSHOT_GIT_REPOSITORY_INPUTS = (
     "external/baselines/qiskit-aer",
     "external/baselines/yastn",
     "external/baselines/qutip",
+    "external/baselines/ITensorMPS.jl",
 )
 _RUNTIME_CONTENT_PACKAGE_TREES = MappingProxyType(
     {
@@ -107,6 +109,7 @@ _SNAPSHOT_EXCLUDED_PARTS = frozenset(
 _ALLOWED_PROCESS_ENVIRONMENT = frozenset(
     {
         "ECS_RUN_AER_MPS_COMPARISON",
+        "ECS_RUN_ITENSOR_MPS_COMPARISON",
         "ECS_RUN_MCWF_XZ_FIXTURE_FAMILY_COMPARISON",
         "ECS_RUN_QUTIP_MCWF_XZ_COMPARISON",
         "ECS_RUN_YASTN_MPS_COMPARISON",

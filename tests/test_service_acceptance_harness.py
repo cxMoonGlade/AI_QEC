@@ -422,6 +422,7 @@ def test_current_catalog_binds_every_direct_and_nested_runtime_environment() -> 
         "aiqec",
         "ecs",
         "ecs-baseline-aer",
+        "ecs-baseline-itensor",
         "ecs-baseline-qutip",
         "ecs-baseline-yastn",
     )
