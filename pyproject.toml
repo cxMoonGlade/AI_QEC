@@ -97,7 +97,7 @@ testpaths = ["tests"]
 norecursedirs = ["external", "outputs", ".venv", ".hypothesis"]
 markers = [
     "slow: opt-in heavy runs",
-    "mutation_trampoline_incompatible: raw-source scanner that cannot identify the active candidate inside a mutmut trampoline",
+    "mutation_trampoline_incompatible: raw-source scanner that cannot identify the active candidate inside a mutmut trampoline, or a cwd-changing test that breaks trampoline-hit source-path resolution",
 ]
 
 [tool.aiqec.core-environment]

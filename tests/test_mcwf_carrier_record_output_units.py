@@ -1390,11 +1390,15 @@ def test_writer_rechecks_program_before_atomic_publication(
     assert not out_dir.exists()
 
 
+@pytest.mark.mutation_trampoline_incompatible
 def test_writer_freezes_relative_output_path_before_long_running_execution(
     monkeypatch,
     tmp_path: Path,
     projected_xz_schedule,
 ) -> None:
+    # This test changes the working directory while calling instrumented
+    # carrier-execution functions; mutmut's trampoline-hit recording resolves
+    # its relative source_paths against the live cwd and cannot survive that.
     initial_directory = tmp_path / "initial"
     changed_directory = tmp_path / "changed"
     initial_directory.mkdir()
