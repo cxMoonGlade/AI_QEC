@@ -17,38 +17,50 @@
     {
       "name": "restricted_mps_cpu",
       "registry": "restricted_mps_mutation_cpu.json",
+      "default_scope": false,
+      "scope_rationale": "out of default scope: the six carrier/mps mechanics modules plus the record layout are the numerical core, and their behaviour is pinned by the external Aer/YASTN/QuTiP comparison legs. This batch also already scores 0.9373 semantic, the best of the six. Run it explicitly when the carrier changes.",
       "lane": "cpu_parallel",
       "jobs": 4
     },
     {
       "name": "restricted_mps_gpu_01_mcwf_execution",
       "registry": "restricted_mps_mutation_gpu_01_mcwf_execution.json",
+      "default_scope": false,
+      "scope_rationale": "out of default scope: MCWF-MPS execution numerics are covered by the external comparison legs. Run explicitly when that executor changes.",
       "lane": "gpu_serial",
-      "jobs": 4
+      "jobs": 8
     },
     {
       "name": "restricted_mps_gpu_02_qt_execution",
       "registry": "restricted_mps_mutation_gpu_02_qt_execution.json",
+      "default_scope": false,
+      "scope_rationale": "out of default scope: QT-MPS execution numerics are covered by the external comparison legs. Run explicitly when that executor changes.",
       "lane": "gpu_serial",
-      "jobs": 4
+      "jobs": 8
     },
     {
       "name": "restricted_mps_gpu_03_carrier_execution",
       "registry": "restricted_mps_mutation_gpu_03_carrier_execution.json",
+      "default_scope": false,
+      "scope_rationale": "out of default scope: record-construction plumbing. Its values reach the emitted record, which the comparison legs read. Run explicitly when the record layout or manifests change.",
       "lane": "gpu_serial",
-      "jobs": 4
+      "jobs": 16
     },
     {
       "name": "restricted_mps_gpu_04_carrier_program",
       "registry": "restricted_mps_mutation_gpu_04_carrier_program.json",
+      "default_scope": false,
+      "scope_rationale": "out of default scope: carrier program assembly. Run explicitly when the program builder changes.",
       "lane": "gpu_serial",
-      "jobs": 4
+      "jobs": 16
     },
     {
       "name": "restricted_mps_gpu_05_certification",
       "registry": "restricted_mps_mutation_gpu_05_certification.json",
+      "default_scope": true,
+      "scope_rationale": "IN default scope: certify/ is the evaluator that judges every comparison, so no external baseline can validate it -- a broken judge reports agreement that is not there. Its fail-closed guards are also structurally invisible to green tests, since a guard that never fires looks like one that cannot fire. Mutation is the only instrument that reaches this surface.",
       "lane": "gpu_serial",
-      "jobs": 4
+      "jobs": 16
     }
   ]
 }

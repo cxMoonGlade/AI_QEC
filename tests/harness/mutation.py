@@ -39,6 +39,16 @@ REPO = Path(__file__).resolve().parents[2]          # portable (works on spark t
 LOGDIR = REPO / "outputs/simulator_validation/logs"
 ENVBIN = str(Path(sys.executable).parent)           # the running interpreter's bin (portable: aiqec OR spark venv)
 CONFIG_PATH = REPO / "tests" / "harness_config.json"
+# One leased GPU may host this many concurrent fresh mutant workers. The mutant
+# loop is a lockstep barrier-wave scheduler, so wave cost is the maximum of the
+# wave rather than its mean, and the practical per-host optimum is bounded by
+# performance cores, not device memory: a worker displaced onto a slow core
+# gates its whole wave. Each batch therefore declares its own jobs for the host
+# that runs it. Classification does not depend on that choice -- the
+# contention-scaled timeout is strictly monotone in jobs, so raising it only
+# lengthens an already non-binding budget, and a real timeout or resource
+# exhaustion aborts the batch instead of being recorded as a survivor.
+_GPU_MAX_FRESH_WORKERS = 16
 _MUTMUT_STATUS_TO_KEY = {
     "killed": "killed",
     "survived": "survived",
@@ -1062,7 +1072,7 @@ def lane_environment(base: dict[str, str], *, lane: str) -> dict[str, str]:
 
 
 def resolve_jobs(reg: dict, *, lane: str, requested: int | None) -> int:
-    """Resolve worker count and bound one leased GPU batch to four fresh workers."""
+    """Resolve worker count and bound one leased GPU batch's fresh workers."""
 
     if lane not in {"cpu_parallel", "gpu_serial"}:
         raise ValueError(f"unknown mutation lane: {lane!r}")
@@ -1084,8 +1094,10 @@ def resolve_jobs(reg: dict, *, lane: str, requested: int | None) -> int:
         raw = 4 if lane == "cpu_parallel" else 1
     if isinstance(raw, bool) or not isinstance(raw, int) or raw <= 0:
         raise ValueError("mutation jobs must be a positive integer")
-    if lane == "gpu_serial" and raw > 4:
-        raise ValueError("gpu_serial mutation allows at most 4 fresh workers")
+    if lane == "gpu_serial" and raw > _GPU_MAX_FRESH_WORKERS:
+        raise ValueError(
+            f"gpu_serial mutation allows at most {_GPU_MAX_FRESH_WORKERS} fresh workers"
+        )
     return raw
 
 
@@ -1095,8 +1107,10 @@ def execution_policy(*, lane: str, jobs: int) -> dict:
     if lane == "gpu_serial":
         if type(jobs) is not int or jobs <= 0:
             raise ValueError("gpu_serial mutation requires positive jobs")
-        if jobs > 4:
-            raise ValueError("gpu_serial mutation allows at most 4 fresh workers")
+        if jobs > _GPU_MAX_FRESH_WORKERS:
+            raise ValueError(
+                f"gpu_serial mutation allows at most {_GPU_MAX_FRESH_WORKERS} fresh workers"
+            )
         return {
             "lane": lane,
             "jobs": jobs,
@@ -1125,8 +1139,10 @@ def _validate_gpu_execution_policy(policy: object) -> int:
     if not isinstance(policy, dict):
         raise TypeError("GPU execution policy must be an object")
     jobs = policy.get("jobs")
-    if type(jobs) is not int or not (1 <= jobs <= 4):
-        raise ValueError("GPU execution policy jobs must be in [1, 4]")
+    if type(jobs) is not int or not (1 <= jobs <= _GPU_MAX_FRESH_WORKERS):
+        raise ValueError(
+            f"GPU execution policy jobs must be in [1, {_GPU_MAX_FRESH_WORKERS}]"
+        )
     expected = {
         "lane": "gpu_serial",
         "cuda_hidden": False,
@@ -3609,14 +3625,28 @@ def load_mutation_suite(suite_path: Path) -> dict:
         name = raw.get("name")
         lane = raw.get("lane")
         jobs = raw.get("jobs")
+        # Scope is a running decision, not a structural one: every batch stays in
+        # the suite so the disjointness and coverage-union invariants still bind,
+        # but only in-scope batches run by default. The rationale travels with the
+        # declaration so a narrowed suite cannot silently look like a full one.
+        default_scope = raw.get("default_scope")
+        scope_rationale = raw.get("scope_rationale")
         if not isinstance(name, str) or not name or name in names:
             raise ValueError(f"invalid or duplicate mutation batch name: {name!r}")
+        if not isinstance(default_scope, bool):
+            raise ValueError(f"mutation batch requires a boolean default_scope: {name}")
+        if not isinstance(scope_rationale, str) or len(scope_rationale) < 40:
+            raise ValueError(
+                f"mutation batch requires a substantive scope_rationale: {name}"
+            )
         if lane not in {"cpu_parallel", "gpu_serial"}:
             raise ValueError(f"unknown mutation lane: {lane!r}")
         if isinstance(jobs, bool) or not isinstance(jobs, int) or jobs <= 0:
             raise ValueError(f"mutation batch jobs must be positive: {name}")
-        if lane == "gpu_serial" and jobs > 4:
-            raise ValueError("gpu_serial mutation permits at most 4 jobs")
+        if lane == "gpu_serial" and jobs > _GPU_MAX_FRESH_WORKERS:
+            raise ValueError(
+                f"gpu_serial mutation permits at most {_GPU_MAX_FRESH_WORKERS} jobs"
+            )
         registry_path = _resolve_registry_reference(path, raw.get("registry"))
         if registry_path in registry_paths:
             raise ValueError(f"duplicate mutation batch registry: {registry_path}")
@@ -3666,6 +3696,8 @@ def load_mutation_suite(suite_path: Path) -> dict:
                 "name": name,
                 "lane": lane,
                 "jobs": jobs,
+                "default_scope": default_scope,
+                "scope_rationale": scope_rationale,
                 "registry_path": registry_path,
                 "registry_doc": registry_doc,
             }
@@ -3853,7 +3885,11 @@ def _run_mutation_suite_locked(
     snapshot_paths = _suite_snapshot_paths(plan)
     snapshot_before = input_snapshot(snapshot_paths, repo=REPO)
     batch_results: list[dict] = []
-    for batch in plan["batches"]:
+    scheduled = [batch for batch in plan["batches"] if batch["default_scope"]]
+    deferred = [batch for batch in plan["batches"] if not batch["default_scope"]]
+    if not scheduled:
+        raise ValueError("mutation suite has no in-scope batch to run")
+    for batch in scheduled:
         current_snapshot = input_snapshot(snapshot_paths, repo=REPO)
         if current_snapshot != snapshot_before:
             raise RuntimeError(
@@ -3897,6 +3933,20 @@ def _run_mutation_suite_locked(
         "tag": plan["path"].stem,
         "input_snapshot_sha256": snapshot_before,
         "verified_snapshot_sha256": snapshot_after,
+        # A narrowed run must never read as a full one: the deferred batches and
+        # their stated reasons are published alongside the score.
+        "scope": {
+            "executed_batches": [batch["name"] for batch in scheduled],
+            "deferred_batches": [
+                {"name": batch["name"], "rationale": batch["scope_rationale"]}
+                for batch in deferred
+            ],
+            "covers_complete_module_union": not deferred,
+            "claim_boundary": (
+                "this score covers the executed batches only; the deferred batches "
+                "remain declared in the suite and can be run explicitly"
+            ),
+        },
         **merged,
         **(
             {

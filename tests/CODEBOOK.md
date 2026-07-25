@@ -26,8 +26,8 @@ Service acceptance uses three non-overlapping resource lanes:
 
 The default environment is `ecs`. Tests for an explicitly isolated optional runtime use the
 per-file environment override declared in the service catalog. The external comparison adapters
-declare their nested `ecs-baseline-aer`, `ecs-baseline-yastn`, and `ecs-baseline-qutip`
-environments. Every acceptance child removes `PYTHONPATH` and disables user-site imports. Checkpoint
+declare their nested `ecs-baseline-aer`, `ecs-baseline-yastn`, `ecs-baseline-qutip`, and
+`ecs-baseline-itensor` environments. Every acceptance child removes `PYTHONPATH` and disables user-site imports. Checkpoint
 policy binds the resolved Conda
 executable and path-bound Conda/pip metadata for all direct and nested environments.
 
@@ -51,7 +51,8 @@ corpora, and corrupted RAG/KG text, claims, counts, hashes, IDs, relationships, 
 endpoints. Trusted build/query paths have no artifact-verification bypass.
 
 `test_external_aer_mps_comparison.py`, `test_external_yastn_mcwf_mass_comparison.py`,
-`test_external_qutip_mcwf_xz_comparison.py`, and `test_external_mcwf_xz_fixture_family.py` protect
+`test_external_qutip_mcwf_xz_comparison.py`, `test_external_itensor_mps_comparison.py`, and
+`test_external_mcwf_xz_fixture_family.py` protect
 repository-owned neutral adapters for isolated external baselines. All external legs run in isolated
 environments. YASTN is source/commit-bound to its pristine clone. QuTiP binds pristine commit/tree,
 selected installed solver sources, full installed-distribution identity, and exact conformance to the
@@ -59,6 +60,17 @@ selected installed solver sources, full installed-distribution identity, and exa
 reference clone, but does not claim wheel-to-clone identity. Aer checks independent dense/unitary
 state evolution and finite-bond damage; YASTN checks frozen product-MPS MCWF candidate-mass arithmetic
 and an omitted-jump falsifier.
+ITensorMPS is the third MPS leg and the only one that exposes the canonical split itself: its
+Julia worker applies every two-qubit gate through an explicit orthogonalize/contract/SVD cycle
+rather than through `apply`, so the per-bond Schmidt spectrum and truncation error at the moment
+of the split are reported rather than discarded. Two conventions are echoed as required result
+fields because each is silently wrong-looking-right: little-endian qubit-0-fastest amplitudes,
+and SQUARED Schmidt coefficients (a maximally entangled bond reads 0.5, not 0.707). Every fixture
+runs full rank first and a full-rank fidelity below 1-1e-12 aborts that fixture before any capped
+row is scored, because a convention error is invisible at full rank only by coincidence and then
+masquerades as truncation damage. Julia has no `direct_url.json`, so the leg binds the running
+package to the pristine clone by resolved tree hash, Manifest digest, and per-file digests of four
+named source anchors.
 
 The MCWF X/Z family freezes two-qubit F1 T1, F2 number dephasing, and F3 thermal down/up fixtures. An
 implementation-isolated dense worker hand-builds each operator and 16x16 Lindblad superoperator;
@@ -125,10 +137,21 @@ mutation topology is `restricted_mps_mutation_suite.json`: seven CPU-only mechan
 run through stock mutmut with exactly four workers and CUDA hidden, then five ordered GPU
 execution/certification shards run one after another. The first four GPU shards own one module each;
 GPU05 owns both evaluator certification and its isolated NumPy operator-reference module. Every GPU
-shard has `jobs=4`, acquires
-one lease, runs four concurrent fresh clean-control replicas for admission, and then uses fixed waves
-of at most four fresh pytest processes on that pinned device. GPU shards never overlap; worker
-overlap is confined to one shard and one wave. The generated mutant/support tree has all write bits
+shard declares its own `jobs` for the host that runs it — bounded by
+`mutation._GPU_MAX_FRESH_WORKERS`, currently 8 for the aarch64 shards and 16 for the x86 shards —
+acquires one lease, runs that many concurrent fresh clean-control replicas for admission, and then
+uses fixed waves of at most that many fresh pytest processes on that pinned device. The choice is a
+throughput decision only: the per-mutant timeout is scaled by the same in-shard concurrency, so it is
+monotone in `jobs`, and a real timeout or resource exhaustion aborts the shard rather than being
+scored. GPU shards never overlap; worker overlap is confined to one shard and one wave.
+Each batch also declares `default_scope` and a `scope_rationale`, and only in-scope batches run
+by default. Every batch stays declared, so the pairwise-disjoint and coverage-union invariants
+still bind and a deferred batch can still be run explicitly by its own registry. The default
+scope is the `certify` shard alone: the evaluator judges every external comparison, so no
+baseline leg can validate it, and its fail-closed guards are invisible to green tests because a
+guard that never fires looks like one that cannot fire. The numerical modules are deferred to
+the Aer/YASTN/QuTiP comparison legs. A suite run publishes its executed and deferred batches
+with their reasons, so a narrowed score never reads as a complete one. The generated mutant/support tree has all write bits
 removed for the worker phase and its exact modes are restored afterward; any write-bit, path, or
 symlink violation fails the batch. If an abrupt process or host exit leaves that real symlink-free
 tree read-only, the next startup makes only its directories owner-deletable and removes the whole

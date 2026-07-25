@@ -258,6 +258,7 @@ def test_reference_inventory_covers_every_registered_mcwf_operator_family():
     assert len(production_collapse_families) == 7
 
 
+@pytest.mark.mutation_trampoline_incompatible
 def test_reference_module_has_only_absolute_stdlib_and_numpy_imports():
     source_path = Path(reference.__file__)
     tree = ast.parse(source_path.read_text(encoding="utf-8"))

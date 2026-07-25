@@ -484,9 +484,11 @@ isolated environment.
 
 The restricted-MPS mutation gate is a narrow exception to service-file GPU serialism, not a change
 to service acceptance. Its five GPU shards still run one after another under one root lock and one
-leased, pinned device. Within one shard, `jobs` may be one through four; the configured gate uses
-four independent fresh pytest children for concurrent clean admission and then fixed waves of at
-most four mutant children on that same device. Every child is host-thread-limited and has a unique
+leased, pinned device. Within one shard, `jobs` may be one through the compiled ceiling; the
+configured gate uses that many independent fresh pytest children for concurrent clean admission and
+then fixed waves of at most that many mutant children on that same device. Each shard declares the
+value suited to the host that runs it, which changes throughput only: the per-mutant budget scales
+with the same concurrency, and a real timeout or resource exhaustion aborts the shard. Every child is host-thread-limited and has a unique
 log, completion sentinel, and pytest temporary directory; inherited pytest/xdist expansion is
 disabled, and the shared generated tree is read-only for the worker phase. The checkpoint binds the
 sanitized child environment plus the leased GPU UUID and driver version. Startup may recover a
@@ -501,7 +503,7 @@ authenticated row remains resumable. Clean-admission timeouts, CPU-lane timeouts
 inconsistent sentinels, resource exhaustion, unverified cleanup, child errors, and all other timeouts
 are non-resumable: they cancel current-wave siblings, stop later admission, and never improve the
 score. Automatic child timeouts multiply the single-worker dynamic budget by the admitted in-shard
-concurrency, so four-way CUDA startup and runtime contention cannot consume a serially estimated
+concurrency, so concurrent CUDA startup and runtime contention cannot consume a serially estimated
 deadline; an explicit operator timeout is literal and is not scaled. The coordinator records the first
 completed non-resumable outcome as the failure trigger while retaining only the safe plan-ordered
 prefix. Direct batches honor the suite lock, so aggregate publication and checkpoint retirement cannot

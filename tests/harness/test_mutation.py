@@ -201,8 +201,8 @@ def test_cpu_lane_defaults_to_four_jobs_and_accepts_registry_override(
     assert mutation.resolve_jobs({}, lane="cpu_parallel", requested=3) == 3
 
 
-@pytest.mark.parametrize("jobs", [1, 2, 3, 4])
-def test_gpu_lane_accepts_one_to_four_fresh_exec_workers(jobs: int) -> None:
+@pytest.mark.parametrize("jobs", [1, 2, 3, 4, 8, 16])
+def test_gpu_lane_accepts_fresh_exec_workers_up_to_the_ceiling(jobs: int) -> None:
     assert mutation.resolve_jobs(
         {"harness": {"mutation_gate": {"jobs": jobs}}},
         lane="gpu_serial",
@@ -218,11 +218,13 @@ def test_gpu_lane_accepts_one_to_four_fresh_exec_workers(jobs: int) -> None:
     }
 
 
-@pytest.mark.parametrize("jobs", [5, 8])
-def test_gpu_lane_rejects_more_than_four_workers(jobs: int) -> None:
-    with pytest.raises(ValueError, match="at most 4"):
+@pytest.mark.parametrize("jobs", [17, 32])
+def test_gpu_lane_rejects_more_workers_than_the_ceiling(jobs: int) -> None:
+    ceiling = mutation._GPU_MAX_FRESH_WORKERS
+    assert jobs > ceiling
+    with pytest.raises(ValueError, match=f"at most {ceiling}"):
         mutation.resolve_jobs({}, lane="gpu_serial", requested=jobs)
-    with pytest.raises(ValueError, match="at most 4"):
+    with pytest.raises(ValueError, match=f"at most {ceiling}"):
         mutation.execution_policy(lane="gpu_serial", jobs=jobs)
 
 
@@ -1072,13 +1074,16 @@ def test_restricted_mps_suite_loads_exact_disjoint_cpu_gpu_shards() -> None:
 
     plan = mutation.load_mutation_suite(suite_path)
 
+    # Each GPU shard declares the worker count suited to the host that runs it:
+    # the aarch64 Spark shards use 8, the x86 shards use 16. Only the ordering,
+    # the lanes, and the per-host ceiling are contractual.
     assert [(batch["lane"], batch["jobs"]) for batch in plan["batches"]] == [
         ("cpu_parallel", 4),
-        ("gpu_serial", 4),
-        ("gpu_serial", 4),
-        ("gpu_serial", 4),
-        ("gpu_serial", 4),
-        ("gpu_serial", 4),
+        ("gpu_serial", 8),
+        ("gpu_serial", 8),
+        ("gpu_serial", 16),
+        ("gpu_serial", 16),
+        ("gpu_serial", 16),
     ]
     batch_modules = [
         set(batch["registry_doc"]["reconcile_modules"])
@@ -1231,11 +1236,15 @@ def _write_suite_fixture(root: Path) -> tuple[Path, Path]:
                         "registry": "cpu.json",
                         "lane": "cpu_parallel",
                         "jobs": 4,
+                        "default_scope": True,
+                        "scope_rationale": "scope declared by the fixture so the suite loader accepts it; the real suite carries a substantive scientific rationale per batch",
                     },
                     {
                         "name": "gpu",
                         "registry": "gpu.json",
                         "lane": "gpu_serial",
+                        "default_scope": True,
+                        "scope_rationale": "scope declared by the fixture so the suite loader accepts it; the real suite carries a substantive scientific rationale per batch",
                         "jobs": 4,
                     },
                 ],
@@ -1306,17 +1315,19 @@ def test_suite_executes_cpu_parallel_then_gpu_serial_and_weights_results(
     ) == result
 
 
-def test_suite_rejects_gpu_jobs_above_four(tmp_path: Path) -> None:
+def test_suite_rejects_gpu_jobs_above_the_ceiling(tmp_path: Path) -> None:
+    ceiling = mutation._GPU_MAX_FRESH_WORKERS
+    over = ceiling + 1
     suite, _source = _write_suite_fixture(tmp_path)
     suite_doc = json.loads(suite.read_text(encoding="utf-8"))
-    suite_doc["batches"][1]["jobs"] = 5
+    suite_doc["batches"][1]["jobs"] = over
     suite.write_text(json.dumps(suite_doc), encoding="utf-8")
     registry = tmp_path / "gpu.json"
     registry_doc = json.loads(registry.read_text(encoding="utf-8"))
-    registry_doc["harness"]["mutation_gate"]["jobs"] = 5
+    registry_doc["harness"]["mutation_gate"]["jobs"] = over
     registry.write_text(json.dumps(registry_doc), encoding="utf-8")
 
-    with pytest.raises(ValueError, match="at most 4"):
+    with pytest.raises(ValueError, match=f"at most {ceiling}"):
         mutation.load_mutation_suite(suite)
 
 
