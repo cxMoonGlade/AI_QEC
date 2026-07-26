@@ -103,6 +103,22 @@ their isolated environments under the shared GPU lease. A pass establishes adapt
 contracts only; it does not establish target completion, finite-bond Record-law faithfulness,
 dissipative PECOS MPS support, qutrit leakage, or a simulator service.
 
+`test_external_peps_d5_pure_state_fidelity.py` protects the bounded external finite-PEPS
+pure-state benchmark, not a simulator service. It independently pins the d3/d5 fixture hashes,
+complete MSB/C-order amplitude convention, gate order and half-angle matrices, op 156 corruption,
+40-edge/four-cycle rank ledger, and distinct unitarity and half-angle falsifiers. A Torch
+tensor-axis d3 replay must agree amplitude-by-amplitude with an independent NumPy bit-index replay.
+The verdict metric accepts only complete one-dimensional complex128 states with matching fixture
+and basis identities; it independently recomputes normalized squared overlap, preserves global
+phase, rejects axis swaps/non-finite data/dtype drift/proxy-only summaries, and never substitutes
+local discarded weight or a contraction residual. Both Quimb and Pepsy schemas bind exact producer,
+complete committed-input ledger, current frozen HEAD, schema-owned environment lock, pristine
+source commit, and installed VCS commit. External d5 execution remains outside pytest and must use
+`run_peps_d5_complete_state_sweeps.py`, which owns the fixed five-bond sweep, fresh-process wall
+timeout, host/device caps, monotonicity prediction, and bond-knob nondegeneracy. Passing this file
+establishes fixture/adapter/aggregate-policy controls only, not leakage/Kraus,
+measurement/reset, a detector/observable Record, LER, d7, or scalable exact PEPS contraction.
+
 `test_mps_three_leg_comparator.py` separately checks repository actual splits and Quimb public wiring
 against independent dense NumPy state math. Its publishable report requires a clean worktree, hashes
 selected and transitive owner sources plus both environment locks, checks selected NumPy/Quimb/Torch

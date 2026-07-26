@@ -136,3 +136,20 @@ Two research surfaces have current owners but do not certify the production reco
   corruption tests live in `tests/test_finite_rtn_free_induction_diagnostic.py`. The signed current
   artifact is pending, and no result transfers to the source-conditioned QEC channel or syndrome
   record.
+- The external finite-PEPS d3/d5 diagnostic uses normalized complete pure-state fidelity
+  `F=|<psi_ref|psi_candidate>|^2/(<psi_ref|psi_ref><psi_candidate|psi_candidate>)`, following
+  Evenbly, Sec. V, Eq. (12), PDF p. 6. Both inputs must be complete one-dimensional complex128
+  vectors in the fixture-pinned basis; a retained-weight product, local truncation tail,
+  contraction residual, finite-boundary overlap, norm, or bond cap is forbidden as a substitute.
+  `scripts/external_baselines/compare_peps_d5_complete_states.py` owns the value, and
+  `tests/test_external_peps_d5_pure_state_fidelity.py` owns independent formula,
+  amplitude-order, global-phase, non-finite, dtype/shape, identity, and proxy-firewall
+  corruption checks. Its output is a nonterminal per-point metric.
+  `scripts/external_baselines/run_peps_d5_complete_state_sweeps.py` is the terminal owner for
+  the fixed `D=[1,2,4,8,16]` sweep, fresh-process `1800 s` point timeout, `64 GiB` host and
+  `28 GiB` device caps, monotonicity prediction, and bond-knob nondegeneracy. Exact
+  self/dual-route tolerances are class (a) numerical checks;
+  `F>=0.99`, `0.95<=F<0.99`, and `F<0.95` are respectively useful, marginal, and low
+  class-(c) project bands. This finite pure-state benchmark does not certify a detector/observable
+  Record, leakage/Kraus dynamics, logical error rate, a syndrome-extraction round, d7, or scalable
+  exact PEPS contraction.
