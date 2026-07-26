@@ -1,6 +1,6 @@
 # Reading order — what matters at the current stage
 
-Reconciled 2026-07-26 against `06780fe`.
+Reconciled 2026-07-26 against `7301632`.
 Verify with `python tools/check_reading_order.py`.
 
 `CLAUDE.md` holds the rules that always bind and a routing table for which surface owns which
@@ -68,13 +68,31 @@ Mutation testing is retired; verification is unit tests plus the coverage gate.
    `Simulator`, with `shortest_graphlike_error` as an executable distance falsifier; `--leg analog`
    runs the real d3 XZZX patch through the within-cycle carrier under a registered qutrit leakage
    preset. Next on this line is a decoder for the Pauli leg, since every rate it reports is
-   undecoded.
-2. **Accuracy-versus-chi curve at n <= 8.** `_RECORD_EVIDENCE_QUBIT_CAP = 8` and
-   `_DENSE_CHANNEL_MAX_DIM = 256 = 2**8`, and an 8-qubit chain has middle-cut bond 16, so
-   `chi` in {1,2,4,8,16} genuinely truncates inside the certifiable regime.
-   `axis1_qt_mps_bond_sweep_manifest` is already a registered entrypoint taking arbitrary
-   `bond_values`; 50 of its 51 call sites pass `(1, 2)`. This is the project's first real truncation
-   -error curve against the registered dense oracle, with no `src/**` change and no new oracle.
+   undecoded — **blocked on one decision, not on code**. `frontend/decoder.py` already implements
+   `decode_dem` against pymatching 2.4.0 with a frozen wheel sha256 that matches `uv.lock`, and
+   `pyproject.toml` declares it as the `hw` extra. But `scripts/sync_core_environment.py` hardcodes
+   `--extra cuda-extension gpu-cu130 test` and omits `hw`, matching the standing rule that the
+   default record path is decoder-free; pymatching is installed in neither `ecs` nor `aiqec`.
+   Turning the decoder on means amending the canonical environment contract.
+2. **Done, and smaller than advertised** — `scripts/mps_accuracy_versus_chi.py`. The curve exists:
+   at n=4, noiseless, against the registered dense Born oracle, `chi` 1/2/4 gives
+   max|dp| 7.5e-1 / 2.46e-1 / 1.33e-15, the exact bond certifying PASS against the 1e-8 gate.
+   Reported discarded weight over-predicts the record error (0.5 discarded, 0.246 actual), so it is
+   an upper proxy and not the error.
+
+   I wrote the n<=8 premise here from `_RECORD_EVIDENCE_QUBIT_CAP = 8` without running it, and
+   three parts of it were wrong. Measured instead: the dense oracle loses
+   `full_positive_duration_coverage` at n>=6 (the one-qubit-gate layer is dropped once it holds
+   three or more simultaneous gates; serializing exposes a stricter rule, one selected row per
+   (active, idle) pair, and scores worse); exact branch enumeration under noise reaches n=2 at the
+   default 4096 branch cap, needs 65536 at n=3, and exceeds that at n=4; and the noisy exact-bond
+   residual is 1.1e-3 against a 1e-8 gate, which the noiseless 1.3e-15 control identifies as the
+   noise finite step, not a carrier defect. That floor cannot be refined away --
+   `microstep_count=2` already blows the branch cap at n=2, because every collapse term splits
+   every branch once per Kraus operator per substep.
+
+   Next on this line, if it is worth it: a custom selection plan to restore coverage past n=4.
+   That is a real piece of work, not a parameter change.
 3. **Only then d5 non-Pauli.** The wall is verified and fundamental: `sv_traj_d3_wc` is specialized
    to 9 data qutrits, and 3**25 state-vector amplitudes is unreachable regardless — arXiv:2308.08186
    records that state-vector simulation needs "a few petabytes of memory for 30 qutrit systems".
@@ -89,6 +107,8 @@ Explicitly not doing: the withdrawn heralding claim, and any PEPS work before 1 
 - Whether the narrowed echo-parity claim survives the ~0.5 randomization argument. Deciding it needs
   Appendix D of arXiv:2002.07119 and a look at its Fig. 3e — neither possible without a PDF renderer.
 - What replaces the retired mutation layer in the release evidence order.
+- Whether to add `hw` to the canonical `ecs` sync so the Pauli leg can report a decoded logical
+  error rate instead of a raw observable-flip rate. Everything else for that is already in place.
 
 ## Unread material already acquired
 
