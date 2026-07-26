@@ -28,6 +28,8 @@ VALIDATION = REPO / "docs" / "simulator_validation"
 # Backtick-quoted repository paths: a slash plus a plausible extension or a trailing slash.
 PATH_RE = re.compile(r"`([A-Za-z0-9_./-]+/[A-Za-z0-9_.-]+)`")
 STAMP_RE = re.compile(r"Reconciled\s+(\d{4}-\d{2}-\d{2})\s+against\s+`([0-9a-f]{7,40})`")
+# A ref name (origin/... or refs/...) or a bare commit-ish of at least seven hex digits.
+REF_RE = re.compile(r"`(?:origin|refs)/[A-Za-z0-9_./-]+`|`[0-9a-f]{7,40}`")
 
 
 def emit(line: str = "") -> None:
@@ -58,7 +60,17 @@ def main() -> int:
     failures: list[str] = []
 
     # 1. every referenced path resolves
-    referenced = sorted({m.group(1) for m in PATH_RE.finditer(text)})
+    #
+    # Only strings whose first segment is a real top-level entry are repository
+    # paths. That excludes ref names like `origin/enh/naming` and paths interior
+    # to an external clone like `quantumsim/models/transmons.py`, neither of which
+    # resolves here and neither of which is claiming to.
+    top_level = {entry.name for entry in REPO.iterdir()}
+    referenced = sorted(
+        m.group(1)
+        for m in PATH_RE.finditer(text)
+        if m.group(1).split("/", 1)[0] in top_level
+    )
     missing = [ref for ref in referenced if not (REPO / ref).exists()]
     emit(f"referenced paths {len(referenced)}, missing {len(missing)}")
     for ref in missing:
@@ -85,7 +97,34 @@ def main() -> int:
                 f"newest dated validation record is not in the reading order: {newest}"
             )
 
-    # 3. reconciliation stamp versus HEAD
+    # 3. every external/ clone reference names a ref or commit
+    #
+    # external/ is gitignored, so a clone's default branch drifts with upstream and a
+    # bare path identifies nothing durable. A sentence naming an external repository
+    # must appear near a ref name or a commit-ish, or it is an unbound citation.
+    # Key on the actual clone directory names, because the reading order names repos
+    # bare (`quantumsim`) rather than by full path.
+    clones = sorted(
+        path.name
+        for parent in (REPO / "external").glob("*")
+        if parent.is_dir()
+        for path in parent.glob("*")
+        if (path / ".git").exists()
+    )
+    mentioned = [name for name in clones if re.search(rf"`{re.escape(name)}`", text)]
+    unbound = [
+        name
+        for name in mentioned
+        if not any(
+            name in para and REF_RE.search(para) for para in text.split("\n\n")
+        )
+    ]
+    emit(f"external clones mentioned {len(mentioned)} of {len(clones)}, unbound {len(unbound)}")
+    for name in unbound:
+        emit(f"    UNBOUND  {name}  (no ref or commit in its paragraph)")
+        failures.append(f"external clone cited without a ref or commit: {name}")
+
+    # 4. reconciliation stamp versus HEAD
     stamp = STAMP_RE.search(text)
     if stamp is None:
         failures.append("no 'Reconciled <date> against `<commit>`' stamp")

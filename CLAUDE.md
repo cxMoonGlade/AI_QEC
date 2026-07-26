@@ -146,6 +146,13 @@ Scientific acceptance is subsystem-owned and listed in `tests/CODEBOOK.md` and t
   `dir_info` and binds nothing. Check clone cleanliness with
   `git status --porcelain --untracked-files=all --ignored`: a directory install writes
   gitignored build artefacts that the ordinary status hides.
+- The same binding applies to **citing** a clone, not only installing one. `external/` is gitignored,
+  so its default branches drift with upstream and a bare path identifies nothing durable. Any claim
+  about what an external repository contains must name the ref or commit it was read at, and a claim
+  that a repository *is* a paper's implementation must name the ref that carries it: `quantumsim` at
+  its default `292fce9` has no `quantumsim/models/transmons.py`, while five of its 34 remote refs do.
+  `tools/check_reading_order.py` enforces this for `docs/READING_ORDER.md` only; everywhere else it
+  is on the author.
 - Every `src/**` change requires explicit user confirmation and a reviewed phase diff.
 - Every nontrivial execution is a committed script with preconditions, printed evidence, flushed
   output, and a `__main__` guard when multiprocessing is involved. Inline shell is for trivial

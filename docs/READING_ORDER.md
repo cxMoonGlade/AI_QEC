@@ -1,6 +1,6 @@
 # Reading order — what matters at the current stage
 
-Reconciled 2026-07-26 against `0f0c024` plus an uncommitted working tree.
+Reconciled 2026-07-26 against `b9d17b1`.
 Verify with `python tools/check_reading_order.py`.
 
 `CLAUDE.md` holds the rules that always bind and a routing table for which surface owns which
@@ -35,9 +35,9 @@ Mutation testing is retired; verification is unit tests plus the coverage gate.
 4. **`docs/service_status.json`**, the `restricted_axis1_1d_mps` note and `excluded_surfaces` — the
    claim boundary. It answers most scope questions outright.
 
-## In flight — uncommitted, decided but not landed
+## Recently landed — read before touching the same surface
 
-- **Transversal-echo frame repair**, `src/error_coupling_simulator/carrier/within_cycle.py`. The emitted observable carried a
+- **Transversal-echo frame repair** (`0553a55`), `src/error_coupling_simulator/carrier/within_cycle.py`. The emitted observable carried a
   deterministic `(R-1)*w mod 2` echo sign on top of the logical-flip bit and was inverted at even
   round counts. The parity is derived from the emitted ops and cross-checked by measuring the frame
   on the noiseless codestate, refusing a non-deterministic frame — the construction the exact
@@ -48,7 +48,7 @@ Mutation testing is retired; verification is unit tests plus the coverage gate.
   (`Y^dag Z Y = -Z + 2|2><2|`). That residual is declared noise reaching the record, not a
   bookkeeping error — but it is unbounded, and the two legs share the leaked-inert convention by
   design so they cannot referee each other on it.
-- **Corpus manifest rebuilt**: retrievable notes went from 15 to 25 with
+- **Corpus manifest rebuilt** (`d72c93a`): retrievable notes went from 15 to 25 with
   `scripts/rebuild_current_corpus_manifest.py`.
 
 ## Superseded — do not act on these
@@ -63,7 +63,7 @@ Mutation testing is retired; verification is unit tests plus the coverage gate.
 
 ## Open decisions
 
-- Whether to commit the in-flight working tree.
+- Which `quantumsim` ref matches arXiv:2002.07119. Five carry the device model; none is confirmed.
 - Whether the narrowed echo-parity claim survives the ~0.5 randomization argument. Deciding it needs
   Appendix D of arXiv:2002.07119 and a look at its Fig. 3e — neither possible without a PDF renderer.
 - What replaces the retired mutation layer in the release evidence order.
@@ -71,9 +71,16 @@ Mutation testing is retired; verification is unit tests plus the coverage gate.
 ## Unread material already acquired
 
 `docs/papers/1905.12731v1.pdf` and `docs/papers/2607.17204v1.pdf` are retained but read only to
-abstract depth. Newly cloned under `external/reference_repos/`: `quantumsim` (the simulator behind
-arXiv:2002.07119), `qutrits`, `restless-simulator`, `surface-code-simulator`,
-`Located-decoder-for-Rydberg-decay`.
+abstract depth. Newly cloned under `external/reference_repos/`, each at the ref it was read at:
+`qutrits` at `fe24c42`, `restless-simulator` at `92e8a62`, `surface-code-simulator` at `f06123e`,
+`Located-decoder-for-Rydberg-decay` at `1bf10b6`.
+
+`quantumsim` is the simulator arXiv:2002.07119 used, but **not at the ref we cloned**: its default
+`292fce9` has no `quantumsim/models/transmons.py` at all. Five of its 34 remote refs do —
+`origin/circuit_classes`, `origin/enh/compiler_refactor`, `origin/enh/cphase_netzero`,
+`origin/enh/naming`, `origin/feature/circuit_plotting`. Which one matches the paper is undetermined;
+`origin/enh/cphase_netzero` is the obvious first candidate because the paper's CZ is the Net-Zero
+implementation. Do not cite "quantumsim" for that paper without naming a ref.
 
 ## Maintenance
 
