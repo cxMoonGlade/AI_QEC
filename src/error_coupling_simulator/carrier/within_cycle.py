@@ -55,6 +55,18 @@ SV_ARM_CODE: dict[str, int] = {"A": 0, "C": 1, "B1": 2, "B2": 3}
 SV_READOUT_CODE: dict[str, int] = {"biased_b": 0, "half": 1}
 WC_OP_GATE = 0
 WC_OP_LEAK = 1
+# Which single-qubit Pauli echo gates anticommute with a given logical Pauli.
+# Keyed by the logical's Pauli, and only X and Z are keys because measurement --
+# and therefore the logical operator -- is X/Z only; marshalling rejects anything
+# else rather than handling a case that cannot occur. A site outside the logical
+# support yields no entry and contributes nothing.
+_ECHO_ANTICOMMUTES_WITH: dict[str, frozenset[str]] = {
+    "X": frozenset({"Y", "Z"}),
+    "Z": frozenset({"X", "Y"}),
+}
+# How far |<L>| may sit from 1 on the framed noiseless codestate before the frame
+# is refused as non-deterministic. Matches the exact leg's |p0-p1| >= 1 - 1e-9.
+FRAME_DETERMINISM_TOL = 1e-9
 
 RUN_PURPOSES: tuple[str, ...] = ("optimization", "final", "certification")
 PRECISION_POLICY = "optimization_c64_final_certification_c128_v1"
@@ -374,6 +386,13 @@ class WithinCycleMarshalled:
     logical_kind: int
     leak_kraus: torch.Tensor
     gate_unitaries: torch.Tensor
+    # Parity of the per-round transversal echo against the logical operator. The
+    # echo is physically applied and must stay applied -- it symmetrises the
+    # |0>/|1>-asymmetric energy-relaxation error -- but it anticommutes with an
+    # odd-weight logical, so the accumulated sign has to be divided back out of
+    # the emitted observable. Even-weight stabilizers are unaffected, which is
+    # why the detectors are correct while the observable was not.
+    frame_logical_parity: int = 0
     w_max: int = 0
     gate_names: tuple[str, ...] = SV_GATE_NAMES
     streams_by_pos: dict[int, tuple[str, ...]] = field(default_factory=dict)
@@ -509,6 +528,20 @@ def _gate_unitaries_table(device: torch.device) -> torch.Tensor:
     ]).contiguous()
 
 
+def _apply_site_unitary(
+    state: torch.Tensor, unitary: torch.Tensor, site: int, n_data: int,
+) -> torch.Tensor:
+    """Apply a 3x3 unitary to one qutrit of a dense 3**n_data state vector."""
+
+    if site < 0 or site >= n_data:
+        raise ValueError(f"site {site} outside 0..{n_data - 1}")
+    left = 3 ** site
+    right = 3 ** (n_data - site - 1)
+    view = state.reshape(left, 3, right)
+    out = torch.einsum("ab,ibj->iaj", unitary.to(view.dtype), view)
+    return out.reshape(-1).contiguous()
+
+
 def _torch_kraus(
     kraus: list[np.ndarray], device: torch.device,
 ) -> torch.Tensor:
@@ -633,11 +666,21 @@ class WithinCycleScheduleHost:
 
         logical_sites = sorted(schedule.logical)
         log_supp = np.asarray(logical_sites, dtype=np.int32)
+        # Measurement is X/Z only, so the logical operator is too. Validate it the
+        # way the stabilizers above are validated: an unrecognised Pauli used to
+        # fall through `== "X"` and be marshalled to the kernel as Z.
+        logical_pauli_by_site: dict[int, str] = {}
+        for site in logical_sites:
+            pauli = str(schedule.logical[site]).upper()
+            if pauli not in ("X", "Z"):
+                raise ValueError(f"logical site {site}: non-X/Z pauli {pauli!r}")
+            logical_pauli_by_site[int(site)] = pauli
         log_supp_isx = np.asarray([
-            int(str(schedule.logical[site]).upper() == "X")
+            int(logical_pauli_by_site[int(site)] == "X")
             for site in logical_sites
         ], dtype=np.int32)
         logical_kind = int(str(schedule.logical_kind).upper() != "X")
+        frame_logical_parity = 0
 
         round_op_ptr = [0]
         op_kind: list[int] = []
@@ -675,6 +718,14 @@ class WithinCycleScheduleHost:
                                 f"within-cycle pos {position}: unexpected post-M "
                                 f"token {token!r}")
                         emit_gate(SV_GATE_IDS["Y"], position)
+                        # Derived from the ops actually emitted, not from a
+                        # round-count formula, so it stays correct if the echo
+                        # pattern, its per-position multiplicity, or the logical
+                        # support ever changes.
+                        if token in _ECHO_ANTICOMMUTES_WITH.get(
+                            logical_pauli_by_site.get(position, ""), ()
+                        ):
+                            frame_logical_parity ^= 1
             round_op_ptr.append(len(op_kind))
 
         def int32_tensor(values: Any) -> torch.Tensor:
@@ -698,6 +749,7 @@ class WithinCycleScheduleHost:
             log_supp=int32_tensor(log_supp),
             log_supp_isx=int32_tensor(log_supp_isx),
             logical_kind=logical_kind,
+            frame_logical_parity=int(frame_logical_parity),
             leak_kraus=leak_kraus.to(self.device).contiguous(),
             gate_unitaries=_gate_unitaries_table(self.device),
             w_max=max_weight,
@@ -777,6 +829,95 @@ class WithinCycleScheduleHost:
             header["numerical_provenance"] = json.loads(
                 spec._numerical_provenance_json)
         return header
+    def verify_frame_logical_parity(
+        self,
+        schedule: Any,
+        *,
+        codestate: torch.Tensor,
+        marshalled: WithinCycleMarshalled,
+        logical_m: int,
+    ) -> dict[str, Any]:
+        """Measure the interior echo frame's effect on the NOISELESS codestate.
+
+        ``marshal_within_cycle`` derives ``frame_logical_parity`` combinatorially
+        from the ops it emits. That derivation is only sound while the frame is a
+        deterministic sign on the logical, which in turn requires the reference
+        state to carry no leaked population -- ``Y`` is identity on ``|2>``, so
+        ``Y^dag Z Y = -Z + 2|2><2|`` and the whole deviation from a clean sign is
+        leakage-conditioned. Nothing in the marshaller asserts either condition.
+
+        So take the same quantity a second way: evolve the noiseless codestate
+        through the interior frames and read the logical. This is the construction
+        ``QutritDM._logical_error_rate`` already uses on the exact leg, including
+        its refusal when the frame does not leave the logical in a deterministic
+        sector. Disagreement between the derived and measured values, or a
+        non-deterministic frame, fails closed rather than shipping a constant.
+        """
+
+        from .exact.qutrit_dm import QutritDM
+
+        logical = dict(schedule.logical)
+        logical_kind = str(schedule.logical_kind).upper()
+        engine = QutritDM(int(schedule.n_data), device=self.device)
+        engine.set_code(
+            stabilizers=schedule.stab_paulis(),
+            logical_z=logical if logical_kind == "Z" else None,
+            logical_x=logical if logical_kind == "X" else None,
+        )
+
+        def logical_expectation(state: torch.Tensor) -> float:
+            operated = engine._apply_logical_vector(state.clone(), logical)
+            return float(torch.vdot(state, operated).real)
+
+        rounds = int(marshalled.R)
+        gate_table = _gate_unitaries_table(self.device)
+        round_op_ptr = marshalled.round_op_ptr.tolist()
+        op_kind = marshalled.op_kind.tolist()
+        op_uid = marshalled.op_uid.tolist()
+        op_site = marshalled.op_site.tolist()
+
+        framed = codestate.clone()
+        applied = 0
+        for round_index in range(rounds - 1):  # the terminal round carries no frame
+            for index in range(
+                round_op_ptr[2 * round_index + 1], round_op_ptr[2 * round_index + 2]
+            ):
+                if op_kind[index] != WC_OP_GATE:
+                    raise AssertionError(
+                        "within-cycle post-measure op stream must contain gates only; "
+                        f"got kind {op_kind[index]} at {index}")
+                framed = _apply_site_unitary(
+                    framed,
+                    gate_table[op_uid[index]],
+                    int(op_site[index]),
+                    int(schedule.n_data),
+                )
+                applied += 1
+
+        reference = logical_expectation(codestate)
+        measured = logical_expectation(framed)
+        if abs(abs(measured) - 1.0) > FRAME_DETERMINISM_TOL:
+            raise RuntimeError(
+                "within-cycle interior frame does not leave the noiseless codestate "
+                f"in a deterministic logical sector (|<L>| = {abs(measured):.6e}); it "
+                "is not a clean deterministic echo, so no single parity bit can "
+                "describe it")
+        parity = 0 if (measured > 0) == (reference > 0) else 1
+        if parity != int(marshalled.frame_logical_parity):
+            raise RuntimeError(
+                "within-cycle echo frame parity disagrees with the noiseless "
+                f"reference: derived {int(marshalled.frame_logical_parity)}, "
+                f"measured {parity}")
+        return {
+            "derived_parity": int(marshalled.frame_logical_parity),
+            "measured_parity": parity,
+            "frame_gates_applied": applied,
+            "logical_expectation_reference": reference,
+            "logical_expectation_framed": measured,
+            "logical_m": int(logical_m),
+            "determinism_tol": FRAME_DETERMINISM_TOL,
+        }
+
 
 
 class FusedWithinCycleSampler(WithinCycleScheduleHost):
@@ -879,6 +1020,9 @@ class FusedWithinCycleSampler(WithinCycleScheduleHost):
         marshalled = self.marshal_within_cycle(
             schedule, leak_kraus, R=spec.R)
         codestate, codestate_check = self.build_codestate(schedule, spec.m)
+        codestate_check["transversal_echo_frame"] = self.verify_frame_logical_parity(
+            schedule, codestate=codestate, marshalled=marshalled, logical_m=spec.m,
+        )
         return self.execute_marshaled(
             spec,
             schedule=schedule,
@@ -951,6 +1095,8 @@ class FusedWithinCycleSampler(WithinCycleScheduleHost):
             "compiled_semantics": "within_cycle_qutrit_sv_mc_v1",
             "kernel_entrypoint": "sv_traj_d3_wc",
             "physics_construction_dtype": "c128",
+            "observable_semantics": "logical_flip_minus_deterministic_noiseless_echo_sign",
+            "transversal_echo_logical_parity": int(execution.frame_logical_parity),
         })
         if codestate_check is not None:
             header["codestate_check"] = dict(codestate_check)
@@ -1008,6 +1154,18 @@ class FusedWithinCycleSampler(WithinCycleScheduleHost):
                 "sv_traj_d3_wc norm-drift shape mismatch: "
                 f"got {norm_drift.shape}, expected {(int(spec.N),)}")
 
+        # Divide the transversal echo back out of the logical readout. The echo
+        # stays physically applied; only its deterministic, shot-independent sign
+        # on the logical operator is removed, so the emitted observable is a
+        # logical-flip bit rather than a flip bit XOR a frame constant. Applied
+        # here, at the carrier's own output seam, so the on-disk artifact, the
+        # raw accessor and the folded RecordBatch all agree.
+        if execution.frame_logical_parity:
+            # Same index expression as unpack_raw_syndrome_shots, so the logical
+            # byte can never drift apart from the one the reader picks up.
+            packed = packed.copy()
+            packed[:, (bits + 7) // 8] ^= np.uint8(1)
+
         out_path = None if spec.out_path is None else Path(spec.out_path)
         header_path: Path | None = None
         if out_path is not None:
@@ -1036,6 +1194,17 @@ class FusedWithinCycleSampler(WithinCycleScheduleHost):
                 "run_purpose": str(spec.run_purpose),
                 "precision_policy": PRECISION_POLICY,
                 "evidence_eligibility": str(spec.evidence_eligibility),
+                # Travels with the record, not only the on-disk header, so a
+                # consumer of the folded RecordBatch can tell that the emitted
+                # observable is a logical-flip bit with the echo already removed.
+                "observable_semantics": (
+                    "logical_flip_minus_deterministic_noiseless_echo_sign"),
+                "observable_semantics_scope": (
+                    "the echo remains physically applied; only its deterministic sign on "
+                    "the leakage-free noiseless reference is removed. Leakage-conditioned "
+                    "deviation is declared-noise signal in the record, not a residual error"),
+                "transversal_echo_logical_parity": int(
+                    execution.frame_logical_parity),
             },
         )
 

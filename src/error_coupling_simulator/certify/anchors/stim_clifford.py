@@ -10,15 +10,40 @@ round-to-round XOR), and the logical — against a reference that shares NONE of
 bug in our own geometry/seam that the DM and the carrier would otherwise share.
 
 The transversal X/Y DD echoes are deliberately NOT reconstructed here. On a Pauli/Clifford slice a
-deterministic transversal Pauli frame is code-normalizer-invariant — it only shifts the noiseless
-reference, which stim's detector/observable definitions factor out — so it is byte-for-byte inert on
-every statistic this anchor answers (verified ON vs OFF on the ZZ/XX stubs and the real d3 XZZX
-geometry: identical raw det+obs). A Clifford statistic therefore cannot certify (nor catch a bug in)
+deterministic transversal Pauli frame is code-normalizer-invariant on the STABILIZERS — every
+stabilizer of this geometry has even weight, so the per-round echo contributes (-1)**even = +1 and
+the detectors are byte-for-byte inert under it.
+
+It is NOT inert on an odd-weight logical. The real d3 XZZX patch has a weight-3 Z logical, so each
+non-terminal echo contributes (-1)**3 = -1 and the accumulated sign lands on the observable. The
+carrier divides that deterministic sign back out at its own output seam
+(``carrier/within_cycle.py``, ``frame_logical_parity``), which is what makes the anchor's
+frame-free observable comparable with the carrier's at every round count; before that division the
+two legs differed by exactly 1.0 on any R >= 2 observable. Omitting the echo here is therefore
+sound, but it is sound because the carrier removes the sign, not because the sign never existed.
+
+A Clifford statistic still cannot certify (nor catch a bug in)
 the echo; reconstructing it here would only be un-killable equivalent-mutant scaffolding. The echo is
-load-bearing ONLY for the NON-Pauli qutrit-leakage trajectory — it symmetrises the |0>/|1>-asymmetric
-energy-relaxation error (McEwen 2102.06131 §3.2/§3.4; Wood–Gambetta 1704.03081) — and that is where it
-is applied and certified: the physical DM/carrier path (``RoundDataFrame`` / ``dm_round_callbacks``),
-NOT this Clifford referee, which is structurally blind to it.
+load-bearing ONLY for the NON-Pauli qutrit-leakage trajectory, and that is where it is applied and
+certified: the physical DM/carrier path (``RoundDataFrame`` / ``dm_round_callbacks``), NOT this
+Clifford referee, which is structurally blind to it.
+
+PROVENANCE OF THE ECHO. Its primary source is the parsed device schedule itself, not a paper. Each
+round of the Google ``d3_at_q6_7/X`` r10 circuit under ``ECS_D3_DATA_ROOT`` contains, in order:
+``R`` on the eight measured ancillas plus two inert indices (the nine data qubits are never reset),
+the ``H``/``CZ`` layers, a transversal ``X`` on all seventeen qubits, more ``CZ``/``H``, ``M`` on the
+eight ancillas, ``DETECTOR ... rec[-8] rec[-16]`` comparing adjacent rounds, and a transversal ``Y``
+on the nine data qubits only. Both echo layers and the adjacent-round detector convention are read
+off that circuit.
+
+The physical rationale — that a transversal pulse spreads the |0>/|1>-asymmetric energy-relaxation
+error evenly across rounds — is attested for an X pulse on data qubits by McEwen et al.
+arXiv:2102.06131 (main text, the sentence beginning "We note the addition of X gates on the data
+qubits to depolarize energy relaxation error"; that paper has no numbered subsections, never uses
+the word echo, and contains no leakage treatment of this pulse). The underlying asymmetry is
+attested by Wood & Gambetta, Phys. Rev. A 97, 032306, whose own remedy is a Haar/Clifford average
+rather than an in-line pulse. Neither source treats a transversal layer's action on a code operator,
+so the even/odd support-weight argument above is this repository's own derivation, not theirs.
 
 It keeps ``_stim_mpp_oracle`` / ``_pauli_targets`` in one current owner. It is
 ``emit_kind() == "clifford_slice"``

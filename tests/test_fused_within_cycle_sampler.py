@@ -279,3 +279,177 @@ def test_fused_sampler_packed_output_shape_is_fail_closed(monkeypatch) -> None:
 
     with pytest.raises(ValueError, match="packed output shape mismatch"):
         sampler.sample(spec, schedule=_schedule())
+
+
+def _frame_schedule(logical: dict[int, str], *, rounds: int):
+    """Nine-site schedule whose every position carries a post-measure Y echo."""
+
+    from error_coupling_simulator.frontend.xzzx_parser import (
+        Stabilizer,
+        WithinCycleStream,
+        XZZXSchedule,
+    )
+
+    return XZZXSchedule(
+        n_data=9,
+        data_indices=tuple(range(9)),
+        data_coords=tuple((float(site), 0.0) for site in range(9)),
+        stabilizers=(Stabilizer(0, {0: "Z", 1: "Z"}, 20, (0.0, 0.0)),),
+        logical=dict(logical),
+        logical_kind="Z",
+        data_init_x=frozenset(),
+        surplus_dropped=(),
+        rounds=rounds,
+        within_cycle_streams=tuple(
+            WithinCycleStream(
+                pos=site,
+                circuit_id=site,
+                tokens=("M", "Y"),
+                n_cz=0,
+                cz_layers=(),
+                h_pattern=(0, 0, 0),
+            )
+            for site in range(9)
+        ),
+        source="synthetic-nine-site-echo",
+    )
+
+
+@pytest.mark.parametrize(
+    ("logical", "rounds", "expected"),
+    [
+        # Weight-3 logical: the transversal Y echo anticommutes on all three
+        # support sites, so each non-terminal round contributes (-1)**3 = -1.
+        ({0: "Z", 2: "Z", 5: "Z"}, 1, 0),
+        ({0: "Z", 2: "Z", 5: "Z"}, 2, 1),
+        ({0: "Z", 2: "Z", 5: "Z"}, 3, 0),
+        ({0: "Z", 2: "Z", 5: "Z"}, 4, 1),
+        # Even-weight logical: the echo is inert on the logical exactly as it is
+        # inert on the even-weight stabilizers.
+        ({0: "Z", 2: "Z"}, 2, 0),
+        ({0: "Z", 2: "Z"}, 5, 0),
+        # X support anticommutes with Y just as Z support does.
+        ({0: "X", 2: "X", 5: "X"}, 2, 1),
+    ],
+)
+def test_marshal_derives_transversal_echo_parity_on_the_logical(
+    logical, rounds, expected
+) -> None:
+    # The per-round transversal Y echo is physically applied (it symmetrises the
+    # asymmetric energy-relaxation error), so it cannot be removed -- but it
+    # anticommutes with an odd-weight logical and must therefore be divided back
+    # out of the emitted observable. Deriving the parity from the ops actually
+    # emitted keeps this correct if the echo or the logical support ever changes.
+    from error_coupling_simulator.carrier.within_cycle import (
+        WithinCycleScheduleHost,
+    )
+
+    host = WithinCycleScheduleHost("cpu")
+    plan = host.marshal_within_cycle(
+        _frame_schedule(logical, rounds=rounds),
+        torch.zeros((1, 3, 3), dtype=torch.complex128),
+        R=rounds,
+    )
+
+    assert plan.frame_logical_parity == expected
+
+
+@pytest.mark.parametrize("pauli", ["Y", "I", "z z", ""])
+def test_marshal_rejects_a_logical_pauli_outside_the_measured_bases(pauli) -> None:
+    # Measurement is X/Z only, so the logical operator is too. Before this check
+    # an unrecognised Pauli fell through `== "X"` and reached the kernel marshalled
+    # as Z -- a silent basis change, not an error. The stabilizer loop has always
+    # rejected the same input; this closes the asymmetry.
+    from error_coupling_simulator.carrier.within_cycle import (
+        WithinCycleScheduleHost,
+    )
+
+    host = WithinCycleScheduleHost("cpu")
+
+    with pytest.raises(ValueError, match="non-X/Z pauli"):
+        host.marshal_within_cycle(
+            _frame_schedule({0: "Z", 2: pauli, 5: "Z"}, rounds=2),
+            torch.zeros((1, 3, 3), dtype=torch.complex128),
+            R=2,
+        )
+
+
+def _real_d3_frame_inputs():
+    """The real d3 patch, its noiseless codestate, and a marshalled plan, on CPU."""
+
+    pytest.importorskip("numpy")
+    from error_coupling_simulator.carrier.exact.qutrit_dm import QutritDM
+    from error_coupling_simulator.carrier.within_cycle import (
+        WithinCycleScheduleHost,
+    )
+    from error_coupling_simulator.frontend import experiments as experiments_mod
+
+    try:
+        schedule = experiments_mod.load_xzzx_d3(with_interior_streams=True)
+    except (FileNotFoundError, OSError) as exc:
+        pytest.skip(f"portable d3 dataset unavailable: {exc}")
+
+    host = WithinCycleScheduleHost("cpu")
+    marshalled = host.marshal_within_cycle(
+        schedule, torch.zeros((1, 3, 3), dtype=torch.complex128), R=4
+    )
+    engine = QutritDM(int(schedule.n_data), device=torch.device("cpu"))
+    engine.set_code(
+        stabilizers=schedule.stab_paulis(),
+        logical_z=dict(schedule.logical),
+        logical_x=None,
+    )
+    codestate = engine._codestate_vector(0)
+    codestate = codestate / torch.linalg.vector_norm(codestate)
+    return host, schedule, marshalled, codestate.contiguous()
+
+
+def test_frame_cross_check_agrees_with_the_noiseless_reference() -> None:
+    host, schedule, marshalled, codestate = _real_d3_frame_inputs()
+
+    report = host.verify_frame_logical_parity(
+        schedule, codestate=codestate, marshalled=marshalled, logical_m=0
+    )
+
+    assert report["derived_parity"] == report["measured_parity"]
+    assert report["frame_gates_applied"] == 3 * int(schedule.n_data)
+    assert abs(abs(report["logical_expectation_framed"]) - 1.0) < 1e-9
+
+
+def test_frame_cross_check_fires_on_a_derived_parity_that_is_wrong() -> None:
+    # The combinatorial derivation is only sound while the frame is a clean sign
+    # on a leakage-free reference. If it ever disagrees with what the frame
+    # actually does, the run must stop rather than ship the constant.
+    from dataclasses import replace as dataclass_replace
+
+    host, schedule, marshalled, codestate = _real_d3_frame_inputs()
+    tampered = dataclass_replace(
+        marshalled,
+        frame_logical_parity=1 - int(marshalled.frame_logical_parity),
+    )
+
+    with pytest.raises(RuntimeError, match="disagrees with the noiseless reference"):
+        host.verify_frame_logical_parity(
+            schedule, codestate=codestate, marshalled=tampered, logical_m=0
+        )
+
+
+def test_frame_cross_check_refuses_a_frame_that_is_not_a_deterministic_sign() -> None:
+    # An echo that does not leave the logical in a deterministic sector cannot be
+    # described by any parity bit. Swapping one Y for an H makes the frame map the
+    # Z logical onto X, so <L> collapses to 0 -- the coherent analogue of what
+    # leakage does, and the case the exact leg already refuses.
+    from dataclasses import replace as dataclass_replace
+
+    from error_coupling_simulator.carrier.within_cycle import SV_GATE_IDS
+
+    host, schedule, marshalled, codestate = _real_d3_frame_inputs()
+    op_uid = marshalled.op_uid.clone()
+    first_post = int(marshalled.round_op_ptr[1])
+    op_uid[first_post] = SV_GATE_IDS["H"]
+    tampered = dataclass_replace(marshalled, op_uid=op_uid)
+
+    with pytest.raises(RuntimeError, match="deterministic logical sector"):
+        host.verify_frame_logical_parity(
+            schedule, codestate=codestate, marshalled=tampered, logical_m=0
+        )
