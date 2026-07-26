@@ -115,10 +115,12 @@ outside `[0,1]` by more than `1e-10`, a non-finite norm, or a nonpositive norm
 is a hard failure.
 
 `docs/METRICS.md` registers this quantity only as an external pure-state
-research diagnostic. The verdict owner is
-`scripts/external_baselines/compare_peps_d5_complete_states.py`; independent
-formula, phase-invariance, dtype/shape, non-finite, identity, and proxy
-firewall tests are in
+research diagnostic. The per-point metric owner is
+`scripts/external_baselines/compare_peps_d5_complete_states.py`; the terminal
+sweep/verdict owner is
+`scripts/external_baselines/run_peps_d5_complete_state_sweeps.py`.
+Independent formula, phase-invariance, dtype/shape, non-finite, identity, and
+proxy firewall tests are in
 `tests/test_external_peps_d5_pure_state_fidelity.py`. It is not a simulator
 Record metric.
 

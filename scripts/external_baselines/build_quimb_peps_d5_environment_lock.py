@@ -21,7 +21,7 @@ from typing import Any
 REPO = Path(__file__).resolve().parents[2]
 ENVIRONMENT = "ecs-baseline-quimb-peps"
 LOCK_PATH = REPO / "baseline-environment-quimb-peps-linux-64.lock.json"
-SCHEMA = "error_coupling_simulator.environment_lock.quimb_peps_d5.v1"
+SCHEMA = "error_coupling_simulator.environment_lock.quimb_peps_d5.v2"
 CLONE = REPO / "external" / "baselines" / "quimb"
 EXPECTED_COMMIT = "3c89529fe0a3487133a3928201691161e110abdf"
 EXPECTED_ORIGIN = "https://github.com/jcmgray/quimb.git"
@@ -124,7 +124,31 @@ def _clone_identity() -> dict[str, Any]:
 def _environment_identity(conda: str) -> dict[str, Any]:
     identity_script = (
         "import hashlib, importlib.metadata as md, json, pathlib, re, sys\n"
+        "import quimb\n"
         f"selected = {SELECTED!r}\n"
+        "prefix = pathlib.Path(sys.prefix).resolve(strict=True)\n"
+        "origin_lexical = pathlib.Path(quimb.__file__).absolute()\n"
+        "origin = origin_lexical.resolve(strict=True)\n"
+        "if origin_lexical != origin:\n"
+        "    raise RuntimeError('Quimb import origin traverses a symlink')\n"
+        "if not origin.is_relative_to(prefix):\n"
+        "    raise RuntimeError('Quimb import origin escapes Python prefix')\n"
+        "package_root = origin.parent\n"
+        "source_manifest = {}\n"
+        "for item in sorted(package_root.rglob('*')):\n"
+        "    if item.is_symlink():\n"
+        "        raise RuntimeError(f'symlink in Quimb package: {item}')\n"
+        "    if not item.is_file() or item.suffix != '.py':\n"
+        "        continue\n"
+        "    resolved = item.resolve(strict=True)\n"
+        "    if not resolved.is_relative_to(package_root):\n"
+        "        raise RuntimeError(f'Quimb source escapes package: {item}')\n"
+        "    relative = resolved.relative_to(package_root).as_posix()\n"
+        "    source_manifest[relative] = hashlib.sha256(\n"
+        "        resolved.read_bytes()\n"
+        "    ).hexdigest()\n"
+        "if not source_manifest or '__init__.py' not in source_manifest:\n"
+        "    raise RuntimeError('Quimb Python source manifest is incomplete')\n"
         "all_dists = {}\n"
         "all_records = {}\n"
         "selected_rows = {}\n"
@@ -166,6 +190,17 @@ def _environment_identity(conda: str) -> dict[str, Any]:
         "  'all_distribution_records': dict(sorted(all_records.items())),\n"
         "  'selected_distributions': selected_rows,\n"
         "  'project_distribution_present': project_distribution_present,\n"
+        "  'installed_quimb_source': {\n"
+        "    'import_origin_relative_to_prefix': "
+        "origin.relative_to(prefix).as_posix(),\n"
+        "    'package_root_relative_to_prefix': "
+        "package_root.relative_to(prefix).as_posix(),\n"
+        "    'python_source_manifest_sha256': "
+        "dict(sorted(source_manifest.items())),\n"
+        "    'python_source_file_count': len(source_manifest),\n"
+        "    'symlinks_rejected': True,\n"
+        "    'prefix_escape_rejected': True,\n"
+        "  },\n"
         "}, sort_keys=True))\n"
     )
     output = _run(
@@ -261,6 +296,7 @@ def main() -> int:
         "pip_distributions": identity["all_distributions"],
         "pip_distribution_records": identity["all_distribution_records"],
         "selected_distribution_records": identity["selected_distributions"],
+        "installed_quimb_source": identity["installed_quimb_source"],
         "pip_check": pip_check,
         "cuda_probe": _cuda_probe(conda),
         "upstream": _clone_identity(),
@@ -278,6 +314,7 @@ def main() -> int:
         "provenance_scope": {
             "installed_state_only": True,
             "quimb_vcs_commit_bound": True,
+            "installed_quimb_python_source_bytes_bound": True,
             "fully_reproducible": False,
         },
         "claim_boundary": (

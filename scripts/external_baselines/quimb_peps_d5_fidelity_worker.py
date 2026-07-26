@@ -42,9 +42,10 @@ ENVIRONMENT_LOCK = (
     REPO / "baseline-environment-quimb-peps-linux-64.lock.json"
 )
 ENVIRONMENT_LOCK_SCHEMA = (
-    "error_coupling_simulator.environment_lock.quimb_peps_d5.v1"
+    "error_coupling_simulator.environment_lock.quimb_peps_d5.v2"
 )
 GAUGE_SMUDGE = 1e-12
+SERIAL_CONTRACTION_POLICY = "auto-hq-serial"
 COMMITTED_INPUTS = (
     "baseline-environment-quimb-peps-linux-64.lock.json",
     "docs/METRICS.md",
@@ -126,6 +127,29 @@ def _atomic_save_npy(path: Path, array: np.ndarray) -> None:
         temporary.unlink(missing_ok=True)
 
 
+def _is_typed_memory_error(error: BaseException) -> bool:
+    import torch
+
+    return isinstance(error, MemoryError) or isinstance(
+        error,
+        torch.cuda.OutOfMemoryError,
+    )
+
+
+def _current_resource_usage() -> dict[str, int]:
+    import torch
+
+    peak_device_bytes = 0
+    if torch.cuda.is_available():
+        peak_device_bytes = int(torch.cuda.max_memory_allocated())
+    return {
+        "python_peak_rss_bytes": int(
+            resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024
+        ),
+        "peak_device_allocated_bytes": peak_device_bytes,
+    }
+
+
 def _run_git(*arguments: str) -> str:
     return subprocess.run(
         ["git", "-C", str(QUIMB_CLONE), *arguments],
@@ -162,6 +186,66 @@ def _verify_pristine_clone() -> dict[str, Any]:
     }
 
 
+def _python_source_identity(
+    *,
+    prefix_path: Path,
+    import_origin: Path,
+) -> dict[str, Any]:
+    prefix = prefix_path.resolve(strict=True)
+    origin_lexical = import_origin.absolute()
+    origin = origin_lexical.resolve(strict=True)
+    if origin_lexical != origin:
+        raise RuntimeError("Quimb import origin traverses a symlink")
+    if not origin.is_relative_to(prefix):
+        raise RuntimeError("Quimb import origin escapes Python prefix")
+    package_root = origin.parent
+    source_manifest: dict[str, str] = {}
+    for item in sorted(package_root.rglob("*")):
+        if item.is_symlink():
+            raise RuntimeError(f"symlink in Quimb package: {item}")
+        if not item.is_file() or item.suffix != ".py":
+            continue
+        resolved = item.resolve(strict=True)
+        if not resolved.is_relative_to(package_root):
+            raise RuntimeError(f"Quimb source escapes package: {item}")
+        relative = resolved.relative_to(package_root).as_posix()
+        source_manifest[relative] = _file_sha256(resolved)
+    if not source_manifest or "__init__.py" not in source_manifest:
+        raise RuntimeError("Quimb Python source manifest is incomplete")
+    return {
+        "import_origin_relative_to_prefix": (
+            origin.relative_to(prefix).as_posix()
+        ),
+        "package_root_relative_to_prefix": (
+            package_root.relative_to(prefix).as_posix()
+        ),
+        "python_source_manifest_sha256": dict(sorted(source_manifest.items())),
+        "python_source_file_count": len(source_manifest),
+        "symlinks_rejected": True,
+        "prefix_escape_rejected": True,
+    }
+
+
+def _installed_quimb_source_identity() -> dict[str, Any]:
+    import quimb
+
+    return _python_source_identity(
+        prefix_path=Path(sys.prefix),
+        import_origin=Path(quimb.__file__),
+    )
+
+
+def _require_installed_source_match(
+    *,
+    observed: Mapping[str, Any],
+    locked: Any,
+) -> None:
+    if observed != locked:
+        raise RuntimeError(
+            "installed Quimb source bytes/origin differ from Quimb lock"
+        )
+
+
 def _verify_installed_quimb() -> dict[str, Any]:
     if os.environ.get("CONDA_DEFAULT_ENV") != ENVIRONMENT_NAME:
         raise RuntimeError(
@@ -188,6 +272,7 @@ def _verify_installed_quimb() -> dict[str, Any]:
     return {
         "version": distribution.version,
         "direct_url": direct_url,
+        "installed_source": _installed_quimb_source_identity(),
     }
 
 
@@ -303,7 +388,9 @@ def _verify_committed_inputs() -> dict[str, Any]:
     return {"git_head": head, "sha256": hashes}
 
 
-def _verify_environment_lock() -> dict[str, Any]:
+def _verify_environment_lock(
+    installed_quimb: Mapping[str, Any],
+) -> dict[str, Any]:
     payload = json.loads(ENVIRONMENT_LOCK.read_text(encoding="utf-8"))
     if payload.get("schema") != ENVIRONMENT_LOCK_SCHEMA:
         raise RuntimeError("Quimb environment lock schema mismatch")
@@ -320,6 +407,10 @@ def _verify_environment_lock() -> dict[str, Any]:
         raise RuntimeError("Quimb environment lock installed commit mismatch")
     if payload.get("pip_check") != "No broken requirements found.":
         raise RuntimeError("Quimb environment lock did not pass pip check")
+    _require_installed_source_match(
+        observed=installed_quimb.get("installed_source", {}),
+        locked=payload.get("installed_quimb_source"),
+    )
     runtime_records = _runtime_distribution_records()
     if runtime_records != payload.get("pip_distribution_records"):
         raise RuntimeError(
@@ -343,6 +434,7 @@ def _verify_environment_lock() -> dict[str, Any]:
         "environment_name": payload["environment_name"],
         "authoritative_runtime_conformance_checked": True,
         "pip_distribution_records_exact": True,
+        "installed_quimb_source_bytes_exact": True,
         "conda_explicit_urls_exact": True,
         "pip_check_exact": True,
     }
@@ -478,6 +570,25 @@ def _torch_converter(device_name: str) -> tuple[Any, Any]:
     return device, convert
 
 
+def _serial_contraction_optimizer(policy: str) -> tuple[Any, dict[str, Any]]:
+    import cotengra
+
+    if policy != SERIAL_CONTRACTION_POLICY:
+        raise ValueError(
+            f"unsupported contraction policy: {policy!r}"
+        )
+    optimizer = cotengra.AutoHQOptimizer(parallel=False)
+    if getattr(optimizer, "kwargs", {}).get("parallel") is not False:
+        raise RuntimeError("Cotengra serial optimizer contract drifted")
+    return optimizer, {
+        "policy": SERIAL_CONTRACTION_POLICY,
+        "implementation": "cotengra.AutoHQOptimizer",
+        "cotengra_version": metadata.version("cotengra"),
+        "parallel": False,
+        "path_search_child_processes": False,
+    }
+
+
 def evolve_quimb(
     fixture: Mapping[str, Any],
     *,
@@ -521,6 +632,7 @@ def evolve_quimb(
     started = time.perf_counter()
     max_gate_unitarity_residual = 0.0
     max_gate_semantic_residual = 0.0
+    applied_operation_count = 0
     for operation_index, operation in enumerate(fixture["operations"]):
         gate_matrix = _numpy_gate(operation)
         unitarity_residual, semantic_residual = _validate_numpy_gate(
@@ -540,6 +652,7 @@ def evolve_quimb(
             qubits=operation["targets"],
         )
         circuit.apply_gate(gate)
+        applied_operation_count += 1
         if (
             (operation_index + 1) % 25 == 0
             or operation_index + 1 == fixture["operation_count"]
@@ -555,9 +668,19 @@ def evolve_quimb(
     actual_max_bond = int(circuit.psi.max_bond())
     if actual_max_bond > max_bond:
         raise RuntimeError("Quimb exceeded the declared state-bond cap")
+    if (
+        applied_operation_count != fixture["operation_count"]
+        or circuit.num_gates != applied_operation_count
+    ):
+        raise RuntimeError(
+            "Quimb applied-operation count differs from the fixture"
+        )
 
+    contraction_optimizer, optimizer_identity = (
+        _serial_contraction_optimizer(optimize)
+    )
     contraction_started = time.perf_counter()
-    dense = circuit.to_dense(optimize=optimize)
+    dense = circuit.to_dense(optimize=contraction_optimizer)
     if device.type == "cuda":
         torch.cuda.synchronize(device)
     contraction_seconds = time.perf_counter() - contraction_started
@@ -604,10 +727,10 @@ def evolve_quimb(
         "cutoff": 0.0,
         "gauge_smudge": GAUGE_SMUDGE,
         "renorm": False,
-        "operation_count": circuit.num_gates,
+        "operation_count": applied_operation_count,
         "evolution_seconds": evolution_seconds,
         "exact_dense_contraction_seconds": contraction_seconds,
-        "contraction_optimizer": optimize,
+        "contraction_optimizer": optimizer_identity,
         "norm_squared": norm_squared,
         "norm_residual": abs(norm_squared - 1.0),
         "max_gate_unitarity_residual": max_gate_unitarity_residual,
@@ -631,8 +754,9 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--optimize",
-        default="auto-hq",
-        help="Exact contraction path optimizer passed to Quimb.",
+        choices=(SERIAL_CONTRACTION_POLICY,),
+        default=SERIAL_CONTRACTION_POLICY,
+        help="Serial exact-contraction path-search policy.",
     )
     return parser.parse_args()
 
@@ -643,18 +767,62 @@ def main() -> int:
         raise ValueError("state and summary outputs must be distinct")
     process_isolation = _verify_process_isolation()
     committed_inputs = _verify_committed_inputs()
-    environment_lock = _verify_environment_lock()
     clone_identity = _verify_pristine_clone()
     installed_identity = _verify_installed_quimb()
+    environment_lock = _verify_environment_lock(installed_identity)
     fixture, fixture_file_hash, fixture_canonical_hash = _read_fixture(
         args.fixture
     )
-    state, diagnostics = evolve_quimb(
-        fixture,
-        max_bond=args.max_bond,
-        device_name=args.device,
-        optimize=args.optimize,
-    )
+    try:
+        state, diagnostics = evolve_quimb(
+            fixture,
+            max_bond=args.max_bond,
+            device_name=args.device,
+            optimize=args.optimize,
+        )
+    except Exception as error:
+        if not _is_typed_memory_error(error):
+            raise
+        unavailable = {
+            "schema": RESULT_SCHEMA,
+            "status": "UNAVAILABLE",
+            "claim_boundary": fixture["claim_boundary"],
+            "reason": {
+                "code": "memory_allocation_failed",
+                "exception_type": type(error).__name__,
+                "authenticated_typed_resource_error": True,
+            },
+            "fixture": {
+                "path": str(args.fixture.resolve()),
+                "file_sha256": fixture_file_hash,
+                "canonical_sha256": fixture_canonical_hash,
+                "schema": fixture["schema"],
+                "distance_label": fixture["distance_label"],
+                "operation_count": fixture["operation_count"],
+            },
+            "state": None,
+            "diagnostics": {
+                "requested_max_bond": args.max_bond,
+            },
+            "resource_usage": _current_resource_usage(),
+            "quimb_source_clone": clone_identity,
+            "installed_quimb": installed_identity,
+            "environment_lock": environment_lock,
+            "provenance": {
+                "git_head": committed_inputs["git_head"],
+                "committed_input_sha256": committed_inputs["sha256"],
+                "worker_path": str(Path(__file__).resolve()),
+                "worker_sha256": _file_sha256(Path(__file__).resolve()),
+                "process_isolation": process_isolation,
+            },
+            "forbidden_substitute_used": False,
+        }
+        _atomic_write_json(args.output_summary, unavailable)
+        print(
+            json.dumps(unavailable, allow_nan=False, sort_keys=True),
+            flush=True,
+        )
+        return 0
     _atomic_save_npy(args.output_state, state)
     summary = {
         "schema": RESULT_SCHEMA,

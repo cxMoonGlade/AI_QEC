@@ -10,6 +10,7 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -521,6 +522,7 @@ def _summary(
             "norm_residual": 0.0,
             "max_gate_unitarity_residual": 0.0,
             "max_gate_semantic_residual": 0.0,
+            "operation_count": fixture["operation_count"],
             **({"requested_max_bond": 4} if candidate else {}),
         },
         "provenance": {
@@ -656,10 +658,12 @@ def test_complete_state_metric_matches_analytic_unnormalized_pair(
 def test_comparator_rejects_failed_diagnostics_and_bond(modules) -> None:
     _emitter, _dense, _quimb_worker, _pepsy_worker, comparison = modules
     reference = {
+        "fixture": {"operation_count": 88},
         "diagnostics": {
             "norm_residual": 0.0,
             "max_gate_unitarity_residual": 0.0,
             "max_gate_semantic_residual": 0.0,
+            "operation_count": 88,
         }
     }
     candidate = {
@@ -667,6 +671,7 @@ def test_comparator_rejects_failed_diagnostics_and_bond(modules) -> None:
             "requested_max_bond": 4,
             "max_gate_unitarity_residual": 0.0,
             "max_gate_semantic_residual": 0.0,
+            "operation_count": 88,
         }
     }
     comparison._validate_execution_diagnostics(reference, candidate)
@@ -679,6 +684,11 @@ def test_comparator_rejects_failed_diagnostics_and_bond(modules) -> None:
     excessive_bond["diagnostics"]["requested_max_bond"] = 17
     with pytest.raises(ValueError, match="outside"):
         comparison._validate_execution_diagnostics(reference, excessive_bond)
+
+    omitted_gate = copy.deepcopy(candidate)
+    omitted_gate["diagnostics"]["operation_count"] = 87
+    with pytest.raises(ValueError, match="applied-operation count"):
+        comparison._validate_execution_diagnostics(reference, omitted_gate)
 
 
 @pytest.mark.parametrize(
@@ -823,6 +833,8 @@ def test_terminal_sweep_owner_classifies_controls_without_proxy() -> None:
     ]
     result = runner._summarize_candidate(rows)
     assert result["usefulness_verdict"] == "pass"
+    assert result["completed_bonds"] == list(runner.BONDS)
+    assert result["invalid_bonds"] == []
     assert result["best_bond"] == 16
     assert result["monotonic_prediction"] == {
         "evaluable": True,
@@ -846,3 +858,256 @@ def test_terminal_sweep_owner_classifies_controls_without_proxy() -> None:
         ]["passed"]
         is False
     )
+
+    partial_useful = copy.deepcopy(rows[:-1])
+    partial_result = runner._summarize_candidate(partial_useful)
+    assert partial_result["best_fidelity"] >= 0.99
+    assert partial_result["usefulness_verdict"] == "inconclusive_partial"
+    assert partial_result["invalid_bonds"] == []
+
+    invalid_with_useful = copy.deepcopy(rows)
+    invalid_with_useful[-1] = {
+        "bond": 16,
+        "status": "invalid",
+        "reason": "worker_failure",
+    }
+    invalid_result = runner._summarize_candidate(invalid_with_useful)
+    assert invalid_result["best_fidelity"] >= 0.99
+    assert invalid_result["usefulness_verdict"] == "invalid"
+    assert invalid_result["invalid_bonds"] == [16]
+
+    timeout_with_useful = copy.deepcopy(rows)
+    timeout_with_useful[-1] = {
+        "bond": 16,
+        "status": "UNAVAILABLE",
+        "reason": "wall_timeout",
+    }
+    timeout_result = runner._summarize_candidate(timeout_with_useful)
+    assert timeout_result["best_fidelity"] >= 0.99
+    assert timeout_result["usefulness_verdict"] == "inconclusive_partial"
+    assert timeout_result["invalid_bonds"] == []
+
+    flat_useful = copy.deepcopy(rows)
+    for row in flat_useful:
+        row["fidelity"] = 0.995
+    flat_result = runner._summarize_candidate(flat_useful)
+    assert flat_result["bond_knob_nondegeneracy"]["passed"] is False
+    assert (
+        flat_result["usefulness_verdict"]
+        == "invalid_nondegenerate_control"
+    )
+
+
+def test_terminal_owner_rejects_wrong_bond_and_nonfinite_fidelity() -> None:
+    runner = _load_script(
+        RUNNER_PATH,
+        "run_peps_d5_complete_state_sweeps_value_gate_under_test",
+    )
+    correct = {"diagnostics": {"requested_max_bond": 16}}
+    runner._require_requested_bond(
+        correct,
+        expected=16,
+        label="d3 seam",
+    )
+    for wrong in (1, True, 16.0, None):
+        with pytest.raises(RuntimeError, match="requested_max_bond"):
+            runner._require_requested_bond(
+                {"diagnostics": {"requested_max_bond": wrong}},
+                expected=16,
+                label="d3 seam",
+            )
+    assert runner._validated_fidelity(1.0, label="d3 seam") == 1.0
+    for invalid in (np.nan, np.inf, -1e-3, 1.001, True, "0.999"):
+        with pytest.raises(RuntimeError, match="fidelity"):
+            runner._validated_fidelity(invalid, label="d3 seam")
+
+    valid_quimb_usage = {
+        "provenance": {"python_peak_rss_kib": 1024},
+        "diagnostics": {"peak_device_allocated_bytes": 2048},
+    }
+    assert runner._candidate_resource_usage(
+        "quimb",
+        valid_quimb_usage,
+    ) == (1024**2, 2048)
+    forged_usage = copy.deepcopy(valid_quimb_usage)
+    forged_usage["provenance"]["python_peak_rss_kib"] = "1024"
+    with pytest.raises(RuntimeError, match="JSON integer"):
+        runner._candidate_resource_usage("quimb", forged_usage)
+
+
+def test_quimb_installed_source_manifest_detects_source_byte_change(
+    modules,
+    tmp_path: Path,
+) -> None:
+    _emitter, _dense, quimb_worker, _pepsy_worker, _comparison = modules
+    prefix = tmp_path / "isolated-prefix"
+    package = (
+        prefix / "lib" / "python3.12" / "site-packages" / "quimb"
+    )
+    package.mkdir(parents=True)
+    origin = package / "__init__.py"
+    source = package / "tensor.py"
+    origin.write_text("from .tensor import marker\n", encoding="utf-8")
+    source.write_text("marker = 1\n", encoding="utf-8")
+    locked = quimb_worker._python_source_identity(
+        prefix_path=prefix,
+        import_origin=origin,
+    )
+    assert locked["python_source_file_count"] == 2
+
+    source.write_text("marker = 2\n", encoding="utf-8")
+    observed = quimb_worker._python_source_identity(
+        prefix_path=prefix,
+        import_origin=origin,
+    )
+    assert (
+        observed["python_source_manifest_sha256"]["tensor.py"]
+        != locked["python_source_manifest_sha256"]["tensor.py"]
+    )
+    with pytest.raises(RuntimeError, match="source bytes/origin"):
+        quimb_worker._require_installed_source_match(
+            observed=observed,
+            locked=locked,
+        )
+
+
+def test_quimb_resource_classification_is_typed_only(modules) -> None:
+    _emitter, _dense, quimb_worker, _pepsy_worker, _comparison = modules
+    assert quimb_worker._is_typed_memory_error(MemoryError())
+    assert not quimb_worker._is_typed_memory_error(
+        RuntimeError("CUDA out of memory string without typed exception")
+    )
+
+
+def test_external_contraction_path_search_is_explicitly_serial(
+    modules,
+) -> None:
+    _emitter, _dense, quimb_worker, pepsy_worker, _comparison = modules
+    for worker in (quimb_worker, pepsy_worker):
+        optimizer, identity = worker._serial_contraction_optimizer(
+            worker.SERIAL_CONTRACTION_POLICY
+        )
+        assert optimizer.kwargs["parallel"] is False
+        assert identity["parallel"] is False
+        assert identity["path_search_child_processes"] is False
+
+
+def test_requested_candidate_subset_cannot_bypass_d3_controls(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runner = _load_script(
+        RUNNER_PATH,
+        "run_peps_d5_complete_state_sweeps_d3_gate_under_test",
+    )
+    requested_candidates = ["quimb"]
+    observed: dict[str, object] = {}
+
+    def fake_d3_controls(
+        *,
+        output_directory: Path,
+        candidates: list[str],
+        process_rows: list[dict],
+        expected_git_head: str,
+    ) -> dict:
+        observed["output_directory"] = output_directory
+        observed["candidates"] = candidates
+        observed["process_rows"] = process_rows
+        observed["expected_git_head"] = expected_git_head
+        return {
+            "status": "passed",
+            "reference_summary_sha256": "0" * 64,
+            "candidate_controls": {
+                candidate: {"passed": True}
+                for candidate in candidates
+            },
+        }
+
+    output_directory = tmp_path / "subset_control_run"
+    monkeypatch.setattr(
+        runner,
+        "_parse_args",
+        lambda: SimpleNamespace(
+            output_directory=output_directory,
+            candidates=requested_candidates,
+            controls_only=True,
+        ),
+    )
+    monkeypatch.setattr(
+        runner,
+        "_verify_frozen_inputs",
+        lambda: {
+            "git_head": "0" * 40,
+            "committed_input_sha256": {},
+        },
+    )
+    monkeypatch.setattr(
+        runner,
+        "_run_d3_integration_controls",
+        fake_d3_controls,
+    )
+    monkeypatch.setattr(runner.fcntl, "flock", lambda *_args: None)
+
+    assert runner.main() == 0
+    assert requested_candidates == ["quimb"]
+    assert observed["output_directory"] == output_directory
+    assert observed["candidates"] == list(runner.CANDIDATES)
+    assert set(observed["candidates"]) == {"quimb", "pepsy"}
+    assert observed["expected_git_head"] == "0" * 40
+
+
+def test_terminal_owner_rejects_midrun_frozen_input_drift(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runner = _load_script(
+        RUNNER_PATH,
+        "run_peps_d5_complete_state_sweeps_drift_under_test",
+    )
+    initial = {
+        "git_head": "a" * 40,
+        "committed_input_sha256": {"frozen": "1" * 64},
+    }
+    changed = {
+        "git_head": "b" * 40,
+        "committed_input_sha256": {"frozen": "2" * 64},
+    }
+    monkeypatch.setattr(
+        runner,
+        "_verify_frozen_inputs",
+        lambda: changed,
+    )
+    with pytest.raises(RuntimeError, match="mixed-HEAD"):
+        runner._require_frozen_inputs_unchanged(
+            initial,
+            stage="test seam",
+        )
+
+    with pytest.raises(RuntimeError, match="comparator Git HEAD"):
+        runner._require_comparator_head(
+            {"provenance": {"git_head": changed["git_head"]}},
+            expected_git_head=initial["git_head"],
+            label="test seam",
+        )
+
+
+def test_terminal_result_self_binds_canonical_hash_and_publication() -> None:
+    runner = _load_script(
+        RUNNER_PATH,
+        "run_peps_d5_complete_state_sweeps_publication_under_test",
+    )
+    payload = {
+        "schema": "test.result.v1",
+        "metric": {"fidelity": 0.991},
+    }
+    published = runner._published_payload(payload)
+    runner._verify_publication(published)
+    assert published["publication"]["status"] == "atomically_published"
+    assert (
+        published["publication"]["terminal_bundle_hashes_child_artifacts"]
+        is True
+    )
+
+    corrupted = copy.deepcopy(published)
+    corrupted["metric"]["fidelity"] = 0.992
+    with pytest.raises(ValueError, match="content hash mismatch"):
+        runner._verify_publication(corrupted)

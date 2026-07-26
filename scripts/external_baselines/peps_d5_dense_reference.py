@@ -332,6 +332,7 @@ def evolve_torch(
     gate_cache: dict[tuple[Any, ...], Any] = {}
     max_unitarity_residual = 0.0
     max_gate_semantic_residual = 0.0
+    applied_operation_count = 0
     started = time.perf_counter()
 
     with torch.no_grad():
@@ -365,6 +366,7 @@ def evolve_torch(
                 operation["targets"],
                 site_count=site_count,
             )
+            applied_operation_count += 1
             if progress_every and (
                 (operation_index + 1) % progress_every == 0
                 or operation_index + 1 == fixture["operation_count"]
@@ -422,6 +424,7 @@ def evolve_torch(
         "norm_residual": norm_residual,
         "max_gate_unitarity_residual": max_unitarity_residual,
         "max_gate_semantic_residual": max_gate_semantic_residual,
+        "operation_count": applied_operation_count,
         "unique_gate_matrix_count": len(gate_cache),
     }
     return state_numpy, diagnostics

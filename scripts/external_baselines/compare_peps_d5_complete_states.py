@@ -99,7 +99,7 @@ SCHEMA_PROVENANCE_POLICIES = {
             "baseline-environment-quimb-peps-linux-64.lock.json"
         ),
         "environment_lock_schema": (
-            "error_coupling_simulator.environment_lock.quimb_peps_d5.v1"
+            "error_coupling_simulator.environment_lock.quimb_peps_d5.v2"
         ),
         "environment_name": "ecs-baseline-quimb-peps",
         "source_key": "quimb_source_clone",
@@ -463,6 +463,23 @@ def _validate_execution_diagnostics(
         raise ValueError("reference summary has no numerical diagnostics")
     if not isinstance(candidate_diagnostics, dict):
         raise ValueError("candidate summary has no numerical diagnostics")
+    expected_operation_count = reference.get("fixture", {}).get(
+        "operation_count"
+    )
+    if (
+        isinstance(expected_operation_count, bool)
+        or not isinstance(expected_operation_count, int)
+        or expected_operation_count < 1
+    ):
+        raise ValueError("reference fixture has no valid operation count")
+    for label, diagnostics in (
+        ("reference", reference_diagnostics),
+        ("candidate", candidate_diagnostics),
+    ):
+        if diagnostics.get("operation_count") != expected_operation_count:
+            raise ValueError(
+                f"{label} applied-operation count differs from fixture"
+            )
     requested_max_bond = candidate_diagnostics.get("requested_max_bond")
     if (
         isinstance(requested_max_bond, bool)

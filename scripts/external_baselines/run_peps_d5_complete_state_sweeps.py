@@ -10,6 +10,7 @@ and classifies only complete complex128 state comparisons.
 from __future__ import annotations
 
 import argparse
+import copy
 import fcntl
 import hashlib
 import json
@@ -63,14 +64,14 @@ CANDIDATES = {
         "worker": (
             "scripts/external_baselines/quimb_peps_d5_fidelity_worker.py"
         ),
-        "extra_arguments": ["--optimize", "auto-hq"],
+        "extra_arguments": ["--optimize", "auto-hq-serial"],
     },
     "pepsy": {
         "environment": "ecs-baseline-pepsy",
         "worker": "scripts/external_baselines/pepsy_peps_d5_state_worker.py",
         "extra_arguments": [
             "--contraction-optimize",
-            "auto-hq",
+            "auto-hq-serial",
             "--max-dense-bytes",
             str(2 * 1024**3),
             "--max-contraction-intermediate-bytes",
@@ -92,11 +93,75 @@ def _file_sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _atomic_json(path: Path, payload: Mapping[str, Any]) -> None:
+def _canonical_content_sha256(payload: Mapping[str, Any]) -> str:
+    canonical = copy.deepcopy(dict(payload))
+    publication = canonical.get("publication")
+    if publication is not None:
+        if not isinstance(publication, dict):
+            raise ValueError("publication metadata must be an object")
+        publication.pop("content_sha256", None)
+    encoded = json.dumps(
+        canonical,
+        allow_nan=False,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _published_payload(payload: Mapping[str, Any]) -> dict[str, Any]:
+    published = copy.deepcopy(dict(payload))
+    if "publication" in published:
+        raise ValueError("payload already contains publication metadata")
+    published["publication"] = {
+        "status": "atomically_published",
+        "protocol": (
+            "temporary_file_fsync_then_os_replace_then_"
+            "parent_directory_fsync"
+        ),
+        "content_sha256_scope": (
+            "canonical_utf8_json_sort_keys_compact_"
+            "excluding_publication.content_sha256"
+        ),
+        "terminal_bundle_hashes_child_artifacts": True,
+    }
+    published["publication"]["content_sha256"] = (
+        _canonical_content_sha256(published)
+    )
+    return published
+
+
+def _verify_publication(payload: Mapping[str, Any]) -> None:
+    publication = payload.get("publication")
+    if not isinstance(publication, dict):
+        raise ValueError("result has no publication metadata")
+    observed = publication.get("content_sha256")
+    if (
+        not isinstance(observed, str)
+        or observed != _canonical_content_sha256(payload)
+    ):
+        raise ValueError("result canonical content hash mismatch")
+    if (
+        publication.get("status") != "atomically_published"
+        or publication.get("protocol")
+        != (
+            "temporary_file_fsync_then_os_replace_then_"
+            "parent_directory_fsync"
+        )
+    ):
+        raise ValueError("result atomic publication contract mismatch")
+
+
+def _atomic_json(
+    path: Path,
+    payload: Mapping[str, Any],
+) -> dict[str, Any]:
     if path.exists():
         raise FileExistsError(f"refusing to replace existing output: {path}")
+    published = _published_payload(payload)
     encoded = (
-        json.dumps(payload, allow_nan=False, indent=2, sort_keys=True) + "\n"
+        json.dumps(published, allow_nan=False, indent=2, sort_keys=True) + "\n"
     ).encode("utf-8")
     descriptor, temporary_name = tempfile.mkstemp(
         prefix=f".{path.name}.",
@@ -116,6 +181,7 @@ def _atomic_json(path: Path, payload: Mapping[str, Any]) -> None:
             os.close(directory)
     finally:
         temporary.unlink(missing_ok=True)
+    return published
 
 
 def _verify_frozen_inputs() -> dict[str, Any]:
@@ -142,6 +208,33 @@ def _verify_frozen_inputs() -> dict[str, Any]:
             raise RuntimeError(f"sweep input is not frozen at HEAD: {relative}")
         hashes[relative] = _file_sha256(REPO / relative)
     return {"git_head": head, "committed_input_sha256": hashes}
+
+
+def _require_frozen_inputs_unchanged(
+    expected: Mapping[str, Any],
+    *,
+    stage: str,
+) -> None:
+    observed = _verify_frozen_inputs()
+    if observed != expected:
+        raise RuntimeError(
+            f"frozen sweep inputs changed during {stage}; "
+            "refusing a mixed-HEAD result"
+        )
+
+
+def _require_comparator_head(
+    comparison: Mapping[str, Any],
+    *,
+    expected_git_head: str,
+    label: str,
+) -> None:
+    observed = comparison.get("provenance", {}).get("git_head")
+    if observed != expected_git_head:
+        raise RuntimeError(
+            f"{label} comparator Git HEAD {observed!r} differs from "
+            f"the frozen sweep HEAD {expected_git_head!r}"
+        )
 
 
 def _child_environment() -> dict[str, str]:
@@ -225,22 +318,47 @@ def _candidate_resource_usage(
     candidate: str,
     summary: Mapping[str, Any],
 ) -> tuple[int, int]:
+    def exact_nonnegative_integer(value: Any, *, label: str) -> int:
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, int)
+            or value < 0
+        ):
+            raise RuntimeError(
+                f"{label} must be a nonnegative JSON integer"
+            )
+        return value
+
     if candidate == "quimb":
-        host_bytes = int(
-            summary["provenance"]["python_peak_rss_kib"]
+        host_bytes = exact_nonnegative_integer(
+            summary["provenance"]["python_peak_rss_kib"],
+            label="Quimb peak host RSS KiB",
         ) * 1024
-        device_bytes = int(
-            summary["diagnostics"]["peak_device_allocated_bytes"]
+        device_bytes = exact_nonnegative_integer(
+            summary["diagnostics"]["peak_device_allocated_bytes"],
+            label="Quimb peak device allocation",
         )
     else:
-        host_bytes = int(summary["resource_usage"]["python_peak_rss_bytes"])
-        device_bytes = int(
-            summary["resource_usage"]["peak_device_allocated_bytes"]
+        host_bytes = exact_nonnegative_integer(
+            summary["resource_usage"]["python_peak_rss_bytes"],
+            label="Pepsy peak host RSS bytes",
+        )
+        device_bytes = exact_nonnegative_integer(
+            summary["resource_usage"]["peak_device_allocated_bytes"],
+            label="Pepsy peak device allocation",
         )
         plan = summary["resource_plan"]
         if (
-            plan["max_host_rss_bytes"] != HOST_LIMIT_BYTES
-            or plan["max_device_allocation_bytes"] != DEVICE_LIMIT_BYTES
+            exact_nonnegative_integer(
+                plan["max_host_rss_bytes"],
+                label="Pepsy host RSS limit",
+            )
+            != HOST_LIMIT_BYTES
+            or exact_nonnegative_integer(
+                plan["max_device_allocation_bytes"],
+                label="Pepsy device allocation limit",
+            )
+            != DEVICE_LIMIT_BYTES
         ):
             raise RuntimeError("Pepsy resource plan differs from frozen limits")
     return host_bytes, device_bytes
@@ -250,17 +368,14 @@ def _summarize_candidate(rows: list[dict[str, Any]]) -> dict[str, Any]:
     completed = [
         row for row in rows if row["status"] == "completed"
     ]
+    invalid_rows = [
+        row for row in rows if row["status"] == "invalid"
+    ]
     by_bond = {row["bond"]: row for row in completed}
     fidelities = [
         row["fidelity"] for row in completed
     ]
     useful = [row for row in completed if row["fidelity"] >= 0.99]
-    if useful:
-        usefulness_verdict = "pass"
-    elif len(completed) == len(BONDS):
-        usefulness_verdict = "fail"
-    else:
-        usefulness_verdict = "inconclusive_partial"
 
     monotonic_evaluable = len(completed) == len(BONDS)
     monotonic_passed = None
@@ -276,6 +391,16 @@ def _summarize_candidate(rows: list[dict[str, Any]]) -> dict[str, Any]:
     if nondegenerate_evaluable:
         separation = by_bond[16]["fidelity"] - by_bond[1]["fidelity"]
         nondegenerate_passed = separation > 1e-4
+    if invalid_rows:
+        usefulness_verdict = "invalid"
+    elif len(completed) != len(BONDS):
+        usefulness_verdict = "inconclusive_partial"
+    elif nondegenerate_passed is not True:
+        usefulness_verdict = "invalid_nondegenerate_control"
+    elif not useful:
+        usefulness_verdict = "fail"
+    else:
+        usefulness_verdict = "pass"
     d16_rank_audited = (
         16 in by_bond
         and by_bond[16].get("no_rank_discarded") is True
@@ -283,6 +408,7 @@ def _summarize_candidate(rows: list[dict[str, Any]]) -> dict[str, Any]:
     return {
         "requested_bonds": list(BONDS),
         "completed_bonds": sorted(by_bond),
+        "invalid_bonds": sorted(row["bond"] for row in invalid_rows),
         "best_fidelity": max(fidelities) if fidelities else None,
         "best_bond": (
             max(completed, key=lambda row: row["fidelity"])["bond"]
@@ -317,11 +443,42 @@ def _summarize_candidate(rows: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _require_requested_bond(
+    summary: dict[str, Any],
+    *,
+    expected: int,
+    label: str,
+) -> None:
+    value = summary.get("diagnostics", {}).get("requested_max_bond")
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, int)
+        or value != expected
+    ):
+        raise RuntimeError(
+            f"{label} requested_max_bond {value!r} != {expected}"
+        )
+
+
+def _validated_fidelity(value: Any, *, label: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise RuntimeError(f"{label} fidelity must be a finite real number")
+    fidelity = float(value)
+    if (
+        not np.isfinite(fidelity)
+        or fidelity < -1e-10
+        or fidelity > 1.0 + 1e-10
+    ):
+        raise RuntimeError(f"{label} emitted invalid fidelity: {fidelity!r}")
+    return fidelity
+
+
 def _run_d3_integration_controls(
     *,
     output_directory: Path,
     candidates: list[str],
     process_rows: list[dict[str, Any]],
+    expected_git_head: str,
 ) -> dict[str, Any]:
     fixture_path = output_directory / "fixture_d3.json"
     reference_state = output_directory / "reference_d3.npy"
@@ -401,6 +558,11 @@ def _run_d3_integration_controls(
                 f"{candidate} d3 integration unavailable: "
                 f"{summary.get('reason')}"
             )
+        _require_requested_bond(
+            summary,
+            expected=16,
+            label=f"{candidate} d3 integration",
+        )
         host_bytes, device_bytes = _candidate_resource_usage(
             candidate,
             summary,
@@ -437,8 +599,14 @@ def _run_d3_integration_controls(
         comparison = json.loads(
             comparison_path.read_text(encoding="utf-8")
         )
-        fidelity = float(
-            comparison["metric"]["normalized_squared_overlap"]
+        _require_comparator_head(
+            comparison,
+            expected_git_head=expected_git_head,
+            label=f"{candidate} d3 integration",
+        )
+        fidelity = _validated_fidelity(
+            comparison["metric"]["normalized_squared_overlap"],
+            label=f"{candidate} d3 integration",
         )
         if fidelity < 1.0 - 1e-10:
             raise RuntimeError(
@@ -501,8 +669,13 @@ def main() -> int:
         fcntl.flock(gpu_lock.fileno(), fcntl.LOCK_EX)
         d3_controls = _run_d3_integration_controls(
             output_directory=args.output_directory,
-            candidates=args.candidates,
+            candidates=list(CANDIDATES),
             process_rows=process_rows,
+            expected_git_head=provenance["git_head"],
+        )
+        _require_frozen_inputs_unchanged(
+            provenance,
+            stage="post-d3 integration control gate",
         )
         if args.controls_only:
             control_result = {
@@ -528,7 +701,11 @@ def main() -> int:
             destination = (
                 args.output_directory / "d3_control_result.json"
             )
-            _atomic_json(destination, control_result)
+            _require_frozen_inputs_unchanged(
+                provenance,
+                stage="controls-only publication",
+            )
+            control_result = _atomic_json(destination, control_result)
             print(json.dumps(control_result, sort_keys=True), flush=True)
             return 0
         emit = _run_fresh_process(
@@ -605,6 +782,10 @@ def main() -> int:
             config = CANDIDATES[candidate]
             rows: list[dict[str, Any]] = []
             for bond in BONDS:
+                _require_frozen_inputs_unchanged(
+                    provenance,
+                    stage=f"{candidate} d5 D{bond} preflight",
+                )
                 prefix = f"{candidate}_d5_D{bond}"
                 state_path = args.output_directory / f"{prefix}.npy"
                 summary_path = args.output_directory / f"{prefix}.json"
@@ -633,16 +814,22 @@ def main() -> int:
                     log_path=args.output_directory / f"{prefix}.log",
                 )
                 process_rows.append(worker)
-                if worker["timed_out"] or worker["returncode"] != 0:
+                if worker["timed_out"]:
                     rows.append(
                         {
                             "bond": bond,
                             "status": "UNAVAILABLE",
-                            "reason": (
-                                "wall_timeout"
-                                if worker["timed_out"]
-                                else "worker_failure"
-                            ),
+                            "reason": "wall_timeout",
+                            "process": worker,
+                        }
+                    )
+                    continue
+                if worker["returncode"] != 0:
+                    rows.append(
+                        {
+                            "bond": bond,
+                            "status": "invalid",
+                            "reason": "worker_failure",
                             "process": worker,
                         }
                     )
@@ -654,6 +841,35 @@ def main() -> int:
                             "bond": bond,
                             "status": "UNAVAILABLE",
                             "reason": summary.get("reason"),
+                            "process": worker,
+                            "summary_sha256": _file_sha256(summary_path),
+                        }
+                    )
+                    continue
+                if summary.get("status") != "completed":
+                    rows.append(
+                        {
+                            "bond": bond,
+                            "status": "invalid",
+                            "reason": "worker_status_not_completed",
+                            "process": worker,
+                            "summary_sha256": _file_sha256(summary_path),
+                        }
+                    )
+                    continue
+                try:
+                    _require_requested_bond(
+                        summary,
+                        expected=bond,
+                        label=f"{candidate} d5 D{bond}",
+                    )
+                except RuntimeError as error:
+                    rows.append(
+                        {
+                            "bond": bond,
+                            "status": "invalid",
+                            "reason": "requested_bond_mismatch",
+                            "detail": str(error),
                             "process": worker,
                             "summary_sha256": _file_sha256(summary_path),
                         }
@@ -704,7 +920,7 @@ def main() -> int:
                         "--output-json",
                         str(comparison_path),
                     ),
-                    timeout_seconds=min(300, remaining_seconds),
+                    timeout_seconds=remaining_seconds,
                     log_path=(
                         args.output_directory / f"{prefix}_compare.log"
                     ),
@@ -723,13 +939,17 @@ def main() -> int:
                 comparison_payload = json.loads(
                     comparison_path.read_text(encoding="utf-8")
                 )
-                fidelity = float(
+                _require_comparator_head(
+                    comparison_payload,
+                    expected_git_head=provenance["git_head"],
+                    label=f"{candidate} d5 D{bond}",
+                )
+                fidelity = _validated_fidelity(
                     comparison_payload["metric"][
                         "normalized_squared_overlap"
-                    ]
+                    ],
+                    label=f"{candidate} d5 D{bond}",
                 )
-                if not np.isfinite(fidelity):
-                    raise RuntimeError("comparator emitted non-finite fidelity")
                 rows.append(
                     {
                         "bond": bond,
@@ -758,6 +978,10 @@ def main() -> int:
                 "aggregate": _summarize_candidate(rows),
             }
 
+    _require_frozen_inputs_unchanged(
+        provenance,
+        stage="terminal sweep publication",
+    )
     result = {
         "schema": RESULT_SCHEMA,
         "status": "completed",
@@ -792,7 +1016,7 @@ def main() -> int:
         },
     }
     destination = args.output_directory / "sweep_result.json"
-    _atomic_json(destination, result)
+    result = _atomic_json(destination, result)
     print(json.dumps(result, sort_keys=True), flush=True)
     return 0
 

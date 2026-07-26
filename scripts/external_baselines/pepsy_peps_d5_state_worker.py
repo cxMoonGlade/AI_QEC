@@ -77,6 +77,7 @@ DEFAULT_MAX_CONTRACTION_INTERMEDIATE_BYTES = 28 * 1024**3
 DEFAULT_MAX_HOST_RSS_BYTES = 64 * 1024**3
 DEFAULT_MAX_DEVICE_ALLOCATION_BYTES = 28 * 1024**3
 GATE_RESIDUAL_LIMIT = 1.0e-12
+SERIAL_CONTRACTION_POLICY = "auto-hq-serial"
 _MEMORY_ERROR_MARKERS = (
     "out of memory",
     "cannot allocate memory",
@@ -780,6 +781,7 @@ def evolve_and_materialize(
     gate_cache: dict[tuple[Any, ...], Any] = {}
     max_gate_unitarity_residual = 0.0
     max_gate_semantic_residual = 0.0
+    applied_operation_count = 0
     started = time.perf_counter()
     with torch.no_grad():
         for operation_index, operation in enumerate(fixture["operations"]):
@@ -828,6 +830,7 @@ def evolve_and_materialize(
                 path_compress=False,
                 inplace=True,
             )
+            applied_operation_count += 1
             actual_max_bond = int(state.max_bond())
             if actual_max_bond > max_bond:
                 raise RuntimeError(
@@ -847,11 +850,18 @@ def evolve_and_materialize(
     if device.type == "cuda":
         torch.cuda.synchronize(device)
     evolution_seconds = time.perf_counter() - started
+    if applied_operation_count != fixture["operation_count"]:
+        raise RuntimeError(
+            "Pepsy applied-operation count differs from the fixture"
+        )
 
+    contraction_optimizer, optimizer_identity = (
+        _serial_contraction_optimizer(contraction_optimize)
+    )
     path_started = time.perf_counter()
     contraction_info = state.contraction_info(
         output_inds=expected_output_inds,
-        optimize=contraction_optimize,
+        optimize=contraction_optimizer,
     )
     path_search_seconds = time.perf_counter() - path_started
     largest_intermediate_elements = int(
@@ -866,11 +876,11 @@ def evolve_and_materialize(
         "actual_max_bond": int(state.max_bond()),
         "cutoff": 0.0,
         "cutoff_mode": "rsum2",
-        "operation_count": int(fixture["operation_count"]),
+        "operation_count": applied_operation_count,
         "max_gate_unitarity_residual": max_gate_unitarity_residual,
         "max_gate_semantic_residual": max_gate_semantic_residual,
         "evolution_seconds": evolution_seconds,
-        "contraction_optimizer": contraction_optimize,
+        "contraction_optimizer": optimizer_identity,
         "contraction_path_search_seconds": path_search_seconds,
         "contraction_largest_intermediate_elements": (
             largest_intermediate_elements
@@ -897,7 +907,7 @@ def evolve_and_materialize(
     with torch.no_grad():
         dense = state.to_dense(
             expected_output_inds,
-            optimize=contraction_optimize,
+            optimize=contraction_optimizer,
         )
     if device.type == "cuda":
         torch.cuda.synchronize(device)
@@ -1029,6 +1039,25 @@ def _is_resource_memory_error(error: BaseException) -> bool:
     )
 
 
+def _serial_contraction_optimizer(policy: str) -> tuple[Any, dict[str, Any]]:
+    import cotengra
+
+    if policy != SERIAL_CONTRACTION_POLICY:
+        raise ValueError(
+            f"unsupported contraction policy: {policy!r}"
+        )
+    optimizer = cotengra.AutoHQOptimizer(parallel=False)
+    if getattr(optimizer, "kwargs", {}).get("parallel") is not False:
+        raise RuntimeError("Cotengra serial optimizer contract drifted")
+    return optimizer, {
+        "policy": SERIAL_CONTRACTION_POLICY,
+        "implementation": "cotengra.AutoHQOptimizer",
+        "cotengra_version": metadata.version("cotengra"),
+        "parallel": False,
+        "path_search_child_processes": False,
+    }
+
+
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--fixture", type=Path, required=True)
@@ -1042,8 +1071,9 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--contraction-optimize",
-        default="auto-hq",
-        help="Exact contraction path optimizer passed to Quimb through Pepsy.",
+        choices=(SERIAL_CONTRACTION_POLICY,),
+        default=SERIAL_CONTRACTION_POLICY,
+        help="Serial exact-contraction path-search policy.",
     )
     parser.add_argument(
         "--max-dense-bytes",
