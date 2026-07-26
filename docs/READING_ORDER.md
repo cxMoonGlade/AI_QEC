@@ -1,6 +1,6 @@
 # Reading order — what matters at the current stage
 
-Reconciled 2026-07-26 against `888243e`.
+Reconciled 2026-07-26 against `a95ba0f`.
 Verify with `python tools/check_reading_order.py`.
 
 `CLAUDE.md` holds the rules that always bind and a routing table for which surface owns which
@@ -17,26 +17,32 @@ Mutation testing is retired; verification is unit tests plus the coverage gate.
 
 ## Read first, in this order
 
-1. **`docs/simulator_validation/CUDAQ_PECOS_XZZX_D7_REPRODUCTION_2026-07-26.md`** — read this
+1. **`docs/simulator_validation/PEPS_D5_COMPLETE_STATE_FIDELITY_RESULTS_2026-07-26.md`** —
+   the first direct 25-qubit 5-by-5 PEPS result. Quimb and Pepsy both exceed
+   `F=0.9998` at `D=2` and `F=0.9999995` at `D=4`; both are
+   resource-unavailable at `D=8,16`, so the registered five-point verdict is
+   `inconclusive_partial`. This is a high-fidelity coherent pure-state result,
+   not leakage, Kraus, a QEC Record, or a scaling claim.
+2. **`docs/simulator_validation/CUDAQ_PECOS_XZZX_D7_REPRODUCTION_2026-07-26.md`** — read this
    **before** the capability record below. An independent rerun finds that **neither runtime
    produces a usable XZZX d7 multi-round non-Pauli Record**: both execute, and both emit Records
    dominated by bond truncation. The capability record's PECOS "YES" is wrong; its CUDA-Q "NO" is
    right in substance and wrong in its reason. Contains the controls that decide it — a noiseless
    injection control, a stabilizer reference, and a p→0 control on the same code path — plus the
    d3 exactness threshold that validates the probe.
-2. **`docs/simulator_validation/CUDAQ_PECOS_XZZX_D7_CAPABILITY_2026-07-26.md`** — the original
+3. **`docs/simulator_validation/CUDAQ_PECOS_XZZX_D7_CAPABILITY_2026-07-26.md`** — the original
    environment-and-execution check prompted by the failed broad differentiator claim. CUDA-Q
    completes an ideal d7/r2 XZZX Record but its full-data two-Kraus target times out or
    native-crashes; PECOS natively builds d7/r7 checkerboard XZZX and executes coherent non-Pauli
    MPS Records, but its scalable MPS has no dissipative Kraus binding. Read its exact boundary
    before saying either "existing products already do the whole leakage job" or "nothing else can
    do XZZX d7 non-Pauli multi-round."
-3. **`docs/simulator_validation/PEPS_PEPO_LITERATURE_LIBRARY_LANDSCAPE_2026-07-26.md`** — the
+4. **`docs/simulator_validation/PEPS_PEPO_LITERATURE_LIBRARY_LANDSCAPE_2026-07-26.md`** — the
    AnySearch-backed PEPS/PEPO literature and software audit. `pepsy` is the closest adjacent
    product but does not compose its PEPS and leakage-trajectory paths; TNQS is the best inspected
    qutrit-PEPS adapter base; YASTN is the independent finite-PEPS comparator. Schuch supplies an
    exact worst-case complexity boundary, not a d7 impossibility or resource estimate.
-4. **`docs/simulator_validation/ENGINEERING_ROWS_LITERATURE_CHECK_2026-07-26.md`** — read this
+5. **`docs/simulator_validation/ENGINEERING_ROWS_LITERATURE_CHECK_2026-07-26.md`** — read this
    **before** the landscape audit below, because it refutes that audit's central section. All three
    surviving engineering differentiator rows are occupied: row 2 by Clader et al. PRA 103, 052428
    (2021) §III, row 3 by TeNPy `7f1d95560645` `algorithms/algorithm.py:493` (a truncation-budget
@@ -45,28 +51,34 @@ Mutation testing is retired; verification is unit tests plus the coverage gate.
    unoccupied" section has nothing left in it. Three of the rows also contain checkable errors about
    code already cloned under `external/`. Read before writing any scope, novelty, or completion
    sentence.
-5. **`docs/simulator_validation/EXTERNAL_LANDSCAPE_AUDIT_2026-07-26.md`** — still the record of what
+6. **`docs/simulator_validation/EXTERNAL_LANDSCAPE_AUDIT_2026-07-26.md`** — still the record of what
    was surveyed and of what is already solved elsewhere, which remains useful. Its "What remains
    unoccupied" section is superseded by the check above and is pending rewrite. `stim` supplies
    geometry, schedule and detector fold at any distance, and the nearest published work is listed
    with locators.
-6. **`docs/simulator_validation/LEAKAGE_FRAME_LITERATURE_CLOSURE_2026-07-26.md`** — closes the
+7. **`docs/simulator_validation/LEAKAGE_FRAME_LITERATURE_CLOSURE_2026-07-26.md`** — closes the
    current leakage-conditioned frame question at documentation scope. It distinguishes physical
    parity-Record content, a one-bit marginal relabeling, and an unestablished exact
    trajectory-conditioned frame. Its source-only companions are the Ghosh, Bultink, Varbanov, and
    Miyamura notes in `docs/papers/reading_notes/`.
-7. **`docs/simulator_validation/2002.07119-claim-audit.md`** — project application of Varbanov v1.
+8. **`docs/simulator_validation/2002.07119-claim-audit.md`** — project application of Varbanov v1.
    Read it for the individual-defect/supercheck distinction, Appendix-G ancilla bookkeeping analog,
    Appendix-B schedule-scoped coherence null, and the printed D11-D13 algebra defects.
-8. **`docs/simulator_validation/HANDOFF_MUTATION_SCOPE_AND_BASELINE_LEGS_2026-07-25.md`** — open
+9. **`docs/simulator_validation/HANDOFF_MUTATION_SCOPE_AND_BASELINE_LEGS_2026-07-25.md`** — open
    items 2 through 7 are still open. Item 1 is discharged; its follow-on was deliberately reverted
    rather than fixed, because the mutation layer is being retired.
-9. **`docs/service_status.json`**, the `restricted_axis1_1d_mps` note and `excluded_surfaces` — the
+10. **`docs/service_status.json`**, the `restricted_axis1_1d_mps` note and `excluded_surfaces` — the
    claim boundary. It answers most scope questions outright.
 
 ## Recently landed — read before touching the same surface
 
-- **PEPS/PEPO landscape and Schuch admission** (current worktree). The bounded AnySearch plus
+- **PEPS d5 complete-state execution** (`a95ba0f` run). Both commit-bound
+  candidates materialize every d5 amplitude at `D<=4`; `D=2` is already
+  useful and `D=4` is near unity. Higher bonds fail the registered resource
+  gate, so this lands as bounded pure-state evidence rather than a complete
+  five-point pass. The terminal artifact is corruption-sensitive and
+  independently hash-checked.
+- **PEPS/PEPO landscape and Schuch admission**. The bounded AnySearch plus
   official-source audit found no integrated finite-qutrit PEPS/PEPO leakage Record engine, but it
   did find much closer prior product surfaces than the earlier notes recorded. The Schuch
   version-of-record note is independently reviewed and admitted; its conclusion concerns the
@@ -142,12 +154,14 @@ Mutation testing is retired; verification is unit tests plus the coverage gate.
 
    Next on this line, if it is worth it: a custom selection plan to restore coverage past n=4.
    That is a real piece of work, not a parameter change.
-3. **Next: a small complete-Record qutrit PEPS bridge, not d7.** The landscape identifies TNQS as
-   the first adapter candidate, YASTN as the independent finite-PEPS comparator, and `pepsy` as the
-   adjacent-product falsifier. Freeze a d3 circuit with dense qutrit truth; compare raw branch
-   mass, post-reset state, detector/observable bits, full Record TV, and LER while sweeping the
-   state bond and boundary bond independently. Only a passing corruption-sensitive bridge permits
-   d5, followed by a profile-based d7 decision.
+3. **Next: a small complete-Record qutrit PEPS bridge, not d7.** The pure-state d5 question is now
+   answered positively at `D<=4`, but none of that exercises Kraus, leakage, reset, or a Record.
+   TNQS remains the first qutrit adapter candidate; Pepsy/Quimb are now measured pure-state
+   references rather than hypothetical adjacent products. Freeze a d3 circuit with dense qutrit
+   truth; compare raw branch mass, post-reset state, detector/observable bits, full Record TV, and
+   LER while sweeping state and boundary bonds independently. Only a passing
+   corruption-sensitive bridge permits a d5 Record experiment, followed by a profile-based d7
+   decision.
 
 Explicitly not doing: the withdrawn heralding claim, an unrestricted exact/scalable PEPS claim, or
 a direct d7 implementation before the small complete-Record bridge.
@@ -160,8 +174,8 @@ a direct d7 implementation before the small complete-Record bridge.
 - What replaces the retired mutation layer in the release evidence order.
 - Whether to add `hw` to the canonical `ecs` sync so the Pauli leg can report a decoded logical
   error rate instead of a raw observable-flip rate. Everything else for that is already in place.
-- Whether to pin `pepsy` and TNQS as pristine external baselines and authorize the repository-owned
-  d3 qutrit PEPS adapter.
+- Whether the measured pure-state d5 success is enough to prioritize the repository-owned d3
+  qutrit/Kraus Record bridge over the current product-facing work.
 
 ## Retained external material
 
@@ -169,6 +183,18 @@ The leakage PDFs are now fully read and routed through the closure packet above.
 under `external/reference_repos/` remain pinned at the refs at which they were inspected:
 `qutrits` at `fe24c42`, `restless-simulator` at `92e8a62`, `surface-code-simulator` at `f06123e`,
 `Located-decoder-for-Rydberg-decay` at `1bf10b6`.
+
+The PEPS execution baselines under `external/baselines/` are full, non-shallow, pristine clones:
+Pepsy at `27cb956e`, Quimb at `3c89529f`, TensorNetworkQuantumSimulator.jl at `b5d40898`, and YASTN
+at `595bd802`. Only Pepsy and Quimb expose an admitted bounded route to the required global d5
+`complex128` vector.
+
+The generated `docs/external_baselines/EXTERNAL_CODE_MAP.md` is the complete structural first-hop
+inventory for all 51 Git clones under `external/`; it records exact commits, clone modes, recognized
+suffix profiles, manifests, code-bearing roots, lexical entry candidates, tests, examples, and
+documentation. The curated `docs/external_baselines/TENSOR_NETWORK_CODE_MAP.md` is the deeper
+semantic route for the seven MPS/PEPS implementations relevant here. Neither map is scientific
+evidence.
 
 `quantumsim` is the simulator arXiv:2002.07119 used, but **not at the ref we cloned**: its default
 `292fce9` has no `quantumsim/models/transmons.py` at all. Five of its 34 remote refs do —
@@ -185,9 +211,9 @@ the qiskit-aer MPS non-Pauli prototype into
 `scripts/external_baselines/emit_stim_circuit_json.py`, headed with the fact that its numbers were
 never independently reproduced.
 
-Left in the scratchpad and expendable: roughly a hundred one-off probes. Two files are deliberately
-not committed -- `gen_external_code_map.py` and `EXTERNAL_CODE_MAP.md`, written by a subagent and
-duplicating the committed `tools/gen_external_tn_code_map.py`.
+Left in the scratchpad and expendable: roughly a hundred one-off probes. The earlier scratch
+codemap drafts are superseded by the committed `tools/gen_external_code_map.py` complete inventory
+and `tools/gen_external_tn_code_map.py` curated tensor-network map.
 
 ## Maintenance
 

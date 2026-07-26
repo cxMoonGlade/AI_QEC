@@ -1,8 +1,9 @@
 # External baseline environments and comparison legs
 
 How to rebuild the four isolated baseline environments and run the four external comparison legs.
-Read this before running or repairing a leg; the upstream code anchors and pinned commits are in
-[`TENSOR_NETWORK_CODE_MAP.md`](TENSOR_NETWORK_CODE_MAP.md).
+Read this before running or repairing a leg. The curated MPS/PEPS code anchors and pinned commits
+are in [`TENSOR_NETWORK_CODE_MAP.md`](TENSOR_NETWORK_CODE_MAP.md); the complete structural inventory
+of every clone under `external/` is [`EXTERNAL_CODE_MAP.md`](EXTERNAL_CODE_MAP.md).
 
 A comparison leg is not simulator acceptance. Each leg compares one external implementation against
 a repository-owned reference on frozen neutral fixtures; none of them establishes full-record
@@ -70,6 +71,70 @@ conda run -n ecs python scripts/external_baselines/run_itensor_mps_comparison.py
 
 Reports land under `outputs/simulator_validation/` and carry their own claim boundary, provenance
 block, and content hash.
+
+## PEPS d5 complete-state environments
+
+These are two additional research-only pure-state legs, not registered simulator services and not
+Kraus/leakage/Record baselines.
+
+| Candidate | Full pristine clone | Environment | Installed-state lock |
+|---|---|---|---|
+| Quimb | `external/baselines/quimb` at `3c89529fe0a3487133a3928201691161e110abdf` | `ecs-baseline-quimb-peps` | `baseline-environment-quimb-peps-linux-64.lock.json` |
+| Pepsy | `external/baselines/pepsy` at `27cb956ec88a739daece90407833bd3c3f8e1d8f` | `ecs-baseline-pepsy` | `baseline-environment-pepsy-linux-64.lock.json` |
+
+The Quimb lock is schema v2: in addition to the VCS and complete installed distribution state, it
+binds the import origin and SHA-256 of all 118 installed Quimb Python source files. The Pepsy lock
+binds its installed source manifest. Both workers reject a dirty or shallow upstream clone and a
+project package leaking into the isolated environment.
+
+Recreate Quimb according to the installed-state sequence below, then emit the lock:
+
+```bash
+conda create -y -n ecs-baseline-quimb-peps python=3.12.13
+conda run -n ecs-baseline-quimb-peps python -m pip install \
+  "git+file://$PWD/external/baselines/quimb@3c89529fe0a3487133a3928201691161e110abdf"
+conda run -n ecs-baseline-quimb-peps python -m pip install "torch==2.12.0"
+conda run -n ecs-baseline-quimb-peps python -m pip check
+conda run -n ecs python \
+  scripts/external_baselines/build_quimb_peps_d5_environment_lock.py
+```
+
+Pepsy deliberately clones that CUDA/PyTorch environment and then installs its commit-bound source:
+
+```bash
+conda run -n ecs python \
+  scripts/external_baselines/build_pepsy_baseline_environment.py \
+  --create --install
+```
+
+The human-readable sequences do not byte-pin every pip artifact. Claim-bearing workers therefore
+require exact conformance to the committed observed locks; these are installed-state ledgers, not a
+promise that a future resolver will recreate identical wheel bytes.
+
+Run the focused contracts and then the terminal sweep:
+
+```bash
+env -u PYTHONPATH PYTHONNOUSERSITE=1 \
+  conda run -n ecs python -m pytest -q \
+  tests/test_external_peps_d5_pure_state_fidelity.py
+
+env -u PYTHONPATH PYTHONNOUSERSITE=1 \
+  conda run -n ecs python \
+  scripts/external_baselines/run_peps_d5_complete_state_sweeps.py \
+  --output-directory outputs/simulator_validation/peps_d5_sweeps_<id> \
+  --candidates quimb pepsy
+```
+
+The terminal owner always runs the d3 dual-reference controls first, then the d5 physical
+corruption control, and only then the external candidates. It fixes `D=[1,2,4,8,16]`,
+`complex128`, an 1800-second total point budget, 64 GiB host peak, 28 GiB device allocation, and
+serial Cotengra path search. A timeout or authenticated resource refusal is `UNAVAILABLE`; an
+unknown worker/comparator failure is invalid.
+
+The dated result is
+[`PEPS_D5_COMPLETE_STATE_FIDELITY_RESULTS_2026-07-26.md`](../simulator_validation/PEPS_D5_COMPLETE_STATE_FIDELITY_RESULTS_2026-07-26.md).
+Both candidates exceeded `F=0.9998` at `D=2` and `F=0.9999995` at `D=4`; `D=8,16` were
+resource-unavailable, so the registered five-point aggregate is `inconclusive_partial`.
 
 ## CUDA-Q QEC and PECOS XZZX capability environments
 
