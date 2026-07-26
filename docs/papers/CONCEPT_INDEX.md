@@ -5,9 +5,9 @@ relationships appear here. This is routing metadata; the cited PDF and locator r
 the evidence.
 
 - corpus status: active
-- sources: 29
-- concept nodes: 84
-- source-located relationships: 84
+- sources: 30
+- concept nodes: 88
+- source-located relationships: 88
 - dangling relationships: 0
 
 ## bond environment (concept)
@@ -210,6 +210,10 @@ the evidence.
 
 - **defines** — A positive tensor network approach for simulating open quantum many-body systems — `Main text, Eq. (3) and Fig. 1(a)`, PDF p. 2 — A locally purified tensor network represents the density operator as `rho = X X^dagger`, with `X` decomposed into local tensors carrying physical, bond, and Kraus indices. ([docs/papers/reading_notes/werner_positive_tensor_network_open_systems_1412.5746.md](reading_notes/werner_positive_tensor_network_open_systems_1412.5746.md))
 
+## PEPS construction (model)
+
+- **defines** — Computational Complexity of Projected Entangled Pair States — `“PEPS and postselection,” p. 1, right column`, PDF p. 1 — The PEPS construction starts from an arbitrary undirected graph, places dimension-`D` maximally entangled virtual pairs along its edges, and applies a local linear map from the incident virtual spaces to a dimension-`d` physical space at every vertex. ([docs/papers/reading_notes/schuch_peps_complexity_prl_98_140506_source_review.md](reading_notes/schuch_peps_complexity_prl_98_140506_source_review.md))
+
 ## phase-damping channel (model)
 
 - **defines** — Microscopic derivation of the one qubit Kraus operators for amplitude and phase damping — `Sec. 4, Eqs. (48)–(49)`, PDF p. 12 — The phase-damping channel obeys `d rho/dt=r(sigma_z rho sigma_z-rho)` and is derived as pure decoherence without energy loss. ([docs/papers/reading_notes/arsenijevic_bankovic_damping_1606.01145_source_review.md](reading_notes/arsenijevic_bankovic_damping_1606.01145_source_review.md))
@@ -334,9 +338,21 @@ the evidence.
 
 - **supports** — Large-scale stochastic simulation of open quantum systems — `Sec. IV.B, Theorem 2 and Eqs. (52)–(56); Appendix B, Theorem 7 and Eqs. (B18)–(B22)`, PDF p. 10 — The full-bond TJM convergence theorem gives an unbiased fixed-time density estimator with matrix-norm standard deviation bounded by `c/sqrt(N)` when every trajectory MPS has full bond dimension. ([docs/papers/reading_notes/sander_tensor_jump_2501.17913_source_review.md](reading_notes/sander_tensor_jump_2501.17913_source_review.md))
 
+## general tensor-network contraction (theorem)
+
+- **limits** — Computational Complexity of Projected Entangled Pair States — `“The classical complexity of PEPS,” p. 3, left column, second paragraph`, PDF p. 3 — The source concludes that general tensor-network contraction is `#P`-complete, using PEPS contraction for hardness and constructions based on `T` with its conjugate, a physical dimension-one PEPS norm, and tensor direct sums for membership. ([docs/papers/reading_notes/schuch_peps_complexity_prl_98_140506_source_review.md](reading_notes/schuch_peps_complexity_prl_98_140506_source_review.md))
+
 ## locally purified trace-norm certificate (theorem)
 
 - **supports** — A positive tensor network approach for simulating open quantum many-body systems — `Appendix D, Theorem 7 and Eqs. (59)–(60)`, PDF p. 11 — The locally purified trace-norm certificate bounds final-state error by `(tb)^3 N^2/(4m^2) + 6(2m+1)N delta` for a nearest-neighbor chain whose local Liouvillians have diamond norm at most `b`, using `m` second-order steps and a common upper bound `delta` on every discarded weight. ([docs/papers/reading_notes/werner_positive_tensor_network_open_systems_1412.5746.md](reading_notes/werner_positive_tensor_network_open_systems_1412.5746.md))
+
+## paper-defined exact PEPS primitives (theorem)
+
+- **limits** — Computational Complexity of Projected Entangled Pair States — `“The classical complexity of PEPS,” p. 3, left column, first paragraph; note [16], p. 4`, PDF p. 3 — The source concludes that the paper-defined exact PEPS primitives are `#P`-complete under weakly parsimonious reductions. ([docs/papers/reading_notes/schuch_peps_complexity_prl_98_140506_source_review.md](reading_notes/schuch_peps_complexity_prl_98_140506_source_review.md))
+
+## postselection--PEPS duality (theorem)
+
+- **derives** — Computational Complexity of Projected Entangled Pair States — `“PEPS and postselection,” p. 2, left column, summary paragraph`, PDF p. 2 — The postselection--PEPS duality consists of efficient transforms in both directions between postselected circuit outputs and PEPS, with the circuit-to-state direction already realized by two-dimensional `D=d=2` PEPS. ([docs/papers/reading_notes/schuch_peps_complexity_prl_98_140506_source_review.md](reading_notes/schuch_peps_complexity_prl_98_140506_source_review.md))
 
 ## Proposition 2 bound (theorem)
 

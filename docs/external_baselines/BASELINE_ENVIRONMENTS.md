@@ -71,6 +71,97 @@ conda run -n ecs python scripts/external_baselines/run_itensor_mps_comparison.py
 Reports land under `outputs/simulator_validation/` and carry their own claim boundary, provenance
 block, and content hash.
 
+## CUDA-Q QEC and PECOS XZZX capability environments
+
+These are capability probes, not two additional comparison legs and not registered simulator
+services. Their installed-state locks are:
+
+- `baseline-environment-cudaq-qec-linux-64.lock.json`
+- `baseline-environment-pecos-linux-64.lock.json`
+
+The locks record the complete observed distribution-version set, selected distribution `RECORD`
+hashes, exact Conda package URLs, pristine source-reference commits, and the compatibility overrides
+used here. They do **not** hash-pin every transitive pip artifact, attest wheel bytes, or establish
+full recreation. Rebuild the installed-state ledgers with:
+
+```bash
+python scripts/external_baselines/build_xzzx_capability_environment_locks.py
+```
+
+The environments were created with these top-level steps:
+
+```bash
+conda create -y -n ecs-baseline-cudaq-qec python=3.12.13
+conda run -n ecs-baseline-cudaq-qec python -m pip install \
+  "cudaq-qec==0.6.0" "cudaq-qec-cu13==0.6.0" "stim==1.16.0"
+conda run -n ecs-baseline-cudaq-qec python -m pip install \
+  "cutensornet-cu13==2.12.2"
+conda run -n ecs-baseline-cudaq-qec python -m pip check
+
+conda create -y -n ecs-baseline-pecos python=3.13.14
+conda run -n ecs-baseline-pecos python -m pip install \
+  "quantum-pecos[cuda13]==0.9.0.dev2" "stim==1.16.0" \
+  "nvidia-cublas==13.6.0.2"
+conda run -n ecs-baseline-pecos python -m pip install \
+  "cupy-cuda13x[ctk]==14.1.1"
+conda run -n ecs-baseline-pecos python -m pip check
+```
+
+CUDA-Q 0.14.2 permits cuTensorNet `~=2.11`, but `cutensornet-cu13==2.13.0` caused a native
+`CUTENSORNET_STATUS_INVALID_VALUE` abort on the minimal measurement/reset MPS control on this host.
+Version `2.12.2` passed that control repeatedly and is therefore a required compatibility pin, not
+an optional performance choice.
+
+PECOS's CUDA extra did not by itself supply every runtime/header dependency needed by CuPy and
+`pytket-cutensornet`. The `[ctk]` extra supplies those packages. The worker also requires the
+environment-local library directory:
+
+```bash
+PECOS_PREFIX=/home/cx/miniforge3/envs/ecs-baseline-pecos
+export LD_LIBRARY_PATH="$PECOS_PREFIX/lib/python3.13/site-packages/nvidia/cu13/lib"
+```
+
+Generate the frozen neutral CUDA-Q fixtures and run a worker as follows. GPU runs must hold the
+same `/tmp/ecs_gpu.0.lock` used by the repository GPU pool; do not overlap the two environments.
+
+```bash
+conda run -n ecs python \
+  scripts/external_baselines/emit_xzzx_d7_capability_fixture.py \
+  --rounds 2 \
+  --output-json outputs/simulator_validation/xzzx_d7_r2_fixture.json \
+  --output-stim outputs/simulator_validation/xzzx_d7_r2_fixture.stim
+
+CUDA_VISIBLE_DEVICES=0 ECS_GPU_SLOT=0 \
+  flock /tmp/ecs_gpu.0.lock \
+  conda run --no-capture-output -n ecs-baseline-cudaq-qec python \
+  scripts/external_baselines/cudaq_xzzx_d7_capability_worker.py \
+  --fixture outputs/simulator_validation/xzzx_d7_r2_fixture.json \
+  --output-json outputs/simulator_validation/cudaq_xzzx_d7_r2_noiseless.json \
+  --shots 1 --max-bond 2 --precision fp32 --damping-probability 0
+
+CUDA_VISIBLE_DEVICES=0 ECS_GPU_SLOT=0 \
+  LD_LIBRARY_PATH="$PECOS_PREFIX/lib/python3.13/site-packages/nvidia/cu13/lib" \
+  flock /tmp/ecs_gpu.0.lock \
+  conda run --no-capture-output -n ecs-baseline-pecos python \
+  scripts/external_baselines/pecos_xzzx_d7_capability_worker.py \
+  --rounds 7 --coherent-angle 0.02 --chi 16 \
+  --output outputs/simulator_validation/pecos_xzzx_d7_r7.json
+```
+
+CUDA-Q consumes the neutral local-H XZZX fixture. PECOS instead consumes its native
+`checkerboard_xzzx`/SZZ circuit. PECOS includes one 24-check initialization layer before the
+requested complete rounds, so its raw and detector widths are 24 larger than the neutral Stim
+fixture at the same `rounds`; the worker reports this difference rather than silently comparing
+the arrays column-for-column.
+
+The CUDA-Q non-Pauli mechanism is explicit two-Kraus amplitude damping on all 49 data qubits after
+each complete round. The PECOS MPS mechanism is coherent `RY` over-rotation after each complete
+round. PECOS's MPS gate bindings expose no dissipative Kraus/channel operation; its actual amplitude
+damping implementation belongs to the exponentially scaling density-matrix path. Neither probe is
+qutrit leakage, and finite bond dimension is not a Record-law faithfulness certificate.
+The dated capability audit records the bounded `p=0.01` CUDA-Q attempts and their timeout/native
+failure; the reproducible command above is the completed no-noise control, not a noisy-target pass.
+
 ## What each leg does and does not cover
 
 Aer, YASTN and QuTiP pin execution results. None of them observes the canonical split itself: the

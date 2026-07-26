@@ -90,6 +90,19 @@ service acceptance supplies file-local opt-in flags so isolated subprocesses exe
 helper contracts. These finite-sample fixtures do not establish a complete QEC Record law,
 qutrit/leakage semantics, scalable execution, production readiness, or the internal restricted verdict.
 
+`test_external_xzzx_d7_capability_fixture.py` protects an engineering-only CUDA-Q/PECOS capability
+probe. It freezes local-H XZZX d7/r2 and d7/r7 Stim circuit and canonical-JSON fingerprints, exact
+measurement/reset order, detector arities, and raw-to-detector/logical XOR rows. Noiseless Stim
+sampling must fold to zero without assuming raw projected syndromes are zero. Removing a
+conjugating H, removing mid-round reset, or dropping one temporal record term must be detected.
+The test also pins CUDA-Q's 49-data Kraus placement after each complete 48-ancilla round, PECOS's
+distinct initial 24-check layer plus requested complete rounds, zero-strength inactive labels,
+critical runtime versions, root environment-lock bindings, real SHA-256 Conda URL fragments, and
+installed-state-only provenance language. GPU workers are deliberately outside pytest and run in
+their isolated environments under the shared GPU lease. A pass establishes adapter/fixture
+contracts only; it does not establish target completion, finite-bond Record-law faithfulness,
+dissipative PECOS MPS support, qutrit leakage, or a simulator service.
+
 `test_mps_three_leg_comparator.py` separately checks repository actual splits and Quimb public wiring
 against independent dense NumPy state math. Its publishable report requires a clean worktree, hashes
 selected and transitive owner sources plus both environment locks, checks selected NumPy/Quimb/Torch

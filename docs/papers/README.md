@@ -67,6 +67,9 @@ curl -L --fail https://arxiv.org/pdf/2012.03095v2 \
   -o outputs/papers/pepo_survey/2012.03095.pdf
 curl -L --fail https://arxiv.org/pdf/2507.11424v2 \
   -o outputs/papers/pepo_survey/2507.11424.pdf
+curl -L --fail \
+  https://harvest.aps.org/v2/journals/articles/10.1103/PhysRevLett.98.140506/fulltext \
+  -o docs/papers/schuch_wolf_verstraete_cirac_prl_98_140506.pdf
 curl -L --fail https://harvest.aps.org/v2/journals/articles/10.1103/PhysRevA.97.032306/fulltext \
   -o docs/papers/wood_gambetta_leakage_characterization_pra_97_032306.pdf
 curl -L --fail https://arxiv.org/pdf/1306.0925v2 -o docs/papers/1306.0925v2.pdf

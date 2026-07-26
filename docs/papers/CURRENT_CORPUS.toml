@@ -1,8 +1,8 @@
 schema = "error_coupling_simulator.literature.corpus_manifest.v1"
 status = "active"
-corpus_sha256 = "4bf3b5b3d060e4b41bbd95a72d8ed2281b3db72d30ead10a6ca0751568055d05"
-note_count = 29
-paper_fact_count = 348
+corpus_sha256 = "33a23422bc72ac98da2b778a4fe96f0f8f4880c97668338dff3a2474eb879e2e"
+note_count = 30
+paper_fact_count = 360
 
 [[notes]]
 path = "docs/papers/reading_notes/arsenijevic_bankovic_damping_1606.01145_source_review.md"
@@ -164,6 +164,13 @@ note_sha256 = "990f7dabd85e298544530374b9a59a774fdec3d8f55cb5b791e115d79f285529"
 source_id = "arxiv:2501.17913"
 source_version = "v2"
 source_sha256 = "9c2b2f2584da0270ef740c5e9ef0b5bc5d2f0fa88326bd0b8b7f04d634dcd2b5"
+
+[[notes]]
+path = "docs/papers/reading_notes/schuch_peps_complexity_prl_98_140506_source_review.md"
+note_sha256 = "7d3b487a5cf90ddb062a3a6730c9029e60420b3ebe8e7486432d249cdd7b5fae"
+source_id = "doi:10.1103/PhysRevLett.98.140506"
+source_version = "version-of-record"
+source_sha256 = "e996af2b5d573e3befd249f69fdfd29284c2a656134a80f46d9351eb9da51537"
 
 [[notes]]
 path = "docs/papers/reading_notes/tepepo_2d_open_system_tn_2512.01781.md"
