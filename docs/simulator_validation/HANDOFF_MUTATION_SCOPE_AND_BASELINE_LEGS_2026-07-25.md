@@ -111,10 +111,31 @@ without a falsifier.
 
 ## Open items
 
-1. **Read `.scratch/mutation-gate-adjudication/`** — three issues (gate-green definition, equivalent
-   mutant denominator, registry/execution snapshot coupling) that bear directly on this session's
-   scope change and kill-rate semantics. They were recovered from Spark this session and have not
-   been read. Check the scope narrowing against them before propagating it.
+1. ~~**Read `.scratch/mutation-gate-adjudication/`**~~ — **done 2026-07-25.** All three issues
+   survive the scope narrowing; none is resolved by it, and each now carries a dated comment with
+   measured evidence. The check found a defect the narrowing introduced, opened as
+   `.scratch/mutation-gate-adjudication/issues/04-narrowed-scope-breaks-suite-publish.md`:
+   `python tests/harness/mutation.py tests/_support/restricted_mps_mutation_suite.json` runs the
+   in-scope shard to completion and then raises instead of publishing, because the suite-level
+   disposition partition requires every reviewed row to be applied by exactly one *executed* batch
+   and all 204 rows belong to the now-deferred `cpu` batch. Reproducer:
+   `scripts/mutation_suite_scope_disposition_probe.py` (executes no mutants). A second defect sits
+   on the same path: post-publish checkpoint retirement iterates every declared batch, so a
+   narrowed publish would delete the checkpoints of batches it never ran. The shard chain
+   (`scripts/run_mutation_shard_chain.py`) is unaffected: it invokes batch registries directly and
+   never reaches suite authentication, which is why this shipped green.
+
+   **Neither defect was fixed, deliberately.** A fix was written and validated in-session (the
+   suite-level partition proving "applied by at most one batch" with an explicit deferred-review
+   disclosure, plus checkpoint retirement scoped to the scheduled batches), then **reverted and not
+   committed**: later the same day the user retired the mutation layer entirely in favour of unit
+   tests plus the coverage gate, so repairing a gate that is being removed would only add history to
+   maintain. **Do not run the default suite command** — it costs ~2 h of GPU and yields no report.
+   The shard chain (`scripts/run_mutation_shard_chain.py`) is unaffected: it invokes batch
+   registries directly and never reaches suite authentication, which is why this shipped green.
+   The reproducer `scripts/mutation_suite_scope_disposition_probe.py` and the analysis in
+   `.scratch/mutation-gate-adjudication/issues/04-narrowed-scope-breaks-suite-publish.md` are
+   retained so the defect is not rediscovered from scratch if the layer is ever revived.
 2. **Spark merge** — `mutation-x86-a875395` is pushed to Spark but not merged; its `Dev-F` is still
    at `a875395` and its fixture-family job has been running since 2026-07-24. Before merging, delete
    Spark's three untracked copies of `scripts/run_pinv_170_test.py`, `scripts/run_svd_170_test.py`

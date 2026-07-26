@@ -11,21 +11,39 @@ object. Metrics are instruments on the record.
 
 The only runtime package is `src/error_coupling_simulator/`. Exact installed ownership, service
 status, entry points, acceptance files, and the complete flow are defined by
-`docs/service_status.json` and generated into `docs/CODE_MAP.md`.
+`docs/service_status.json` and generated into `docs/CODE_MAP.md`. Read the owning module README
+before changing a module, and do not add flat modules at the package root.
 
-The current carrier frontier is the single-wire two-dimensional PEPS research route. The
-density-matrix PEPO is also retained as a tested research carrier. Neither has established
-finite-truncation full-record or d5/d7 faithfulness. The former PEPS/FET all-noop blocker was an
-implementation defect: gauge preparation mutated the verdict-driving gamma tensor and the complete
-local QR/SVD feasible candidate was not retained. The focused B1_3 owner gate now preserves gamma,
-reconstructs the local map, and accepts an independently checked rank-four candidate from stored bond
-dimension 12 at the unchanged strict `eps_fid=1e-8`. Clean-head aggregate replay and the literature
-bridge from local FET fidelity to full-record faithfulness remain open. Do not weaken the target or
-promote this bounded repair into a PEPS faithfulness claim.
+**This file holds only what always binds.** What is true *right now* — the current stage, what to
+read first, what is in flight, what has been superseded — lives in `docs/READING_ORDER.md`. Read it
+at the start of a session; it is short by design.
 
-The classical finite-RTN source process and the static qutrit XZZX leakage process are separate
-implemented routes. Do not describe an integrated source-driven qutrit XZZX record product as
-current.
+## Current authority
+
+Answer the question with the surface that owns it. Grepping `src/` to find out what exists, or
+inferring from module structure what is claimed, is the slow path and it has produced wrong answers.
+
+| question | read this first |
+|---|---|
+| what may be claimed at all; the product boundary | `docs/SIMULATOR.md` (wins every conflict), `CONTEXT.md` for the glossary and claim classes |
+| what a service claims, and what it explicitly does **not** | `docs/service_status.json` — the per-service `note` and the `excluded_surfaces` dispositions |
+| what modules and services exist, who owns what, the flow | `docs/CODE_MAP.md`, `docs/ARCHITECTURE.md` |
+| what is executable acceptance versus regression | `tests/CODEBOOK.md` |
+| whether a number may be claim-bearing | `docs/METRICS.md`, `docs/FAITHFULNESS_PROTOCOL.md`, `docs/NUMERICAL_PROVENANCE.md` |
+| what the literature says | `tools/literature_rag.py query`, `tools/literature_kg.py concept` — then `audit` before treating the answer as coverage |
+| what matters at the current stage; what is in flight | `docs/READING_ORDER.md` |
+
+`service_status.json` is the claim boundary, and a service `note` usually answers a scope question
+outright: the `restricted_axis1_1d_mps` note states in its first sentence that `carrier/mps` "makes
+no state-, Record-, or LER-faithfulness claim and is not a registered scientific Carrier". Read it
+before writing any scope, status, or completion sentence.
+
+Keep these honest rather than assuming they are: `python tools/gen_code_map.py --check` and
+`python scripts/rebuild_current_corpus_manifest.py --check`.
+
+The pre-cleanup formula ledger, old project narratives, old outputs, and current local retrieval
+caches are not scientific authority. Until the literature reset closes, return load-bearing claims
+to primary papers and exact equation/figure/table locators.
 
 ## Commands
 
@@ -65,8 +83,20 @@ environment. PyMatching is optional; the default record path is decoder-free.
 
 The literature tools build from live `error_coupling_simulator.literature.note.v1` records. RAG
 returns only `paper_fact`; KG relationships require exact source locators and zero dangling
-endpoints. Neither tool reads quarantined vector/graph caches. Retrieval is discovery only; reopen
-the primary source before using a load-bearing claim.
+endpoints. Neither tool reads quarantined vector/graph caches.
+
+**Local absence is not a gap.** The admitted corpus is a small, topically skewed subset of the
+notes on disk, so a "nobody has done this" conclusion drawn from local retrieval describes this
+corpus, not the field. Before any gap or novelty claim: search externally with `anysearch`, fetch
+the primary source into `docs/papers/` with `deep-read-paper`'s `fetch_and_extract.py` (run it
+under `ecs`; the system Python has no pypdf), and write the reading note. Snippets and abstracts
+never settle a row, and a repository is only evidence of prior art if it was searched for, not if
+it happened to be cloned. This rule is written because a local-only survey once concluded "no
+external precedent" for an effect published in arXiv:2002.07119 and demonstrated on d3 Surface-17.
+
+`docs/papers/CURRENT_CORPUS.toml` is what `query` and the KG actually read, so an audited-valid note
+missing from it answers nothing. Keep the two equal with
+`python scripts/rebuild_current_corpus_manifest.py` (`--check` reports drift without writing).
 
 ## Acceptance execution
 
@@ -84,39 +114,6 @@ gate.
 
 `pytest tests/` is an engineering regression surface, not a scientific certification claim.
 Scientific acceptance is subsystem-owned and listed in `tests/CODEBOOK.md` and the service catalog.
-
-The restricted-MPS mutation suite declares six batches but runs only the in-scope ones by default.
-The default scope is the `certify` shard alone: the evaluator judges every external comparison, so
-no baseline leg can validate it, and its fail-closed guards are invisible to green tests because a
-guard that never fires looks like one that cannot fire. The numerical modules are deferred to the
-external comparison legs and can still be run explicitly by their own registry. Every batch declares
-`default_scope` and a `scope_rationale`, and a suite run publishes its executed and deferred batches,
-so a narrowed score never reads as a complete one. Each GPU shard also declares its own worker count
-for the host that runs it, bounded by `mutation._GPU_MAX_FRESH_WORKERS`; that is a throughput
-decision only, because the per-mutant timeout scales by the same concurrency and a real timeout or
-resource exhaustion aborts the shard rather than being scored.
-
-## Architecture
-
-```text
-src/error_coupling_simulator/
-  source/           replayable finite-RTN timelines and explicit source-to-parameter mapping
-  mechanisms/       local Axis-1 primitives, qutrit leakage, and explicit CZ transport
-  noise_processes/  controlled generative record processes
-  carrier/
-    exact/           bounded density-matrix references
-    kernels/         scoped native CUDA acceleration
-    pepo/            retained density-matrix PEPO research carrier
-    peps/            single-wire PEPS research frontier
-    records.py       common record objects and packed layout
-    record_fold.py   raw-syndrome to temporal-detector conversion
-  frontend/         circuit IR, compiler, schedules, bounded executors, artifact emission
-  certify/          evaluator-only reference-oracle scoring
-  quantum_bath/     feasibility-only research models
-  numerics.py       shared float64 representability and comparison policy
-```
-
-Read the owning module README before changing a module. Do not add flat modules at the package root.
 
 ## Code and scientific rules
 
@@ -136,6 +133,11 @@ Read the owning module README before changing a module. Do not add flat modules 
   `docs/METRICS.md`; every faithfulness claim follows `docs/FAITHFULNESS_PROTOCOL.md`.
 - Every retained scientific claim needs a physical name, formula, implementation owner, current
   falsifier, and exact primary-source or complete-derivation locator. A missing item is a gap.
+  A locator must **resolve in the named artifact**: open it and check the section exists, that the
+  source uses the term you attribute to it, and that it says what you cite it for. Nothing in the
+  test surface checks this, and a `src/` docstring once cited "McEwen 2102.06131 §3.2/§3.4" for a
+  "DD echo" in a paper that is numbered I–V, never uses the word echo, and describes X gates for
+  relaxation depolarization rather than leakage.
 - External baseline repositories are pristine. Adaptors live in this repository, not in vendored
   upstream code. Each isolated baseline environment has a committed root lock
   (`baseline-environment-{aer,yastn,qutip,itensor}-linux-64.lock.json`); rebuild and leg
@@ -164,22 +166,23 @@ Fresh-process acceptance and mutation orchestration use `ECS_GPU_SLOT`,
 `ECS_MUT_TIMEOUT_CONST`, `ECS_MUT_TIMEOUT_MULT`, `ECS_GPUS`, and `ECS_MUT_BAR`. These keys configure
 the harness; they are not simulator runtime inputs.
 
-## Current authority
-
-- `docs/SIMULATOR.md` — binding product and scientific boundary.
-- `CONTEXT.md` — glossary and claim classes.
-- `docs/ARCHITECTURE.md` — module and flow summary.
-- `docs/service_status.json` + `docs/CODE_MAP.md` — exact current inventory.
-- `tests/CODEBOOK.md` — executable acceptance/coverage map.
-- `docs/METRICS.md`, `docs/FAITHFULNESS_PROTOCOL.md`, `docs/NUMERICAL_PROVENANCE.md` — scientific
-  disciplines.
-- `docs/simulator_validation/` — current cleanup and retained-carrier evidence/status.
-
-The pre-cleanup formula ledger, old project narratives, old outputs, and current local retrieval
-caches are not scientific authority. Until the literature reset closes, return load-bearing claims
-to primary papers and exact equation/figure/table locators.
-
 ## Agent skills
+
+Installed under `.claude/skills/`, which `.gitignore` excludes via `.*/`. They do not travel with a
+clone and no lock records them, so this section is their only durable record. The ordering binds
+whether or not the files are present.
+
+`theory-first` runs **before** any new mechanism, observable, metric, forward model, prediction, or
+experiment; only a closed evidence packet plus a passing preregistration permits code. `theory-fix`
+runs **during or after** results, before a result becomes a premise for a definition, design, or a
+new run. `project-engine-ecs` routes work here: engineering repairs direct, `theory-first` first for
+new scientific mechanism or fixture code, evaluator truth isolated, semantic mutation last.
+
+Composed by those and callable alone: `zoom-out`, `close-literature`, `anysearch`,
+`deep-read-paper`, `preregister-claim`, `stress-test-claim`. Engineering: `tdd`, `diagnose`,
+`codebase-cleanup`, `improve-codebase-architecture`, `neat-freak`, `collaborative-workspace`,
+`grill-me`, `grill-with-docs`, `to-prd`, `to-issues`, `caveman`. `contract-build/` and
+`theory-first-workspace/` hold no skill file.
 
 ### Issue tracker
 
