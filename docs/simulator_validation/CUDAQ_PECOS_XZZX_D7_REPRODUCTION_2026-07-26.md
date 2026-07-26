@@ -191,11 +191,18 @@ Scaling of the same noiseless control at chi=16, r=3:
 
 | d | qubits | MPS chi=16 fired | stabilizer | chi needed for exactness |
 |---|---|---|---|---|
-| 3 | 17 | 5 / 28 | 0 | **64** |
-| 5 | 49 | 22 / 84 | 0 | > 256, not located |
-| 7 | 97 | 74 / 168 | 0 | far beyond 256; fidelity lb ~1e-45 there |
+| 3 | 17 | 5 / 28 | 0 | **64** (fidelity lb exactly 1.000, 0 fired over 5 shots) |
+| 5 | 49 | 22 / 84 | 0 | **> 1024** (at chi=1024 the bound is still 7.90e-18 and 57 detectors fire over 3 shots; at chi=256, 6.84e-23 and 87) |
+| 7 | 97 | 74 / 168 | 0 | far beyond 256; bound ~1e-45 there, 124/192 bonds pinned |
 
-d3 already needs chi=64. That is the wall, measured here rather than argued.
+`chi = 4096` at d5 produced no output row and no Python-level exception, so the process was
+killed rather than failing logically. It is recorded as not obtained, not as a failure.
+
+d3 already needs chi=64, d5 has not reached exactness by chi=1024, and the required bond
+grows roughly as the exponential of the patch width that d3's 2**6 and d5's >2**10 suggest.
+That is the wall, measured here rather than argued, and it is the same one Manabe, Suzuki &
+Darmawan describe when they fix their patch width at 3 and defer two-dimensional
+connectivity to "tensor network ansatz beyond MPS".
 
 **A caveat that must travel with these numbers.** The pytket MPS object also reports
 `fidelity`, and at chi=16 it reads `3.14e-29` then `1.23e-47`, with 168 of 192 bonds pinned
