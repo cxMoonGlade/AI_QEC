@@ -1,8 +1,8 @@
 # PEPS d5 pure-state fidelity — pre-registration
 
-Status: **READY TO FREEZE, 2026-07-26.** No d5 target result has been run.
-Predictions, fixture, controls, and decision bands become frozen only after
-this document and every verdict-driving owner are committed. A miss is a
+Status: **FROZEN, 2026-07-26.** No d5 target result has been run. The
+predictions, fixture, controls, decision bands, and fail-closed terminal owner
+were frozen by commit `06e5a2e`; its focused suite passed `26/26`. A miss is a
 finding, not a reason to change the fixture or band.
 
 ## -1. Question charter
@@ -276,14 +276,15 @@ Prerequisite gate:
 |---|---|
 | premises closed | pass |
 | standard metric bound | pass: Evenbly normalized whole-state fidelity |
-| metric owner and independent tests | pending until committed |
-| predictions frozen | pending until committed |
+| metric owner and independent tests | pass: commit `06e5a2e`, `26/26` focused tests |
+| predictions frozen | pass: fixture/bands/owners committed at `06e5a2e` |
 | independent ground truth | pass by design; must pass d3 before target |
 | constraint falsifiers registered | pass by design; must demonstrate trips |
 | simplifications bounded | pass for the frozen pure-state object |
 | controls registered | pass |
-| **preregistration gate** | **BLOCKED UNTIL COMMIT + d3/falsifier gate** |
+| **preregistration gate** | **PASS FOR THE CONDITIONAL TERMINAL RUNNER ONLY** |
 
-Theory-first verdict: owner code may be completed and tested, but **d5 target
-execution is prohibited until a scoped freeze commit exists and every d3 and
-corruption control passes from committed code.**
+Theory-first verdict: the committed terminal runner is permitted to execute.
+It must rerun both commit-bound d3 adapters and the registered d5 physical
+corruption before the first external d5 candidate; any failed control forbids
+a target verdict.

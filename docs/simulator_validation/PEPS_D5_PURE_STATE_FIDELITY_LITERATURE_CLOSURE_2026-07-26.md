@@ -1,6 +1,6 @@
 # PEPS d5 pure-state fidelity — literature closure
 
-Date: 2026-07-26  
+Date: 2026-07-26
 Status: **closed for the bounded pure-state benchmark; not a QEC Record closure**
 
 ## Frozen claim
