@@ -1,6 +1,6 @@
 # Reading order — what matters at the current stage
 
-Reconciled 2026-07-26 against `b4ddbdb`.
+Reconciled 2026-07-26 against `06780fe`.
 Verify with `python tools/check_reading_order.py`.
 
 `CLAUDE.md` holds the rules that always bind and a routing table for which surface owns which
@@ -63,14 +63,12 @@ Mutation testing is retired; verification is unit tests plus the coverage gate.
 
 ## Next, in this order
 
-1. **Package the d3 non-Pauli record as a committed entrypoint.** It already works and has never
-   been shipped: `experiments.load_xzzx_d3(with_interior_streams=True)` ->
-   `experiments.run_spec_from_preset(PRESET_LEAK_THETA_0P30, ...)` ->
-   `FusedWithinCycleSampler(device="cuda").sample(...).to_det_obs()`. Verified at R=1..10 and 25,
-   N up to 16384, complex128, max norm drift 7.8e-16, detector rate monotone in theta. The Stim leg
-   (d3 and d5 Pauli, full `.b8` + `.dem` + per-artifact sha256 manifest through our own
-   `StimCircuitSource` + `Simulator`) is equally unshipped. Both currently exist only as scratchpad
-   probes; see below.
+1. **Done** — both legs are packaged as `scripts/run_real_code_records.py`. `--leg pauli` runs a
+   Stim-generated rotated surface code at any distance through our own `StimCircuitSource` and
+   `Simulator`, with `shortest_graphlike_error` as an executable distance falsifier; `--leg analog`
+   runs the real d3 XZZX patch through the within-cycle carrier under a registered qutrit leakage
+   preset. Next on this line is a decoder for the Pauli leg, since every rate it reports is
+   undecoded.
 2. **Accuracy-versus-chi curve at n <= 8.** `_RECORD_EVIDENCE_QUBIT_CAP = 8` and
    `_DENSE_CHANNEL_MAX_DIM = 256 = 2**8`, and an 8-qubit chain has middle-cut bond 16, so
    `chi` in {1,2,4,8,16} genuinely truncates inside the certifiable regime.
@@ -108,13 +106,15 @@ implementation. Do not cite "quantumsim" for that paper without naming a ref.
 
 ## Live only in the session scratchpad
 
-Not committed, and lost when the scratchpad is cleared. Re-derive or promote before relying on them:
-`d3run.py` (Stim d3/d5 through our Simulator), `p3_carrier_record.py` (the three-call d3 non-Pauli
-path), `p1_parse.py` / `p2_stim_record.py` / `p9_parity.py` / `p10_parity.py` (probes),
-`emit_stim_json.py` + `aer_probe3.py` (the qiskit-aer MPS non-Pauli prototype, reported at 1.7
-ms/shot for d3 and a 16.9 sigma Kraus-versus-twirl separation, **not independently reproduced**),
-and `gen_external_code_map.py` + `EXTERNAL_CODE_MAP.md` (written by a subagent, duplicates the
-committed `tools/gen_external_tn_code_map.py`, deliberately not committed).
+The load-bearing ones are promoted: both record legs into `scripts/run_real_code_records.py`, and
+the qiskit-aer MPS non-Pauli prototype into
+`scripts/external_baselines/aer_mps_nonpauli_record_prototype.py` plus
+`scripts/external_baselines/emit_stim_circuit_json.py`, headed with the fact that its numbers were
+never independently reproduced.
+
+Left in the scratchpad and expendable: roughly a hundred one-off probes. Two files are deliberately
+not committed -- `gen_external_code_map.py` and `EXTERNAL_CODE_MAP.md`, written by a subagent and
+duplicating the committed `tools/gen_external_tn_code_map.py`.
 
 ## Maintenance
 
