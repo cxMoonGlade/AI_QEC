@@ -5,9 +5,9 @@ relationships appear here. This is routing metadata; the cited PDF and locator r
 the evidence.
 
 - corpus status: active
-- sources: 15
-- concept nodes: 52
-- source-located relationships: 52
+- sources: 29
+- concept nodes: 84
+- source-located relationships: 84
 - dangling relationships: 0
 
 ## bond environment (concept)
@@ -18,9 +18,17 @@ the evidence.
 
 - **defines** — Fundamental Speed Limits on Quantum Coherence and Correlation Decay — `Methods, Eqs. (10)–(11)`, PDF p. 5 — The summed dissipator has collapse-operator gauge invariance under unitary mixing, while adding an identity multiple to a collapse operator produces only the stated effective-Hamiltonian correction. ([docs/papers/reading_notes/oi_schirmer_pure_dephasing_1109.0954_source_review.md](reading_notes/oi_schirmer_pure_dephasing_1109.0954_source_review.md))
 
+## generalized MPO (concept)
+
+- **defines** — A simplified and improved approach to tensor network operators in two dimensions — `Sec. III A and Fig. 1`, PDF p. 4 — A generalized MPO adds an external virtual index `beta_i` to each operator-valued MPO matrix, and summing those indices couples operators outside the one-dimensional MPO domain into a sum of ordinary MPOs. ([docs/papers/reading_notes/orourke_chan_simplified_pepo_1911.04592.md](reading_notes/orourke_chan_simplified_pepo_1911.04592.md))
+
 ## mixed-canonical matrix-product-state cut (concept)
 
 - **defines** — Time-evolution methods for matrix-product states — `Secs. 2.4–2.6.1, Eqs. (11)–(15) and Figs. 4–6`, PDF p. 7 — A mixed-canonical matrix-product-state cut supplies orthonormal effective bases on both sides of the selected bond, so the bond tensor can be treated as the coefficient matrix for that bipartition. ([docs/papers/reading_notes/paeckel_mps_time_evolution_1901.05824_source_review.md](reading_notes/paeckel_mps_time_evolution_1901.05824_source_review.md))
+
+## monotonic convergence (concept)
+
+- **supports** — Simulation of IBM's kicked Ising experiment with Projected Entangled Pair Operator — `Sec. IV B and Fig. 3`, PDF p. 5 — For the 20-step `Z_62` expectation, the paper observes monotonic convergence with increasing `chi` in the intermediate-angle regime and fits the finite-`chi` values with `b exp(-a/chi)` to extrapolate toward infinite bond dimension. ([docs/papers/reading_notes/liao_heisenberg_pepo_2308.03082.md](reading_notes/liao_heisenberg_pepo_2308.03082.md))
 
 ## TDVP error decomposition (concept)
 
@@ -33,6 +41,10 @@ the evidence.
 ## DLM twirl (limitation)
 
 - **limits** — Quantification and Characterization of Leakage Errors — `Sec. VI.A.3, Eq. (49) and its preceding paragraph`, PDF p. 8 — The printed DLM twirl introduces independent leakage-subspace unitaries `U_2,V_2` and sums over both, while Eq. (49) divides by only one factor of `|P_2|`. ([docs/papers/reading_notes/wood_gambetta_leakage_diagnostics_pra_97_032306.md](reading_notes/wood_gambetta_leakage_diagnostics_pra_97_032306.md))
+
+## error-correction-regime projection (limitation)
+
+- **limits** — Heralded Leakage Detection with Preserved Computational-State Coherence in a Fixed-Frequency Transmon — `Supplemental Sec. IX, opening paragraphs`, PDF p. 16 — The error-correction-regime projection assumes leakage population below about one percent and treats post-detection ge-to-f late flips as flagged in the subsequent detection cycle, so that contribution is not counted as an unheralded error. ([docs/papers/reading_notes/miyamura_heralded_leakage_2607.17204v1.md](reading_notes/miyamura_heralded_leakage_2607.17204v1.md))
 
 ## finite-boundary-dimension sampling (limitation)
 
@@ -54,6 +66,10 @@ the evidence.
 
 - **limits** — One-dimensional many-body entangled open quantum systems with tensor network methods — `Sec. III.B, Eq. (27) and the following paragraph`, PDF p. 12 — A nonlinear trajectory observable such as density-matrix purity is not the average of the corresponding pure-trajectory value and can require all pairwise trajectory contractions. ([docs/papers/reading_notes/jaschke_open_system_tn_1804.09796_source_review.md](reading_notes/jaschke_open_system_tn_1804.09796_source_review.md))
 
+## rank-one simple-update environment (limitation)
+
+- **limits** — Efficient Time Evolution of 2D Open-Quantum Lattice Models with Long-Range Interactions using Tensor Networks — `Section V.C and Discussion, pages 8 and 13`, PDF p. 13 — The itrSU truncation retains a rank-one simple-update environment made from bond matrices, and the source calls this environment approximation uncontrolled. ([docs/papers/reading_notes/tepepo_2d_open_system_tn_2512.01781.md](reading_notes/tepepo_2d_open_system_tn_2512.01781.md))
+
 ## sequential cutwise SVD local optimality (limitation)
 
 - **limits** — Time-evolution methods for matrix-product states — `Sec. 2.6.1, final paragraph`, PDF p. 9 — Sequential cutwise SVD local optimality does not guarantee a globally optimal compressed matrix-product state when truncation errors are large. ([docs/papers/reading_notes/paeckel_mps_time_evolution_1901.05824_source_review.md](reading_notes/paeckel_mps_time_evolution_1901.05824_source_review.md))
@@ -66,13 +82,57 @@ the evidence.
 
 - **limits** — One-dimensional many-body entangled open quantum systems with tensor network methods — `Sec. III.B, paragraph immediately after Eq. (25)`, PDF p. 11 — Solver-induced norm error can contaminate the physical norm loss used for quantum-trajectory jump timing because the local Runge–Kutta method can enhance or prevent the loss caused by the effective Hamiltonian. ([docs/papers/reading_notes/jaschke_open_system_tn_1804.09796_source_review.md](reading_notes/jaschke_open_system_tn_1804.09796_source_review.md))
 
+## alternating ancilla pi-pulse scheme (method)
+
+- **uses** — Leakage detection for a transmon-based surface code — `Appendix G, opening paragraph spanning PDF pp. 18-19`, PDF p. 19 — The alternating ancilla pi-pulse scheme applies a pi pulse to each ancilla every other cycle and compensates it in post-processing so that a leaked ancilla, assumed unaffected by the pulse, would create a defect every cycle. ([docs/papers/reading_notes/varbanov_leakage_detection_surface17_2002.07119.md](reading_notes/varbanov_leakage_detection_surface17_2002.07119.md))
+
+## ancilla-assisted measurement of a single sigma-z operator (method)
+
+- **defines** — Understanding the effects of leakage in superconducting quantum error detection circuits — `Abstract and Sec. I, PDF p. 1`, PDF p. 1 — The source studies repeated ancilla-assisted measurement of a single sigma-z operator for one data qutrit and analyzes leakage signatures in the ancilla readout sequence. ([docs/papers/reading_notes/ghosh_leakage_paralysis_1306.0925v2.md](reading_notes/ghosh_leakage_paralysis_1306.0925v2.md))
+
+## boundary gMPO method (method)
+
+- **supports** — A simplified and improved approach to tensor network operators in two dimensions — `Sec. III B, steps 1--6 and Fig. 4(c)--(g)`, PDF p. 6 — The boundary gMPO method precomputes upper norm environments, initializes a running energy from a bottom-row MPO, carries crossing interactions in `intops`, and alternates row gMPO contraction with an approximate `intops` update until the final scalar `<psi|H|psi>` is accumulated. ([docs/papers/reading_notes/orourke_chan_simplified_pepo_1911.04592.md](reading_notes/orourke_chan_simplified_pepo_1911.04592.md))
+
+## CTMRG projector truncation (method)
+
+- **defines** — An introduction to infinite projected entangled-pair state methods for variational ground state simulations using automatic differentiation — `Sec. 2.2.2, Figs. 7--8 and Eqs. (4)--(6)`, PDF p. 10 — CTMRG projector truncation singular-value decomposes an approximate lattice-environment matrix `M=rho_B rho_T` and retains the leading `chi_E` singular subspace. ([docs/papers/reading_notes/naumann_varipeps_lectures_source_review.md](reading_notes/naumann_varipeps_lectures_source_review.md))
+
+## direct binary leakage measurement (method)
+
+- **defines** — Heralded Leakage Detection with Preserved Computational-State Coherence in a Fixed-Frequency Transmon — `Fig. 1 and accompanying text`, PDF p. 2 — The direct binary leakage measurement applies a near-resonant computational-transition Rabi drive during dispersive probing so the resonator responses of ground and first-excited states merge while the measured second-excited-state response remains distinct. ([docs/papers/reading_notes/miyamura_heralded_leakage_2607.17204v1.md](reading_notes/miyamura_heralded_leakage_2607.17204v1.md))
+
+## echo pulse breaks leakage paralysis (method)
+
+- **supports** — Protecting quantum entanglement from qubit errors and leakage via repetitive parity measurements — `Supplemental Sec. II.B, parenthetical sentence after the ZZ-and-XX effective-check example`, PDF p. 11 — In the repeated-ZZ experiment, the echo pulse breaks leakage paralysis by flipping the effective stabilizer of a leaked qubit on each round. ([docs/papers/reading_notes/bultink_repetitive_parity_leakage_1905.12731v1.md](reading_notes/bultink_repetitive_parity_leakage_1905.12731v1.md))
+
+## finite-signaling-agent tePEPO construction (method)
+
+- **defines** — Efficient Time Evolution of 2D Open-Quantum Lattice Models with Long-Range Interactions using Tensor Networks — `Section III.B, Eq. (7), Tables I-II, and Algorithm 1, pages 5-6`, PDF p. 5 — The finite-signaling-agent tePEPO construction assigns operator-valued rules to combinations of four virtual-edge signals and rejects signal patterns that do not encode accepted cluster terms. ([docs/papers/reading_notes/tepepo_2d_open_system_tn_2512.01781.md](reading_notes/tepepo_2d_open_system_tn_2512.01781.md))
+
 ## full-environment truncation (method)
 
 - **defines** — Gauge fixing, canonical forms, and optimal truncations in tensor networks with closed loops — `Sec. V, Eq. (12) and Fig. 5`, PDF p. 6 — Full-environment truncation replaces a selected bond by a lower-rank factorization and chooses its factors to maximize normalized whole-network pure-state fidelity. ([docs/papers/reading_notes/evenbly_closed_loop_truncation_1801.05390_source_review.md](reading_notes/evenbly_closed_loop_truncation_1801.05390_source_review.md))
 
+## Gaussian long-range approximation (method)
+
+- **uses** — Efficient Time Evolution of 2D Open-Quantum Lattice Models with Long-Range Interactions using Tensor Networks — `Section IV, Eqs. (9)-(12) and Table III, pages 6-7`, PDF p. 7 — The Gaussian long-range approximation fits a radial interaction profile on a finite lattice disc by a weighted sum of separable Gaussian functions that each admit FSA rules. ([docs/papers/reading_notes/tepepo_2d_open_system_tn_2512.01781.md](reading_notes/tepepo_2d_open_system_tn_2512.01781.md))
+
+## Heisenberg PEPO evolution (method)
+
+- **supports** — Simulation of IBM's kicked Ising experiment with Projected Entangled Pair Operator — `Sec. III, paragraphs below Eqs. (4)--(5)`, PDF p. 3 — Heisenberg PEPO evolution represents the time-evolved observable as a PEPO, applies each gate together with its conjugate from the middle toward the two temporal boundaries, compresses by simple-update singular-value decompositions, and exactly contracts the final tensor network to a scalar expectation. ([docs/papers/reading_notes/liao_heisenberg_pepo_2308.03082.md](reading_notes/liao_heisenberg_pepo_2308.03082.md))
+
 ## iPEPO density-operator evolution (method)
 
 - **defines** — On the stability of the infinite Projected Entangled Pair Operator ansatz for driven-dissipative 2D lattices — `Appendix A.2, first three paragraphs, page 15`, PDF p. 15 — The iPEPO density-operator evolution vectorizes a PEPO into a PEPS-shaped state and replaces imaginary-time Hamiltonian gates by real-time two-body Liouvillian gates. ([docs/papers/reading_notes/kilda_ipepo_stability_2012.03095.md](reading_notes/kilda_ipepo_stability_2012.03095.md))
+
+## iterative simple-update truncation (method)
+
+- **defines** — Efficient Time Evolution of 2D Open-Quantum Lattice Models with Long-Range Interactions using Tensor Networks — `Section V.C and Appendix D, pages 8-9 and 18`, PDF p. 18 — The iterative simple-update truncation reuses previous-step isometries on every non-target bond, performs a QR and truncated SVD on the remaining bond, updates the isometries and bond weight, and repeats over all bonds. ([docs/papers/reading_notes/tepepo_2d_open_system_tn_2512.01781.md](reading_notes/tepepo_2d_open_system_tn_2512.01781.md))
+
+## neighborhood tensor update (method)
+
+- **defines** — Time evolution of an infinite projected entangled pair state: a neighborhood tensor update — `Sec. II, Figs. 3--4`, PDF p. 4 — Neighborhood tensor update contracts a finite nearest-neighbor double-layer cluster exactly to obtain a metric that is Hermitian and nonnegative to machine precision. ([docs/papers/reading_notes/dziarmaga_ntu_2107.06635_source_review.md](reading_notes/dziarmaga_ntu_2107.06635_source_review.md))
 
 ## quantum-trajectory jump-channel selection (method)
 
@@ -90,6 +150,18 @@ the evidence.
 
 - **defines** — Simulating and Sampling from Quantum Circuits with 2D Tensor Networks — `Section II, sampling definitions and procedure, page 4`, PDF p. 4 — The terminal tensor-network sampling method draws a final computational-basis bitstring x from q(x), while p(x)=|<x|psi>|^2 is the terminal distribution encoded by the final tensor-network state. ([docs/papers/reading_notes/rudolph_tindall_gpu_peps_2507.11424.md](reading_notes/rudolph_tindall_gpu_peps_2507.11424.md))
 
+## two-hidden-state leakage model (method)
+
+- **defines** — Leakage detection for a transmon-based surface code — `Appendix E, Eqs. (E1)-(E6)`, PDF p. 17 — The two-hidden-state leakage model uses computational and leaked states, a transition matrix parameterized by leakage and seepage per cycle, state-dependent defect emissions, and a Bayesian posterior update. ([docs/papers/reading_notes/varbanov_leakage_detection_surface17_2002.07119.md](reading_notes/varbanov_leakage_detection_surface17_2002.07119.md))
+
+## YASTN layered architecture (method)
+
+- **defines** — YASTN: Yet another symmetric tensor networks; A Python library for Abelian symmetric tensor network calculations — `Sec. 2 and Fig. 2`, PDF p. 4 — The YASTN layered architecture separates Abelian symmetry structure from dense numerical backends in `yastn.Tensor` and builds higher-level MPS and fPEPS modules above that symmetric-tensor layer. ([docs/papers/reading_notes/rams_yastn_codebase_source_review.md](reading_notes/rams_yastn_codebase_source_review.md))
+
+## binary projection character (model)
+
+- **supports** — Heralded Leakage Detection with Preserved Computational-State Coherence in a Fixed-Frequency Transmon — `Supplemental Sec. VII and Fig. S7`, PDF p. 15 — The binary projection character is supported by a coherent three-level input whose ground-first coherence is largely retained while ground-second and first-second coherences are strongly suppressed. ([docs/papers/reading_notes/miyamura_heralded_leakage_2607.17204v1.md](reading_notes/miyamura_heralded_leakage_2607.17204v1.md))
+
 ## depolarizing leakage extension (model)
 
 - **defines** — Quantification and Characterization of Leakage Errors — `Sec. VI.A.2, Eqs. (46)--(47)`, PDF p. 8 — The depolarizing leakage extension of a computational-subspace channel is the model in Eq. (46), parameterized by leakage and seepage rates and completely depolarizing maps between the two subspaces. ([docs/papers/reading_notes/wood_gambetta_leakage_diagnostics_pra_97_032306.md](reading_notes/wood_gambetta_leakage_diagnostics_pra_97_032306.md))
@@ -102,6 +174,14 @@ the evidence.
 
 - **defines** — Fundamental Speed Limits on Quantum Coherence and Correlation Decay — `Results, Eqs. (1)–(4)`, PDF p. 2 — A diagonal pure-dephasing rate is one half the summed squared diagonal entries minus their real cross product, and each coherence magnitude decays exponentially at that rate. ([docs/papers/reading_notes/oi_schirmer_pure_dephasing_1109.0954_source_review.md](reading_notes/oi_schirmer_pure_dephasing_1109.0954_source_review.md))
 
+## effective N-minus-one-qubit parity check (model)
+
+- **defines** — Protecting quantum entanglement from qubit errors and leakage via repetitive parity measurements — `Supplemental Sec. II.B, paragraph beginning with an N-qubit parity check`, PDF p. 11 — A leaked site reduces an N-qubit stabilizer measurement to an effective N-minus-one-qubit parity check plus a fixed phase from the leaked interaction. ([docs/papers/reading_notes/bultink_repetitive_parity_leakage_1905.12731v1.md](reading_notes/bultink_repetitive_parity_leakage_1905.12731v1.md))
+
+## effective weight-three parity checks (model)
+
+- **defines** — Leakage detection for a transmon-based surface code — `Appendix D, Eq. (D13) and following paragraph`, PDF p. 16 — At leakage conditional phase zero or pi, the branch operators become projectors onto effective weight-three parity checks and their anti-commutation fully randomizes individual ancilla outcomes. ([docs/papers/reading_notes/varbanov_leakage_detection_surface17_2002.07119.md](reading_notes/varbanov_leakage_detection_surface17_2002.07119.md))
+
 ## finite open-boundary PEPS (model)
 
 - **defines** — Algorithms for finite projected entangled pair states — `Sec. II, PEPS definition and Fig. 1`, PDF p. 2 — The source studies a finite open-boundary PEPS on a square lattice, with one physical index per lattice site and virtual bond dimension `D`. ([docs/papers/reading_notes/lubasch_finite_peps_1405.3259_source_review.md](reading_notes/lubasch_finite_peps_1405.3259_source_review.md))
@@ -113,6 +193,14 @@ the evidence.
 ## generalized amplitude-damping channel (model)
 
 - **derives** — Microscopic derivation of the one qubit Kraus operators for amplitude and phase damping — `Sec. 3, Eqs. (17)–(18)`, PDF p. 5 — The finite-temperature master equation generates a generalized amplitude-damping channel with four Kraus branches and distinct positive downward and upward rates. ([docs/papers/reading_notes/arsenijevic_bankovic_damping_1606.01145_source_review.md](reading_notes/arsenijevic_bankovic_damping_1606.01145_source_review.md))
+
+## leakage conditional phases (model)
+
+- **defines** — Leakage detection for a transmon-based surface code — `Sec. I.A, definitions following the CZ model`, PDF p. 2 — The leakage conditional phases are the phase differences imposed on the computational partner when either the fluxed or static CZ partner is leaked. ([docs/papers/reading_notes/varbanov_leakage_detection_surface17_2002.07119.md](reading_notes/varbanov_leakage_detection_surface17_2002.07119.md))
+
+## leakage phase theta (model)
+
+- **defines** — Understanding the effects of leakage in superconducting quantum error detection circuits — `Sec. II.A, Eqs. (7)-(8)`, PDF p. 3 — The leakage phase theta is defined as xi2 minus xi1 and is the dynamical phase difference that determines whether the ancilla becomes paralyzed during a data-leakage event. ([docs/papers/reading_notes/ghosh_leakage_paralysis_1306.0925v2.md](reading_notes/ghosh_leakage_paralysis_1306.0925v2.md))
 
 ## Lindblad leakage model (model)
 
@@ -146,9 +234,21 @@ the evidence.
 
 - **defines** — Quantification and Characterization of Leakage Errors — `Sec. VI.B, Eqs. (57)--(58), first equality`, PDF p. 9 — The unitary leakage model starts from `H = (|1><2| + |2><1|)/2` and defines its propagator by `U(t) = exp(-i t H)`. ([docs/papers/reading_notes/wood_gambetta_leakage_diagnostics_pra_97_032306.md](reading_notes/wood_gambetta_leakage_diagnostics_pra_97_032306.md))
 
+## ancilla paralysis (observable)
+
+- **defines** — Understanding the effects of leakage in superconducting quantum error detection circuits — `Sec. III.B, Eq. (24), following paragraph, and Fig. 4`, PDF p. 6 — The source labels theta modulo pi equal to zero as ancilla paralysis and describes it as a deterministic all-zero readout with no indication of the leaked data state. ([docs/papers/reading_notes/ghosh_leakage_paralysis_1306.0925v2.md](reading_notes/ghosh_leakage_paralysis_1306.0925v2.md))
+
+## balanced detection fidelity (observable)
+
+- **measures** — Heralded Leakage Detection with Preserved Computational-State Coherence in a Fixed-Frequency Transmon — `Fig. 3 and Eq. (5)`, PDF p. 4 — For prepared ground, first-excited, and second-excited states, an eighty-nanosecond window gives false-flag rate 2.3(3) percent, undetected-leakage rate 3.5(2) percent, and balanced detection fidelity 97.1(3) percent. ([docs/papers/reading_notes/miyamura_heralded_leakage_2607.17204v1.md](reading_notes/miyamura_heralded_leakage_2607.17204v1.md))
+
 ## bond-spectrum stationarity diagnostic (observable)
 
 - **defines** — On the stability of the infinite Projected Entangled Pair Operator ansatz for driven-dissipative 2D lattices — `Section 2, Eq. (3) and Figure 2, page 4`, PDF p. 4 — The bond-spectrum stationarity diagnostic epsilon_Lambda is the maximum consecutive-step singular-value change divided by the timestep and the current maximum singular value. ([docs/papers/reading_notes/kilda_ipepo_stability_2012.03095.md](reading_notes/kilda_ipepo_stability_2012.03095.md))
+
+## bond-weight convergence indicator (observable)
+
+- **measures** — Efficient Time Evolution of 2D Open-Quantum Lattice Models with Long-Range Interactions using Tensor Networks — `Eq. (15), pages 8-9; Figure 11, page 13`, PDF p. 8 — The bond-weight convergence indicator is used to stop itrSU and, after division by the timestep, to plot convergence toward a steady state, but Eq. (15) is typeset as an inequality rather than an unambiguous definition. ([docs/papers/reading_notes/tepepo_2d_open_system_tn_2512.01781.md](reading_notes/tepepo_2d_open_system_tn_2512.01781.md))
 
 ## channel coherent leakage and seepage rates (observable)
 
@@ -157,6 +257,18 @@ the evidence.
 ## coherence of leakage (observable)
 
 - **defines** — Quantification and Characterization of Leakage Errors — `Sec. V.A, Eqs. (30)--(34)`, PDF p. 6 — The coherence of leakage of a state is `C_L(rho) = ||P_C(rho)||_1`, where `P_C(rho) = 1_1 rho 1_2 + 1_2 rho 1_1` is the cross-subspace block. ([docs/papers/reading_notes/wood_gambetta_leakage_diagnostics_pra_97_032306.md](reading_notes/wood_gambetta_leakage_diagnostics_pra_97_032306.md))
+
+## computational-subspace likelihood (observable)
+
+- **defines** — Protecting quantum entanglement from qubit errors and leakage via repetitive parity measurements — `Main text following Fig. 2, HMM definition paragraph`, PDF p. 3 — The hidden Markov model returns a computational-subspace likelihood from the observed parity-outcome string by alternating Markov evolution with Bayesian measurement updates. ([docs/papers/reading_notes/bultink_repetitive_parity_leakage_1905.12731v1.md](reading_notes/bultink_repetitive_parity_leakage_1905.12731v1.md))
+
+## conditional average state fidelity (observable)
+
+- **measures** — Heralded Leakage Detection with Preserved Computational-State Coherence in a Fixed-Frequency Transmon — `Fig. 4 and accompanying text`, PDF p. 5 — For a target equal mixture of computational and second-excited-state population, no-leakage post-selection gives conditional average state fidelity 92.9(5) percent over six cardinal states. ([docs/papers/reading_notes/miyamura_heralded_leakage_2607.17204v1.md](reading_notes/miyamura_heralded_leakage_2607.17204v1.md))
+
+## data-leakage syndrome (observable)
+
+- **defines** — Protecting quantum entanglement from qubit errors and leakage via repetitive parity measurements — `Supplemental Sec. II.A, data-qubit leakage model`, PDF p. 10 — The repeated-ZZ data-leakage syndrome is defined as the product of ancilla outcomes two rounds apart, sD at round m equals MA at m times MA at m-minus-two. ([docs/papers/reading_notes/bultink_repetitive_parity_leakage_1905.12731v1.md](reading_notes/bultink_repetitive_parity_leakage_1905.12731v1.md))
 
 ## direct-SVD discarded weight (observable)
 
@@ -178,6 +290,10 @@ the evidence.
 
 - **defines** — On-State Commutativity of Measurements and Joint Distributions of Their Outcomes — `Sec. 3.1, Eq. (9)`, PDF p. 7 — For projectors `A` followed by `B`, the ordered projective outcome law assigns probability `Tr(A B A rho)`, whereas the reversed order generally gives `Tr(B A B rho)`. ([docs/papers/reading_notes/czajkowski_grilo_sequential_measurements_2101.08313_source_review.md](reading_notes/czajkowski_grilo_sequential_measurements_2101.08313_source_review.md))
 
+## parity-outcome string (observable)
+
+- **measures** — Protecting quantum entanglement from qubit errors and leakage via repetitive parity measurements — `Main text following Fig. 2, paragraph beginning with leakage inference from the outcome string`, PDF p. 3 — Data-qubit leakage produces an apparent-error parity-outcome string with pairs of equal signs, exemplified by plus, plus, minus, minus, because the echo pulses act only on the unleaked data qubit. ([docs/papers/reading_notes/bultink_repetitive_parity_leakage_1905.12731v1.md](reading_notes/bultink_repetitive_parity_leakage_1905.12731v1.md))
+
 ## purification discarded weight (observable)
 
 - **defines** — A positive tensor network approach for simulating open quantum many-body systems — `Appendix D, Definition 5 and Eq. (55)`, PDF p. 10 — Purification discarded weight is the square root of the sum of squared singular values omitted when one mixed-canonical local tensor is compressed along a bond or Kraus index. ([docs/papers/reading_notes/werner_positive_tensor_network_open_systems_1412.5746.md](reading_notes/werner_positive_tensor_network_open_systems_1412.5746.md))
@@ -194,13 +310,25 @@ the evidence.
 
 - **defines** — Quantification and Characterization of Leakage Errors — `Sec. II, Eq. (2)`, PDF p. 2 — For a CPTP map `E`, the leakage rate is `L_1(E) = L(E(1_1/d_1))` and the seepage rate is `L_2(E) = 1 - L(E(1_2/d_2))`, equal to Haar averages over input states in the respective subspaces. ([docs/papers/reading_notes/wood_gambetta_leakage_diagnostics_pra_97_032306.md](reading_notes/wood_gambetta_leakage_diagnostics_pra_97_032306.md))
 
+## spacing metric W (observable)
+
+- **defines** — Understanding the effects of leakage in superconducting quantum error detection circuits — `Sec. III.B, Eq. (25)`, PDF p. 6 — The spacing metric W is the average number of cycles between consecutive ancilla-one outcomes and equals cosecant-squared theta-over-two without decoherence. ([docs/papers/reading_notes/ghosh_leakage_paralysis_1306.0925v2.md](reading_notes/ghosh_leakage_paralysis_1306.0925v2.md))
+
 ## state leakage (observable)
 
 - **defines** — Quantification and Characterization of Leakage Errors — `Sec. II, Eq. (1)`, PDF p. 2 — State leakage is the population outside computational subspace `X_1`, defined by `L(rho) = Tr[1_2 rho] = 1 - Tr[1_1 rho]` on the direct sum `X = X_1 direct-sum X_2`. ([docs/papers/reading_notes/wood_gambetta_leakage_diagnostics_pra_97_032306.md](reading_notes/wood_gambetta_leakage_diagnostics_pra_97_032306.md))
 
+## surface-code defect (observable)
+
+- **defines** — Leakage detection for a transmon-based surface code — `Sec. I.B, paragraph defining syndrome and defect bits`, PDF p. 3 — With ancillas left unreset, the surface-code defect is defined as d at cycle n equals m at n XOR m at n-minus-two, and a measured level two is declared as bit one. ([docs/papers/reading_notes/varbanov_leakage_detection_surface17_2002.07119.md](reading_notes/varbanov_leakage_detection_surface17_2002.07119.md))
+
 ## thermal equilibrium population (observable)
 
 - **defines** — Exact and Efficient Stabilizer Simulation of Thermal-Relaxation Noise for Quantum Error Correction — `Sec. II.A, Eqs. (10) and (15)`, PDF p. 3 — The thermal equilibrium population is `p_1=n_bar/(1+2n_bar)`, while the total population-relaxation rate is `gamma(2n_bar+1)`. ([docs/papers/reading_notes/garner_thermal_relaxation_2512.09189_source_review.md](reading_notes/garner_thermal_relaxation_2512.09189_source_review.md))
+
+## weight-six supercheck (observable)
+
+- **defines** — Leakage detection for a transmon-based surface code — `Appendix D, paragraph following Eq. (D13) and Fig. 10a`, PDF p. 16 — At leakage conditional phase zero or pi, the product of two same-type weight-three gauge outcomes defines a weight-six supercheck parity when both same-type gauges are measured before either opposite-type gauge. ([docs/papers/reading_notes/varbanov_leakage_detection_surface17_2002.07119.md](reading_notes/varbanov_leakage_detection_surface17_2002.07119.md))
 
 ## full-bond TJM convergence theorem (theorem)
 

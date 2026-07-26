@@ -17,22 +17,32 @@ Mutation testing is retired; verification is unit tests plus the coverage gate.
 
 ## Read first, in this order
 
-1. **`docs/simulator_validation/EXTERNAL_LANDSCAPE_AUDIT_2026-07-26.md`** — re-cuts the scope. A
-   multi-round Record for a real surface-code patch under declared non-Pauli noise is not a
-   distinguishing deliverable; `stim` supplies geometry, schedule and detector fold at any distance,
-   and the nearest published work is listed with locators. Read before writing any scope, novelty,
-   or completion sentence. Its differentiator rows carry per-row status and several have already
-   narrowed on contact with the literature.
-2. **`docs/simulator_validation/2002.07119-claim-audit.md`** — kills a project claim and closes a
-   standing modelling gap. Varbanov et al. state the leaked-inert single-qubit gate assumption
-   verbatim, and report leakage driving neighbouring defect probability to ~0.5 by reducing the
-   affected check to an effective weight-3 anti-commuting check. Companion source-only note:
-   `docs/papers/reading_notes/varbanov_leakage_detection_surface17_2002.07119.md` (deliberately not
-   admitted — no renderer, no independent reviewer).
-3. **`docs/simulator_validation/HANDOFF_MUTATION_SCOPE_AND_BASELINE_LEGS_2026-07-25.md`** — open
+1. **`docs/simulator_validation/ENGINEERING_ROWS_LITERATURE_CHECK_2026-07-26.md`** — read this
+   **before** the landscape audit below, because it refutes that audit's central section. All three
+   surviving engineering differentiator rows are occupied: row 2 by Clader et al. PRA 103, 052428
+   (2021) §III, row 3 by TeNPy `7f1d95560645` `algorithms/algorithm.py:493` (a truncation-budget
+   abort inside the evolution loop), row 4 by `qecsim` `24d6b8a` `cli.py:247-250` plus
+   `tests/core/test_model.py:14-32`. With row 1 already refuted, the audit's "What remains
+   unoccupied" section has nothing left in it. Three of the rows also contain checkable errors about
+   code already cloned under `external/`. Read before writing any scope, novelty, or completion
+   sentence.
+2. **`docs/simulator_validation/EXTERNAL_LANDSCAPE_AUDIT_2026-07-26.md`** — still the record of what
+   was surveyed and of what is already solved elsewhere, which remains useful. Its "What remains
+   unoccupied" section is superseded by the check above and is pending rewrite. `stim` supplies
+   geometry, schedule and detector fold at any distance, and the nearest published work is listed
+   with locators.
+3. **`docs/simulator_validation/LEAKAGE_FRAME_LITERATURE_CLOSURE_2026-07-26.md`** — closes the
+   current leakage-conditioned frame question at documentation scope. It distinguishes physical
+   parity-Record content, a one-bit marginal relabeling, and an unestablished exact
+   trajectory-conditioned frame. Its source-only companions are the Ghosh, Bultink, Varbanov, and
+   Miyamura notes in `docs/papers/reading_notes/`.
+4. **`docs/simulator_validation/2002.07119-claim-audit.md`** — project application of Varbanov v1.
+   Read it for the individual-defect/supercheck distinction, Appendix-G ancilla bookkeeping analog,
+   Appendix-B schedule-scoped coherence null, and the printed D11-D13 algebra defects.
+5. **`docs/simulator_validation/HANDOFF_MUTATION_SCOPE_AND_BASELINE_LEGS_2026-07-25.md`** — open
    items 2 through 7 are still open. Item 1 is discharged; its follow-on was deliberately reverted
    rather than fixed, because the mutation layer is being retired.
-4. **`docs/service_status.json`**, the `restricted_axis1_1d_mps` note and `excluded_surfaces` — the
+6. **`docs/service_status.json`**, the `restricted_axis1_1d_mps` note and `excluded_surfaces` — the
    claim boundary. It answers most scope questions outright.
 
 ## Recently landed — read before touching the same surface
@@ -46,18 +56,27 @@ Mutation testing is retired; verification is unit tests plus the coverage gate.
 - **Known residual**: the correction is exact only on a leakage-free reference. Under leakage the
   frame is trajectory-dependent, and the deviation is entirely leakage-conditioned
   (`Y^dag Z Y = -Z + 2|2><2|`). That residual is declared noise reaching the record, not a
-  bookkeeping error — but it is unbounded, and the two legs share the leaked-inert convention by
-  design so they cannot referee each other on it.
-- **Corpus manifest rebuilt** (`d72c93a`): retrievable notes went from 15 to 25 with
-  `scripts/rebuild_current_corpus_manifest.py`.
+  bookkeeping error. The literature closure now grounds that semantics: divide out only the
+  deterministic leakage-free sign, retain the residual as physical Record content, and do not call
+  it an exactly reconstructed frame. It remains unbounded, and the two legs share the leaked-inert
+  convention by design so they cannot referee each other on it.
+- **Leakage source reset closed for this question**: four full-text, source-located notes now cover
+  single-check paralysis, physical data echo and temporal syndromes, Surface-17
+  gauge/supercheck/HMM behavior, and direct heralded leakage measurement. Exact frame
+  identifiability remains project inference rather than a literature theorem. The rebuilt current
+  corpus contains 29 admitted notes and 348 retrievable `paper_fact` records.
 
 ## Superseded — do not act on these
 
 - The mutation-gate scope work and its adjudication issues under `.scratch/mutation-gate-adjudication/`.
   Issue 04 is `wontfix`; the fix was written, validated, and reverted.
 - Any claim that the transversal echo converting leakage occupancy into detector signal is novel.
-  Withdrawn: prior art in arXiv:2002.07119 and arXiv:1905.12731, and a possible unobservability
-  argument recorded in the claim audit.
+  Withdrawn: arXiv:1905.12731 explicitly attributes the repeated-ZZ leakage pattern to the physical
+  data echo flipping the effective stabilizer, with arXiv:1306.0925 supplying the preceding
+  phase/paralysis mechanism.
+- Any argument that a one-half individual defect marginal makes the complete Record
+  unobservable. The XOR relabeling symmetry is only a one-bit marginal statement; temporal and
+  supercheck products can still carry information.
 - Any statement that "no external precedent exists" derived from local retrieval alone. Local
   absence is not a gap; see the rule in `CLAUDE.md`.
 
@@ -104,16 +123,16 @@ Explicitly not doing: the withdrawn heralding claim, and any PEPS work before 1 
 ## Open decisions
 
 - Which `quantumsim` ref matches arXiv:2002.07119. Five carry the device model; none is confirmed.
-- Whether the narrowed echo-parity claim survives the ~0.5 randomization argument. Deciding it needs
-  Appendix D of arXiv:2002.07119 and a look at its Fig. 3e — neither possible without a PDF renderer.
+- Whether and how to bound the declared leaked-block echo representative against an independent
+  device model. The present literature pass documents the convention but does not certify it.
 - What replaces the retired mutation layer in the release evidence order.
 - Whether to add `hw` to the canonical `ecs` sync so the Pauli leg can report a decoded logical
   error rate instead of a raw observable-flip rate. Everything else for that is already in place.
 
-## Unread material already acquired
+## Retained external material
 
-`docs/papers/1905.12731v1.pdf` and `docs/papers/2607.17204v1.pdf` are retained but read only to
-abstract depth. Newly cloned under `external/reference_repos/`, each at the ref it was read at:
+The leakage PDFs are now fully read and routed through the closure packet above. Repositories cloned
+under `external/reference_repos/` remain pinned at the refs at which they were inspected:
 `qutrits` at `fe24c42`, `restless-simulator` at `92e8a62`, `surface-code-simulator` at `f06123e`,
 `Located-decoder-for-Rydberg-decay` at `1bf10b6`.
 

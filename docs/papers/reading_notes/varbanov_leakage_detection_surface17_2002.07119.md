@@ -7,138 +7,285 @@ source_artifact = "docs/papers/2002.07119v1.pdf"
 source_sha256 = "e5e3f4756bcedac10a4016aaac957af41a7a560501033a7f43a993a7b22abbe9"
 title = "Leakage detection for a transmon-based surface code"
 publication_status = "preprint"
-read_status = "incomplete"
+read_status = "complete"
 evidence_status = "persisted"
 review_scope = "full_text"
-operation_replay_status = "incomplete"
-admission_status = "pending_visual_verification_and_independent_review"
-admission_reviewer = ""
-admission_date = ""
-visually_checked_pages = []
-+++
-# Full-text review — Varbanov, Battistel, Tarasinski, Ostroukh, O'Brien, DiCarlo, Terhal, "Leakage detection for a transmon-based surface code"
+operation_replay_status = "complete"
+audit_packet = "docs/simulator_validation/LEAKAGE_FRAME_LITERATURE_CLOSURE_2026-07-26.md"
+audit_packet_sha256 = "c8ee8d0157fc5f1bc9c9cb0e208518a3579e103611d8fcaf114d4d450c04982b"
+admission_status = "source_only_reviewed"
+admission_reviewer = "independent_varbanov_source_review"
+admission_date = "2026-07-26"
+visually_checked_pages = [1, 2, 3, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]
 
-> **This note is deliberately NOT admissible and will fail `literature_rag.py audit`.** The schema
-> requires `read_status = "complete"`, `operation_replay_status = "complete"` and
-> `admission_status = "source_only_reviewed"`. Two gate conditions are unmet and neither can be
-> satisfied by asserting them: (1) no PDF renderer is installed in this environment, so no equation,
-> figure, or table was visually verified — every record below rests on extracted text; (2) no
-> independent source-only reviewer has compared these claims against the source. The content is
-> recorded so it is reusable and auditable; the front matter refuses the attestation.
+[[relations]]
+predicate = "defines"
+object_id = "varbanov.surface-code-defect"
+object_type = "observable"
+object_label = "surface-code defect"
+fact_id = "varbanov.defect"
+
+[[relations]]
+predicate = "defines"
+object_id = "varbanov.leakage-conditional-phase"
+object_type = "model"
+object_label = "leakage conditional phases"
+fact_id = "varbanov.phases"
+
+[[relations]]
+predicate = "defines"
+object_id = "varbanov.effective-weight-three-checks"
+object_type = "model"
+object_label = "effective weight-three parity checks"
+fact_id = "varbanov.projector-regime"
+
+[[relations]]
+predicate = "defines"
+object_id = "varbanov.weight-six-supercheck"
+object_type = "observable"
+object_label = "weight-six supercheck"
+fact_id = "varbanov.supercheck"
+
+[[relations]]
+predicate = "defines"
+object_id = "varbanov.leakage-hmm"
+object_type = "method"
+object_label = "two-hidden-state leakage model"
+fact_id = "varbanov.hmm"
+
+[[relations]]
+predicate = "uses"
+object_id = "varbanov.ancilla-pi-scheme"
+object_type = "method"
+object_label = "alternating ancilla pi-pulse scheme"
+fact_id = "varbanov.ancilla-pi"
+
++++
+# Full-text review -- Varbanov et al., "Leakage detection for a transmon-based surface code"
 
 ## Source identity [paper_fact]
-Fact ID: source-identity
-Source locator: title page, author and affiliation block, date line
+Fact ID: varbanov.source
+Source locator: PDF artifact metadata and p. 1 title and author block
 PDF page: 1
-Claim: arXiv:2002.07119v1, dated 18 February 2020, by B. M. Varbanov, F. Battistel, B. M. Tarasinski, V. P. Ostroukh, T. E. O'Brien, L. DiCarlo and B. M. Terhal (QuTech/TU Delft, Kavli, Instituut-Lorentz Leiden, Google Research, Forschungszentrum Jülich), 21 pages including appendices.
+Claim: The persisted source is the twenty-one-page arXiv:2002.07119v1 preprint by Boris M. Varbanov and coauthors, submitted on February 17, 2020.
 
-## Selection scope [paper_fact]
-Fact ID: selection-scope
-Source locator: abstract
+Locators in this note refer only to the v1 artifact.
+
+## Scientific scope [paper_fact]
+Fact ID: varbanov.scope
+Source locator: Abstract, PDF p. 1
 PDF page: 1
-Claim: The source develops a leakage-detection scheme via hidden Markov models for transmon implementations of the distance-3 surface code, using density-matrix simulations, and reports restoring the logical error rate below the memory break-even point by post-selection.
+Claim: The source simulates a qutrit-bearing distance-three Surface-17 circuit and infers the time and location of leakage with local hidden Markov models driven by neighboring defects, with ancilla analog readout additionally used for ancilla-qubit models.
 
-## Load-bearing notation — leakage probability per two-qubit gate [paper_fact]
-Fact ID: notation-l1
-Source locator: Sec. I.A "Leakage error model"
+It evaluates mitigation by post-selecting runs classified as leaked.
+
+## Leaked-state gate convention [paper_fact]
+Fact ID: varbanov.single-gate
+Source locator: Sec. I.A, opening paragraph
 PDF page: 2
-Claim: `L1` denotes the leakage probability per CZ gate, with leakage modelled as an exchange between the two-qubit states |11> and |02> with amplitude sqrt(4*L1), and is set to 0.125% unless otherwise stated.
+Claim: The source assumes that single-qubit gates induce no leakage and act as the identity on a leaked state.
 
-## Load-bearing notation — leakage conditional phases [paper_fact]
-Fact ID: notation-leakage-conditional-phase
-Source locator: Sec. I.A, definitions following the CZ rotation model
+Measurement-induced leakage is also neglected in the stated error model.
+
+## Leakage conditional phases [paper_fact]
+Fact ID: varbanov.phases
+Source locator: Sec. I.A, definitions following the CZ model
 PDF page: 2
-Claim: When one partner of a CZ is leaked the other acquires a leakage conditional phase, defined as `phi_stat^L := phi_02 - phi_12` when the flux qubit is leaked and `phi_flux^L := phi_20 - phi_21` when the static qubit is leaked; these are randomized per qubit pair across runs but held fixed across CZ gates within a run.
+Claim: The leakage conditional phases are the phase differences imposed on the computational partner when either the fluxed or static CZ partner is leaked.
 
-## Load-bearing notation — leakage population and defect probability [paper_fact]
-Fact ID: notation-leakage-population
-Source locator: Sec. I.C "Projection and signatures of leakage"
-PDF page: 4
-Claim: `p_DM^L(Q) = P(Q in L) = <2|rho_Q|2>` is the reduced-density-matrix probability that qubit Q occupies the leakage subspace at the end of a QEC cycle after ancilla measurement, and `p_d` is the probability of observing a defect `d = 1` on a neighbouring stabilizer.
+In the baseline simulation these phases are randomized per qubit pair between runs and held fixed within each run.
 
-## Model or mechanism — single-qubit gates act as identity on a leaked state [paper_fact]
-Fact ID: mechanism-leaked-inert-single-qubit-gate
-Source locator: Sec. I.A "Leakage error model", opening paragraph
-PDF page: 2
-Claim: The source states as an explicit modelling assumption, verbatim, "We assume that single-qubit gates act on a leaked state as the identity", alongside the assumptions that single-qubit gates induce no leakage and that measurement-induced leakage is negligible.
-
-## Model or mechanism — three-level inclusion is selective [paper_fact]
-Fact ID: mechanism-selective-qutrit
-Source locator: Sec. I.B "Effect of leakage on the code performance"
+## Selective qutrit model [paper_fact]
+Fact ID: varbanov.selective-qutrit
+Source locator: Sec. I.B, Surface-17 simulation description
 PDF page: 3
-Claim: Only the high- and mid-frequency qubits are treated as three-level systems in the density-matrix simulation while the low-frequency qubits remain two-level, because under the stated model with no leakage mobility only those are leakage-prone.
+Claim: High- and middle-frequency transmons are modeled as qutrits while low-frequency data qubits remain two-level because the baseline model excludes leakage mobility.
 
-## Model or mechanism — defect definition under an unreset ancilla [paper_fact]
-Fact ID: mechanism-defect-two-cycle
+Ancilla measurements are projective in the three-level basis.
+
+## Surface-code defect [paper_fact]
+Fact ID: varbanov.defect
 Source locator: Sec. I.B, paragraph defining syndrome and defect bits
 PDF page: 3
-Claim: Because ancilla qubits are not reset between QEC cycles, the syndrome is `m[n] XOR m[n-1]` and the surface-code defect is `d[n] = m[n] XOR m[n-2]`, with a measurement outcome `m[n] = 2` declared as `m[n] = 1`.
+Claim: With ancillas left unreset, the surface-code defect is defined as d at cycle n equals m at n XOR m at n-minus-two, and a measured level two is declared as bit one.
 
-## Model or mechanism — leaked ancilla readout convention [paper_fact]
-Fact ID: mechanism-leaked-readout-as-one
-Source locator: decoding discussion preceding the leakage-detection section
-PDF page: 12
-Claim: For decoding the source assumes the |2> state is measured as a |1>, and states that this is the convention "as in most current experiments"; discrimination of |2> in readout is treated separately as a leakage-detection resource.
+The intermediate syndrome uses outcomes one cycle apart.
 
-## Observable and bridge — data-qubit leakage reduces stabilizer weight and randomizes the check [paper_fact]
-Fact ID: observable-bridge-weight3-anticommuting
-Source locator: Sec. I.C, paragraph accompanying Fig. 3c-e
+## Leakage projection [paper_fact]
+Fact ID: varbanov.projection
+Source locator: Sec. I.C, Fig. 3a-b and accompanying text
 PDF page: 4
-Claim: During data-qubit leakage the defect probability on neighbouring stabilizers rises to approximately 0.5, which the source explains by the leaked data qubit reducing the stabilizer checks it participates in to effective weight-3 anti-commuting checks, with the sharp projection of leakage attributed to measurement back-action whose outcomes are nearly randomized while the qubit is leaked.
+Claim: Repeated stabilizer measurement sharply projects simulated data-qubit leakage probabilities toward the computational or leakage sector.
 
-## Observable and bridge — ancilla leakage disables the check and rotates neighbours [paper_fact]
-Fact ID: observable-bridge-ancilla-signature
-Source locator: Sec. I.C, paragraph accompanying Fig. 3f-h
-PDF page: 4-5
-Claim: During ancilla-qubit leakage the defect probability on neighbouring stabilizers rises abruptly in the cycle after leakage, which the source attributes to Z rotations acquired by neighbouring data qubits through interaction with the leaked ancilla, while the corresponding stabilizer measurement detects no errors at all and is effectively disabled.
+This observation motivates the later use of a classical two-state hidden model.
 
-## Findings and scale — leakage dwell times [paper_fact]
-Fact ID: finding-dwell-time
-Source locator: Sec. I.C, text accompanying Fig. 3a-d and Fig. 3g, referring to Table I parameters
-PDF page: 4-5
-Claim: A leaked data qubit remains leaked for approximately 9 QEC cycles on average and a leaked ancilla qubit for approximately 11 QEC cycles, with data-qubit leakage rising over roughly 3 QEC cycles to a maximum probability near 0.8.
+## Data-leakage defect signature [paper_fact]
+Fact ID: varbanov.data-signature
+Source locator: Sec. I.C, Fig. 3c-e and accompanying text
+PDF page: 4
+Claim: Data-qubit leakage raises the neighboring stabilizer defect probability to approximately one half and is attributed to effective weight-reduced checks that anticommute.
 
-## Findings and scale — effective distance reduction [paper_fact]
-Fact ID: finding-distance-reduction
-Source locator: Sec. I.C, paragraph following the weight-3 discussion
+The more detailed phase and supercheck qualifications are derived in Appendix D.
+
+## Ancilla-leakage defect signature [paper_fact]
+Fact ID: varbanov.ancilla-signature
+Source locator: Sec. I.C, Fig. 3f-h and accompanying text
 PDF page: 5
-Claim: The weight-3 checks produced by data-qubit leakage can be interpreted as gauge operators whose pairwise product yields weight-6 stabilizer checks usable for decoding, effectively reducing the code distance from 3 to 2.
+Claim: A leaked ancilla effectively disables its own check while leakage-conditional phase rotations on neighboring data qubits raise nearby defect rates.
 
-## Findings and scale — post-selection cost [paper_fact]
-Fact ID: finding-postselection-cost
-Source locator: abstract
-PDF page: 1
-Claim: The logical error rate is restored below the memory break-even point by post-selecting out leakage, at the cost of discarding about 47% of the data.
+## Effective distance reduction [paper_fact]
+Fact ID: varbanov.distance
+Source locator: Sec. I.C, paragraph following the effective-check explanation
+PDF page: 5
+Claim: One leaked data qubit reduces the effective code distance of Surface-17 from three to two.
 
-## Limitations and contrary results — declared model simplifications [paper_fact]
-Fact ID: limitation-model-simplifications
-Source locator: Sec. I.A, assumptions paragraph and the paragraph setting the exchange phase to zero
-PDF page: 2-3
-Claim: The source declares that single-qubit gates are assumed to induce no leakage and to act as identity on a leaked state, that measurement-induced leakage is neglected, that the leakage exchange phase and the |11><02| off-diagonal elements are set to zero for computational efficiency, and that leakage mobility and further leakage to |3> are treated only in an appendix.
+The source attributes the reduction to replacing affected stabilizers with gauge checks and superchecks.
 
-## Limitations and contrary results — decoder weights are leakage-free [paper_fact]
-Fact ID: limitation-decoder-trained-without-leakage
-Source locator: Sec. I.B, description of the MWPM decoder
-PDF page: 3-4
-Claim: The minimum-weight perfect-matching decoder used to benchmark performance has weights trained on simulated data without leakage, so its reported logical error rate under leakage measures a leakage-unaware decoder.
+## Schedule-specific exchange-phase null [paper_fact]
+Fact ID: varbanov.exchange-phase-null
+Source locator: Appendix B, Eqs. (B7)-(B9)
+PDF page: 14
+Claim: In the simulated schedule, changing the leakage-exchange phase does not materially change the leakage dynamics or logical error rate.
 
-## Source-local unsupported rows [literature_gap]
-Fact ID: gap-transversal-echo-layer
-Source locator: full-text keyword traversal of the extracted text; the two occurrences of "echo" appear in the flux-noise discussion of the Net-Zero pulse
-PDF page: 13
-Claim: This source does not apply, model, or discuss a transversal dynamical-decoupling layer on data qubits inside the QEC cycle; its only use of "echo" refers to the built-in echo effect of Net-Zero flux pulses on low-frequency flux noise, and "dynamical decoupling", "refocus" and "transversal" do not occur.
+The source attributes the null to an intervening ancilla measurement between repeated CZ interactions on the same pair and does not state it as a general channel identity.
+
+## Schedule-specific coherent-leakage null [paper_fact]
+Fact ID: varbanov.coherent-null
+Source locator: Appendix B, final paragraph
+PDF page: 14
+Claim: Setting the computational-leakage coherences of the density matrix to zero leaves the leakage projections and signatures unchanged and, at least for a logical state prepared in the Z basis, does not affect the logical error rate.
+
+The source presents this as a result for its simulated schedule, not a general coherence theorem.
+
+## Qutrit CZ decomposition [paper_fact]
+Fact ID: varbanov.cz-decomposition
+Source locator: Appendix D, Eqs. (D1)-(D2)
+PDF page: 15
+Claim: In the limit of zero CZ leakage probability `L1`, zero leakage mobility `Lm`, and no decoherence, the ancilla-controlled qutrit CZ is decomposed into extended data operators whose leaked-level entries are minus one for the extended identity and minus `exp(-i phi_stat^L)` for the extended Z.
+
+On the computational block those operators reduce to the ordinary identity and Pauli Z.
+
+## Parity-check measurement operators [paper_fact]
+Fact ID: varbanov.measurement-operators
+Source locator: Appendix D, Eqs. (D3)-(D5)
+PDF page: 16
+Claim: The Z- and X-type parity-check outcomes are represented by two branch operators formed from extended identity and Pauli products, with the extended X derived under a Hadamard that acts trivially on leakage.
+
+The leaked-level entry of the extended X carries the same leakage conditional phase as the extended Z.
+
+## Leakage-induced anti-commutation [paper_fact]
+Fact ID: varbanov.anticommutation
+Source locator: Appendix D, Eqs. (D6)-(D12)
+PDF page: 16
+Claim: With one high-frequency data site leaked, the neighboring extended X- and Z-type checks anticommute independently of the leakage conditional phase.
+
+The derivation requires the single-qubit gate on the leaked sector to commute with the leaked-sector CZ action.
+
+Operation replay: Eq. (D11) prints a zero anticommutator for the four-overlap checks, whereas direct Pauli algebra gives a zero commutator. In Eq. (D12), direct multiplication gives the common prefactor exp(-2 i phi), not the printed exp(-i phi). The intended one-leaked-site anticommutation conclusion survives because it multiplies the zero anticommutator of the effective three-qubit X and Z checks.
+
+## Projector phase regime [paper_fact]
+Fact ID: varbanov.projector-regime
+Source locator: Appendix D, Eq. (D13) and following paragraph
+PDF page: 16
+Claim: At leakage conditional phase zero or pi, the branch operators become projectors onto effective weight-three parity checks and their anti-commutation fully randomizes individual ancilla outcomes.
+
+In this analytic regime the source assigns one-half defect probability to each neighboring stabilizer.
+
+Operation replay: direct substitution into Eq. (D3) retains a branch-global minus sign omitted from Eq. (D13); it changes neither normalized post-measurement states nor probabilities. At phase pi, the plus and minus branch labels interchange.
+
+## Weight-six supercheck [paper_fact]
+Fact ID: varbanov.supercheck
+Source locator: Appendix D, paragraph following Eq. (D13) and Fig. 10a
+PDF page: 16
+Claim: At leakage conditional phase zero or pi, the product of two same-type weight-three gauge outcomes defines a weight-six supercheck parity when both same-type gauges are measured before either opposite-type gauge.
+
+The analyzed schedule satisfies that ordering condition.
+
+## Generic-phase individual defects [paper_fact]
+Fact ID: varbanov.generic-individual
+Source locator: Appendix D, general-phase paragraph spanning PDF pp. 16-17
+PDF page: 17
+Claim: For leakage conditional phases other than zero or pi, individual branch operators are not projectors and outcomes are not analytically fully randomized, yet the simulations still give individual neighboring defect probabilities near one half for fixed or randomized phases.
+
+The source explains that the two-cycle defect fold can turn moderate cycle-varying outcome imbalance into an approximately one-half defect probability.
+
+## Generic-phase supercheck defects [paper_fact]
+Fact ID: varbanov.generic-supercheck
+Source locator: Appendix D, Fig. 10b-c and final paragraph
+PDF page: 17
+Claim: Outside the zero-or-pi projector regimes, leakage conditional phases perturb the two gauge measurements independently, giving a higher weight-six supercheck defect probability that can reach approximately one half.
+
+Figure 10b-c plots the supercheck statistic rather than the individual neighboring-check statistic.
+
+## Two-hidden-state leakage model [paper_fact]
+Fact ID: varbanov.hmm
+Source locator: Appendix E, Eqs. (E1)-(E6)
+PDF page: 17
+Claim: The two-hidden-state leakage model uses computational and leaked states, a transition matrix parameterized by leakage and seepage per cycle, state-dependent defect emissions, and a Bayesian posterior update.
+
+The state posterior is an inferred probability, not a directly measured leakage label.
+
+## Data-model emission approximation [paper_fact]
+Fact ID: varbanov.hmm-emission
+Source locator: Appendix E, paragraph following Eq. (E6)
+PDF page: 17
+Claim: The data-qubit hidden model uses leaked-state defect-emission probabilities near one half regardless of leakage conditional phase.
+
+Those emission probabilities are extracted from density-matrix simulations using a leakage-probability threshold.
+
+## Conditional-independence approximation [paper_fact]
+Fact ID: varbanov.hmm-independence
+Source locator: Appendix F, opening paragraph
+PDF page: 18
+Claim: Each local hidden model assumes that the neighboring defect observables are conditionally independent given the hidden leakage state.
+
+## Alternating ancilla pi-pulse scheme [paper_fact]
+Fact ID: varbanov.ancilla-pi
+Source locator: Appendix G, opening paragraph spanning PDF pp. 18-19
+PDF page: 19
+Claim: The alternating ancilla pi-pulse scheme applies a pi pulse to each ancilla every other cycle and compensates it in post-processing so that a leaked ancilla, assumed unaffected by the pulse, would create a defect every cycle.
+
+The pulse can be integrated with the single-qubit gates already present at the start of a cycle.
+
+## Ancilla pi-scheme evaluation limit [paper_fact]
+Fact ID: varbanov.ancilla-pi-limit
+Source locator: Appendix G, paragraphs spanning PDF pp. 18-19
+PDF page: 19
+Claim: The alternating ancilla scheme is not physically simulated; it is evaluated by flipping outcomes only during density-matrix-identified ancilla-leakage periods.
+
+The source reports improved ancilla-model optimality but worse data-model crosstalk and omits the added amplitude-damping cost of the physical pulses.
+
+## Leakage mobility result [paper_fact]
+Fact ID: varbanov.mobility
+Source locator: Appendix I, opening paragraphs
+PDF page: 20
+Claim: In the simulated low-leakage regime, the included leakage-mobility probabilities have negligible effect on logical performance and hidden-model optimality.
+
+The source calls mobility a second-order effect under its stated gate-leakage probability and limited qutrit allocation.
+
+## Transversal data echo absent [literature_gap]
+Fact ID: varbanov.gap-data-echo
+Source locator: Full-text circuit scope; Net-Zero built-in flux echo in Appendix B on p. 13, Appendix D gate construction on pp. 15-17, and Appendix G ancilla-only proposal on pp. 18-19
+PDF page: 18
+Claim: The source does not apply or analyze a transversal data-qubit echo layer; its added deterministic pi-pulse proposal acts on ancillas every other cycle.
 Gap scope: source_local
 
-## Source-local unsupported rows [literature_gap]
-Fact ID: gap-deterministic-frame-on-logical
-Source locator: full-text keyword traversal; the single occurrence of "Pauli frame" is in the decoding discussion
+The Net-Zero pulse's built-in flux echo is a two-qubit-gate implementation detail, not a data-wide inserted layer.
+
+## Logical-observable frame absent [literature_gap]
+Fact ID: varbanov.gap-logical-frame
+Source locator: Appendix A MWPM Pauli-frame tracking on p. 12 and Appendix G post-processing proposal on pp. 18-19
 PDF page: 12
-Claim: This source does not treat the action of any deterministic inserted single-qubit layer on the logical operator or on stabilizer support parity; its one reference to a Pauli frame describes the MWPM decoder tracking decoder-inferred corrections to estimate the final logical state, not a circuit-level frame carried by intended gates.
+Claim: The source does not define a logical-observable frame conditioned on a data-qubit leakage and return trajectory.
 Gap scope: source_local
 
-## Source-local unsupported rows [literature_gap]
-Fact ID: gap-support-parity-mechanism
-Source locator: Sec. I.C, the mechanism paragraphs for both data-qubit and ancilla-qubit leakage
-PDF page: 4-5
-Claim: The source explains elevated defect probability by weight reduction and anti-commutation of the affected check and by phase rotation from a leaked ancilla, and does not state, derive, or test any mechanism in which the parity of the number of leaked support sites of a check determines a deterministic defect outcome.
+Its Pauli-frame reference concerns decoder-inferred corrections, while the ancilla proposal applies a predetermined outcome relabeling.
+
+## Exact instrument from public defects absent [literature_gap]
+Fact ID: varbanov.gap-identifiability
+Source locator: Appendix E hidden-state emissions and Appendix F error budget
+PDF page: 18
+Claim: The source does not prove that the hidden leakage trajectory or an exact trajectory-dependent correction is identifiable from the public defect sequence.
 Gap scope: source_local
+
+It reports an approximate local estimator with crosstalk and regular-error limitations.

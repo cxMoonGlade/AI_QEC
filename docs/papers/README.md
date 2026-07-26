@@ -32,12 +32,11 @@ notes and syntheses remain discovery-only quarantine material and may not be cop
 record. A retrieval hit is routing information: reopen the named source object and verify the exact
 locator before using the claim.
 
-The current manifest is active and deliberately small. Ten records form the minimum load-bearing
-MPS/PEPS carrier-precision set; the Wood--Gambetta record remains as a separate project-level leakage
-baseline and is not a tensor-network precision premise. The many other notes in `reading_notes/` remain
-excluded legacy, or source-reviewed but non-load-bearing, material. A non-empty RAG, KG, or concept
-index proves publication integrity for the admitted records only; it does not prove literature coverage
-or closure for a new claim.
+The current manifest is active and deliberately curated. It includes the load-bearing MPS/PEPS
+carrier-precision set, the Wood--Gambetta leakage baseline, and the four source-only records in the
+leakage-frame closure packet. The many other notes in `reading_notes/` remain excluded legacy or
+non-load-bearing material. A non-empty RAG, KG, or concept index proves publication integrity for
+the admitted records only; it does not prove literature coverage or closure for a new claim.
 
 To add an evidence record, acquire a versioned source, record its SHA-256, read the full text,
 visually inspect every load-bearing formula page, complete an operation replay, and write a note
@@ -70,6 +69,10 @@ curl -L --fail https://arxiv.org/pdf/2507.11424v2 \
   -o outputs/papers/pepo_survey/2507.11424.pdf
 curl -L --fail https://harvest.aps.org/v2/journals/articles/10.1103/PhysRevA.97.032306/fulltext \
   -o docs/papers/wood_gambetta_leakage_characterization_pra_97_032306.pdf
+curl -L --fail https://arxiv.org/pdf/1306.0925v2 -o docs/papers/1306.0925v2.pdf
+curl -L --fail https://arxiv.org/pdf/1905.12731v1 -o docs/papers/1905.12731v1.pdf
+curl -L --fail https://arxiv.org/pdf/2002.07119v1 -o docs/papers/2002.07119v1.pdf
+curl -L --fail https://arxiv.org/pdf/2607.17204v1 -o docs/papers/2607.17204v1.pdf
 ```
 
 Then run the artifact-verified builders; SHA mismatches fail closed:

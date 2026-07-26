@@ -1,8 +1,8 @@
 schema = "error_coupling_simulator.literature.corpus_manifest.v1"
 status = "active"
-corpus_sha256 = "a8d78c842393adc519edf5592c994a003671582f888626eeb2ed1e4e726fe066"
-note_count = 25
-paper_fact_count = 271
+corpus_sha256 = "4bf3b5b3d060e4b41bbd95a72d8ed2281b3db72d30ead10a6ca0751568055d05"
+note_count = 29
+paper_fact_count = 348
 
 [[notes]]
 path = "docs/papers/reading_notes/arsenijevic_bankovic_damping_1606.01145_source_review.md"
@@ -10,6 +10,13 @@ note_sha256 = "1bb138455f6ca74c8794e5c41b5597b3ce4335331994c737a14cde5bcd3d5ee2"
 source_id = "arxiv:1606.01145"
 source_version = "v1"
 source_sha256 = "32e3d12077bef0b1e6eb84f2f85f5bc35fc1fce6b5f9a3e58c625cf902ee0694"
+
+[[notes]]
+path = "docs/papers/reading_notes/bultink_repetitive_parity_leakage_1905.12731v1.md"
+note_sha256 = "9894725a1c730c832a6788cef0c604b615731871e433d1b42743a9ae12d5b97f"
+source_id = "arxiv:1905.12731"
+source_version = "v1"
+source_sha256 = "b7f831dc66b329d583c892483160c937b773dec1cc2f52edf33b32e15d1b563d"
 
 [[notes]]
 path = "docs/papers/reading_notes/czajkowski_grilo_sequential_measurements_2101.08313_source_review.md"
@@ -47,6 +54,13 @@ source_version = "v1"
 source_sha256 = "c1be4a05112b90c3ec250cca2ffbe8bfce06b0fc443e9fc9b2c6bf63a0cb88e4"
 
 [[notes]]
+path = "docs/papers/reading_notes/ghosh_leakage_paralysis_1306.0925v2.md"
+note_sha256 = "2f290bbb4644de552bc32817028fb49dd166cfcfa272fff302f2ca936d750bbe"
+source_id = "arxiv:1306.0925"
+source_version = "v2"
+source_sha256 = "d2b630d8cee32a4e1ab5302fda3e4f7cee15849577565dff9eb63a10dd10f076"
+
+[[notes]]
 path = "docs/papers/reading_notes/jaschke_open_system_tn_1804.09796_source_review.md"
 note_sha256 = "38defd218448d5e2f19bff9a4b80b0ccea0352beaaa3cc8da05b13fdc3dfcace"
 source_id = "arxiv:1804.09796"
@@ -80,6 +94,13 @@ note_sha256 = "87f10ff117f65d92fdd665669f8c62d81c8c2f2bf3be7e173a2bd328c0df8ef1"
 source_id = "arxiv:2012.12233"
 source_version = "v1"
 source_sha256 = "c9d066eabc2cf1e4769f4d733737e0330a7882663a48894ed7f6073a0f502b48"
+
+[[notes]]
+path = "docs/papers/reading_notes/miyamura_heralded_leakage_2607.17204v1.md"
+note_sha256 = "639131afd588612718410cc61595915329e6d1fdb8ea55762316fcd478f724bf"
+source_id = "arxiv:2607.17204"
+source_version = "v1"
+source_sha256 = "cb33dbc5eaddb400c0e04b63dfc9be199adfef2797e3133996b6aea32b0ed889"
 
 [[notes]]
 path = "docs/papers/reading_notes/naumann_varipeps_lectures_source_review.md"
@@ -157,6 +178,13 @@ note_sha256 = "216df152fcb99a68eab18c41a6baaa0181c2b38697cb360a5f204669ca915271"
 source_id = "arxiv:1912.10512"
 source_version = "v2"
 source_sha256 = "53e4e79c4f08f14c603a29e066cd0e0e48bb5dc0a86c43039c5a599c9f9f80ba"
+
+[[notes]]
+path = "docs/papers/reading_notes/varbanov_leakage_detection_surface17_2002.07119.md"
+note_sha256 = "03c9c7c805bfa93d4ddeecabf6ab5f8634f536c19e2c9202cd188f4b07f8ca01"
+source_id = "arxiv:2002.07119"
+source_version = "v1"
+source_sha256 = "e5e3f4756bcedac10a4016aaac957af41a7a560501033a7f43a993a7b22abbe9"
 
 [[notes]]
 path = "docs/papers/reading_notes/werner_positive_tensor_network_open_systems_1412.5746.md"
