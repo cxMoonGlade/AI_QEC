@@ -444,6 +444,8 @@ def test_dense_worker_is_independent_and_proxy_firewall_is_explicit() -> None:
     assert "HOST_LIMIT_BYTES = 64 * 1024**3" in runner_source
     assert "DEVICE_LIMIT_BYTES = 28 * 1024**3" in runner_source
     assert "peps_d5_physical_corruption_control.py" in runner_source
+    assert "--controls-only" in runner_source
+    assert "_run_d3_integration_controls" in runner_source
 
     corruption_source = CORRUPTION_CONTROL_PATH.read_text(encoding="utf-8")
     assert 'fixture["operations"][156]' in corruption_source

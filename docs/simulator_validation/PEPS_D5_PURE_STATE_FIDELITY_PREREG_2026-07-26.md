@@ -262,7 +262,9 @@ verdict.
   `run_peps_d5_complete_state_sweeps.py` is the terminal owner for the exact
   `D=[1,2,4,8,16]` sweep, `1800 s` fresh-process timeout, `64 GiB` host and
   `28 GiB` device caps, monotonicity prediction, bond-knob nondegeneracy, and
-  usefulness verdict. A direct worker or comparator invocation cannot issue a
+  usefulness verdict. Its `--controls-only` mode must first pass the independent
+  d3 Torch/NumPy reference and both commit-bound external D16 adapters before
+  any d5 execution. A direct worker or comparator invocation cannot issue a
   terminal benchmark verdict.
 - No `src/**` change is authorized by this phase.
 

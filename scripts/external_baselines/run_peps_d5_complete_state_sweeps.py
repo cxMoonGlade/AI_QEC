@@ -317,6 +317,150 @@ def _summarize_candidate(rows: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _run_d3_integration_controls(
+    *,
+    output_directory: Path,
+    candidates: list[str],
+    process_rows: list[dict[str, Any]],
+) -> dict[str, Any]:
+    fixture_path = output_directory / "fixture_d3.json"
+    reference_state = output_directory / "reference_d3.npy"
+    reference_summary = output_directory / "reference_d3.json"
+    emit = _run_fresh_process(
+        label="emit_d3_fixture",
+        command=_conda_python(
+            "ecs",
+            "scripts/external_baselines/"
+            "emit_peps_d5_pure_state_fixture.py",
+            "--distance",
+            "3",
+            "--output-json",
+            str(fixture_path),
+        ),
+        timeout_seconds=60,
+        log_path=output_directory / "emit_d3.log",
+    )
+    process_rows.append(emit)
+    if emit["returncode"] != 0 or emit["timed_out"]:
+        raise RuntimeError(f"d3 fixture emission failed: {emit}")
+    reference = _run_fresh_process(
+        label="dense_reference_d3",
+        command=_conda_python(
+            "ecs",
+            "scripts/external_baselines/peps_d5_dense_reference.py",
+            "--fixture",
+            str(fixture_path),
+            "--output-state",
+            str(reference_state),
+            "--output-summary",
+            str(reference_summary),
+            "--device",
+            "cuda",
+            "--require-numpy-crosscheck",
+        ),
+        timeout_seconds=POINT_TIMEOUT_SECONDS,
+        log_path=output_directory / "reference_d3.log",
+    )
+    process_rows.append(reference)
+    if reference["returncode"] != 0 or reference["timed_out"]:
+        raise RuntimeError(f"d3 dense reference failed: {reference}")
+
+    rows: dict[str, Any] = {}
+    for candidate in candidates:
+        config = CANDIDATES[candidate]
+        prefix = f"{candidate}_d3_D16"
+        state_path = output_directory / f"{prefix}.npy"
+        summary_path = output_directory / f"{prefix}.json"
+        comparison_path = output_directory / f"{prefix}_fidelity.json"
+        worker = _run_fresh_process(
+            label=prefix,
+            command=_conda_python(
+                config["environment"],
+                config["worker"],
+                "--fixture",
+                str(fixture_path),
+                "--max-bond",
+                "16",
+                "--output-state",
+                str(state_path),
+                "--output-summary",
+                str(summary_path),
+                "--device",
+                "cuda",
+                *config["extra_arguments"],
+            ),
+            timeout_seconds=POINT_TIMEOUT_SECONDS,
+            log_path=output_directory / f"{prefix}.log",
+        )
+        process_rows.append(worker)
+        if worker["returncode"] != 0 or worker["timed_out"]:
+            raise RuntimeError(f"{candidate} d3 integration failed: {worker}")
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        if summary.get("status") != "completed":
+            raise RuntimeError(
+                f"{candidate} d3 integration unavailable: "
+                f"{summary.get('reason')}"
+            )
+        host_bytes, device_bytes = _candidate_resource_usage(
+            candidate,
+            summary,
+        )
+        if (
+            host_bytes > HOST_LIMIT_BYTES
+            or device_bytes > DEVICE_LIMIT_BYTES
+        ):
+            raise RuntimeError(f"{candidate} d3 integration exceeded resources")
+        compare_process = _run_fresh_process(
+            label=f"{prefix}_compare",
+            command=_conda_python(
+                "ecs",
+                "scripts/external_baselines/"
+                "compare_peps_d5_complete_states.py",
+                "--reference-summary",
+                str(reference_summary),
+                "--candidate-summary",
+                str(summary_path),
+                "--output-json",
+                str(comparison_path),
+            ),
+            timeout_seconds=300,
+            log_path=output_directory / f"{prefix}_compare.log",
+        )
+        process_rows.append(compare_process)
+        if (
+            compare_process["returncode"] != 0
+            or compare_process["timed_out"]
+        ):
+            raise RuntimeError(
+                f"{candidate} d3 comparison failed: {compare_process}"
+            )
+        comparison = json.loads(
+            comparison_path.read_text(encoding="utf-8")
+        )
+        fidelity = float(
+            comparison["metric"]["normalized_squared_overlap"]
+        )
+        if fidelity < 1.0 - 1e-10:
+            raise RuntimeError(
+                f"{candidate} d3 D16 fidelity control failed: {fidelity}"
+            )
+        rows[candidate] = {
+            "bond": 16,
+            "fidelity": fidelity,
+            "required_minimum": 1.0 - 1e-10,
+            "candidate_summary_sha256": _file_sha256(summary_path),
+            "comparison_sha256": _file_sha256(comparison_path),
+            "host_peak_bytes": host_bytes,
+            "device_peak_bytes": device_bytes,
+            "passed": True,
+        }
+    return {
+        "status": "passed",
+        "reference_summary_sha256": _file_sha256(reference_summary),
+        "candidate_controls": rows,
+    }
+
+
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-directory", type=Path, required=True)
@@ -325,6 +469,11 @@ def _parse_args() -> argparse.Namespace:
         nargs="+",
         choices=tuple(CANDIDATES),
         default=list(CANDIDATES),
+    )
+    parser.add_argument(
+        "--controls-only",
+        action="store_true",
+        help="Run the d3 integration gate and stop before any d5 evolution.",
     )
     return parser.parse_args()
 
@@ -350,6 +499,38 @@ def main() -> int:
     lock_path = Path("/tmp/ecs_gpu.0.lock")
     with lock_path.open("a+b") as gpu_lock:
         fcntl.flock(gpu_lock.fileno(), fcntl.LOCK_EX)
+        d3_controls = _run_d3_integration_controls(
+            output_directory=args.output_directory,
+            candidates=args.candidates,
+            process_rows=process_rows,
+        )
+        if args.controls_only:
+            control_result = {
+                "schema": (
+                    "error_coupling_simulator.external."
+                    "peps_d3_integration_controls.v1"
+                ),
+                "status": "passed",
+                "d3_integration_controls": d3_controls,
+                "resource_gate": {
+                    "point_timeout_seconds": POINT_TIMEOUT_SECONDS,
+                    "host_peak_limit_bytes": HOST_LIMIT_BYTES,
+                    "device_peak_limit_bytes": DEVICE_LIMIT_BYTES,
+                    "gpu_lock": str(lock_path),
+                },
+                "processes": process_rows,
+                "provenance": {
+                    **provenance,
+                    "runner_path": str(Path(__file__).resolve()),
+                    "runner_sha256": _file_sha256(Path(__file__).resolve()),
+                },
+            }
+            destination = (
+                args.output_directory / "d3_control_result.json"
+            )
+            _atomic_json(destination, control_result)
+            print(json.dumps(control_result, sort_keys=True), flush=True)
+            return 0
         emit = _run_fresh_process(
             label="emit_fixture",
             command=_conda_python(
@@ -591,6 +772,7 @@ def main() -> int:
             "device_peak_limit_bytes": DEVICE_LIMIT_BYTES,
             "gpu_lock": str(lock_path),
         },
+        "d3_integration_controls": d3_controls,
         "candidates": candidate_results,
         "physical_corruption_control": {
             "path": str(corruption_control_path.resolve()),
