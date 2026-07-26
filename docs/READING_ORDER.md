@@ -1,6 +1,6 @@
 # Reading order — what matters at the current stage
 
-Reconciled 2026-07-26 against `b9d17b1`.
+Reconciled 2026-07-26 against `b4ddbdb`.
 Verify with `python tools/check_reading_order.py`.
 
 `CLAUDE.md` holds the rules that always bind and a routing table for which surface owns which
@@ -61,6 +61,30 @@ Mutation testing is retired; verification is unit tests plus the coverage gate.
 - Any statement that "no external precedent exists" derived from local retrieval alone. Local
   absence is not a gap; see the rule in `CLAUDE.md`.
 
+## Next, in this order
+
+1. **Package the d3 non-Pauli record as a committed entrypoint.** It already works and has never
+   been shipped: `experiments.load_xzzx_d3(with_interior_streams=True)` ->
+   `experiments.run_spec_from_preset(PRESET_LEAK_THETA_0P30, ...)` ->
+   `FusedWithinCycleSampler(device="cuda").sample(...).to_det_obs()`. Verified at R=1..10 and 25,
+   N up to 16384, complex128, max norm drift 7.8e-16, detector rate monotone in theta. The Stim leg
+   (d3 and d5 Pauli, full `.b8` + `.dem` + per-artifact sha256 manifest through our own
+   `StimCircuitSource` + `Simulator`) is equally unshipped. Both currently exist only as scratchpad
+   probes; see below.
+2. **Accuracy-versus-chi curve at n <= 8.** `_RECORD_EVIDENCE_QUBIT_CAP = 8` and
+   `_DENSE_CHANNEL_MAX_DIM = 256 = 2**8`, and an 8-qubit chain has middle-cut bond 16, so
+   `chi` in {1,2,4,8,16} genuinely truncates inside the certifiable regime.
+   `axis1_qt_mps_bond_sweep_manifest` is already a registered entrypoint taking arbitrary
+   `bond_values`; 50 of its 51 call sites pass `(1, 2)`. This is the project's first real truncation
+   -error curve against the registered dense oracle, with no `src/**` change and no new oracle.
+3. **Only then d5 non-Pauli.** The wall is verified and fundamental: `sv_traj_d3_wc` is specialized
+   to 9 data qutrits, and 3**25 state-vector amplitudes is unreachable regardless — arXiv:2308.08186
+   records that state-vector simulation needs "a few petabytes of memory for 30 qutrit systems".
+   The route is a 2D ansatz (`carrier/peps`, `carrier/pepo`, neither in any coverage registry), which
+   is month-scale work and must not precede items 1 and 2.
+
+Explicitly not doing: the withdrawn heralding claim, and any PEPS work before 1 and 2 land.
+
 ## Open decisions
 
 - Which `quantumsim` ref matches arXiv:2002.07119. Five carry the device model; none is confirmed.
@@ -81,6 +105,16 @@ abstract depth. Newly cloned under `external/reference_repos/`, each at the ref 
 `origin/enh/naming`, `origin/feature/circuit_plotting`. Which one matches the paper is undetermined;
 `origin/enh/cphase_netzero` is the obvious first candidate because the paper's CZ is the Net-Zero
 implementation. Do not cite "quantumsim" for that paper without naming a ref.
+
+## Live only in the session scratchpad
+
+Not committed, and lost when the scratchpad is cleared. Re-derive or promote before relying on them:
+`d3run.py` (Stim d3/d5 through our Simulator), `p3_carrier_record.py` (the three-call d3 non-Pauli
+path), `p1_parse.py` / `p2_stim_record.py` / `p9_parity.py` / `p10_parity.py` (probes),
+`emit_stim_json.py` + `aer_probe3.py` (the qiskit-aer MPS non-Pauli prototype, reported at 1.7
+ms/shot for d3 and a 16.9 sigma Kraus-versus-twirl separation, **not independently reproduced**),
+and `gen_external_code_map.py` + `EXTERNAL_CODE_MAP.md` (written by a subagent, duplicates the
+committed `tools/gen_external_tn_code_map.py`, deliberately not committed).
 
 ## Maintenance
 

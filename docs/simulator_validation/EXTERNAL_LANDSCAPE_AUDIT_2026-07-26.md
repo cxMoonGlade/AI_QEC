@@ -137,6 +137,59 @@ Items 3 and 4 are worth naming explicitly, because they are the parts of this re
 discipline most often read as overhead. They are, on this survey, the two capabilities with no
 external counterpart at all.
 
+## Five reference clones read, 2026-07-26
+
+Cloned to test whether precedent exists in code that no paper describes:
+`qutrits` at `fe24c42`, `restless-simulator` at `92e8a62`, `surface-code-simulator` at `f06123e`,
+`Located-decoder-for-Rydberg-decay` at `1bf10b6`, and `quantumsim` (default `292fce9`, plus its
+other remote refs).
+
+**Zero of five apply a deterministic single-qubit layer inside a cycle while carrying a leaked
+level.** The strongest candidate was checked exhaustively rather than at its default:
+`git grep -i -E "dynamical|decoupl|refocus|pauli_frame|pauli frame"` over every `*.py` on all 34 of
+quantumsim's remote refs returns zero hits on every ref. The other four cannot host the question —
+`qutrits` rejects measurement outright, `restless-simulator` has shots not rounds,
+`Located-decoder-for-Rydberg-decay` contains no circuit or quantum state, and
+`surface-code-simulator` is a typed wrapper over `stim.Circuit.generated`.
+
+**Zero of five do circuit-level frame bookkeeping.** What the reads surfaced is three different
+objects that must not be conflated with it: compile-time support tracking (quantumsim's surviving
+basis labels), classical readout post-processing (restless XOR differencing, lag-1 over shots of
+independent calibration circuits, not lag-2 over rounds), and decoder-side herald annotation
+(`Located-decoder`'s `fault_ids` plus weight-0 erasure edges). No leakage indicator bit exists
+anywhere in the five.
+
+Five more repositories of silence still do not establish a field-wide gap.
+
+### The finding that matters: the leaked-inert assumption is underdetermined
+
+quantumsim ships `R_y(pi) = (-iY) (+) 1`, not `Y (+) 1`. The conjugation identity is unaffected —
+the extra phase is diagonal, so both conventions give `U^dag Z U = diag(-1,+1,+1) = -Z + 2|2><2|`,
+and quantumsim therefore corroborates the identity our stabilizer-sign argument rests on. What
+diverges is `Y^2 = I`: under their convention two pi pulses flip the sign of a `|0><2|` coherence,
+so it fails as a channel.
+
+The consequence is about the literature, not the code. "Single-qubit gates act on a leaked state as
+the identity" fixes the `|2><2|` entry to modulus 1 but leaves its **phase relative to the
+computational block free**. Two implementations that both satisfy the sentence verbatim are
+physically inequivalent the moment `|2>`-computational coherence exists — and the CZ `|11> <-> |02>`
+exchange generates exactly that coherence. This is not a code-versus-paper contradiction; the
+assumption is simply underdetermined. Any preregistration resting on it must state the phase
+convention explicitly and cannot use the Varbanov sentence to fix it.
+
+### Adoptable, if wanted
+
+- `restless-simulator`'s `QutritUnitaryGate.from_qubit_gate`
+  (`restless_simulator/circuit/qutrit_unitary_gate.py:127-193` at `92e8a62`), Apache-2.0 (IBM 2023).
+  Seeds `np.eye(3**n)` and overwrites only computational entries, so identity-on-`|2>` is automatic.
+  Useful as an independent third-party cross-check on our qutrit embedding, not as a dependency. Its
+  `test_two_qutrit_gate` pins RZZ to identity on *every* leaked basis state — stronger than anything
+  Varbanov asserts, and wrong for our explicit CZ transport, so it doubles as a ready-made falsifier
+  of a divergence we would have to make deliberately.
+- quantumsim's `optimize` / `optimal_bases` (`quantumsim/circuits/compiler.py:9-42, 345-406`). An
+  SVD-derived per-qubit subbasis whose reduction is derived from the operator rather than declared
+  by the caller, and whose surviving label set is itself a standing falsifier.
+
 ## Excluded on evidence
 
 - `yaqs` rejects `reset` and mid-circuit measurement outright (`dag_utils.py:49`,
