@@ -44,6 +44,7 @@ ENVIRONMENT_LOCK = (
 ENVIRONMENT_LOCK_SCHEMA = (
     "error_coupling_simulator.environment_lock.quimb_peps_d5.v1"
 )
+GAUGE_SMUDGE = 1e-12
 COMMITTED_INPUTS = (
     "baseline-environment-quimb-peps-linux-64.lock.json",
     "docs/METRICS.md",
@@ -507,7 +508,7 @@ def evolve_quimb(
         max_bond=max_bond,
         cutoff=0.0,
         renorm=False,
-        gauge_smudge=0.0,
+        gauge_smudge=GAUGE_SMUDGE,
         dtype="complex128",
         to_backend=converter,
         convert_eager=True,
@@ -601,7 +602,7 @@ def evolve_quimb(
         "requested_max_bond": max_bond,
         "actual_max_bond": actual_max_bond,
         "cutoff": 0.0,
-        "gauge_smudge": 0.0,
+        "gauge_smudge": GAUGE_SMUDGE,
         "renorm": False,
         "operation_count": circuit.num_gates,
         "evolution_seconds": evolution_seconds,

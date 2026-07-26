@@ -431,6 +431,7 @@ def test_dense_worker_is_independent_and_proxy_firewall_is_explicit() -> None:
     assert "EXPECTED_QUIMB_COMMIT" in quimb_source
     assert "--max-bond" in quimb_source
     assert "cutoff=0.0" in quimb_source
+    assert "GAUGE_SMUDGE = 1e-12" in quimb_source
     assert ".to_dense(" in quimb_source
     assert "get_fidelities" not in quimb_source
     assert "discarded" not in quimb_source
