@@ -182,6 +182,10 @@ def _torch_matrices(torch: Any, *, device: Any) -> dict[str, Any]:
     return {"I2": eye2, "I4": eye4, "X": x, "Z": z, "H": h}
 
 
+def _canonical_torch_device_name(device_name: str) -> str:
+    return "cuda:0" if device_name == "cuda" else device_name
+
+
 def _torch_gate_for_operation(
     torch: Any,
     operation: Mapping[str, Any],
@@ -311,6 +315,7 @@ def evolve_torch(
         device_name = "cuda" if torch.cuda.is_available() else "cpu"
     if device_name == "cuda" and not torch.cuda.is_available():
         raise RuntimeError("CUDA was requested but is unavailable in process")
+    device_name = _canonical_torch_device_name(device_name)
     device = torch.device(device_name)
     if device.type == "cuda":
         torch.cuda.set_device(device)

@@ -364,6 +364,14 @@ def test_gate_unitarity_and_half_angle_have_distinct_falsifiers(
         pepsy_worker._validated_numpy_gate(operation)
 
 
+def test_cuda_device_names_are_indexed_before_set_device(modules) -> None:
+    _emitter, dense, quimb_worker, _pepsy_worker, _comparison = modules
+    assert dense._canonical_torch_device_name("cuda") == "cuda:0"
+    assert quimb_worker._canonical_torch_device_name("cuda") == "cuda:0"
+    assert dense._canonical_torch_device_name("cpu") == "cpu"
+    assert quimb_worker._canonical_torch_device_name("cpu") == "cpu"
+
+
 def test_d3_independent_dense_routes_and_controls_trip(modules) -> None:
     emitter, dense, _quimb_worker, _pepsy_worker, _comparison = modules
     fixture = emitter.build_fixture(size=3)
