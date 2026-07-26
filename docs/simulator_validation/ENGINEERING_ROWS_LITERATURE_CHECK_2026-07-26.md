@@ -1,7 +1,8 @@
 # Engineering differentiator rows checked against the literature
 
-Date: 2026-07-26. Status: **all three rows OCCUPIED. The positioning record's "What remains
-unoccupied" section is refuted in full.**
+Date: 2026-07-26. Status: **all three rows OCCUPIED, and all three narrow residuals came back partially occupied
+after forward citation. The positioning record's "What remains unoccupied" section is refuted in
+full, and nothing survives it as a novelty claim.**
 
 This record is deliberately separate from
 `docs/simulator_validation/EXTERNAL_LANDSCAPE_AUDIT_2026-07-26.md` rather than an edit to it. The
@@ -125,15 +126,92 @@ These are the sharpest part of the result, because none of them required externa
   own external-citation rule in `CLAUDE.md`. The ITensorMPS negative-probability sub-claim remains
   unverified by anyone.
 
+## Second round: the three residuals, put through forward citation
+
+Run after the above, with the search quota repaired. Workflow `wf_512fa03d-6e0`, ten agents:
+per residual a forward-citation traversal via Semantic Scholar and OpenAlex, a sweep of the
+communities the first round never touched, and an adversarial verifier required to report how many
+citing works were screened across which seeds — with `search_inconclusive` mandated instead of
+"survives" when it could not.
+
+**All three residuals came back `partially_occupied`. None supports a novelty claim.**
+
+| residual | verdict | strongest occupant | screening depth |
+|---|---|---|---|
+| R2 — first-class time-correlated noise source object plus measurement in one run | partially occupied (high) | `corrqec2` at ref `v1-arxiv` = `b71e1c280778571f6c393600bb937c08f85018d3`: `src/corrqec2/noisemodels/storm_model.py` (`StormModel.__init__`, `self._T = [[1-a,a],[b,1-b]]`) and `src/corrqec2/simulation/simulator.py` (`CircuitSimulator.simulate_batch` returning `get_detector_flips()` and `get_observable_flips()`). Second, missed by both finders: `leakysim` 0.5.0 on PyPI, "an implementation of Google's Pauli+ simulator", `inmzhang/leaky` at `035a9881fe5cd6a86c4140d8e7a00e8295df8b11` — `src/leaky/core/simulator.h` carries `LeakageStatus leakage_status` and a dedicated `std::mt19937_64 leakage_rng` | 1,744 citing works screened, which produced nothing; the row was settled by repository probing instead |
+| R3 — self-describing versioned record refusing unknown versions | partially occupied (medium) | PECOS at `fa974197f0debd6478343c760af47f6faa4f04d2`, `crates/pecos-phir-json/src/common.rs:16-36` — `detect_version` reads `version` from inside the payload and returns `Err(PecosError::Input("Unsupported PHIR-JSON version"))` on anything unknown. That is the mechanism, applied to the program IR rather than to the record | 5,917 citing works across 8 seeds, plus an independent 1,799-work pass |
+| R4 — permutation/surrogate null on a record as a harness self-check | partially occupied (high) | IceCube SkyLLH at `074426a81d4d4b79230553765e6c584149de12db`, `skyllh/core/scrambling.py` — `DataScramblingMethod` (abstract, line 19), `UniformRAScramblingMethod.scramble` randomising at line 120, driven by `DataScrambler` at line 223: a randomisation null on a detector record as a first-class pluggable harness component. Also gravitational-wave time slides, DOI `10.1088/0264-9381/27/1/015005` | 5,486 citing works fully enumerated across Theiler 1992 (n=3,786), Adebayo 2018 (n=609) and Stim (n=387 / n=704) |
+
+Three verification catches worth keeping, because each was a finder error that would have changed a
+verdict:
+
+- The R2 forward-citation finder reported `corrqec2` as 404 and substituted `corrqec`, a different
+  repository for a different paper, then called its `base.py` "a 15-line stub" and nearly saved the
+  row on that basis. `corrqec2`'s default branch is `v1-arxiv`, not `main`; requesting `main` 404s.
+  Its `base_noise_model.py` is 6797 bytes and a genuine ABC.
+- The R2 sweep finder dismissed `jaq-lab/qec-control-gym` because grepping for `ornstein|uhlenbeck`
+  returned nothing. The grep is correct and the mechanism is Ornstein-Uhlenbeck anyway:
+  `qec_control.py:52-58` is the exact OU Euler update with user-configurable correlation times. A
+  vocabulary lens lost a hit to vocabulary.
+- The R4 sweep finder called `shard`'s negative control a Theiler-class surrogate. Line 338 is
+  `S_iid = (rng.uniform(size=(50000, 22)) < rate)` — a fresh Bernoulli stream at a matched rate, not
+  anything derived from the record. A surrogate is by construction generated *from* the data.
+
+The R3 verifier also read the Google Zenodo archives' ZIP central directories over HTTP range
+requests rather than downloading gigabytes, and found a machine-readable `metadata.json` in the 2024
+deposit that neither finder had found — the sharpest available test of its own row. The 2023 deposit
+(6804040) has 2,095 entries and zero matching `schema|version|manifest|.json|meta`; its
+`properties.yml` carries `type`, basis, rounds, distance and `circuit_detectors` but no format
+version, and its README states the shot width is supplied out of band, which is the direct
+consequence of headerlessness.
+
+## What may be stated, and in what words
+
+R2 should be dropped from any positioning document outright. Every clause is individually occupied at
+a named commit; what is left is one `pip publish` and one `rng=` parameter away from false, and turns
+on two adjectives — "installable" and "general-purpose" — that were never operationalised.
+
+R3 and R4 are statable only as **design rationale**, never near the word "first":
+
+> **R3.** QEC record tooling is uniformly headerless — Stim's raw formats, sinter's CSV, Deltakit's
+> b8/01/c64, decoder-bench's HDF5, FlamingPy, and both Google Zenodo deposits all ship records with
+> no in-file schema identity. We version and gate ours instead. The mechanism is ordinary (Braket's
+> `braketSchemaHeader`, Qiskit QPY, PECOS's PHIR-JSON loader); the departure is that we apply it to
+> the record.
+
+> **R4.** We gate record emission on a surrogate null. This is standard in adjacent detector sciences
+> (IceCube SkyLLH's `DataScrambler`; gravitational-wave time slides) and in quantum software testing
+> (Huang & Martonosi, ISCA 2019); QEC resamples its detector record only for uncertainty, never to
+> construct a null.
+
+Both are engineering statements about packaging. Neither is evidence that anything about the
+simulator's physics or capability is new.
+
 ## What this check did not do
 
 Recorded so the negative results are not read as stronger than they are.
 
-- **Forward-citation traversal was never run**, in any row. Every claim here that depends on an
-  *absence* rests on keyword search alone. Nobody asked who cites SchWARMA (arXiv:2010.04580), Stim
-  (arXiv:2103.02202), or Theiler et al. 1992 within QEC.
-- **Quota.** The external search ran anonymously and exhausted its free quota mid-survey; two
-  finders fell back to another tool. An API key has since been configured, so this is repairable.
+- **Authenticated GitHub global code search was unavailable to every agent in both rounds**, and it
+  is the single largest hole, for all three rows. Unauthenticated `/search/code` returns 401,
+  grep.app is behind a checkpoint, and Sourcegraph's public index returns false negatives. Every
+  real hit in either round came from reading repositories, not from citation graphs.
+- **Patent-office full-text and CPC-class search** was never run in either round; only ad-hoc
+  keyword passes. G06N10/70 crossed with format-version and noise-model claims is the obvious query.
+- **Non-English literature and dissertation repositories** (CNKI, J-STAGE, theses.fr, DissOnline)
+  were never searched.
+- **Closed and industrial stacks** are structurally invisible: Riverlane's server side behind
+  `deltakit.explorer.Client`, the Google/IBM/Quantinuum/PsiQuantum internal harnesses, and QC
+  Design's Plaquette, now absent from both PyPI and GitHub.
+- **Named documents still unread**: arXiv:2607.08767 body and TeX source, whose XPauli "environment
+  sector" is the one architecture that could still take R2 outright; PECOS's error-generator
+  internals and its `feat/experimental` (`34cf40fd4c`) and `more-py-to-rs` (`538ebb50f9`) branches;
+  cudaq-qec 0.6.0's noise API; three of the five Google 2024 Zenodo archives; DOI
+  `10.1049/qtc2.70037` (403).
+- **Full-text sweep of the QEC-touching Stim citers** was not run — roughly 360 works were screened
+  on titles and abstracts only, never on strings like "shuffled shots" or "permuted rounds".
+- **Quota, first round only.** The first round ran anonymously and exhausted its free quota
+  mid-survey; two finders fell back to another tool. An API key is now configured and the second
+  round ran with quota.
 - **Evidence quality.** One finder never opened a PDF. Clader et al. §III was read via ar5iv, not
   the published PRA. arXiv:2507.08713v1 was read as HTML with an unverified author list.
   arXiv:2511.09491 and arXiv:2512.07815 rest on abstracts. arXiv:2603.05474, the formalism paper
@@ -158,16 +236,19 @@ Recorded so the negative results are not read as stronger than they are.
    ground it stands on — Stim's record formats and `analyze_errors` aborts, QCSchema's
    `schema_name`/`schema_version`/`provenance`, TeNPy's `max_trunc_err`, Model Cards and MODA for
    scope declaration — and never as a statement that these have no counterpart.
-3. **Do not treat the three narrow residuals as consolation.** Each has the same shape — "nobody has
-   packaged known practice X into pipeline Y" — and each was produced by the same move that produced
-   the refuted rows: narrow the claim until keyword search stops returning hits. Two of the three
-   rest on absence established by keyword search alone, in vocabularies the relevant communities may
-   not use.
-4. **Run forward-citation traversal before any further gap claim.** It is the only method that
-   converts "N queries returned nothing" into a defensible negative, and it has never been run here.
+3. **Drop residual R2 outright; keep R3 and R4 only as design rationale**, in the exact words given
+   above. All three came back `partially_occupied` after forward citation, and none of them is a
+   capability claim.
+4. **Forward-citation traversal is now run** and is recorded above with screening counts. The method
+   is worth keeping as the standing requirement for any future absence claim: a negative that cannot
+   state which seeds were traversed and how many citing works were screened is not a negative.
+5. **Get authenticated GitHub code search working before the next round.** It is the one hole that
+   affects every row, and both rounds found their real hits by reading repositories rather than by
+   following citations — which is exactly the capability that search would industrialise.
 
 ## Provenance
 
-Workflow run `wf_c5b0873b-cd6`, 10 agents, 0 errors, ~1.19M subagent tokens, 345 tool calls,
-1494 s wall clock. Per-agent returns in that run's `journal.jsonl`. The TeNPy determination in the
+Round one: workflow `wf_c5b0873b-cd6`, 10 agents, 0 errors, ~1.19M subagent tokens, 345 tool calls,
+1494 s. Round two: workflow `wf_512fa03d-6e0`, 10 agents, 0 errors, ~1.30M subagent tokens,
+442 tool calls, 1633 s. Per-agent returns in that run's `journal.jsonl`. The TeNPy determination in the
 row-3 section was made in this repository by reading the fetched sources directly, not by an agent.
