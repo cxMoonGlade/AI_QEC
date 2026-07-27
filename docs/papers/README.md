@@ -76,6 +76,8 @@ curl -L --fail https://arxiv.org/pdf/1306.0925v2 -o docs/papers/1306.0925v2.pdf
 curl -L --fail https://arxiv.org/pdf/1905.12731v1 -o docs/papers/1905.12731v1.pdf
 curl -L --fail https://arxiv.org/pdf/2002.07119v1 -o docs/papers/2002.07119v1.pdf
 curl -L --fail https://arxiv.org/pdf/2607.17204v1 -o docs/papers/2607.17204v1.pdf
+curl -L --fail https://arxiv.org/pdf/2009.07851v3 -o docs/papers/2009.07851v3.pdf
+curl -L --fail https://arxiv.org/pdf/2104.09539v2 -o docs/papers/2104.09539v2.pdf
 ```
 
 Then run the artifact-verified builders; SHA mismatches fail closed:

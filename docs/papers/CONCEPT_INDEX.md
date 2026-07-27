@@ -5,9 +5,9 @@ relationships appear here. This is routing metadata; the cited PDF and locator r
 the evidence.
 
 - corpus status: active
-- sources: 30
-- concept nodes: 88
-- source-located relationships: 88
+- sources: 32
+- concept nodes: 95
+- source-located relationships: 95
 - dangling relationships: 0
 
 ## bond environment (concept)
@@ -70,6 +70,10 @@ the evidence.
 
 - **limits** — Efficient Time Evolution of 2D Open-Quantum Lattice Models with Long-Range Interactions using Tensor Networks — `Section V.C and Discussion, pages 8 and 13`, PDF p. 13 — The itrSU truncation retains a rank-one simple-update environment made from bond matrices, and the source calls this environment approximation uncontrolled. ([docs/papers/reading_notes/tepepo_2d_open_system_tn_2512.01781.md](reading_notes/tepepo_2d_open_system_tn_2512.01781.md))
 
+## residual leakage (limitation)
+
+- **limits** — Practical quantum error correction with the XZZX code and Kerr-cat qubits — `Sec. IV.B, paragraph beginning with leakage suppression at the physical level`, PDF p. 10 — After suppressing Kerr-cat leakage at the physical-operation level, the source neglects the residual leakage in its subsequent surface-code simulations. ([docs/papers/reading_notes/darmawan_xzzx_circuit_2104.09539_source_review.md](reading_notes/darmawan_xzzx_circuit_2104.09539_source_review.md))
+
 ## sequential cutwise SVD local optimality (limitation)
 
 - **limits** — Time-evolution methods for matrix-product states — `Sec. 2.6.1, final paragraph`, PDF p. 9 — Sequential cutwise SVD local optimality does not guarantee a globally optimal compressed matrix-product state when truncation errors are large. ([docs/papers/reading_notes/paeckel_mps_time_evolution_1901.05824_source_review.md](reading_notes/paeckel_mps_time_evolution_1901.05824_source_review.md))
@@ -93,6 +97,10 @@ the evidence.
 ## boundary gMPO method (method)
 
 - **supports** — A simplified and improved approach to tensor network operators in two dimensions — `Sec. III B, steps 1--6 and Fig. 4(c)--(g)`, PDF p. 6 — The boundary gMPO method precomputes upper norm environments, initializes a running energy from a bottom-row MPO, carries crossing interactions in `intops`, and alternates row gMPO contraction with an approximate `intops` update until the final scalar `<psi|H|psi>` is accumulated. ([docs/papers/reading_notes/orourke_chan_simplified_pepo_1911.04592.md](reading_notes/orourke_chan_simplified_pepo_1911.04592.md))
+
+## corresponding plus or minus X eigenstate (method)
+
+- **defines** — Practical quantum error correction with the XZZX code and Kerr-cat qubits — `Sec. III.B.4, Fig. 6 and adjacent paragraph`, PDF p. 7 — After projective readout places the measured ancilla in computational state zero or one conditional on the outcome, inverse rotations prepare the corresponding plus or minus X eigenstate for the next syndrome round. ([docs/papers/reading_notes/darmawan_xzzx_circuit_2104.09539_source_review.md](reading_notes/darmawan_xzzx_circuit_2104.09539_source_review.md))
 
 ## CTMRG projector truncation (method)
 
@@ -154,6 +162,10 @@ the evidence.
 
 - **defines** — Leakage detection for a transmon-based surface code — `Appendix E, Eqs. (E1)-(E6)`, PDF p. 17 — The two-hidden-state leakage model uses computational and leaked states, a transition matrix parameterized by leakage and seepage per cycle, state-dependent defect emissions, and a Bayesian posterior update. ([docs/papers/reading_notes/varbanov_leakage_detection_surface17_2002.07119.md](reading_notes/varbanov_leakage_detection_surface17_2002.07119.md))
 
+## XZZX check (method)
+
+- **defines** — Practical quantum error correction with the XZZX code and Kerr-cat qubits — `Sec. II.A, Fig. 2(a-b), caption, and adjacent circuit description`, PDF p. 3 — One XZZX check is measured by preparing a face ancilla in the plus state, applying an ordered CZ, CX, CX, CZ sequence to its four data neighbors, and measuring the ancilla in the Pauli-X basis. ([docs/papers/reading_notes/darmawan_xzzx_circuit_2104.09539_source_review.md](reading_notes/darmawan_xzzx_circuit_2104.09539_source_review.md))
+
 ## YASTN layered architecture (method)
 
 - **defines** — YASTN: Yet another symmetric tensor networks; A Python library for Abelian symmetric tensor network calculations — `Sec. 2 and Fig. 2`, PDF p. 4 — The YASTN layered architecture separates Abelian symmetry structure from dense numerical backends in `yastn.Tensor` and builds higher-level MPS and fPEPS modules above that symmetric-tensor layer. ([docs/papers/reading_notes/rams_yastn_codebase_source_review.md](reading_notes/rams_yastn_codebase_source_review.md))
@@ -193,6 +205,10 @@ the evidence.
 ## generalized amplitude-damping channel (model)
 
 - **derives** — Microscopic derivation of the one qubit Kraus operators for amplitude and phase damping — `Sec. 3, Eqs. (17)–(18)`, PDF p. 5 — The finite-temperature master equation generates a generalized amplitude-damping channel with four Kraus branches and distinct positive downward and upward rates. ([docs/papers/reading_notes/arsenijevic_bankovic_damping_1606.01145_source_review.md](reading_notes/arsenijevic_bankovic_damping_1606.01145_source_review.md))
+
+## incorrect stabilizer outcome (model)
+
+- **uses** — The XZZX surface code — `Fault-tolerant threshold model, paragraph below Fig. 5`, PDF p. 6 — The fault-tolerant numerical study uses independent data Pauli errors and an independent incorrect stabilizer outcome with probability q equal to the sum of its declared high-rate and low-rate error probabilities. ([docs/papers/reading_notes/bonilla_ataides_xzzx_2009.07851_source_review.md](reading_notes/bonilla_ataides_xzzx_2009.07851_source_review.md))
 
 ## leakage conditional phases (model)
 
@@ -238,6 +254,10 @@ the evidence.
 
 - **defines** — Quantification and Characterization of Leakage Errors — `Sec. VI.B, Eqs. (57)--(58), first equality`, PDF p. 9 — The unitary leakage model starts from `H = (|1><2| + |2><1|)/2` and defines its propagator by `U(t) = exp(-i t H)`. ([docs/papers/reading_notes/wood_gambetta_leakage_diagnostics_pra_97_032306.md](reading_notes/wood_gambetta_leakage_diagnostics_pra_97_032306.md))
 
+## XZZX bulk face check (model)
+
+- **defines** — The XZZX surface code — `Results, Fig. 1(a) and caption`, PDF p. 2 — The XZZX bulk face check is a product of two Pauli-X terms and two Pauli-Z terms on square-lattice vertices, and the same stabilizer form is used at every bulk face. ([docs/papers/reading_notes/bonilla_ataides_xzzx_2009.07851_source_review.md](reading_notes/bonilla_ataides_xzzx_2009.07851_source_review.md))
+
 ## ancilla paralysis (observable)
 
 - **defines** — Understanding the effects of leakage in superconducting quantum error detection circuits — `Sec. III.B, Eq. (24), following paragraph, and Fig. 4`, PDF p. 6 — The source labels theta modulo pi equal to zero as ancilla paralysis and describes it as a deterministic all-zero readout with no indication of the leaked data state. ([docs/papers/reading_notes/ghosh_leakage_paralysis_1306.0925v2.md](reading_notes/ghosh_leakage_paralysis_1306.0925v2.md))
@@ -273,6 +293,10 @@ the evidence.
 ## data-leakage syndrome (observable)
 
 - **defines** — Protecting quantum entanglement from qubit errors and leakage via repetitive parity measurements — `Supplemental Sec. II.A, data-qubit leakage model`, PDF p. 10 — The repeated-ZZ data-leakage syndrome is defined as the product of ancilla outcomes two rounds apart, sD at round m equals MA at m times MA at m-minus-two. ([docs/papers/reading_notes/bultink_repetitive_parity_leakage_1905.12731v1.md](reading_notes/bultink_repetitive_parity_leakage_1905.12731v1.md))
+
+## defect (observable)
+
+- **defines** — Practical quantum error correction with the XZZX code and Kerr-cat qubits — `Sec. II.B, opening decoder definition`, PDF p. 3 — A defect occurs at face f and time t when the product of the check outcomes at times t minus one and t equals minus one. ([docs/papers/reading_notes/darmawan_xzzx_circuit_2104.09539_source_review.md](reading_notes/darmawan_xzzx_circuit_2104.09539_source_review.md))
 
 ## direct-SVD discarded weight (observable)
 
@@ -317,6 +341,10 @@ the evidence.
 ## spacing metric W (observable)
 
 - **defines** — Understanding the effects of leakage in superconducting quantum error detection circuits — `Sec. III.B, Eq. (25)`, PDF p. 6 — The spacing metric W is the average number of cycles between consecutive ancilla-one outcomes and equals cosecant-squared theta-over-two without decoherence. ([docs/papers/reading_notes/ghosh_leakage_paralysis_1306.0925v2.md](reading_notes/ghosh_leakage_paralysis_1306.0925v2.md))
+
+## stabilizer outcome differs from its preceding outcome (observable)
+
+- **defines** — The XZZX surface code — `Fault-tolerant threshold discussion, Fig. 5(a-d) and caption`, PDF p. 6 — In the repeated-measurement phenomenological model, a defect is identified when a stabilizer outcome differs from its preceding outcome. ([docs/papers/reading_notes/bonilla_ataides_xzzx_2009.07851_source_review.md](reading_notes/bonilla_ataides_xzzx_2009.07851_source_review.md))
 
 ## state leakage (observable)
 

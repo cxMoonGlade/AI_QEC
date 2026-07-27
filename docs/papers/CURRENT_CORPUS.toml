@@ -1,8 +1,8 @@
 schema = "error_coupling_simulator.literature.corpus_manifest.v1"
 status = "active"
-corpus_sha256 = "33a23422bc72ac98da2b778a4fe96f0f8f4880c97668338dff3a2474eb879e2e"
-note_count = 30
-paper_fact_count = 360
+corpus_sha256 = "72024903f8c8b58fbc43089c77565b8877eda6696af8e5fcbc7de9d4cff53ec9"
+note_count = 32
+paper_fact_count = 376
 
 [[notes]]
 path = "docs/papers/reading_notes/arsenijevic_bankovic_damping_1606.01145_source_review.md"
@@ -10,6 +10,13 @@ note_sha256 = "1bb138455f6ca74c8794e5c41b5597b3ce4335331994c737a14cde5bcd3d5ee2"
 source_id = "arxiv:1606.01145"
 source_version = "v1"
 source_sha256 = "32e3d12077bef0b1e6eb84f2f85f5bc35fc1fce6b5f9a3e58c625cf902ee0694"
+
+[[notes]]
+path = "docs/papers/reading_notes/bonilla_ataides_xzzx_2009.07851_source_review.md"
+note_sha256 = "14a6d25e836b5673fb5fe3bf87c6ac417cb82a7a4ee672d42348984291365481"
+source_id = "arxiv:2009.07851"
+source_version = "v3"
+source_sha256 = "4b4f244f949b0d1e862ff44e6328f33abab93654cd64a7e5f1ada0467ccaafd7"
 
 [[notes]]
 path = "docs/papers/reading_notes/bultink_repetitive_parity_leakage_1905.12731v1.md"
@@ -24,6 +31,13 @@ note_sha256 = "2dbbd9b827ba884bf1ea0fe2afba959cd5732edabdbc2fa72ca3b953ebceddf1"
 source_id = "arxiv:2101.08313"
 source_version = "v2"
 source_sha256 = "29bfff3bc43db7e5159529ae7be85f87de4803589703fe3f8fa8790f547986ee"
+
+[[notes]]
+path = "docs/papers/reading_notes/darmawan_xzzx_circuit_2104.09539_source_review.md"
+note_sha256 = "2e714f7236d6f1859851d5164ab65b58b0847113d34163593d7fdfa92f651a24"
+source_id = "arxiv:2104.09539"
+source_version = "v2"
+source_sha256 = "809149344e94392151a3935a4ec9615930e19d7aee414a9d022a7ac07036e5e5"
 
 [[notes]]
 path = "docs/papers/reading_notes/dziarmaga_ntu_2107.06635_source_review.md"
