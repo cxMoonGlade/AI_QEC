@@ -2,8 +2,8 @@
   "frozen_preregistration_commit": "dc7f6a6a4bbc2ae3e8ba8dea6f00343ef9a9fc67",
   "frozen_preregistration_sha256": "76889bb6f9287ec7b5278257a81c71aacdbf697eb8a051003b1fbd90c05d4c36",
   "implementation_modified": false,
-  "review_markdown_sha256": "5e8a21f9e478112a5ccedc55250cc6c914093eef28f1b0b4ceef343ed233f895",
-  "reviewed_implementation_commit": "dcd3f9407046893ef8f81c96c5c3cc73a8c6c76b",
+  "review_markdown_sha256": "3e2ec394622890b714d548f26a12a68c87e4abff3a6c400b9955033235786b08",
+  "reviewed_implementation_commit": "f89d04c22f003c265a28c765e7e4e65808ecf0f4",
   "reviewed_inputs": {
     "scripts/external_baselines/compare_xzzx_record_peps.py": {
       "git_blob": "3c5bfecf4860653827426d86c4cfc82984ee5d53",
@@ -14,16 +14,16 @@
       "sha256": "030a616b10cc5aeccce2be28f8d57d0afeb58567dc16ebce07eee864d1627097"
     },
     "scripts/external_baselines/run_xzzx_record_peps_experiment.py": {
-      "git_blob": "00c3fd89cae289676274e87038356ebbe58b7c75",
-      "sha256": "c5163767a9d69611308c0a406f88ec09410d5414b94652105c4b8f6289ad7f24"
+      "git_blob": "c85d173e95dde4fe30bcda33ceb44f8dddf32afd",
+      "sha256": "79cf12e77a0e9da0f4beafb15b1072b693047c05043a8269c5278e16c7f8833e"
     },
     "scripts/external_baselines/xzzx_record_dense_reference.py": {
-      "git_blob": "ce79be8b460ee86f895b123197de385d3569a457",
-      "sha256": "59f2cefe5dfbde8fca7c877287f396e3e289638640c5981b2bc753e4758e5ea1"
+      "git_blob": "5d3a0e0623404fd75be45f795d95deaa28d4240e",
+      "sha256": "6d63967cf6c276f21d8954fadfe309214432f8f810068b4ad9a9421ab9dbca2f"
     },
     "scripts/external_baselines/xzzx_record_exact_data_reference.py": {
-      "git_blob": "4dd2c7b650633b999941ceface3e06e6a5b687d6",
-      "sha256": "8317d5786ae4b433e21225449d7ac70b1b86e0ec08255fc751d3f4bb1388dc6c"
+      "git_blob": "a7b6b43951571d30e3b90760d25313b79c57a063",
+      "sha256": "c47bff9604286069f081fa205233a0f53a4e2a3064142da668c2159dd37ffdcb"
     },
     "scripts/external_baselines/xzzx_record_quimb_candidate.py": {
       "git_blob": "c536639ea430b55275b0a16877c345b03af3bf24",
@@ -34,8 +34,8 @@
       "sha256": "6801a15a50a0b28ea344c4131f77bdb151909e4b896e064030accf157f266b7e"
     },
     "tests/test_external_xzzx_record_exact_data_reference.py": {
-      "git_blob": "29c200d77b66d9bfa265ac0eb441743d3186b47b",
-      "sha256": "43a4e640ae7db8b1e33417f4d3ef77ee445009ae2e319e78aabe1f7a89a2a864"
+      "git_blob": "2e29d26cb4ec0488689c21dc8b829cb16b9aba79",
+      "sha256": "669ff4bc6bfb11841849e1e9c74c15257a70c8ba88c53b965f24c3813a96afb9"
     },
     "tests/test_external_xzzx_record_fixture.py": {
       "git_blob": "e029d7450017a620923a6d766294691628230183",
@@ -50,8 +50,8 @@
       "sha256": "c2bd5d2ff1b6cd6d84036d83fe96e54f5e64b690d0e9cfb6738d41839fc629eb"
     },
     "tests/test_external_xzzx_record_runner.py": {
-      "git_blob": "e01cbc43a03fc3bc1fe5b909c82715a895271486",
-      "sha256": "52716fb7ff562b6819eee75274fac9e05e1962dcfe6e08d63cceb820d09358cf"
+      "git_blob": "f05ec0d72be6be7aad5479efec598a84a0751c7f",
+      "sha256": "cdbd934bfe1545e417c00bdfe16104db32e9c695228215fb9325302fb1f92251"
     }
   },
   "reviewer_mode": "new_unled_read_only",
