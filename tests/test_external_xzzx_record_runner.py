@@ -291,6 +291,24 @@ def test_fresh_process_records_wall_and_peak_host_rss(tmp_path: Path) -> None:
     assert Path(row["resource_log_path"]).is_file()
 
 
+def test_fresh_process_keeps_peak_host_rss_when_child_fails(
+    tmp_path: Path,
+) -> None:
+    runner = _load_runner()
+    row = runner.run_fresh_process(
+        label="false-control",
+        command=["/bin/false"],
+        log_path=tmp_path / "false.log",
+        timeout_seconds=5,
+    )
+
+    assert row["returncode"] == 1
+    assert row["timed_out"] is False
+    assert isinstance(row["peak_host_rss_bytes"], int)
+    assert 0 <= row["peak_host_rss_bytes"] <= runner.HOST_LIMIT_BYTES
+    assert row["host_limit_passed"] is True
+
+
 def test_artifact_manifest_rejects_symlinks(tmp_path: Path) -> None:
     runner = _load_runner()
     regular = tmp_path / "regular.txt"

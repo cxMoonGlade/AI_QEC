@@ -170,7 +170,7 @@ def born_bit_from_hash_integer(p0: float, hash_integer: int) -> int:
         isinstance(p0, bool)
         or not isinstance(p0, float)
         or not math.isfinite(p0)
-        or not 0.0 <= p0 <= 1.0 + REFERENCE_PROBABILITY_TOLERANCE
+        or not 0.0 <= p0 <= 1.0
     ):
         raise ValueError("p0 must be a finite binary64 probability")
     if (
@@ -432,15 +432,25 @@ def projector_probabilities(
     signed = sign * transformed
     plus = 0.5 * (vector + signed)
     minus = 0.5 * (vector - signed)
-    p0 = float(np.vdot(plus, plus).real)
-    p1 = float(np.vdot(minus, minus).real)
+    weight0 = float(np.vdot(plus, plus).real)
+    weight1 = float(np.vdot(minus, minus).real)
     if (
-        not math.isfinite(p0)
-        or not math.isfinite(p1)
-        or p0 < 0.0
-        or p1 < 0.0
+        not math.isfinite(weight0)
+        or not math.isfinite(weight1)
+        or weight0 < 0.0
+        or weight1 < 0.0
     ):
         raise ValueError("projected-vector probability is invalid")
+    total_weight = math.fsum((weight0, weight1))
+    if not math.isfinite(total_weight) or total_weight <= 0.0:
+        raise ValueError("projected-vector probability sum is invalid")
+    # These are conditional probabilities, so derive them from the complete
+    # nonnegative pair. This is normalization, not clipping: structural zeros
+    # and every representable positive projected norm are preserved.
+    p0 = weight0 / total_weight
+    p1 = weight1 / total_weight
+    if not 0.0 <= p0 <= 1.0 or not 0.0 <= p1 <= 1.0:
+        raise RuntimeError("normalized projected probability left [0, 1]")
     return p0, p1, plus, minus
 
 
@@ -475,7 +485,11 @@ def select_projector(
         raise SelectedBranchUnavailable(
             f"selected branch probability is below {minimum_probability:g}"
         )
-    selected = (plus, minus)[bit] / math.sqrt(probability)
+    projected = (plus, minus)[bit]
+    selected_weight = float(np.vdot(projected, projected).real)
+    if not math.isfinite(selected_weight) or selected_weight <= 0.0:
+        raise SelectedBranchUnavailable("selected branch has zero probability")
+    selected = projected / math.sqrt(selected_weight)
     if not np.all(np.isfinite(selected)):
         raise ValueError("selected poststate is nonfinite")
     return selected, (p0, p1)
@@ -558,7 +572,7 @@ def stable_positive_branch_mass(
         or not isinstance(value, float)
         or not math.isfinite(value)
         or value <= 0.0
-        or value > 1.0 + REFERENCE_PROBABILITY_TOLERANCE
+        or value > 1.0
         for value in values
     ):
         raise ValueError("branch probabilities must be finite and positive")
@@ -571,6 +585,60 @@ def stable_positive_branch_mass(
         "branch_mass_representable": not underflow,
         "positive_mass_underflowed_to_zero": underflow,
     }
+
+
+def validate_probability_rows(
+    rows: object,
+    *,
+    bits: Sequence[int],
+    measurement_count: int,
+) -> None:
+    probability_fields = {
+        "column",
+        "qubit",
+        "basis",
+        "reset",
+        "bit",
+        "p0",
+        "p1",
+        "selected_probability",
+    }
+    if not isinstance(rows, list) or len(rows) != measurement_count:
+        raise ValueError("probability rows are incomplete")
+    for column, (row, bit) in enumerate(zip(rows, bits, strict=True)):
+        if (
+            not isinstance(row, Mapping)
+            or set(row) != probability_fields
+            or row.get("column") != column
+            or row.get("bit") != bit
+        ):
+            raise ValueError("probability rows are not aligned")
+        raw_p0 = row.get("p0")
+        raw_p1 = row.get("p1")
+        raw_selected = row.get("selected_probability")
+        if (
+            isinstance(raw_p0, bool)
+            or isinstance(raw_p1, bool)
+            or isinstance(raw_selected, bool)
+            or not isinstance(raw_p0, (int, float))
+            or not isinstance(raw_p1, (int, float))
+            or not isinstance(raw_selected, (int, float))
+        ):
+            raise ValueError("probability row is non-numeric")
+        p0 = float(raw_p0)
+        p1 = float(raw_p1)
+        selected = float(raw_selected)
+        if (
+            not math.isfinite(p0)
+            or not math.isfinite(p1)
+            or not math.isfinite(selected)
+            or not 0.0 <= p0 <= 1.0
+            or not 0.0 <= p1 <= 1.0
+            or abs(math.fsum((p0, p1)) - 1.0)
+            > REFERENCE_PROBABILITY_TOLERANCE
+            or selected != (p0, p1)[bit]
+        ):
+            raise ValueError("probability row is invalid")
 
 
 def phase_invariant_fidelity(left: object, right: object) -> float:
@@ -1182,27 +1250,11 @@ def validate_parent_primary_summary(
     if authority.get("role") != "primary":
         raise ValueError("alternate parent must be the exact primary")
     rows = parent.get("probability_rows")
-    probability_fields = {
-        "column",
-        "qubit",
-        "basis",
-        "reset",
-        "bit",
-        "p0",
-        "p1",
-        "selected_probability",
-    }
-    if (
-        not isinstance(rows, list)
-        or len(rows) != fixture["num_measurements"]
-        or any(
-            not isinstance(row, Mapping)
-            or set(row) != probability_fields
-            or row.get("column") != column
-            for column, row in enumerate(rows)
-        )
-    ):
-        raise ValueError("parent probability rows are incomplete")
+    validate_probability_rows(
+        rows,
+        bits=bits,
+        measurement_count=fixture["num_measurements"],
+    )
     record = parent.get("record")
     state = parent.get("state")
     ledger = parent.get("projector_ledger")
@@ -1281,6 +1333,11 @@ def write_reference_artifacts(
         branch_authority,
         branch=branch,
         run_spec=run_spec,
+    )
+    validate_probability_rows(
+        execution.get("probability_rows"),
+        bits=[row["bit"] for row in branch["outcomes"]],
+        measurement_count=fixture["num_measurements"],
     )
     data_state = np.asarray(execution.get("preterminal_data_state"))
     data_order = list(fixture["frame"]["data_qubits"])

@@ -23,6 +23,7 @@ SCRIPT_DIR = REPO / "scripts" / "external_baselines"
 EMITTER_PATH = SCRIPT_DIR / "emit_xzzx_record_peps_fixture.py"
 EXACT_PATH = SCRIPT_DIR / "xzzx_record_exact_data_reference.py"
 DENSE_PATH = SCRIPT_DIR / "xzzx_record_dense_reference.py"
+COMPARATOR_PATH = SCRIPT_DIR / "compare_xzzx_record_peps.py"
 
 
 def _load(path: Path, name: str):
@@ -109,6 +110,111 @@ def test_projected_vector_norms_preserve_tiny_positive_probability() -> None:
         )
 
 
+def test_projector_uses_pair_probability_but_raw_weight_poststate_norm() -> None:
+    exact = _load(EXACT_PATH, "xzzx_exact_projector_pair_normalization")
+    state = np.asarray([2.0, 1.0], dtype=np.complex128)
+
+    p0, p1, _plus, _minus = exact.projector_probabilities(
+        state,
+        support=[[0, "Z"]],
+        data_order=[0],
+        sign=1,
+    )
+    selected, probabilities = exact.select_projector(
+        state,
+        0,
+        support=[[0, "Z"]],
+        data_order=[0],
+        sign=1,
+    )
+
+    assert probabilities == pytest.approx((0.8, 0.2))
+    assert (p0, p1) == pytest.approx((0.8, 0.2))
+    assert selected == pytest.approx(
+        np.asarray([1.0, 0.0], dtype=np.complex128)
+    )
+    assert float(np.vdot(selected, selected).real) == pytest.approx(1.0)
+
+
+def test_d3_primary_emits_only_valid_bernoulli_rows() -> None:
+    exact = _load(EXACT_PATH, "xzzx_exact_primary_probability_domain")
+    emitter, fixture = _fixture(3)
+    execution = exact.execute_primary_branch(
+        fixture,
+        emitter.run_spec(fixture),
+    )
+
+    assert len(execution["probability_rows"]) == fixture["num_measurements"]
+    for row in execution["probability_rows"]:
+        assert 0.0 <= row["p0"] <= 1.0
+        assert 0.0 <= row["p1"] <= 1.0
+        assert row["p0"] + row["p1"] == pytest.approx(1.0, abs=1e-12)
+        assert row["selected_probability"] == (row["p0"], row["p1"])[
+            row["bit"]
+        ]
+
+
+def test_d3_primary_exact_dense_comparator_seam(tmp_path: Path) -> None:
+    exact = _load(EXACT_PATH, "xzzx_exact_primary_comparator_seam")
+    dense = _load(DENSE_PATH, "xzzx_dense_primary_comparator_seam")
+    comparator = _load(COMPARATOR_PATH, "xzzx_primary_comparator_seam")
+    emitter, fixture = _fixture(3)
+    run_spec = emitter.run_spec(fixture)
+    execution = exact.execute_primary_branch(fixture, run_spec)
+    branch = exact.neutral_branch(fixture, run_spec, execution)
+    authority = exact.primary_branch_authority(branch, run_spec)
+    exact_summary_path = tmp_path / "exact.json"
+    exact_state_path = tmp_path / "exact.npy"
+    exact_summary = exact.write_reference_artifacts(
+        fixture=fixture,
+        run_spec=run_spec,
+        execution=execution,
+        branch_authority=authority,
+        input_provenance={"test_control": True},
+        resource_usage={"wall_seconds": 0.0, "peak_host_rss_kib": 0},
+        summary_path=exact_summary_path,
+        state_path=exact_state_path,
+    )
+    bits, neutral, authenticated_authority = (
+        dense.validate_exact_primary_summary(
+            exact_summary,
+            fixture=fixture,
+            run_spec=run_spec,
+        )
+    )
+    dense_execution = dense.forced_branch(
+        fixture,
+        bits,
+        branch_id=neutral["branch_id"],
+    )
+    dense_summary = dense.write_branch_artifacts(
+        fixture=fixture,
+        run_spec=run_spec,
+        branch=dense_execution,
+        branch_authority=authenticated_authority,
+        reference_parent={
+            "path": str(exact_summary_path.resolve()),
+            "file_sha256": hashlib.sha256(
+                exact_summary_path.read_bytes()
+            ).hexdigest(),
+            "summary_schema": exact_summary["schema"],
+            "role": "primary",
+            "branch_sha256": authority["branch_sha256"],
+            "branch_id": branch["branch_id"],
+        },
+        state_path=tmp_path / "dense.npy",
+    )
+
+    comparison = comparator.compare_d3_exact_and_full_dense(
+        exact_summary,
+        dense_summary,
+    )
+    assert comparison["passes"] is True
+    assert 1.0 - comparison["fidelity"] <= 1e-12
+    assert comparison["max_probability_error"] <= 1e-12
+    assert comparison["log_branch_mass_error"] <= 1e-9
+
+
 def test_sha256_prefix_born_selector_has_frozen_bytes_and_exact_boundary() -> None:
     exact = _load(EXACT_PATH, "xzzx_exact_selector")
 
@@ -143,6 +249,11 @@ def test_sha256_prefix_born_selector_has_frozen_bytes_and_exact_boundary() -> No
         exact.selector_digest(seed=0, column=1, prefix=[])
     with pytest.raises(ValueError, match="binary64 probability"):
         exact.born_bit_from_hash_integer(-1e-30, 0)
+    with pytest.raises(ValueError, match="binary64 probability"):
+        exact.born_bit_from_hash_integer(
+            math.nextafter(1.0, math.inf),
+            (1 << 256) - 1,
+        )
 
 
 def test_fixed_d2_d3_branches_match_full_dense_probabilities_and_checkpoint() -> None:
@@ -497,6 +608,27 @@ def test_reference_summary_has_frozen_schema_authority_state_and_immutable_outpu
     with pytest.raises(ValueError, match="non-exact record/state/ledger"):
         exact.validate_parent_primary_summary(
             injected_state,
+            fixture=fixture,
+            run_spec=run_spec,
+        )
+    invalid_probability = copy.deepcopy(summary)
+    invalid_probability["probability_rows"][0]["p0"] = math.nextafter(
+        1.0,
+        math.inf,
+    )
+    invalid_probability["probability_rows"][0]["p1"] = 0.0
+    invalid_probability["probability_rows"][0]["selected_probability"] = (
+        invalid_probability["probability_rows"][0]["p0"]
+    )
+    with pytest.raises(ValueError, match="probability"):
+        exact.validate_parent_primary_summary(
+            invalid_probability,
+            fixture=fixture,
+            run_spec=run_spec,
+        )
+    with pytest.raises(ValueError, match="probability"):
+        dense.validate_exact_primary_summary(
+            invalid_probability,
             fixture=fixture,
             run_spec=run_spec,
         )

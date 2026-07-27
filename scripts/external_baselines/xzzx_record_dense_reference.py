@@ -577,6 +577,8 @@ def validate_exact_primary_summary(
             or not all(math.isfinite(float(value)) for value in (p0, p1, selected))
             or p0 < 0.0
             or p1 < 0.0
+            or p0 > 1.0
+            or p1 > 1.0
             or abs(float(p0 + p1) - 1.0) > 1e-12
             or float(selected) != float((p0, p1)[bit])
         ):

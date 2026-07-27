@@ -482,6 +482,7 @@ def run_fresh_process(
     try:
         timed_command = [
             "/usr/bin/time",
+            "--quiet",
             "--format=%M",
             "--output",
             str(temporary_resource),
