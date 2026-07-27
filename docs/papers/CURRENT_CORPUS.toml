@@ -1,8 +1,8 @@
 schema = "error_coupling_simulator.literature.corpus_manifest.v1"
 status = "active"
-corpus_sha256 = "72024903f8c8b58fbc43089c77565b8877eda6696af8e5fcbc7de9d4cff53ec9"
-note_count = 32
-paper_fact_count = 376
+corpus_sha256 = "9e7f5329166a8230db5274125978ecb67b868c21be68ca37d79886bf4fff823c"
+note_count = 44
+paper_fact_count = 652
 
 [[notes]]
 path = "docs/papers/reading_notes/arsenijevic_bankovic_damping_1606.01145_source_review.md"
@@ -13,7 +13,7 @@ source_sha256 = "32e3d12077bef0b1e6eb84f2f85f5bc35fc1fce6b5f9a3e58c625cf902ee069
 
 [[notes]]
 path = "docs/papers/reading_notes/bonilla_ataides_xzzx_2009.07851_source_review.md"
-note_sha256 = "14a6d25e836b5673fb5fe3bf87c6ac417cb82a7a4ee672d42348984291365481"
+note_sha256 = "a6029c550b0396bab6f933379d9cb5ba6281c7028fdf7f1adcde8ee09a6bd305"
 source_id = "arxiv:2009.07851"
 source_version = "v3"
 source_sha256 = "4b4f244f949b0d1e862ff44e6328f33abab93654cd64a7e5f1ada0467ccaafd7"
@@ -26,6 +26,20 @@ source_version = "v1"
 source_sha256 = "b7f831dc66b329d583c892483160c937b773dec1cc2f52edf33b32e15d1b563d"
 
 [[notes]]
+path = "docs/papers/reading_notes/chang_clifford_disentanglers_2606.12056v1_source_review.md"
+note_sha256 = "44c98f5703c4b018e2c8e02c6ba3b163d817ef1d3b54c307c7135e540e95d276"
+source_id = "arxiv:2606.12056"
+source_version = "v1"
+source_sha256 = "5c6eee55dda650c88a2d1db2b7812a6297f7af762842e7d4c00e03bd273c48aa"
+
+[[notes]]
+path = "docs/papers/reading_notes/corcoles_two_qubit_clifford_decomposition_1210.7011v2_source_review.md"
+note_sha256 = "7a68d27199ce5d7d62b870b543c9e1c3de919ff3a747b126fab1a07a73b84051"
+source_id = "arxiv:1210.7011"
+source_version = "v2"
+source_sha256 = "d0d52308fa0e23e7a8a10eab0291c3d02a9b28cb94893375d36693a602b1543f"
+
+[[notes]]
 path = "docs/papers/reading_notes/czajkowski_grilo_sequential_measurements_2101.08313_source_review.md"
 note_sha256 = "2dbbd9b827ba884bf1ea0fe2afba959cd5732edabdbc2fa72ca3b953ebceddf1"
 source_id = "arxiv:2101.08313"
@@ -33,8 +47,15 @@ source_version = "v2"
 source_sha256 = "29bfff3bc43db7e5159529ae7be85f87de4803589703fe3f8fa8790f547986ee"
 
 [[notes]]
+path = "docs/papers/reading_notes/czarnik_dziarmaga_corboz_ipeps_time_evolution_1811.05497v2_source_review.md"
+note_sha256 = "21e424ee69715a7899577e3606187677d711705cc9ff293eed57fe4069adb2fb"
+source_id = "arxiv:1811.05497"
+source_version = "v2"
+source_sha256 = "a29c4bf23e381c50cae91a708456d6240792302bf1c0e127348cd2c6fdc5639c"
+
+[[notes]]
 path = "docs/papers/reading_notes/darmawan_xzzx_circuit_2104.09539_source_review.md"
-note_sha256 = "2e714f7236d6f1859851d5164ab65b58b0847113d34163593d7fdfa92f651a24"
+note_sha256 = "6fc308142806b6f27878d3ea5477a6dc751ef7ea58aab4d754e8611670fb75a5"
 source_id = "arxiv:2104.09539"
 source_version = "v2"
 source_sha256 = "809149344e94392151a3935a4ec9615930e19d7aee414a9d022a7ac07036e5e5"
@@ -75,6 +96,27 @@ source_version = "v2"
 source_sha256 = "d2b630d8cee32a4e1ab5302fda3e4f7cee15849577565dff9eb63a10dd10f076"
 
 [[notes]]
+path = "docs/papers/reading_notes/harper_gcamps_2511.06672v2.md"
+note_sha256 = "770bad822875f1e301beab5627d4e395daea29f5b74ffaacc7ffffdd4e570f02"
+source_id = "arxiv:2511.06672"
+source_version = "v2"
+source_sha256 = "880c44e25e9c1fd589a75ca5e824e58a2436c0c35a7ee7dddebbb61d439a0c42"
+
+[[notes]]
+path = "docs/papers/reading_notes/harper_hybrid_surface_code_2605.29514v1_source_review.md"
+note_sha256 = "980501ee4e824c5e1fd3858d2724e2f48ce984565c7b630bf916a52fab351311"
+source_id = "arxiv:2605.29514"
+source_version = "v1"
+source_sha256 = "c13096aa841acf2b2161f18140c56dd9d3549b268969f79328ff0865583a35dd"
+
+[[notes]]
+path = "docs/papers/reading_notes/hostens_stabilizer_clifford_arbitrary_dimension_quant_ph_0408190v2_source_review.md"
+note_sha256 = "8aa5036b651b3386c636b4711c237d289745b97c872feb5dad6382602a58dce6"
+source_id = "arxiv:quant-ph/0408190"
+source_version = "v2"
+source_sha256 = "b48cf81d89050ccf9372d5be713c098088fd3a0d371e9be2a9901d09ef07c831"
+
+[[notes]]
 path = "docs/papers/reading_notes/jaschke_open_system_tn_1804.09796_source_review.md"
 note_sha256 = "38defd218448d5e2f19bff9a4b80b0ccea0352beaaa3cc8da05b13fdc3dfcace"
 source_id = "arxiv:1804.09796"
@@ -89,6 +131,13 @@ source_version = "v2"
 source_sha256 = "d750982bd052408459beb0a6b1ce2655dcac236273bbd6e65ec660e79cedd25b"
 
 [[notes]]
+path = "docs/papers/reading_notes/kim_qutrit_camps_haldane_2607.03939v1_source_review.md"
+note_sha256 = "d2e484753b717f4639ca7c7ffd15591ad89b0547c375e3d8262cc4a67ac9c589"
+source_id = "arxiv:2607.03939"
+source_version = "v1"
+source_sha256 = "f02ec3815f3776c25b2e4a460eaaea2988b180deaecf9b602d4c0017c903cb9b"
+
+[[notes]]
 path = "docs/papers/reading_notes/liao_heisenberg_pepo_2308.03082.md"
 note_sha256 = "dc292fe8737ff8f858ea0a39fd582952c87bff13761b75e5d018d57f4bf386c9"
 source_id = "arxiv:2308.03082"
@@ -96,11 +145,32 @@ source_version = "v1"
 source_sha256 = "c201a5645b5b67bac817bcbea5f401f083481d8c541bc3527064f2b2671c32ad"
 
 [[notes]]
+path = "docs/papers/reading_notes/liu_clark_clifford_augmented_mps_2412.17209v2_source_review.md"
+note_sha256 = "392837445ee484dbc8dcbf9226902a4c85d36d90fbd62e6b7122ede7300b748c"
+source_id = "arxiv:2412.17209"
+source_version = "v2"
+source_sha256 = "69022d415caf05b6318ef178ddf853a90eecec25581c85d03f193036d1d2cc9c"
+
+[[notes]]
 path = "docs/papers/reading_notes/lubasch_finite_peps_1405.3259_source_review.md"
 note_sha256 = "be8457fdb099ed00ce8b329a6eb51e372d37031a5946d940865c1dd5936da97a"
 source_id = "arxiv:1405.3259"
 source_version = "v2"
 source_sha256 = "5d7e010293770b0c97ac9c0b88075710ceda3a68988da7933dd2130621d8269a"
+
+[[notes]]
+path = "docs/papers/reading_notes/masot_limits_clifford_disentangling_2602.15942v2_source_review.md"
+note_sha256 = "2afe4b4d19b3b9e0331279476e544559cdd5b1674e8be1b2153f1222c719e5c5"
+source_id = "arxiv:2602.15942"
+source_version = "v2"
+source_sha256 = "ec572bd96d4a937667c2c6fb9c1996da92ff359072050c2fe47b501ed80aa83e"
+
+[[notes]]
+path = "docs/papers/reading_notes/masot_llima_stabilizer_tensor_networks_prl_133_230601_source_review.md"
+note_sha256 = "aeb6682c2235049a28e7175a53d7499cabb8c9191658f41fd981b698e2d145d6"
+source_id = "doi:10.1103/PhysRevLett.133.230601"
+source_version = "version-of-record"
+source_sha256 = "7630570f2d8281ac29a99075082c7e992f8f68aa9d05bd13cf190c473f08946c"
 
 [[notes]]
 path = "docs/papers/reading_notes/mc_keever_stable_ipepo_fet_wtg_2012.12233.md"
@@ -152,6 +222,13 @@ source_version = "v3"
 source_sha256 = "aafacaf117d5a3a536760900800f473ef2c806f0c4485838e24db44712bc7fc6"
 
 [[notes]]
+path = "docs/papers/reading_notes/qian_clifford_augmented_dmrg_2405.09217v2_source_review.md"
+note_sha256 = "4ecd9a07ed1b721b7e563a232c0dcca6b4bd87d4d17e1da95bfb2bad1d722d2b"
+source_id = "arxiv:2405.09217"
+source_version = "v2"
+source_sha256 = "13e1369ff2817d5dc20c595716b2f89a505c239d245603ef89811b51e672e2b7"
+
+[[notes]]
 path = "docs/papers/reading_notes/rams_yastn_codebase_source_review.md"
 note_sha256 = "73d745ff4ac811ddf3b9abfa9d995184e7560d4147ab79c7c2154e257de8975a"
 source_id = "doi:10.21468/SciPostPhysCodeb.52"
@@ -185,6 +262,13 @@ note_sha256 = "7d3b487a5cf90ddb062a3a6730c9029e60420b3ebe8e7486432d249cdd7b5fae"
 source_id = "doi:10.1103/PhysRevLett.98.140506"
 source_version = "version-of-record"
 source_sha256 = "e996af2b5d573e3befd249f69fdfd29284c2a656134a80f46d9351eb9da51537"
+
+[[notes]]
+path = "docs/papers/reading_notes/schwarz_approximating_local_observables_peps_1606.06301v2_source_review.md"
+note_sha256 = "596aa77b0c0488babb8fe5a510edb050f40ab69102235c418664c2e8d0c2d33e"
+source_id = "arxiv:1606.06301"
+source_version = "v2"
+source_sha256 = "bc240a9b78a84e886360d4d0a621a0b06b12fef93e4e399c6b9aa1f66d1e43c3"
 
 [[notes]]
 path = "docs/papers/reading_notes/tepepo_2d_open_system_tn_2512.01781.md"

@@ -69,7 +69,9 @@ _MANIFEST_NOTE_KEYS = frozenset(
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 _OBJECT_ID_RE = re.compile(r"^[a-z][a-z0-9_.-]*$")
-_ARXIV_ID_RE = re.compile(r"^arxiv:(\d{4}\.\d{4,5})$")
+_ARXIV_ID_RE = re.compile(
+    r"^arxiv:(\d{4}\.\d{4,5}|[a-z]+(?:-[a-z]+)*/\d{7})$"
+)
 _ARXIV_VERSION_RE = re.compile(r"^v[1-9]\d*$")
 _DOI_ID_RE = re.compile(r"^doi:(10\.\d{4,9}/\S+)$", re.IGNORECASE)
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")

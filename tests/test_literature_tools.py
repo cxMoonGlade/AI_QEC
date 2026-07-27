@@ -457,6 +457,60 @@ def test_source_identity_pdf_signature_and_lowercase_hash_are_verified(tmp_path:
         parse_note(note_path, tmp_path)
 
 
+def test_source_identity_accepts_a_pinned_legacy_arxiv_category_id(tmp_path: Path) -> None:
+    note_path = _write_current_note(tmp_path, include_gap=False)
+    _replace_toml_value(note_path, "source_id", '"arxiv:quant-ph/0408190"')
+    _replace_toml_value(
+        note_path,
+        "source_uri",
+        '"https://arxiv.org/abs/quant-ph/0408190v2"',
+    )
+
+    note = parse_note(note_path, tmp_path)
+
+    assert note.source_id == "arxiv:quant-ph/0408190"
+    assert note.source_version == "v2"
+
+
+@pytest.mark.parametrize(
+    ("source_id", "source_uri", "message"),
+    (
+        (
+            "arxiv:quant-ph/0408190",
+            "https://arxiv.org/abs/quant-ph/0408190",
+            "pin the declared version",
+        ),
+        (
+            "arxiv:quant-ph/0408190v2",
+            "https://arxiv.org/abs/quant-ph/0408190v2",
+            "arxiv: or doi:",
+        ),
+        (
+            "arxiv:Quant-ph/0408190",
+            "https://arxiv.org/abs/Quant-ph/0408190v2",
+            "arxiv: or doi:",
+        ),
+        (
+            "arxiv:quant_ph/0408190",
+            "https://arxiv.org/abs/quant_ph/0408190v2",
+            "arxiv: or doi:",
+        ),
+    ),
+)
+def test_source_identity_rejects_unpinned_or_malformed_legacy_arxiv_ids(
+    tmp_path: Path,
+    source_id: str,
+    source_uri: str,
+    message: str,
+) -> None:
+    note_path = _write_current_note(tmp_path, include_gap=False)
+    _replace_toml_value(note_path, "source_id", f'"{source_id}"')
+    _replace_toml_value(note_path, "source_uri", f'"{source_uri}"')
+
+    with pytest.raises(LiteratureSchemaError, match=message):
+        parse_note(note_path, tmp_path)
+
+
 def test_candidate_audit_rejects_a_missing_directory(tmp_path: Path) -> None:
     with pytest.raises(LiteratureSchemaError, match="directory is missing"):
         audit_corpus(tmp_path / "missing", tmp_path, schema_only=True)

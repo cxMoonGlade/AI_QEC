@@ -5,14 +5,18 @@ relationships appear here. This is routing metadata; the cited PDF and locator r
 the evidence.
 
 - corpus status: active
-- sources: 32
-- concept nodes: 95
-- source-located relationships: 95
+- sources: 44
+- concept nodes: 154
+- source-located relationships: 154
 - dangling relationships: 0
 
 ## bond environment (concept)
 
 - **defines** — Gauge fixing, canonical forms, and optimal truncations in tensor networks with closed loops — `Sec. II, Eq. (1) and Fig. 1`, PDF p. 2 — The bond environment `Upsilon` is obtained by contracting the state norm network while leaving a selected bond and its conjugate open, and contracting it with the two bond matrices recovers the state norm. ([docs/papers/reading_notes/evenbly_closed_loop_truncation_1801.05390_source_review.md](reading_notes/evenbly_closed_loop_truncation_1801.05390_source_review.md))
+
+## Clifford operation (concept)
+
+- **defines** — Stabilizer states and Clifford operations for systems of arbitrary dimensions, and modular arithmetic — `PDF p. 2, Sec. II.B, opening paragraphs`, PDF p. 2 — A Clifford operation is a unitary operation \(Q\) satisfying \(Q\mathcal P_nQ^\dagger=\mathcal P_n\), and its conjugation action on the Pauli group determines it up to a global phase. ([docs/papers/reading_notes/hostens_stabilizer_clifford_arbitrary_dimension_quant_ph_0408190v2_source_review.md](reading_notes/hostens_stabilizer_clifford_arbitrary_dimension_quant_ph_0408190v2_source_review.md))
 
 ## collapse-operator gauge invariance (concept)
 
@@ -22,6 +26,10 @@ the evidence.
 
 - **defines** — A simplified and improved approach to tensor network operators in two dimensions — `Sec. III A and Fig. 1`, PDF p. 4 — A generalized MPO adds an external virtual index `beta_i` to each operator-valued MPO matrix, and summing those indices couples operators outside the one-dimensional MPO domain into a sum of ordinary MPOs. ([docs/papers/reading_notes/orourke_chan_simplified_pepo_1911.04592.md](reading_notes/orourke_chan_simplified_pepo_1911.04592.md))
 
+## generalized shift and phase operators (concept)
+
+- **defines** — Stabilizer states and Clifford operations for systems of arbitrary dimensions, and modular arithmetic — `PDF p. 2, Sec. II.A, Eq. (1)`, PDF p. 2 — The generalized shift and phase operators satisfy \(X^{(d)}\lvert j\rangle=\lvert j+1\rangle\) and \(Z^{(d)}\lvert j\rangle=\omega^j\lvert j\rangle\) for \(j\in\mathbb Z_d\), with ket addition modulo \(d\). ([docs/papers/reading_notes/hostens_stabilizer_clifford_arbitrary_dimension_quant_ph_0408190v2_source_review.md](reading_notes/hostens_stabilizer_clifford_arbitrary_dimension_quant_ph_0408190v2_source_review.md))
+
 ## mixed-canonical matrix-product-state cut (concept)
 
 - **defines** — Time-evolution methods for matrix-product states — `Secs. 2.4–2.6.1, Eqs. (11)–(15) and Figs. 4–6`, PDF p. 7 — A mixed-canonical matrix-product-state cut supplies orthonormal effective bases on both sides of the selected bond, so the bond tensor can be treated as the coefficient matrix for that bipartition. ([docs/papers/reading_notes/paeckel_mps_time_evolution_1901.05824_source_review.md](reading_notes/paeckel_mps_time_evolution_1901.05824_source_review.md))
@@ -29,6 +37,22 @@ the evidence.
 ## monotonic convergence (concept)
 
 - **supports** — Simulation of IBM's kicked Ising experiment with Projected Entangled Pair Operator — `Sec. IV B and Fig. 3`, PDF p. 5 — For the 20-step `Z_62` expectation, the paper observes monotonic convergence with increasing `chi` in the intermediate-angle regime and fits the finite-`chi` values with `b exp(-a/chi)` to extrapolate toward infinite bond dimension. ([docs/papers/reading_notes/liao_heisenberg_pepo_2308.03082.md](reading_notes/liao_heisenberg_pepo_2308.03082.md))
+
+## odd-d Pauli representation (concept)
+
+- **defines** — Stabilizer states and Clifford operations for systems of arbitrary dimensions, and modular arithmetic — `PDF p. 9, Appendix C, opening paragraphs and Eq. (C1)`, PDF p. 9 — Because \(2^{-1}=(d+1)/2\) exists modulo odd \(d\), the odd-d Pauli representation uses phases \(\omega^\delta\) with \(\delta\in\mathbb Z_d\), and Eq. (C1) gives its multiplication law. ([docs/papers/reading_notes/hostens_stabilizer_clifford_arbitrary_dimension_quant_ph_0408190v2_source_review.md](reading_notes/hostens_stabilizer_clifford_arbitrary_dimension_quant_ph_0408190v2_source_review.md))
+
+## Pauli group (concept)
+
+- **defines** — Stabilizer states and Clifford operations for systems of arbitrary dimensions, and modular arithmetic — `PDF p. 2, Sec. II.A, paragraph before Eq. (4)`, PDF p. 2 — The Pauli group contains the \(d^{2n}\) operators \(XZ(a)\) multiplied by phases \(\zeta^\delta\), where \(\zeta\) is a square root of \(\omega\) and \(\delta\in\mathbb Z_{2d}\). ([docs/papers/reading_notes/hostens_stabilizer_clifford_arbitrary_dimension_quant_ph_0408190v2_source_review.md](reading_notes/hostens_stabilizer_clifford_arbitrary_dimension_quant_ph_0408190v2_source_review.md))
+
+## stabilizer state (concept)
+
+- **defines** — Stabilizer states and Clifford operations for systems of arbitrary dimensions, and modular arithmetic — `PDF p. 6, Sec. V.A, opening definition paragraph`, PDF p. 6 — A stabilizer state is the simultaneous eigenvector with eigenvalue one of a subgroup of \(d^n\) commuting Pauli elements that contains no scalar multiple of identity other than identity itself. ([docs/papers/reading_notes/hostens_stabilizer_clifford_arbitrary_dimension_quant_ph_0408190v2_source_review.md](reading_notes/hostens_stabilizer_clifford_arbitrary_dimension_quant_ph_0408190v2_source_review.md))
+
+## symplectic condition (concept)
+
+- **defines** — Stabilizer states and Clifford operations for systems of arbitrary dimensions, and modular arithmetic — `PDF p. 3, Sec. II.C, derivation before Eq. (10)`, PDF p. 3 — The symplectic condition for a Clifford label matrix is \(C^TPC=P\pmod d\), and it implies \(C^{-1}=-PC^TP\pmod d\). ([docs/papers/reading_notes/hostens_stabilizer_clifford_arbitrary_dimension_quant_ph_0408190v2_source_review.md](reading_notes/hostens_stabilizer_clifford_arbitrary_dimension_quant_ph_0408190v2_source_review.md))
 
 ## TDVP error decomposition (concept)
 
@@ -38,13 +62,25 @@ the evidence.
 
 - **defines** — Time-evolution methods for matrix-product states — `Sec. 4.1.1, first and final paragraphs`, PDF p. 18 — TEBD time-step and truncation errors are distinct: the Trotter error is controlled by step size and decomposition order, while MPS truncation is controlled by discarded weight or bond dimension and can affect unitarity and conserved quantities. ([docs/papers/reading_notes/paeckel_mps_time_evolution_1901.05824_source_review.md](reading_notes/paeckel_mps_time_evolution_1901.05824_source_review.md))
 
+## Clifford-optimization cost (limitation)
+
+- **limits** — Non-Clifford Crosstalk Noise in Surface Codes Using Hybrid Stabilizer-Tensor Network Methods — `Sec. IV.A, final paragraph`, PDF p. 4 — The source omits magic-state injection and Clifford optimization, stating that Clifford-optimization cost outweighed its MPS bond-dimension benefit for the reported circuits. ([docs/papers/reading_notes/harper_hybrid_surface_code_2605.29514v1_source_review.md](reading_notes/harper_hybrid_surface_code_2605.29514v1_source_review.md))
+
 ## DLM twirl (limitation)
 
 - **limits** — Quantification and Characterization of Leakage Errors — `Sec. VI.A.3, Eq. (49) and its preceding paragraph`, PDF p. 8 — The printed DLM twirl introduces independent leakage-subspace unitaries `U_2,V_2` and sums over both, while Eq. (49) divides by only one factor of `|P_2|`. ([docs/papers/reading_notes/wood_gambetta_leakage_diagnostics_pra_97_032306.md](reading_notes/wood_gambetta_leakage_diagnostics_pra_97_032306.md))
 
+## downward logical-error bias (limitation)
+
+- **limits** — Non-Clifford Crosstalk Noise in Surface Codes Using Hybrid Stabilizer-Tensor Network Methods — `Sec. IV.B, paragraphs discussing Figs. 2–3`, PDF p. 5 — The source reports that aggressive MPS truncation creates a downward logical-error bias because the dominant residual component is the no-crosstalk state. ([docs/papers/reading_notes/harper_hybrid_surface_code_2605.29514v1_source_review.md](reading_notes/harper_hybrid_surface_code_2605.29514v1_source_review.md))
+
 ## error-correction-regime projection (limitation)
 
 - **limits** — Heralded Leakage Detection with Preserved Computational-State Coherence in a Fixed-Frequency Transmon — `Supplemental Sec. IX, opening paragraphs`, PDF p. 16 — The error-correction-regime projection assumes leakage population below about one percent and treats post-detection ge-to-f late flips as flagged in the subsequent detection cycle, so that contribution is not counted as an unheralded error. ([docs/papers/reading_notes/miyamura_heralded_leakage_2607.17204v1.md](reading_notes/miyamura_heralded_leakage_2607.17204v1.md))
+
+## finite real-time convergence horizon (limitation)
+
+- **limits** — Time Evolution of an Infinite Projected Entangled Pair State: an Efficient Algorithm — `Sec. II, paragraph beginning “A challenging application”`, PDF p. 2 — The source identifies a finite real-time convergence horizon for fixed-resource tensor networks because a generic sudden quench creates separating entangled quasiparticle pairs and asymptotically linear entanglement-entropy growth. ([docs/papers/reading_notes/czarnik_dziarmaga_corboz_ipeps_time_evolution_1811.05497v2_source_review.md](reading_notes/czarnik_dziarmaga_corboz_ipeps_time_evolution_1811.05497v2_source_review.md))
 
 ## finite-boundary-dimension sampling (limitation)
 
@@ -62,9 +98,25 @@ the evidence.
 
 - **contradicts** — On the stability of the infinite Projected Entangled Pair Operator ansatz for driven-dissipative 2D lattices — `Section 2.2, Figure 6 and accompanying text, pages 6-8`, PDF p. 7 — The reported simulations contradict monotone bond-dimension convergence because increasing D can destroy a previously stationary simple-update iPEPO history. ([docs/papers/reading_notes/kilda_ipepo_stability_2012.03095.md](reading_notes/kilda_ipepo_stability_2012.03095.md))
 
+## more efficient search (limitation)
+
+- **limits** — GCAMPS: A Scalable Classical Simulator for Qudit Systems — `Sec. 3.1, final paragraph`, PDF p. 6 — The source says the set of generalized Clifford tableaus grows exponentially with \(d\), places \(d>3\) beyond the scope of the work, and leaves more efficient search for future work. ([docs/papers/reading_notes/harper_gcamps_2511.06672v2.md](reading_notes/harper_gcamps_2511.06672v2.md))
+
 ## nonlinear trajectory observable (limitation)
 
 - **limits** — One-dimensional many-body entangled open quantum systems with tensor network methods — `Sec. III.B, Eq. (27) and the following paragraph`, PDF p. 12 — A nonlinear trajectory observable such as density-matrix purity is not the average of the corresponding pure-trajectory value and can require all pairwise trajectory contractions. ([docs/papers/reading_notes/jaschke_open_system_tn_1804.09796_source_review.md](reading_notes/jaschke_open_system_tn_1804.09796_source_review.md))
+
+## OBD (limitation)
+
+- **contradicts** — Classical simulability of Clifford+T circuits with Clifford-augmented matrix product states — `Appendix C, Eq. (C1) and explanatory paragraph`, PDF p. 24 — For the six five-qubit Pauli strings listed in Eq. (C1), the source reports that an entanglement barrier prevents OBD from finding the needed disentangler, while OFD succeeds with the long-range gate \(CX_{1,5}\). ([docs/papers/reading_notes/liu_clark_clifford_augmented_mps_2412.17209v2_source_review.md](reading_notes/liu_clark_clifford_augmented_mps_2412.17209v2_source_review.md))
+
+## PEPS layout (limitation)
+
+- **limits** — Non-Clifford Crosstalk Noise in Surface Codes Using Hybrid Stabilizer-Tensor Network Methods — `Conclusion, paragraph on further optimization and tensor-network layouts`, PDF p. 7 — The source lists a PEPS layout and tree tensor networks as possible future alternatives to its MPS residual. ([docs/papers/reading_notes/harper_hybrid_surface_code_2605.29514v1_source_review.md](reading_notes/harper_hybrid_surface_code_2605.29514v1_source_review.md))
+
+## phase-free Pauli action (limitation)
+
+- **limits** — Clifford disentanglers for entanglement reduction in molecular electronic structure simulations — `Appendix, opening paragraph under “Hash-Based Classification of Clifford Operators”`, PDF p. 13 — The appendix performs the classification modulo Pauli factors and global phases because the binary symplectic representation retains only the phase-free Pauli action. ([docs/papers/reading_notes/chang_clifford_disentanglers_2606.12056v1_source_review.md](reading_notes/chang_clifford_disentanglers_2606.12056v1_source_review.md))
 
 ## rank-one simple-update environment (limitation)
 
@@ -73,6 +125,10 @@ the evidence.
 ## residual leakage (limitation)
 
 - **limits** — Practical quantum error correction with the XZZX code and Kerr-cat qubits — `Sec. IV.B, paragraph beginning with leakage suppression at the physical level`, PDF p. 10 — After suppressing Kerr-cat leakage at the physical-operation level, the source neglects the residual leakage in its subsequent surface-code simulations. ([docs/papers/reading_notes/darmawan_xzzx_circuit_2104.09539_source_review.md](reading_notes/darmawan_xzzx_circuit_2104.09539_source_review.md))
+
+## residual MPS entanglement (limitation)
+
+- **limits** — Classical simulability of Clifford+T circuits with Clifford-augmented matrix product states — `Sec. IV.B, first three paragraphs`, PDF p. 9 — The source states that OBD often, but not always, finds behavior equivalent to its optimization-free disentangler, because residual MPS entanglement can obstruct the local optimization. ([docs/papers/reading_notes/liu_clark_clifford_augmented_mps_2412.17209v2_source_review.md](reading_notes/liu_clark_clifford_augmented_mps_2412.17209v2_source_review.md))
 
 ## sequential cutwise SVD local optimality (limitation)
 
@@ -86,6 +142,18 @@ the evidence.
 
 - **limits** — One-dimensional many-body entangled open quantum systems with tensor network methods — `Sec. III.B, paragraph immediately after Eq. (25)`, PDF p. 11 — Solver-induced norm error can contaminate the physical norm loss used for quantum-trajectory jump timing because the local Runge–Kutta method can enhance or prevent the loss caused by the effective Hamiltonian. ([docs/papers/reading_notes/jaschke_open_system_tn_1804.09796_source_review.md](reading_notes/jaschke_open_system_tn_1804.09796_source_review.md))
 
+## standard local topological quantum order (limitation)
+
+- **limits** — Approximating local observables on projected entangled pair states — `PDF page 4, paragraph “Injective PEPS with uniformly gapped parent Hamiltonians satisfy a variant of local topological quantum order”`, PDF p. 4 — The source explicitly says its proof does not establish standard local topological quantum order because it adds boundary terms to enforce a unique ground state, and instead claims only a unique-ground-state variant. ([docs/papers/reading_notes/schwarz_approximating_local_observables_peps_1606.06301v2_source_review.md](reading_notes/schwarz_approximating_local_observables_peps_1606.06301v2_source_review.md))
+
+## truncation and disentangling (limitation)
+
+- **limits** — Classical simulability of Clifford+T circuits with Clifford-augmented matrix product states — `Sec. V.A, paragraphs following Fig. 10`, PDF p. 12 — The source reports that once bond truncation begins, repeated cycles of truncation and disentangling can discard newly introduced small singular-value tails and continuously degrade CAMPS fidelity, so its procedure stops disentangling at that point. ([docs/papers/reading_notes/liu_clark_clifford_augmented_mps_2412.17209v2_source_review.md](reading_notes/liu_clark_clifford_augmented_mps_2412.17209v2_source_review.md))
+
+## 20 classes (method)
+
+- **supports** — Clifford disentanglers for entanglement reduction in molecular electronic structure simulations — `Sec. 2.4, Eqs. (9)–(10) and paragraph following Eq. (10)`, PDF p. 5 — The source reports that its classification reduces 720 phase-free two-qubit actions to 20 classes and 47,377,612,800 phase-free four-qubit actions to 91,392 classes. ([docs/papers/reading_notes/chang_clifford_disentanglers_2606.12056v1_source_review.md](reading_notes/chang_clifford_disentanglers_2606.12056v1_source_review.md))
+
 ## alternating ancilla pi-pulse scheme (method)
 
 - **uses** — Leakage detection for a transmon-based surface code — `Appendix G, opening paragraph spanning PDF pp. 18-19`, PDF p. 19 — The alternating ancilla pi-pulse scheme applies a pi pulse to each ancilla every other cycle and compensates it in post-processing so that a leaked ancilla, assumed unaffected by the pulse, would create a defect every cycle. ([docs/papers/reading_notes/varbanov_leakage_detection_surface17_2002.07119.md](reading_notes/varbanov_leakage_detection_surface17_2002.07119.md))
@@ -94,13 +162,37 @@ the evidence.
 
 - **defines** — Understanding the effects of leakage in superconducting quantum error detection circuits — `Abstract and Sec. I, PDF p. 1`, PDF p. 1 — The source studies repeated ancilla-assisted measurement of a single sigma-z operator for one data qutrit and analyzes leakage signatures in the ancilla readout sequence. ([docs/papers/reading_notes/ghosh_leakage_paralysis_1306.0925v2.md](reading_notes/ghosh_leakage_paralysis_1306.0925v2.md))
 
+## block diagonal (method)
+
+- **defines** — Clifford disentanglers for entanglement reduction in molecular electronic structure simulations — `Sec. 2.4, Eq. (10)`, PDF p. 5 — Two symplectic actions \(S_1\) and \(S_2\) are in the same class exactly when \(S_2^{-1}S_1=\Omega S_2^T\Omega S_1\) is block diagonal as \(\operatorname{diag}(s,s')\), with independent \(n\times n\) symplectic blocks \(s\) and \(s'\). ([docs/papers/reading_notes/chang_clifford_disentanglers_2606.12056v1_source_review.md](reading_notes/chang_clifford_disentanglers_2606.12056v1_source_review.md))
+
 ## boundary gMPO method (method)
 
 - **supports** — A simplified and improved approach to tensor network operators in two dimensions — `Sec. III B, steps 1--6 and Fig. 4(c)--(g)`, PDF p. 6 — The boundary gMPO method precomputes upper norm environments, initializes a running energy from a bottom-row MPO, carries crossing interactions in `intops`, and alternates row gMPO contraction with an approximate `intops` update until the final scalar `<psi|H|psi>` is accumulated. ([docs/papers/reading_notes/orourke_chan_simplified_pepo_1911.04592.md](reading_notes/orourke_chan_simplified_pepo_1911.04592.md))
 
+## class hash (method)
+
+- **defines** — Clifford disentanglers for entanglement reduction in molecular electronic structure simulations — `Appendix, Algorithm 1; Eqs. (A1)–(A3)`, PDF p. 13 — For \(S=\begin{psmallmatrix}A&B\\C&D\end{psmallmatrix}\), the source defines the class hash by packing the bits of \(T_1=AQA^T\), \(T_2=AQC^T\), and \(T_3=CQC^T\), where \(Q\) is a direct sum of binary swap matrices. ([docs/papers/reading_notes/chang_clifford_disentanglers_2606.12056v1_source_review.md](reading_notes/chang_clifford_disentanglers_2606.12056v1_source_review.md))
+
+## Clifford action on stabilizers (method)
+
+- **derives** — Stabilizer states and Clifford operations for systems of arbitrary dimensions, and modular arithmetic — `PDF p. 6, Sec. V.A, Eq. (13)`, PDF p. 6 — The Clifford action on stabilizers sends \(S\) to \(S'=CS\pmod d\) and sends \(f\) to the modulo-\(2d\) phase vector printed in Eq. (13). ([docs/papers/reading_notes/hostens_stabilizer_clifford_arbitrary_dimension_quant_ph_0408190v2_source_review.md](reading_notes/hostens_stabilizer_clifford_arbitrary_dimension_quant_ph_0408190v2_source_review.md))
+
+## Clifford decomposition (method)
+
+- **derives** — Stabilizer states and Clifford operations for systems of arbitrary dimensions, and modular arithmetic — `PDF pp. 4--6, Sec. IV, constructive reduction of C to I`, PDF p. 5 — The Clifford decomposition reduces an arbitrary admissible symplectic matrix to identity with embedded operations acting on at most two qudits, then reverses those operations and applies the phase correction. ([docs/papers/reading_notes/hostens_stabilizer_clifford_arbitrary_dimension_quant_ph_0408190v2_source_review.md](reading_notes/hostens_stabilizer_clifford_arbitrary_dimension_quant_ph_0408190v2_source_review.md))
+
+## commutation relation (method)
+
+- **derives** — Stabilizer states and Clifford operations for systems of arbitrary dimensions, and modular arithmetic — `PDF p. 2, Sec. II.A, Eqs. (5)--(6)`, PDF p. 2 — The commutation relation is \(XZ(a)XZ(b)=\omega^{a^TPb}XZ(b)XZ(a)\), where \(P=U-U^T\pmod d\). ([docs/papers/reading_notes/hostens_stabilizer_clifford_arbitrary_dimension_quant_ph_0408190v2_source_review.md](reading_notes/hostens_stabilizer_clifford_arbitrary_dimension_quant_ph_0408190v2_source_review.md))
+
 ## corresponding plus or minus X eigenstate (method)
 
 - **defines** — Practical quantum error correction with the XZZX code and Kerr-cat qubits — `Sec. III.B.4, Fig. 6 and adjacent paragraph`, PDF p. 7 — After projective readout places the measured ancilla in computational state zero or one conditional on the outcome, inverse rotations prepare the corresponding plus or minus X eigenstate for the next syndrome round. ([docs/papers/reading_notes/darmawan_xzzx_circuit_2104.09539_source_review.md](reading_notes/darmawan_xzzx_circuit_2104.09539_source_review.md))
+
+## CTMRG bond environment (method)
+
+- **uses** — Time Evolution of an Infinite Projected Entangled Pair State: an Efficient Algorithm — `Sec. III.E, final paragraph`, PDF p. 4 — The rank-six CTMRG bond environment used by the local objective is obtained approximately with environmental bond dimension \(\chi\). ([docs/papers/reading_notes/czarnik_dziarmaga_corboz_ipeps_time_evolution_1811.05497v2_source_review.md](reading_notes/czarnik_dziarmaga_corboz_ipeps_time_evolution_1811.05497v2_source_review.md))
 
 ## CTMRG projector truncation (method)
 
@@ -113,6 +205,10 @@ the evidence.
 ## echo pulse breaks leakage paralysis (method)
 
 - **supports** — Protecting quantum entanglement from qubit errors and leakage via repetitive parity measurements — `Supplemental Sec. II.B, parenthetical sentence after the ZZ-and-XX effective-check example`, PDF p. 11 — In the repeated-ZZ experiment, the echo pulse breaks leakage paralysis by flipping the effective stabilizer of a leaked qubit on each round. ([docs/papers/reading_notes/bultink_repetitive_parity_leakage_1905.12731v1.md](reading_notes/bultink_repetitive_parity_leakage_1905.12731v1.md))
+
+## exact finite-patch contraction (method)
+
+- **derives** — Approximating local observables on projected entangled pair states — `PDF page 6, Appendix paragraph following Eq. (18)`, PDF p. 6 — The source obtains its classical estimate by exact finite-patch contraction with printed cost \((Dd)^{O(\ell^d)}\). ([docs/papers/reading_notes/schwarz_approximating_local_observables_peps_1606.06301v2_source_review.md](reading_notes/schwarz_approximating_local_observables_peps_1606.06301v2_source_review.md))
 
 ## finite-signaling-agent tePEPO construction (method)
 
@@ -130,9 +226,17 @@ the evidence.
 
 - **supports** — Simulation of IBM's kicked Ising experiment with Projected Entangled Pair Operator — `Sec. III, paragraphs below Eqs. (4)--(5)`, PDF p. 3 — Heisenberg PEPO evolution represents the time-evolved observable as a PEPO, applies each gate together with its conjugate from the middle toward the two temporal boundaries, compresses by simple-update singular-value decompositions, and exactly contracts the final tensor network to a scalar expectation. ([docs/papers/reading_notes/liao_heisenberg_pepo_2308.03082.md](reading_notes/liao_heisenberg_pepo_2308.03082.md))
 
+## heuristic Clifford (method)
+
+- **defines** — GCAMPS: A Scalable Classical Simulator for Qudit Systems — `Sec. 3, paragraph beginning “Having performed a non-Clifford operation”`, PDF p. 5 — The source applies a heuristic Clifford \(Q\) to the residual MPS to reduce entanglement and preserves the represented state by updating the leading Clifford to \(\widetilde C=CQ^\dagger\). ([docs/papers/reading_notes/harper_gcamps_2511.06672v2.md](reading_notes/harper_gcamps_2511.06672v2.md))
+
 ## iPEPO density-operator evolution (method)
 
 - **defines** — On the stability of the infinite Projected Entangled Pair Operator ansatz for driven-dissipative 2D lattices — `Appendix A.2, first three paragraphs, page 15`, PDF p. 15 — The iPEPO density-operator evolution vectorizes a PEPO into a PEPS-shaped state and replaces imaginary-time Hamiltonian gates by real-time two-body Liouvillian gates. ([docs/papers/reading_notes/kilda_ipepo_stability_2012.03095.md](reading_notes/kilda_ipepo_stability_2012.03095.md))
+
+## iPEPS bond-growth-and-compression step (method)
+
+- **defines** — Time Evolution of an Infinite Projected Entangled Pair State: an Efficient Algorithm — `Sec. II, opening paragraph`, PDF p. 1 — The source defines an iPEPS bond-growth-and-compression step in which a nearest-neighbour gate enlarges its acted bond from \(D\) to \(kD\), with \(k\le d^2\), before the post-step iPEPS is approximated with the original bond dimension \(D\). ([docs/papers/reading_notes/czarnik_dziarmaga_corboz_ipeps_time_evolution_1811.05497v2_source_review.md](reading_notes/czarnik_dziarmaga_corboz_ipeps_time_evolution_1811.05497v2_source_review.md))
 
 ## iterative simple-update truncation (method)
 
@@ -142,13 +246,57 @@ the evidence.
 
 - **defines** — Time evolution of an infinite projected entangled pair state: a neighborhood tensor update — `Sec. II, Figs. 3--4`, PDF p. 4 — Neighborhood tensor update contracts a finite nearest-neighbor double-layer cluster exactly to obtain a metric that is Hermitian and nonnegative to machine precision. ([docs/papers/reading_notes/dziarmaga_ntu_2107.06635_source_review.md](reading_notes/dziarmaga_ntu_2107.06635_source_review.md))
 
+## one-bond auxiliary iPEPS (method)
+
+- **uses** — Time Evolution of an Infinite Projected Entangled Pair State: an Efficient Algorithm — `Sec. II, first two paragraphs`, PDF p. 2 — The efficient update constructs a one-bond auxiliary iPEPS \(\lvert\widetilde\psi''\rangle\) that equals the exact enlarged state \(\lvert\psi'\rangle\) everywhere except at one acted bond, where two tensors with bond \(D\) replace the enlarged tensors. ([docs/papers/reading_notes/czarnik_dziarmaga_corboz_ipeps_time_evolution_1811.05497v2_source_review.md](reading_notes/czarnik_dziarmaga_corboz_ipeps_time_evolution_1811.05497v2_source_review.md))
+
+## operator basis (method)
+
+- **uses** — GCAMPS: A Scalable Classical Simulator for Qudit Systems — `Sec. 2.3, displayed definitions of \(\omega\), \(X\), and \(Z\)`, PDF p. 3 — The source defines generalized Pauli shift and clock operators satisfying \(XZ=\omega^{-1}ZX\), where \(\omega=\exp(2\pi i/d)\), and uses \(X^xZ^z\) terms as an operator basis. ([docs/papers/reading_notes/harper_gcamps_2511.06672v2.md](reading_notes/harper_gcamps_2511.06672v2.md))
+
+## projective-measurement Pauli sum (method)
+
+- **uses** — Non-Clifford Crosstalk Noise in Surface Codes Using Hybrid Stabilizer-Tensor Network Methods — `Sec. IV.A, projective-measurement paragraph`, PDF p. 4 — The source implements projective measurement by commuting a projective-measurement Pauli sum through \(C\) and applying it directly to the tensor network. ([docs/papers/reading_notes/harper_hybrid_surface_code_2605.29514v1_source_review.md](reading_notes/harper_hybrid_surface_code_2605.29514v1_source_review.md))
+
 ## quantum-trajectory jump-channel selection (method)
 
 - **defines** — One-dimensional many-body entangled open quantum systems with tensor network methods — `Sec. III.B, steps (a)–(c) and Fig. 3`, PDF p. 12 — Quantum-trajectory jump-channel selection normalizes the expectations `p_nu = <psi|L_nu^dagger L_nu|psi>`, samples one channel, applies its Lindblad operator, and then renormalizes the state. ([docs/papers/reading_notes/jaschke_open_system_tn_1804.09796_source_review.md](reading_notes/jaschke_open_system_tn_1804.09796_source_review.md))
 
+## reduced-tensor optimization (method)
+
+- **uses** — Time Evolution of an Infinite Projected Entangled Pair State: an Efficient Algorithm — `Appendix A, Eqs. (A1)–(A3)`, PDF p. 12 — The implementation uses reduced-tensor optimization, with the stated spin-\(1/2\) element counts changing from \(4D^4\) for a full tensor to \(16D^2\) with disentanglers or \(4D^2\) without them. ([docs/papers/reading_notes/czarnik_dziarmaga_corboz_ipeps_time_evolution_1811.05497v2_source_review.md](reading_notes/czarnik_dziarmaga_corboz_ipeps_time_evolution_1811.05497v2_source_review.md))
+
+## rotated-surface-code syndrome extraction (method)
+
+- **uses** — Non-Clifford Crosstalk Noise in Surface Codes Using Hybrid Stabilizer-Tensor Network Methods — `Sec. II, first paragraph`, PDF p. 2 — The source simulates rotated-surface-code syndrome extraction repeated for \(d\) rounds, using face ancillas to measure local \(X\)- and \(Z\)-type checks. ([docs/papers/reading_notes/harper_hybrid_surface_code_2605.29514v1_source_review.md](reading_notes/harper_hybrid_surface_code_2605.29514v1_source_review.md))
+
+## row-vector convention (method)
+
+- **defines** — Clifford disentanglers for entanglement reduction in molecular electronic structure simulations — `Sec. 2.2, Eq. (7) and preceding paragraph`, PDF p. 3 — Under the source's row-vector convention, Pauli labels act on the right and a Clifford product \(C=C_1C_2\) is represented in reversed matrix order as \(S_C=S_{C_2}S_{C_1}\). ([docs/papers/reading_notes/chang_clifford_disentanglers_2606.12056v1_source_review.md](reading_notes/chang_clifford_disentanglers_2606.12056v1_source_review.md))
+
 ## selective measurement update (method)
 
 - **defines** — On-State Commutativity of Measurements and Joint Distributions of Their Outcomes — `Sec. 2.2, Eq. (1)`, PDF p. 5 — A selective measurement update assigns outcome probability `Tr(Q_x rho)` and post-measurement state `A_x rho A_x^dagger/Tr(Q_x rho)` when `Q_x=A_x^dagger A_x`. ([docs/papers/reading_notes/czajkowski_grilo_sequential_measurements_2101.08313_source_review.md](reading_notes/czajkowski_grilo_sequential_measurements_2101.08313_source_review.md))
+
+## sequential two-qubit-Clifford search cost (method)
+
+- **supports** — Classical simulability of Clifford+T circuits with Clifford-augmented matrix product states — `Sec. IV.A, paragraphs following Eq. (19)`, PDF p. 9 — By precontracting the MPS tensors once, the source changes the sequential two-qubit-Clifford search cost from a multiplicative \(|\mathrm{Cl}_2|\chi^3\) dependence to \(O(\chi^3)+O(|\mathrm{Cl}_2|)\), with \(|\mathrm{Cl}_2|=11{,}520\). ([docs/papers/reading_notes/liu_clark_clifford_augmented_mps_2412.17209v2_source_review.md](reading_notes/liu_clark_clifford_augmented_mps_2412.17209v2_source_review.md))
+
+## simple-update truncation (method)
+
+- **uses** — Time Evolution of an Infinite Projected Entangled Pair State: an Efficient Algorithm — `Sec. IV.G, opening paragraph`, PDF p. 10 — The source defines simple-update truncation as reducing an enlarged \(kD\) bond by an SVD of the tensor pair while ignoring long-range correlations in the bond environment. ([docs/papers/reading_notes/czarnik_dziarmaga_corboz_ipeps_time_evolution_1811.05497v2_source_review.md](reading_notes/czarnik_dziarmaga_corboz_ipeps_time_evolution_1811.05497v2_source_review.md))
+
+## stabilizer and destabilizer exponents (method)
+
+- **defines** — GCAMPS: A Scalable Classical Simulator for Qudit Systems — `Sec. 2.3.1, Eq. (5) and following paragraph`, PDF p. 4 — Equation (5) solves for stabilizer and destabilizer exponents from a \(2n\times2n\) tableau matrix with its phase column removed, after which explicit generator multiplication recovers the overall phase. ([docs/papers/reading_notes/harper_gcamps_2511.06672v2.md](reading_notes/harper_gcamps_2511.06672v2.md))
+
+## stabilizer generator matrix change (method)
+
+- **defines** — Stabilizer states and Clifford operations for systems of arbitrary dimensions, and modular arithmetic — `PDF p. 6, Sec. V.A, Eq. (12)`, PDF p. 6 — An invertible right action \(S'=SR\pmod d\), together with the phase update printed in Eq. (12), is called a stabilizer generator matrix change. ([docs/papers/reading_notes/hostens_stabilizer_clifford_arbitrary_dimension_quant_ph_0408190v2_source_review.md](reading_notes/hostens_stabilizer_clifford_arbitrary_dimension_quant_ph_0408190v2_source_review.md))
+
+## sum of generalized Pauli words (method)
+
+- **uses** — GCAMPS: A Scalable Classical Simulator for Qudit Systems — `Sec. 3, paragraph beginning “To perform non-Clifford operations”`, PDF p. 5 — The source numerically expands a small-support non-Clifford unitary as a sum of generalized Pauli words, commutes each word through \(C\), and applies the resulting operator to the MPS. ([docs/papers/reading_notes/harper_gcamps_2511.06672v2.md](reading_notes/harper_gcamps_2511.06672v2.md))
 
 ## tensor jump method (method)
 
@@ -173,6 +321,22 @@ the evidence.
 ## binary projection character (model)
 
 - **supports** — Heralded Leakage Detection with Preserved Computational-State Coherence in a Fixed-Frequency Transmon — `Supplemental Sec. VII and Fig. S7`, PDF p. 15 — The binary projection character is supported by a coherent three-level input whose ground-first coherence is largely retained while ground-second and first-second coherences are strongly suppressed. ([docs/papers/reading_notes/miyamura_heralded_leakage_2607.17204v1.md](reading_notes/miyamura_heralded_leakage_2607.17204v1.md))
+
+## Clifford disentanglers (model)
+
+- **defines** — Classical simulability of Clifford+T circuits with Clifford-augmented matrix product states — `Sec. II, Eqs. (3)–(7)`, PDF p. 3 — The source inserts Clifford identities to express the same state as an updated leading Clifford acting on a residual MPS transformed by a sequence of Clifford disentanglers. ([docs/papers/reading_notes/liu_clark_clifford_augmented_mps_2412.17209v2_source_review.md](reading_notes/liu_clark_clifford_augmented_mps_2412.17209v2_source_review.md))
+
+## Clifford representation (model)
+
+- **defines** — Stabilizer states and Clifford operations for systems of arbitrary dimensions, and modular arithmetic — `PDF p. 2, Sec. II.B, paragraphs before and after Eq. (7)`, PDF p. 2 — The Clifford representation consists of a matrix \(C\in\mathbb Z_d^{2n\times2n}\) whose columns are the output labels of the standard Pauli generators and a phase vector \(h\in\mathbb Z_{2d}^{2n}\), and it completely specifies the operation up to global phase. ([docs/papers/reading_notes/hostens_stabilizer_clifford_arbitrary_dimension_quant_ph_0408190v2_source_review.md](reading_notes/hostens_stabilizer_clifford_arbitrary_dimension_quant_ph_0408190v2_source_review.md))
+
+## Clifford–MPS hybrid state (model)
+
+- **uses** — Non-Clifford Crosstalk Noise in Surface Codes Using Hybrid Stabilizer-Tensor Network Methods — `Sec. IV.A, Eq. (7)`, PDF p. 4 — The source represents an arbitrary simulated state as a Clifford–MPS hybrid state \(|\psi\rangle=C|\mathrm{MPS}\rangle\). ([docs/papers/reading_notes/harper_hybrid_surface_code_2605.29514v1_source_review.md](reading_notes/harper_hybrid_surface_code_2605.29514v1_source_review.md))
+
+## coherent ZZ crosstalk channel (model)
+
+- **defines** — Non-Clifford Crosstalk Noise in Surface Codes Using Hybrid Stabilizer-Tensor Network Methods — `Sec. III.B, Eqs. (4)–(5), implementation circuit, and Fig. 1 caption`, PDF p. 3 — The source models gate-based nearest-neighbour noise as a coherent ZZ crosstalk channel \(e^{i\theta Z_1Z_2}\rho e^{-i\theta Z_1Z_2}\) applied after entangling gates, with \(\theta=J_{ZZ}t_g\). ([docs/papers/reading_notes/harper_hybrid_surface_code_2605.29514v1_source_review.md](reading_notes/harper_hybrid_surface_code_2605.29514v1_source_review.md))
 
 ## depolarizing leakage extension (model)
 
@@ -210,6 +374,14 @@ the evidence.
 
 - **uses** — The XZZX surface code — `Fault-tolerant threshold model, paragraph below Fig. 5`, PDF p. 6 — The fault-tolerant numerical study uses independent data Pauli errors and an independent incorrect stabilizer outcome with probability q equal to the sum of its declared high-rate and low-rate error probabilities. ([docs/papers/reading_notes/bonilla_ataides_xzzx_2009.07851_source_review.md](reading_notes/bonilla_ataides_xzzx_2009.07851_source_review.md))
 
+## injectivity after constant blocking (model)
+
+- **uses** — Approximating local observables on projected entangled pair states — `PDF page 3, Preliminaries paragraph following Eq. (2)`, PDF p. 3 — The source defines injectivity after constant blocking by requiring every resulting local PEPS map \(A_v\) to have a Moore–Penrose left inverse satisfying \(A_v^{-1}A_v=I\). ([docs/papers/reading_notes/schwarz_approximating_local_observables_peps_1606.06301v2_source_review.md](reading_notes/schwarz_approximating_local_observables_peps_1606.06301v2_source_review.md))
+
+## leading Clifford (model)
+
+- **defines** — GCAMPS: A Scalable Classical Simulator for Qudit Systems — `Sec. 3, opening paragraphs and Fig. 3`, PDF p. 5 — GCAMPS represents a state as \(\lvert\psi\rangle=C\lvert\mathrm{MPS}\rangle\), with the leading Clifford stored in a stabilizer tableau and the residual state stored as an MPS. ([docs/papers/reading_notes/harper_gcamps_2511.06672v2.md](reading_notes/harper_gcamps_2511.06672v2.md))
+
 ## leakage conditional phases (model)
 
 - **defines** — Leakage detection for a transmon-based surface code — `Sec. I.A, definitions following the CZ model`, PDF p. 2 — The leakage conditional phases are the phase differences imposed on the computational partner when either the fluxed or static CZ partner is leaked. ([docs/papers/reading_notes/varbanov_leakage_detection_surface17_2002.07119.md](reading_notes/varbanov_leakage_detection_surface17_2002.07119.md))
@@ -226,6 +398,10 @@ the evidence.
 
 - **defines** — A positive tensor network approach for simulating open quantum many-body systems — `Main text, Eq. (3) and Fig. 1(a)`, PDF p. 2 — A locally purified tensor network represents the density operator as `rho = X X^dagger`, with `X` decomposed into local tensors carrying physical, bond, and Kraus indices. ([docs/papers/reading_notes/werner_positive_tensor_network_open_systems_1412.5746.md](reading_notes/werner_positive_tensor_network_open_systems_1412.5746.md))
 
+## Pauli-twirled crosstalk channel (model)
+
+- **defines** — Non-Clifford Crosstalk Noise in Surface Codes Using Hybrid Stabilizer-Tensor Network Methods — `Sec. III.C, Eq. (6) and following paragraph`, PDF p. 3 — The source defines the Pauli-twirled crosstalk channel as \((1-\sin^2\theta)\rho+\sin^2\theta(Z\otimes Z)\rho(Z\otimes Z)\). ([docs/papers/reading_notes/harper_hybrid_surface_code_2605.29514v1_source_review.md](reading_notes/harper_hybrid_surface_code_2605.29514v1_source_review.md))
+
 ## PEPS construction (model)
 
 - **defines** — Computational Complexity of Projected Entangled Pair States — `“PEPS and postselection,” p. 1, right column`, PDF p. 1 — The PEPS construction starts from an arbitrary undirected graph, places dimension-`D` maximally entangled virtual pairs along its edges, and applies a local linear map from the incident virtual spaces to a dimension-`d` physical space at every vertex. ([docs/papers/reading_notes/schuch_peps_complexity_prl_98_140506_source_review.md](reading_notes/schuch_peps_complexity_prl_98_140506_source_review.md))
@@ -233,6 +409,10 @@ the evidence.
 ## phase-damping channel (model)
 
 - **defines** — Microscopic derivation of the one qubit Kraus operators for amplitude and phase damping — `Sec. 4, Eqs. (48)–(49)`, PDF p. 12 — The phase-damping channel obeys `d rho/dt=r(sigma_z rho sigma_z-rho)` and is derived as pure decoherence without energy loss. ([docs/papers/reading_notes/arsenijevic_bankovic_damping_1606.01145_source_review.md](reading_notes/arsenijevic_bankovic_damping_1606.01145_source_review.md))
+
+## phase-free action (model)
+
+- **defines** — Clifford disentanglers for entanglement reduction in molecular electronic structure simulations — `Sec. 2.2, Eqs. (5)–(6)`, PDF p. 3 — The source encodes the phase-free action of an \(n\)-qubit Clifford operator by a binary \(2n\times2n\) symplectic matrix \(S\) satisfying \(S\Omega S^T=\Omega\). ([docs/papers/reading_notes/chang_clifford_disentanglers_2606.12056v1_source_review.md](reading_notes/chang_clifford_disentanglers_2606.12056v1_source_review.md))
 
 ## quantum-trajectory effective non-Hermitian Hamiltonian (model)
 
@@ -249,6 +429,10 @@ the evidence.
 ## thermal down/up Lindblad generator (model)
 
 - **defines** — Microscopic derivation of the one qubit Kraus operators for amplitude and phase damping — `Sec. 3, Eq. (16)`, PDF p. 5 — The microscopic thermal master equation contains a thermal down/up Lindblad generator with downward coefficient `2 pi J(omega_0)(n_bar+1)` and upward coefficient `2 pi J(omega_0)n_bar`. ([docs/papers/reading_notes/arsenijevic_bankovic_damping_1606.01145_source_review.md](reading_notes/arsenijevic_bankovic_damping_1606.01145_source_review.md))
+
+## uniformly gapped parent Hamiltonian (model)
+
+- **uses** — Approximating local observables on projected entangled pair states — `PDF page 3, Preliminaries final paragraph before “Proof sketch of Theorem 1”`, PDF p. 3 — A uniformly gapped parent Hamiltonian is defined by requiring every prefix/sub-PEPS parent Hamiltonian \(H_t\) to satisfy \(\Delta_t\geq\Delta_*\) for all \(0\leq t\leq N\). ([docs/papers/reading_notes/schwarz_approximating_local_observables_peps_1606.06301v2_source_review.md](reading_notes/schwarz_approximating_local_observables_peps_1606.06301v2_source_review.md))
 
 ## unitary leakage model (model)
 
@@ -302,13 +486,25 @@ the evidence.
 
 - **defines** — Time-evolution methods for matrix-product states — `Sec. 2.6.1, Eq. (17) and the paragraph immediately following it`, PDF p. 9 — The direct-SVD approximation error at one canonical cut is the square root of the direct-SVD discarded weight, defined as the sum of the squared omitted singular values. ([docs/papers/reading_notes/paeckel_mps_time_evolution_1901.05824_source_review.md](reading_notes/paeckel_mps_time_evolution_1901.05824_source_review.md))
 
+## double-layer tensor contraction (observable)
+
+- **measures** — Classical simulability of Clifford+T circuits with Clifford-augmented matrix product states — `Sec. IV.A, Eq. (19)`, PDF p. 9 — The improved OBD evaluates \(L(U,n)=e^{-S_2(U,n)}\) by a double-layer tensor contraction for each two-qubit Clifford \(U\) acting across the cut between sites \(n\) and \(n+1\). ([docs/papers/reading_notes/liu_clark_clifford_augmented_mps_2412.17209v2_source_review.md](reading_notes/liu_clark_clifford_augmented_mps_2412.17209v2_source_review.md))
+
 ## dynamic-TDVP projection error (observable)
 
 - **defines** — Large-scale stochastic simulation of open quantum systems — `Sec. IV.C, Eqs. (57)–(58)`, PDF p. 11 — The dynamic-TDVP projection error is the 2-norm of the component of `H_0|Phi>` outside the chosen MPS tangent space, and the one-site projector minimizes this local residual inside that space. ([docs/papers/reading_notes/sander_tensor_jump_2501.17913_source_review.md](reading_notes/sander_tensor_jump_2501.17913_source_review.md))
 
+## global fidelity objective (observable)
+
+- **defines** — Time Evolution of an Infinite Projected Entangled Pair State: an Efficient Algorithm — `Sec. III.E, Eq. (12)`, PDF p. 4 — The source prints a global fidelity objective \(F=\langle\psi''|\psi'\rangle\langle\psi'|\psi''\rangle/\langle\psi''|\psi''\rangle\) for direct optimization of the global \(D\)-bond approximation against the enlarged target. ([docs/papers/reading_notes/czarnik_dziarmaga_corboz_ipeps_time_evolution_1811.05497v2_source_review.md](reading_notes/czarnik_dziarmaga_corboz_ipeps_time_evolution_1811.05497v2_source_review.md))
+
 ## leakage rate (observable)
 
 - **defines** — Quantification and Characterization of Leakage Errors — `Sec. II, Eq. (2)`, PDF p. 2 — For a CPTP map `E`, the leakage rate is `L_1(E) = L(E(1_1/d_1))` and the seepage rate is `L_2(E) = 1 - L(E(1_2/d_2))`, equal to Haar averages over input states in the respective subspaces. ([docs/papers/reading_notes/wood_gambetta_leakage_diagnostics_pra_97_032306.md](reading_notes/wood_gambetta_leakage_diagnostics_pra_97_032306.md))
+
+## local bond-fidelity objective (observable)
+
+- **uses** — Time Evolution of an Infinite Projected Entangled Pair State: an Efficient Algorithm — `Sec. III.E, Eq. (13)`, PDF p. 4 — The efficient method instead maximizes a local bond-fidelity objective \(\widetilde F=\langle\widetilde\psi''|\psi'\rangle\langle\psi'|\widetilde\psi''\rangle/\langle\widetilde\psi''|\widetilde\psi''\rangle\) over \(A'',B''\), and optionally \(g\). ([docs/papers/reading_notes/czarnik_dziarmaga_corboz_ipeps_time_evolution_1811.05497v2_source_review.md](reading_notes/czarnik_dziarmaga_corboz_ipeps_time_evolution_1811.05497v2_source_review.md))
 
 ## MCWF norm-deficit jump probability (observable)
 
@@ -326,6 +522,14 @@ the evidence.
 
 - **defines** — A positive tensor network approach for simulating open quantum many-body systems — `Appendix D, Definition 5 and Eq. (55)`, PDF p. 10 — Purification discarded weight is the square root of the sum of squared singular values omitted when one mixed-canonical local tensor is compressed along a bond or Kraus index. ([docs/papers/reading_notes/werner_positive_tensor_network_open_systems_1412.5746.md](reading_notes/werner_positive_tensor_network_open_systems_1412.5746.md))
 
+## reported full-update CPU workload (observable)
+
+- **measures** — Time Evolution of an Infinite Projected Entangled Pair State: an Efficient Algorithm — `Appendix B, final sentence`, PDF p. 12 — The reported full-update CPU workload for the \(h_x=2.9\), \(D=5\) critical estimates is 5–6 days on a 14-core 2.20 GHz Intel Xeon Gold 5120 processor. ([docs/papers/reading_notes/czarnik_dziarmaga_corboz_ipeps_time_evolution_1811.05497v2_source_review.md](reading_notes/czarnik_dziarmaga_corboz_ipeps_time_evolution_1811.05497v2_source_review.md))
+
+## Rényi entropy (observable)
+
+- **measures** — Clifford disentanglers for entanglement reduction in molecular electronic structure simulations — `Sec. 2.3, Fig. 1 and Eq. (8)`, PDF p. 4 — The local Clifford search minimizes the bipartite order-\(1/2\) Rényi entropy \(S_{1/2}(\rho_A)=2\log\operatorname{Tr}\rho_A^{1/2}=2\log\sum_i\lambda_i\) across the selected MPS bond. ([docs/papers/reading_notes/chang_clifford_disentanglers_2606.12056v1_source_review.md](reading_notes/chang_clifford_disentanglers_2606.12056v1_source_review.md))
+
 ## sample KL divergence (observable)
 
 - **defines** — Simulating and Sampling from Quantum Circuits with 2D Tensor Networks — `Section II, Eq. (6), page 4`, PDF p. 4 — The sample KL divergence is defined as KLD(q,p)=E under q of log(q(x)/p(x)) for the terminal bitstring distributions. ([docs/papers/reading_notes/rudolph_tindall_gpu_peps_2507.11424.md](reading_notes/rudolph_tindall_gpu_peps_2507.11424.md))
@@ -333,6 +537,14 @@ the evidence.
 ## sample probability ratio (observable)
 
 - **defines** — Simulating and Sampling from Quantum Circuits with 2D Tensor Networks — `Section II, Eq. (5), page 4`, PDF p. 4 — The sample probability ratio p(x)/q(x) has expectation under q equal to the norm of the represented tensor-network state. ([docs/papers/reading_notes/rudolph_tindall_gpu_peps_2507.11424.md](reading_notes/rudolph_tindall_gpu_peps_2507.11424.md))
+
+## scaled bond dimension (observable)
+
+- **measures** — GCAMPS: A Scalable Classical Simulator for Qudit Systems — `Sec. 4 and Fig. 5`, PDF p. 7 — The source plots scaled circuit depth \(t/N\) against scaled bond dimension \(2\log_d(\chi)/N\). ([docs/papers/reading_notes/harper_gcamps_2511.06672v2.md](reading_notes/harper_gcamps_2511.06672v2.md))
+
+## second entanglement Rényi entropy (observable)
+
+- **defines** — Classical simulability of Clifford+T circuits with Clifford-augmented matrix product states — `Sec. VI.C, Eqs. (31)–(33)`, PDF p. 16 — The source defines the second entanglement Rényi entropy using the natural logarithm as \(S_2=-\ln\operatorname{Tr}_A(\rho_A^2)\), where \(\rho_A=\operatorname{Tr}_{\bar A}\rho\). ([docs/papers/reading_notes/liu_clark_clifford_augmented_mps_2412.17209v2_source_review.md](reading_notes/liu_clark_clifford_augmented_mps_2412.17209v2_source_review.md))
 
 ## seepage rate (observable)
 
@@ -350,9 +562,17 @@ the evidence.
 
 - **defines** — Quantification and Characterization of Leakage Errors — `Sec. II, Eq. (1)`, PDF p. 2 — State leakage is the population outside computational subspace `X_1`, defined by `L(rho) = Tr[1_2 rho] = 1 - Tr[1_1 rho]` on the direct sum `X = X_1 direct-sum X_2`. ([docs/papers/reading_notes/wood_gambetta_leakage_diagnostics_pra_97_032306.md](reading_notes/wood_gambetta_leakage_diagnostics_pra_97_032306.md))
 
+## sub-threshold logical error (observable)
+
+- **measures** — Non-Clifford Crosstalk Noise in Surface Codes Using Hybrid Stabilizer-Tensor Network Methods — `Sec. V.A, paragraphs preceding Fig. 4`, PDF p. 5 — For the reported workload, the source says that crosstalk lowers the threshold from about \(1\%\) to \(0.8\%\), while coherence further increases sub-threshold logical error without a statistically significant additional threshold shift. ([docs/papers/reading_notes/harper_hybrid_surface_code_2605.29514v1_source_review.md](reading_notes/harper_hybrid_surface_code_2605.29514v1_source_review.md))
+
 ## surface-code defect (observable)
 
 - **defines** — Leakage detection for a transmon-based surface code — `Sec. I.B, paragraph defining syndrome and defect bits`, PDF p. 3 — With ancillas left unreset, the surface-code defect is defined as d at cycle n equals m at n XOR m at n-minus-two, and a measured level two is declared as bit one. ([docs/papers/reading_notes/varbanov_leakage_detection_surface17_2002.07119.md](reading_notes/varbanov_leakage_detection_surface17_2002.07119.md))
+
+## thermal critical-temperature scaling (observable)
+
+- **measures** — Time Evolution of an Infinite Projected Entangled Pair State: an Efficient Algorithm — `Sec. IV.D, Eqs. (21)–(23)`, PDF p. 8 — The source defines thermal critical-temperature scaling through the bias dependence \(T^*-T_c\sim h_z^{1/\widetilde\beta\delta}\) of peaks in the order-parameter derivative. ([docs/papers/reading_notes/czarnik_dziarmaga_corboz_ipeps_time_evolution_1811.05497v2_source_review.md](reading_notes/czarnik_dziarmaga_corboz_ipeps_time_evolution_1811.05497v2_source_review.md))
 
 ## thermal equilibrium population (observable)
 
@@ -362,6 +582,14 @@ the evidence.
 
 - **defines** — Leakage detection for a transmon-based surface code — `Appendix D, paragraph following Eq. (D13) and Fig. 10a`, PDF p. 16 — At leakage conditional phase zero or pi, the product of two same-type weight-three gauge outcomes defines a weight-six supercheck parity when both same-type gauges are measured before either opposite-type gauge. ([docs/papers/reading_notes/varbanov_leakage_detection_surface17_2002.07119.md](reading_notes/varbanov_leakage_detection_surface17_2002.07119.md))
 
+## conditional line-transfer-operator gap (theorem)
+
+- **supports** — Approximating local observables on projected entangled pair states — `PDF page 7, Appendix Eqs. (22)–(24)`, PDF p. 7 — Under the extra transfer-section assumptions and the printed exponential-correlation bound, the source derives the conditional line-transfer-operator gap inequality \(\lambda_2/\lambda_1\leq e^{-c_2\delta}\). ([docs/papers/reading_notes/schwarz_approximating_local_observables_peps_1606.06301v2_source_review.md](reading_notes/schwarz_approximating_local_observables_peps_1606.06301v2_source_review.md))
+
+## conditional local-observable approximation (theorem)
+
+- **supports** — Approximating local observables on projected entangled pair states — `PDF page 2, Theorem 1 displayed inequality`, PDF p. 2 — The conditional local-observable approximation controls the additive absolute error in one normalized scalar expectation \(\langle\omega|O_X|\omega\rangle/\langle\omega|\omega\rangle\). ([docs/papers/reading_notes/schwarz_approximating_local_observables_peps_1606.06301v2_source_review.md](reading_notes/schwarz_approximating_local_observables_peps_1606.06301v2_source_review.md))
+
 ## full-bond TJM convergence theorem (theorem)
 
 - **supports** — Large-scale stochastic simulation of open quantum systems — `Sec. IV.B, Theorem 2 and Eqs. (52)–(56); Appendix B, Theorem 7 and Eqs. (B18)–(B22)`, PDF p. 10 — The full-bond TJM convergence theorem gives an unbiased fixed-time density estimator with matrix-norm standard deviation bounded by `c/sqrt(N)` when every trajectory MPS has full bond dimension. ([docs/papers/reading_notes/sander_tensor_jump_2501.17913_source_review.md](reading_notes/sander_tensor_jump_2501.17913_source_review.md))
@@ -369,6 +597,10 @@ the evidence.
 ## general tensor-network contraction (theorem)
 
 - **limits** — Computational Complexity of Projected Entangled Pair States — `“The classical complexity of PEPS,” p. 3, left column, second paragraph`, PDF p. 3 — The source concludes that general tensor-network contraction is `#P`-complete, using PEPS contraction for hardness and constructions based on `T` with its conjugate, a physical dimension-one PEPS norm, and tensor direct sums for membership. ([docs/papers/reading_notes/schuch_peps_complexity_prl_98_140506_source_review.md](reading_notes/schuch_peps_complexity_prl_98_140506_source_review.md))
+
+## hash matrices (theorem)
+
+- **supports** — Clifford disentanglers for entanglement reduction in molecular electronic structure simulations — `Appendix, Theorem 1, Eqs. (A14)–(A30)`, PDF p. 14 — The source proves that two valid symplectic actions satisfy the block-local criterion if and only if all three hash matrices \(T_1,T_2,T_3\) are equal. ([docs/papers/reading_notes/chang_clifford_disentanglers_2606.12056v1_source_review.md](reading_notes/chang_clifford_disentanglers_2606.12056v1_source_review.md))
 
 ## locally purified trace-norm certificate (theorem)
 
@@ -389,3 +621,7 @@ the evidence.
 ## purification-to-trace-norm bound (theorem)
 
 - **supports** — A positive tensor network approach for simulating open quantum many-body systems — `Appendix A, Lemma 1 and Eqs. (20)–(25)`, PDF p. 6 — The purification-to-trace-norm bound states that normalized factorizations `rho = X X^dagger` and `sigma = Y Y^dagger` satisfy `||rho-sigma||_1 <= sqrt(2) ||X-Y||_2`, with a companion fidelity lower bound. ([docs/papers/reading_notes/werner_positive_tensor_network_open_systems_1412.5746.md](reading_notes/werner_positive_tensor_network_open_systems_1412.5746.md))
+
+## standard-basis expansion (theorem)
+
+- **derives** — Stabilizer states and Clifford operations for systems of arbitrary dimensions, and modular arithmetic — `PDF p. 7, Theorem 1(ii), Eqs. (17)--(18)`, PDF p. 7 — The standard-basis expansion is, up to normalization, a sum over \(t\in\mathbb Z_d^n\) of basis states \(\lvert T(\bar Qt+x^*)\rangle\) weighted by the quadratic phase \(\zeta^{t^TMt+p^Tt}\), with \(x^*\) defined by \(B^Tx=y\pmod q\). ([docs/papers/reading_notes/hostens_stabilizer_clifford_arbitrary_dimension_quant_ph_0408190v2_source_review.md](reading_notes/hostens_stabilizer_clifford_arbitrary_dimension_quant_ph_0408190v2_source_review.md))
