@@ -44,6 +44,31 @@ current finite-RTN source owner. Its post-result contract is in
 `docs/simulator_validation/finite_rtn_free_induction_diagnostic_contract_2026-07-15.md`; a pass does
 not assign CP-divisibility or BLP status to the production QEC channel or record.
 
+`test_capeps_hybrid.py` protects the all-qubit Clifford-augmented PEPS mechanics prototype. It checks
+left-composed Clifford frames, signed Pauli pullback, coherent rather than twirled non-Clifford
+updates, and untruncated Quimb local/nonlocal algebra against hand-written dense vectors on focused
+one- and two-qubit fixtures. It also checks constructor/accessor snapshot isolation,
+parent-isolated branch copies, physical Z reset, preservation of tiny positive Born branches, and
+the one-sided correction of a deterministic PEPS probability that contracts to `1 + O(eps)`. The SDIM seam is version-pinned and phase-tested; the
+canonical environment has no live SDIM installation, so explicit backend selection must fail
+closed. Passing this file establishes focused complex128 engineering mechanics only, not a
+canonical QEC Record, leakage/qutrit support, finite-bond control, PEPS scaling, or production
+faithfulness.
+
+`test_capeps_gcamps_formulas.py` protects the source-mapped GCAMPS algebra
+surface. It checks Eq. (5) GF(2) generator decomposition, ordered
+stabilizer/destabilizer phase recovery, and direct signed pullback for all
+one-qubit Cliffords and Pauli phases plus all 720 unsigned two-qubit Cliffords
+against all 16 Pauli bodies. It reconstructs one- and reversed-two-site local
+unitaries from every Pauli coefficient, enforces the default `k <= 2` expansion
+guard with explicit larger-support opt-in, and checks dense plus horizontal,
+vertical, and reversed-target adjacent-PEPS physical-ray refactors. It also
+checks nonadjacent transaction failure, the normalized Pauli-expectation bound,
+and the Born branch identity. These tests remain qubit-only, untruncated
+mechanics evidence;
+they do not establish the paper's 20/90-candidate optimizer, generalized-qudit
+SDIM execution, finite-bond error, Record fidelity, or efficiency.
+
 `test_literature_tools.py` protects developer-tooling trust boundaries rather than a simulator
 service. Its falsifiers cover explicit-manifest admission, source-PDF and audit-packet hashes,
 one-fact locators and checked pages, empty-corpus refusal, project-inference injection, stale live

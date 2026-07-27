@@ -33,14 +33,26 @@ circuits. The binding contract is `docs/SIMULATOR.md`.
 ## Current implementation boundary
 
 The frontend Stim route, dense Axis-1 route, finite-RTN source process, restricted one-dimensional MPS
-verification routes, qutrit/ququart channels, exact bounded references, PEPO, PEPS, certification, and
-quantum-bath research surface are separate registered services.
+verification routes, the all-qubit Clifford-augmented PEPS prototype, qutrit/ququart channels, exact
+bounded references, PEPO, PEPS, certification, and quantum-bath research surface are separate
+registered services.
 
 The density-matrix PEPO and single-wire PEPS are retained research carriers. PEPO is not the canonical
 record backend. PEPS full-record finite-truncation faithfulness is open, and its current FET
 entropy equality is all-noop at the registered strict target: zero rank-reducing writes make the
 non-degeneracy gate RED. See `docs/simulator_validation/PEPO_VALIDATION.md` and
 `docs/simulator_validation/PEPS_FET_VALIDATION.md`.
+
+The Clifford-augmented PEPS prototype is a separate all-qubit restricted-verification surface. Its
+Stim frame plus dense/Quimb residual has focused untruncated-mechanics regressions for GCAMPS
+Eq. (5) generator/phase decomposition, coherent signed pullback, small-local-unitary expansion,
+exact local Clifford refactorization, Pauli expectations, and measurement/reset branches. SDIM is
+only a version-pinned fail-closed optional qubit seam without canonical live-backend acceptance;
+generalized-qutrit residual semantics and the paper's 20/90-candidate optimizer are not present.
+This is not a canonical detector/observable Record, leakage-qutrit semantics, controlled finite-bond
+approximation, or scalable PEPS evidence. The existing full-PEPS XZZX v2 preregistration does not
+authorize CAPEPS target execution, Record-law claims, or an efficiency comparison; CAPEPS-specific
+literature closure and preregistration remain open.
 
 The source-conditioned dense-qubit process and static data-qutrit XZZX leakage process are not one
 integrated product. Their missing bridge is an implementation fact. No field-wide literature-gap

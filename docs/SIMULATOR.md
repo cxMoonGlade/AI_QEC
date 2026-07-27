@@ -383,7 +383,22 @@ The current routes are deliberately not one universal executor:
 7. **Single-wire PEPS (RESEARCH).** `carrier/peps` is the current full-geometry trajectory-carrier
    frontier. It emits packed records through the current record adapter, but complete multi-round
    finite-truncation faithfulness remains open.
-8. **Quantum-bath models (RESEARCH).** The pseudomode-enlarged GKSL surface provides bounded formal
+8. **Clifford-augmented qubit PEPS (RESEARCH verification prototype).** `carrier/capeps` maintains
+   the untruncated complex128 decomposition `|psi> = C|phi>`: Stim is the default Clifford frame,
+   an optional version-pinned SDIM qubit seam fails closed when unavailable, and coherent
+   signed-Pauli expansions or small-local complex128 unitaries update a dense or Quimb-PEPS
+   residual. The qubit GCAMPS Eq. (5) specialization records GF(2) stabilizer/destabilizer
+   exponents, ordered-product phase, and a direct signed-pullback consistency check. One- and
+   adjacent-two-site exact refactors implement `(C, phi) -> (C Q^dagger, Q phi)`, and normalized
+   qubit Pauli expectations are available. Canonical acceptance does not execute live SDIM; the
+   paper's 20/90-candidate search and generalized-qudit residual remain unimplemented. Nonlocal
+   PEPS sums are untruncated algebraic direct sums with no finite-bond control. The implementation
+   exposes raw conditional measurement branches only; it makes no canonical Record,
+   leakage/qutrit, scaling, or production-faithfulness claim. Registration is engineering-mechanics
+   inventory only: the existing full-PEPS XZZX v2 preregistration does not authorize CAPEPS target
+   execution, Record-law claims, or an efficiency comparison, all of which require CAPEPS-specific
+   literature closure and preregistration.
+9. **Quantum-bath models (RESEARCH).** The pseudomode-enlarged GKSL surface provides bounded formal
    comparisons. It is not evidence that a passive record certifies quantum environmental memory.
 
 The source-conditioned dense-qubit process and the static data-qutrit XZZX leakage process are

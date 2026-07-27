@@ -7,6 +7,10 @@ that inventory plus the installed source tree.
 `carrier/mps` is an execution-mechanics library for restricted verification routes. It makes
 no state-, Record-, or LER-faithfulness claim and is not a registered scientific Carrier.
 PEPS remains the trajectory-carrier frontier, and PEPO remains the retained research Carrier.
+`carrier/capeps` is a separate all-qubit engineering-mechanics prototype: it splits a Clifford
+frame from a dense or PEPS residual, records the qubit specialization of GCAMPS Eq. (5), supports
+exact local Clifford refactors and Pauli expectations, but emits only a raw conditional-branch
+ledger. It is not the qutrit PEPS carrier, a canonical Record backend, or an efficiency result.
 
 ## Package map
 
@@ -23,6 +27,7 @@ PEPS remains the trajectory-carrier frontier, and PEPO remains the retained rese
 | `carrier/exact/` | bounded qubit/qutrit density-matrix routes | implementation references; not scaling paths |
 | `carrier/kernels/` | scoped native CUDA acceleration | optional loading; scientific fallback rules remain explicit |
 | `carrier/mps/` | bounded MPS execution mechanics for restricted verification routes | not a registered scientific carrier; explicit-zero-cutoff uncapped nonlocal unitaries only within fixed numerical resource guards |
+| `carrier/capeps/` | all-qubit Clifford frame plus dense/Quimb residual mechanics | `RESEARCH` restricted verification; Stim default, fail-closed optional SDIM seam, raw branches only; no Record/leakage/finite-bond/scaling claim |
 | `carrier/pepo/` | two-dimensional density-matrix PEPO | retained `RESEARCH`; not canonical record output |
 | `carrier/peps/` | single-wire two-dimensional PEPS trajectories | `RESEARCH`; full-record truncation faithfulness open |
 | `frontend/` | circuit IR, code specs, compiler, schedules, bounded executors, artifact emission, optional DEM/decoder reduction | one record contract, multiple explicit execution routes |
@@ -61,6 +66,16 @@ Restricted MPS verification route
     -> completed measured MCWF accepted for restricted execution only: same-call-bound exact-count expansion in grouped support order
        -> canonical detector/observable RecordBatch
        -> Carrier execution JSON + complete sealed-program JSON + optional detection_events.b8/obs_flips_actual.b8 + v1 sample summary
+
+Clifford-augmented PEPS mechanics prototype
+  all-qubit Clifford circuit + coherent signed-Pauli expansion or small-local c128 unitary
+    -> Stim frame, or explicit fail-closed optional SDIM 1.3.3 qubit seam
+    -> Eq. (5) GF(2) generator exponents + ordered-product phase + direct pullback gate
+    -> dense complex128 or open-boundary Quimb PEPS residual
+    -> untruncated coherent update, exact local (C, phi) -> (C Q^dagger, Q phi) refactor,
+       normalized Pauli expectation, or Pauli projection / explicit outcome
+    -> ordered raw conditional branch/log-mass ledger
+    -> restricted engineering evidence only; no RecordBatch
 
 Leakage research routes
   external XZZX schedule + explicit qutrit channel/run specification
@@ -176,6 +191,16 @@ or document must not draw that missing edge as implemented.
   `claims_b8_artifact=true`; it claims neither DEM/decoder integration, complete-QEC behavior, nor
   production scalability.
 - PEPO is retained for current density-matrix research and exact bounded comparisons.
+- CAPEPS is a separate all-qubit restricted-verification prototype. Its current regressions cover
+  left frame composition, Eq. (5) generator/phase reconstruction, signed coherent pullback,
+  small-local-unitary Pauli expansion, untruncated dense/Quimb residual updates, exact one- and
+  adjacent-two-site Clifford refactors, Pauli expectations, parent-isolated measurement branches,
+  and physical-Z reset. Canonical acceptance does not execute a live SDIM backend, and neither the
+  generalized-qutrit residual nor the paper's 20/90-candidate search is implemented. Nonlocal
+  Quimb sums use a global algebraic direct sum, so the current route has no finite-bond or scaling
+  claim. The existing
+  full-PEPS XZZX v2 preregistration does not authorize CAPEPS target execution, Record-law claims,
+  or efficiency comparison; CAPEPS-specific literature closure and preregistration remain open.
 - PEPS is the full-geometry trajectory frontier. The focused B1_3 strict-target cut now preserves and
   accepts an independently reconstructed rank-four local QR/SVD feasible candidate from stored bond
   dimension 12, and gauge preparation is gated not to mutate the verdict-driving gamma tensor. This

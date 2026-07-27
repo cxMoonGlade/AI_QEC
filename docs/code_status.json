@@ -49,6 +49,10 @@
     "status": "ACTIVE",
     "note": "Bounded MPS execution mechanics for restricted verification routes; not a registered scientific carrier and no state-, Record-, LER-, or production-faithfulness claim."
   },
+  "error_coupling_simulator/carrier/capeps": {
+    "status": "RESEARCH",
+    "note": "All-qubit Clifford-augmented PEPS engineering prototype with Stim as the accepted frame owner and a fail-closed optional SDIM seam; no canonical Record, leakage, finite-bond, efficiency, or scaling claim."
+  },
   "error_coupling_simulator/carrier/pepo": {
     "status": "RESEARCH",
     "note": "Retained two-dimensional qutrit density-matrix PEPO carrier. Executable d3 reference checks remain; production record faithfulness and d5/d7 scientific claims remain open."
