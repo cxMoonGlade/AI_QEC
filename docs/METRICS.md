@@ -153,3 +153,24 @@ Two research surfaces have current owners but do not certify the production reco
   class-(c) project bands. This finite pure-state benchmark does not certify a detector/observable
   Record, leakage/Kraus dynamics, logical error rate, a syndrome-extraction round, d7, or scalable
   exact PEPS contraction.
+- The bounded XZZX measurement/reset bridge registers five distinct objects through
+  `scripts/external_baselines/compare_xzzx_record_peps.py`, with independent value, boundary,
+  alignment, order, and proxy-firewall tests in `tests/test_external_xzzx_record_metrics.py`.
+  Complete-vector fidelity uses the normalized formula above, but the XZZX owner separately binds
+  the hash-pinned d3 preterminal 17-qubit state or d5 preterminal 25-data-qubit state, sorted
+  physical-axis order, and complete complex128 vector; its usefulness bands are class (c).
+  Tracer raw-trajectory TV is the class-(b) quantity
+  `0.5*sum_x abs(p(x)-q(x))` on the complete declared ten-bit raw-measurement support, including
+  structural-zero strings. It is explicitly not the folded detector/observable Record metric.
+  Selected-branch maximum conditional-probability error is
+  `max_k abs(p_candidate,k-p_reference,k)`, and selected-branch log-mass error is
+  `abs(sum_k log(p_candidate,k)-sum_k log(p_reference,k))`; both are class-(c) gates on aligned
+  measurement columns, with no probability floor and a hard error for a reference selected
+  probability below `1e-12` or zero candidate selected probability. Post-reset one-site trace distance
+  is the class-(a) identity `0.5*||rho-|0><0|||_1`, evaluated on a normalized Hermitian
+  one-site density operator rather than an MPS tensor slice. These metrics are bounded to the
+  two-round all-qubit experiment being frozen in
+  `docs/simulator_validation/PEPS_XZZX_MEASUREMENT_RESET_RECORD_PREREG_V2_2026-07-27.md`; the v1
+  Aer-reference route was killed before formal target execution. These metrics do not
+  certify d5 full-law TV, leakage/Kraus dynamics, a decoder/LER, long-time scaling, or scalable
+  exact PEPS contraction.
