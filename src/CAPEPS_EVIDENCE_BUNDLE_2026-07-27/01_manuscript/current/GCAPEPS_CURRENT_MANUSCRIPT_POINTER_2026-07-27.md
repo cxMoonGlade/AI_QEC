@@ -25,4 +25,4 @@ active claim to Record correctness, QEC completeness, contraction efficiency,
 or a performance advantage.
 
 The copy-only minimal packet is
-`docs/CAPEPS_EVIDENCE_BUNDLE_2026-07-27/00_CURRENT_GCAPEPS_MATHEMATICAL_PACKET/`.
+`src/CAPEPS_EVIDENCE_BUNDLE_2026-07-27/00_CURRENT_GCAPEPS_MATHEMATICAL_PACKET/`.

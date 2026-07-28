@@ -62,8 +62,12 @@ current mathematical note.
   the local cache.  They were downloaded from official arXiv PDF endpoints on
   2026-07-27 and have **not** thereby become source-reviewed or admitted.
 - `06_literature_provenance/local_cache/`: existing provenance sidecars.
-- `07_literature_text/local_cache/`: existing PDF text extractions.
-- `MANIFEST.sha256`: integrity manifest generated after assembly.
+- `07_literature_text/local_cache/`: existing PDF text extractions retained
+  locally but deliberately excluded from the committed payload and root
+  manifest because repository-wide policy ignores `*.txt` cache files.
+- `MANIFEST.sha256`: integrity manifest for the committed payload, generated
+  after assembly. It excludes both manifest files and the local-only
+  `07_literature_text/` cache.
 
 ## Downloaded-but-not-admitted sources
 

@@ -745,7 +745,7 @@ The following current consumers need reconciliation by the parent workflow:
    disentangler...” — **premise-bearing false promotion; must be downgraded to
    an unresolved/failed source theorem**.
 2. The copied closure under
-   `docs/CAPEPS_EVIDENCE_BUNDLE_2026-07-27/02_scientific_closure_and_audits/`
+   `src/CAPEPS_EVIDENCE_BUNDLE_2026-07-27/02_scientific_closure_and_audits/`
    contains the same sentence — **derived bundle copy; regenerate only after
    the authority document is repaired**.
 3. `docs/simulator_validation/CAPEPS_EXACT_SMALL_DISENTANGLER_PREREGISTRATION_2026-07-27.md`

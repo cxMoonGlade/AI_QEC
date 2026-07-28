@@ -113,7 +113,7 @@ remain historical files and were not overwritten.
 ### Evidence-bundle synchronization
 
 The minimal current packet is
-`docs/CAPEPS_EVIDENCE_BUNDLE_2026-07-27/00_CURRENT_GCAPEPS_MATHEMATICAL_PACKET/`.
+`src/CAPEPS_EVIDENCE_BUNDLE_2026-07-27/00_CURRENT_GCAPEPS_MATHEMATICAL_PACKET/`.
 It contains only the current manuscript/proof/review chain and the four-source
 literature chain. All entries are copies; no canonical source was moved. Its
 own `MANIFEST.sha256` and the bundle-root `MANIFEST.sha256` were regenerated and
