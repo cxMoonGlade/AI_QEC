@@ -874,9 +874,10 @@ with schema
 `error_coupling_simulator.external.gcapeps_finite_memory.bond32_comparison.v1`.
 It owns child envelope/receipt SHAs, forbids its own complete-file SHA field,
 and retains `result_projection_sha256`.  After publication the outer runner
-hashes the exact destination bytes; tracked note
-`docs/simulator_validation/GCAPEPS_FINITE_MEMORY_BOND32_RESULT_2026-07-29.md`
-later persists that SHA without claiming its own containing commit.
+hashes the exact destination bytes.  The reserved future result-note path is
+docs/simulator_validation/GCAPEPS_FINITE_MEMORY_BOND32_RESULT_2026-07-29.md;
+it is intentionally absent until a formal held-out run, after which the
+tracked note persists that SHA without claiming its own containing commit.
 
 Logical resource bytes use four nonoverlapping base categories:
 
