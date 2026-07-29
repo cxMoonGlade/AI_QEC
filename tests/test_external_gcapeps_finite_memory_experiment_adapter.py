@@ -33,6 +33,19 @@ ORCHESTRATION_PATH = (
     / "gcapeps_finite_memory_orchestration.py"
 )
 
+DENSE_REFERENCE_PATH = (
+    ROOT
+    / "scripts"
+    / "external_baselines"
+    / "gcapeps_finite_memory_dense_reference.py"
+)
+EMITTER_PATH = (
+    ROOT
+    / "scripts"
+    / "external_baselines"
+    / "emit_gcapeps_finite_memory_fixture.py"
+)
+
 
 def _load(path: Path, name: str):
     spec = importlib.util.spec_from_file_location(name, path)
@@ -153,6 +166,9 @@ def _dense_core(distances=(0.2, 0.3)):
     return {
         "fixed_blp": {
             "object": "fixed_carrier_mask",
+            "difference_eigenvalues_by_round": [
+                {"encoding": "ndarray-v1"} for _ in distances
+            ],
             "trace_distances": list(distances),
             "increments": increments,
             "summed_positive_increments": float(
@@ -586,6 +602,12 @@ def test_qualifiers_recompute_dense_tail_and_terminal_gate(adapter):
     with pytest.raises(ValueError, match="inconsistent"):
         adapter._qualifier_from_core(runner, dense_spec, inconsistent)
 
+    wrong_spectrum_count = copy.deepcopy(_dense_core())
+    wrong_spectrum_count["fixed_blp"][
+        "difference_eigenvalues_by_round"
+    ].pop()
+    with pytest.raises(ValueError, match="difference spectra are invalid"):
+        adapter._qualifier_from_core(runner, dense_spec, wrong_spectrum_count)
     cap_spec = _spec(runner.GCAPEPS_EVIDENCE)
     cap = {
         "positive_cap_event_count": 1,
@@ -616,6 +638,45 @@ def test_dense_qualifier_recomputes_each_multistep_blp_increment_once(adapter):
         [-0.4, 0.15, -0.25]
     )
     assert adapter._qualifier_from_core(runner, dense_spec, core) is True
+
+
+def test_real_dense_owner_frame_matches_adapter_qualifier_schema(adapter):
+    runner = _load(RUNNER_PATH, "gcapeps_fm_adapter_real_frame_runner")
+    emitter = _load(
+        EMITTER_PATH,
+        "gcapeps_fm_adapter_real_frame_emitter",
+    )
+    dense = _load(
+        DENSE_REFERENCE_PATH,
+        "gcapeps_fm_adapter_real_frame_dense",
+    )
+    fixture = emitter.build_fixture(
+        run_partition="HELDOUT",
+        width=3,
+        rounds=1,
+        axis_family=3,
+        p_event_numerator=3,
+        seed=emitter.HELDOUT_SEED,
+        gamma_index=0,
+        run_blpensemble=False,
+    )
+    framed = dense.build_framed_worker_output(fixture)
+    decoded = runner.decode_clean_worker_frames(
+        framed,
+        role=runner.DENSE_REFERENCE,
+    )
+
+    assert "difference_eigenvalues_by_round" in decoded.core["fixed_blp"]
+    distances = decoded.core["fixed_blp"]["trace_distances"]
+    expected = max(
+        distances[index] - distances[index - 1]
+        for index in range(1, len(distances))
+    ) > 1.0e-10
+    assert adapter._qualifier_from_core(
+        runner,
+        _spec(runner.DENSE_REFERENCE),
+        decoded.core,
+    ) is expected
 
 
 def test_development_search_serializes_a_nonempty_calibration_selection(adapter):

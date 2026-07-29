@@ -1034,6 +1034,7 @@ def _qualifier_from_core(runner: Any, spec: Any, core: Mapping[str, Any]) -> boo
         fixed = core.get("fixed_blp")
         expected_keys = {
             "object",
+            "difference_eigenvalues_by_round",
             "trace_distances",
             "increments",
             "summed_positive_increments",
@@ -1044,6 +1045,7 @@ def _qualifier_from_core(runner: Any, spec: Any, core: Mapping[str, Any]) -> boo
         if not isinstance(fixed, Mapping) or set(fixed) != expected_keys:
             raise ValueError("dense core fixed-mask BLP shape drifted")
         distances = fixed["trace_distances"]
+        spectra = fixed["difference_eigenvalues_by_round"]
         if (
             not isinstance(distances, list)
             or len(distances) < 2
@@ -1055,6 +1057,11 @@ def _qualifier_from_core(runner: Any, spec: Any, core: Mapping[str, Any]) -> boo
             )
         ):
             raise ValueError("dense fixed-mask BLP distances are invalid")
+        if not isinstance(spectra, list) or len(spectra) != len(distances):
+            raise ValueError(
+                "dense fixed-mask BLP difference spectra are invalid"
+            )
+
         increments = [
             float(distances[index] - distances[index - 1])
             for index in range(1, len(distances))
