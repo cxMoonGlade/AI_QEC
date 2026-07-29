@@ -46,7 +46,7 @@ sum by a Pauli twirl or independently sampled Pauli alternatives.
   and public frame/residual access are defensive snapshots.
 
 The source-located, top-down formula ledger and code mapping is
-[`GCAMPS_2511_06672_FORMULA_IMPLEMENTATION_AUDIT_2026-07-27.md`](../../../../docs/simulator_validation/GCAMPS_2511_06672_FORMULA_IMPLEMENTATION_AUDIT_2026-07-27.md).
+[the GCAMPS formula implementation audit](../../../../docs/simulator_validation/GCAMPS_2511_06672_FORMULA_IMPLEMENTATION_AUDIT_2026-07-27.md).
 
 PECOS is a future isolated differential-reference candidate.  No CAPEPS–PECOS
 comparator is currently implemented or accepted.  Any future comparison must

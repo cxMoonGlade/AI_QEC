@@ -89,6 +89,76 @@ the test nor the formal result supplies performance, complete Record,
 multiround, qutrit/SDIM, leakage, generic PEPS, or global truncation-error
 evidence; each split ledger remains a local cause/resource diagnostic.
 
+The finite-memory bond-32 benchmark has a separate repository-only engineering
+surface.  Its fixture, dense-reference, plain-Quimb, GCAPEPS, comparator,
+SDIM/Stim, timing/memory, supervisor, and outer-orchestration owners are
+protected by:
+
+- `test_external_gcapeps_finite_memory_fixture.py`,
+  `test_external_gcapeps_finite_memory_dense_reference.py`,
+  `test_external_plain_quimb_finite_memory_engine.py`,
+  `test_external_plain_quimb_finite_memory_workers.py`,
+  `test_external_gcapeps_finite_memory_engine.py`, and
+  `test_external_gcapeps_finite_memory_workers.py`;
+- `test_external_gcapeps_finite_memory_carrier_hash.py`,
+  `test_external_gcapeps_finite_memory_logical_memory.py`,
+  `test_external_gcapeps_finite_memory_comparator.py`,
+  `test_external_gcapeps_finite_memory_terminal_gates.py`, and
+  `test_external_gcapeps_finite_memory_sdim.py`;
+- `test_external_gcapeps_finite_memory_timing.py`,
+  `test_external_gcapeps_finite_memory_child_dispatch.py`,
+  `test_external_gcapeps_finite_memory_experiment_adapter.py`,
+  `test_external_gcapeps_finite_memory_development_sweep.py`,
+  `test_external_gcapeps_finite_memory_development_sweep_runner.py`,
+  `test_external_gcapeps_finite_memory_supervisor_foundation.py`,
+  `test_external_gcapeps_finite_memory_manager_lifecycle.py`,
+  `test_external_gcapeps_finite_memory_systemd_snapshot.py`,
+  `test_external_gcapeps_finite_memory_serial_orchestrator.py`, and
+  `test_external_gcapeps_finite_memory_outer_orchestration.py`.
+
+The implementation checkpoint is **scoped engineering green / formal held-out
+blocked** at parent commit `eccae8984fa1d6e4b466af43360e67c38afde3b7`,
+tree `3d2902edbb3afa410b4266c80d3c9f88a61389c3`.  The Quimb fork implementation is
+frozen at commit
+`d90bb5ea210e666cbd7ecf8a8b7fa02390519baf`, tree
+`f7cd3496c48ec69f1800d41eabcaa8d53cab3b5b`.  These tests cover the bounded
+construction, complete-vector dense controls, strict complex128/gauge/split
+policy, ownership-aware logical-memory accounting, corruption-sensitive
+terminal joins, SDIM/Stim signed-frame corroboration, two-frame transport,
+fresh-unit lifecycle, and deterministic calibration/held-out orchestration
+algebra.  They do not execute the preregistered formal calibration or held-out
+sweep.
+
+The executable outer adapter's `--development-direct` mode runs the real worker
+owners in fresh ordinary subprocesses and performs the adaptive calibration
+graph.  The separate development-sweep runner executes the fixed heldout-shaped
+grid after an explicitly supplied selected gamma and `R_star`.  Both label
+their outputs `formal_claim_eligible=false` and `is_heldout_evidence=false`,
+record no systemd facts, and cannot publish a target amendment, systemd
+node/launch receipts, or a formal held-out report.  These modes, ad hoc
+in-process worker calls, and ordinary pytest are development diagnostics only:
+none can produce formal calibration or claim-bearing evidence.
+
+The formal entry point is explicitly fail-closed.  Comparator-owned conditional
+H_E/H_F verdict algebra is covered, but formal activation still needs the
+comparator-to-classifier-to-`cell_results` join, complete amendment/cell/fixture
+binding, and comparator semantic validation at the supervisor seam.  The
+output-only comparator validator checks internal consistency and authenticated
+locators; by itself it cannot prove that a source event was not omitted without
+the authenticated source cores.  Formal execution also requires the
+preregistered noninteractive system-scope transient-unit preflight and its
+effective-property evidence.  That host preflight has not been rerun at this
+checkpoint; an authorization result would not close the implementation wiring
+gaps.  This is a formal trust-boundary status, not a scientific verdict.
+
+The AnySearch-backed literature closure is
+`docs/simulator_validation/GCAPEPS_FINITE_MEMORY_BOND32_LITERATURE_CLOSURE_2026-07-29.md`.
+It closes only the bounded persistent-memory unitary dilation, registered dense
+BLP witness, and carrier-comparison design.  No held-out result exists, and this
+engineering surface establishes no generic PEPS contraction/faithfulness or
+speedup claim, no generic non-Markovian QEC/Record claim, and no
+qutrit/composite-\(d\), leakage, measurement/reset, or LER claim.
+
 `test_literature_tools.py` protects developer-tooling trust boundaries rather than a simulator
 service. Its falsifiers cover explicit-manifest admission, source-PDF and audit-packet hashes,
 one-fact locators and checked pages, empty-corpus refusal, project-inference injection, stale live

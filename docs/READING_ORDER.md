@@ -1,6 +1,6 @@
 # Reading order — what matters at the current stage
 
-Reconciled 2026-07-29 against `736683c`.
+Reconciled 2026-07-29 against `eccae89` (implementation checkpoint).
 Verify with `python tools/check_reading_order.py`.
 
 `CLAUDE.md` holds the rules that always bind and a routing table for which surface owns which
@@ -18,12 +18,28 @@ Mutation testing is retired; verification is unit tests plus the coverage gate.
 ## Read first, in this order
 
 1. **`docs/simulator_validation/GCAPEPS_FINITE_MEMORY_BOND32_LITERATURE_CLOSURE_2026-07-29.md` and its matching preregistration** —
-   freezes the pending `2 x w`, `w=3,5,7`, persistent-memory benchmark: native
+   freezes the `2 x w`, `w=3,5,7`, persistent-memory benchmark: native
    bond-32 plain Quimb versus Clifford-frame/tree-routed GCAPEPS, bounded dense
    complete-state faithfulness, BLP trace-distance backflow, SDIM/Stim frame
    corroboration, positive local truncation evidence, and layered per-case and
-   per-substep timing.  It is not a QEC Record, generic PEPS certificate,
-   monotonic-entanglement theorem, or universal efficiency claim.  Its primary
+   per-substep timing.  The AnySearch-backed closure is complete and the
+   implementation and scoped regression checkpoint is parent commit
+   `eccae8984fa1d6e4b466af43360e67c38afde3b7`, tree
+   `3d2902edbb3afa410b4266c80d3c9f88a61389c3`, with Quimb fork commit
+   `d90bb5ea210e666cbd7ecf8a8b7fa02390519baf`, tree
+   `f7cd3496c48ec69f1800d41eabcaa8d53cab3b5b`.  There is no formal calibration,
+   amendment, held-out report, or result.  `--development-direct` runs the
+   adaptive calibration graph in fresh ordinary subprocesses; the separate
+   `DEVELOPMENT_SWEEP` runner executes a fixed selected-grid diagnostic.  Both
+   set `formal_claim_eligible=false` and are nonclaim-bearing development
+   instruments; pytest is likewise engineering-only.  The formal CLI is
+   explicitly fail-closed.  Formal activation still requires comparator to
+   classifier to `cell_results` wiring, complete amendment/cell/fixture
+   binding, and comparator semantic validation at the supervisor seam.  Host
+   system-manager preflight has not been rerun at this checkpoint, and a host
+   authorization result would not close those wiring gaps.  This is not a QEC
+   Record, generic PEPS certificate, monotonic-entanglement theorem,
+   qutrit/SDIM GCAPEPS result, or universal efficiency claim.  Its primary
    witness audit starts at
    `docs/simulator_validation/BLP_0908_0238V2_NONMARKOVIAN_WITNESS_AUDIT_2026-07-29.md`;
    the closure routes the remaining collision-model and sign audits.
@@ -87,6 +103,17 @@ Mutation testing is retired; verification is unit tests plus the coverage gate.
 
 ## Recently landed — read before touching the same surface
 
+- **Finite-memory bond-32 implementation, not experiment result.** The
+  repository-owned fixture/reference/candidate/comparator/SDIM/timing and
+  systemd-supervisor owners now have the engineering acceptance surface listed
+  in `tests/CODEBOOK.md`.  Scoped regression is green at parent `eccae89` and
+  fork `d90bb5e`; this implements the bounded workers, comparator-owned
+  conditional H_E/H_F algebra, and development runners, but publishes no
+  calibration, amendment, formal held-out report, or result note.  The two
+  ordinary-process development modes cannot support a claim.  The formal CLI
+  remains fail-closed until its amendment-aware comparator/classifier/report
+  join and supervisor trust-boundary validation are wired; current host
+  preflight state is deliberately not inferred from an earlier session.
 - **PEPS d5 complete-state execution** (`a95ba0f` run). Both commit-bound
   candidates materialize every d5 amplitude at `D<=4`; `D=2` is already
   useful and `D=4` is near unity. Higher bonds fail the registered resource
