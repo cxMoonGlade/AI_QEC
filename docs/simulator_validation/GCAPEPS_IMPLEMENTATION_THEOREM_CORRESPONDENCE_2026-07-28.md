@@ -2,6 +2,8 @@
 
 Date: 2026-07-28
 
+Updated: 2026-07-29
+
 Status: `SCOPED_ENGINEERING_GREEN__GENERIC_EQUIVALENCE_OPEN`
 
 Scope: bind the frozen GCAPEPS mathematical-feasibility theorem to two distinct
@@ -33,10 +35,14 @@ The strongest justified fork statement is:
 
 > The fork implements the untruncated tree construction with structural ledgers,
 > performs a same-IR dense state-action check for every production update at
-> most 10 qubits, and has one finite two-qubit full-basis reconstruction fixture.
+> most 10 qubits, and has three finite full-basis reconstruction fixtures against
+> an independently written test-side bitwise action. The two four-site fixtures
+> give operator-level witnesses for all three reviewed Lemma-3 repairs, including
+> both common-factor subbranches of repair 1.
 
 It is not justified to replace that statement with generic operator equivalence,
-certified PEPS contraction, finite-bond correctness, or efficiency.
+certified PEPS contraction, finite-bond correctness, or efficiency. The fixtures
+remain fixed-graph, fixed-rank, exact-small construction evidence.
 
 ## 2. Pinned artifacts
 
@@ -47,7 +53,7 @@ certified PEPS contraction, finite-bond correctness, or efficiency.
 | feasibility theorem | `docs/simulator_validation/GCAPEPS_MATHEMATICAL_FEASIBILITY_THEOREM_2026-07-27.md` | SHA-256 `7f5ec9c7c3dac2da7c377c0958f7eafc104d2da19b59350e1a7c336cc1cc10dc` |
 | independent review | `docs/simulator_validation/GCAPEPS_MATHEMATICAL_FEASIBILITY_INDEPENDENT_REVIEW_2026-07-27.md` | theorem hash binding remains intact |
 
-The theorem hash was recomputed on 2026-07-28 after the fork changes. It is
+The theorem hash was recomputed on 2026-07-29 after the fork changes. It is
 unchanged.
 
 ### 2.2 Quimb fork
@@ -56,9 +62,9 @@ unchanged.
 |---|---|
 | repository | `https://github.com/cxMoonGlade/quimb` |
 | branch | `gcapeps-carrier` |
-| commit | `12838e4e1d32abb619c607d71ac3393018ce7b56` |
-| commit subject | `Close GCAPEPS construction correspondence gaps` |
-| push | confirmed on `origin/gcapeps-carrier` on 2026-07-28 |
+| commit | `6fbbf74cd36686ed30a4d8865697ce46e47056c1` |
+| commit subject | `Cover Lemma 3 repairs with full-basis fixtures` |
+| push | confirmed on `origin/gcapeps-carrier` on 2026-07-29 |
 | package | `quimb/experimental/gcapeps/` |
 
 All fork statements below are statements about that exact commit.
@@ -85,16 +91,16 @@ Verdict vocabulary:
   formula, but the structural validator does not inspect tensor elements.
 - `STATE_ACTION_EXACT_SMALL`: one production update on its current residual state
   is compared with a complete dense vector at the stated ceiling.
-- `BASIS_FIXTURE_EXACT_SMALL`: one finite fixture reconstructs all matrix columns
-  from basis-state actions.
+- `BASIS_FIXTURE_EXACT_SMALL`: a finite fixture reconstructs every matrix
+  column from computational-basis actions.
 - `TRACEABILITY_ONLY`: a test marker prevents silent loss of a named witness but
   does not prove its theorem clause.
 - `OPEN`: not established by the implementation or acceptance evidence.
 
-| theorem or project clause | fork witness at `12838e4e` | verdict |
+| theorem or project clause | fork witness at `6fbbf74c` | verdict |
 |---|---|---|
-| Lemma 3 copy tensor and three reviewed repairs | `_local_pepo_block`, finite repair fixtures, and current-state action checks through 10 qubits | `SOURCE_CONSTRUCTION` plus finite fixtures; generic value-level correctness `OPEN` |
-| Lemma 3 operator equality | two-qubit full-basis reconstruction against `CoherentPauliSum.to_dense()` | `BASIS_FIXTURE_EXACT_SMALL`; generic statement `OPEN` |
+| Lemma 3 copy tensor and three reviewed repairs | `_local_pepo_block`, current-state checks, and two four-site full-basis fixtures: common nonidentity factors in both `T \ W` and `V \ T`, a degree-two root, and a single-root tree | `SOURCE_CONSTRUCTION` plus `BASIS_FIXTURE_EXACT_SMALL`; generic value-level correctness `OPEN` |
+| Lemma 3 operator equality | three full-basis reconstructions against an independently written test-side bitwise Pauli-sum action | `BASIS_FIXTURE_EXACT_SMALL`; generic statement `OPEN` |
 | Lemma 3 / Eq. (9), tree PEPO bond rank | per-edge `operator_bond` and `pepo_rank_factor` recomputed from active rank and tree membership | `STRUCTURAL_LEDGER_ENFORCED` |
 | Lemma 3 tree validity | graph membership, connectedness, acyclicity, terminals, and deterministic route recomputed | `STRUCTURAL_LEDGER_ENFORCED` |
 | Lemma 4 / Eq. (11) | measured `state_bond_after = state_bond_before * operator_bond` without compression | `STRUCTURAL_LEDGER_ENFORCED` |
@@ -250,11 +256,27 @@ At `n > 10`, the update explicitly records
 `not_checked_above_exact_small_ceiling`; only the structural validator remains.
 No generic semantic certificate is inferred.
 
-A separate two-qubit test applies the implemented update to all four
-computational-basis inputs, stacks the four output columns, and compares the
-resulting matrix with the dense operator. That is a real full-basis check for one
-finite fixture. It is not a proof for arbitrary graph, bond dimension, gauge, or
-system size.
+Three fixed tests reconstruct all computational-basis columns and compare the
+implemented matrix with an independently written test-side bitwise Pauli-sum
+action, using `rtol = 0` and `atol = 2e-12`:
+
+1. A two-qubit baseline with `II`, `XI`, and `YZ` has
+   \(W=\{0,1\}\) and the ordinary one-edge tree.
+2. On the four-site tree with edges \((0,1),(0,2),(2,3)\), the words
+   `IIXI` and `ZXXY` give \(W=\{0,1,3\}\). Site 2 is a routing vertex in
+   \(T\setminus W\) with common \(X\), and root 0 has degree two. The test
+   reconstructs all 16 columns and witnesses repairs 1 and 2.
+3. On the same graph, `IXYZ` and `ZXYZ` give \(W=\{0\}\). The route is the
+   single root, while sites 1, 2, and 3 lie outside \(T\) with common
+   \(X,Y,Z\), respectively. The test reconstructs all 16 columns and witnesses
+   repairs 1 and 3.
+
+The helper consumes raw test tuples and implements bit flips and Pauli phases
+without calling `CoherentPauliSum.to_dense()`, production Pauli matrices,
+routing, or PEPO code. It is independent at the implementation-test-oracle
+level, not an independent scientific ground truth. These fixtures do not prove
+arbitrary graph, active rank, existing PEPS bond dimension, gauge, or system
+size.
 
 ## 7. Gauge fusion convention
 
@@ -291,19 +313,22 @@ canonical form or environment certificate.
 
 ## 8. Test-to-clause traceability
 
-`tests/test_experimental/conftest.py` declares the required implemented-clause
-set and registers `gcapeps_clause(name)`. During a complete experimental
-collection, collection fails if any required clause has no witness or if a test
-uses an unknown clause. A focused single-node run is deliberately allowed and
-does not require unrelated witnesses.
+`tests/test_experimental/conftest.py` now maintains two separate traceability
+accounts. `gcapeps_clause(name)` covers the general implemented-clause set.
+`gcapeps_full_basis_clause(name)` has its own required set for operator equality,
+repair 1 at a common-factor routing vertex, repair 1 outside the tree, repair 2,
+and repair 3. Old current-state witnesses cannot satisfy this second account.
 
-The declared set covers Lemma-3 repairs and tree validity, Eqs. (9) and (11),
-Theorem-1 structural accounting, and Eqs. (16) and (17). The operator-equality
-marker is now attached only to the finite full-basis reconstruction test, not to
-a single-state production check.
+During an unfiltered complete experimental collection, collection fails if a
+required name has no witness or if a test uses an unknown name. Focused or
+selector-filtered runs still validate marker syntax and names but deliberately
+do not claim complete witness coverage. This prevents post-collection
+`-k`/`-m`/`--deselect` filtering from being reported as a complete gate.
 
-Marker coverage is a maintenance and traceability contract. It is not proof that
-the marked mathematical statement holds generically.
+The general set also covers tree validity, Eqs. (9) and (11), Theorem-1
+structural accounting, and Eqs. (16) and (17). Marker coverage is a maintenance
+and traceability contract; it neither verifies that a marker was attached to
+the right test nor proves that the marked statement holds generically.
 
 ## 9. Two-implementation responsibility table
 
@@ -328,10 +353,10 @@ accepted combined carrier.
 
 ## 10. Gap disposition
 
-| gap | disposition at fork commit `12838e4e` |
+| gap | disposition at fork commit `6fbbf74c` |
 |---|---|
-| G1: tensor amplitudes absent from structural validator | `PARTIALLY_CLOSED_EXACT_SMALL`: state action for every production update through 10 qubits plus one finite full-basis fixture; generic equality remains open |
-| G2: no theorem-clause test mapping | `CLOSED_TRACEABILITY_ONLY`: collection contract added; proof status unchanged |
+| G1: tensor amplitudes absent from structural validator | `PARTIALLY_CLOSED_EXACT_SMALL`: state action for every production update through 10 qubits plus three finite full-basis fixtures covering both repair-1 subbranches and repairs 2/3; generic equality remains open |
+| G2: no theorem-clause test mapping | `CLOSED_TRACEABILITY_ONLY`: separate general and full-basis unfiltered-collection contracts added; proof status unchanged |
 | G3: PEPO ledger would miss a future refactor factor | `CLOSED_AS_SEQUENCING_GUARD`: PEPO, refactor, and total accounts separated; nonidentity refactor remains open |
 | G4: gauge fusion layout unnamed and fixture symmetric | `CLOSED_CHARACTERIZATION_FIXTURE`: asymmetric `[2,5]` fixture locks the convention |
 | G5: Theorem-2 refactor absent from fork | `OPEN` |
@@ -344,9 +369,10 @@ accepted combined carrier.
 ### 11.1 Implemented
 
 - tree-routed PEPO construction and structural validator;
-- clause-tag collection contract;
+- separate general and full-basis clause-tag collection contracts;
 - exact-small current-state action evidence with explicit 10-qubit ceiling;
-- finite two-qubit full-basis reconstruction fixture;
+- one two-qubit baseline and two adversarial four-site full-basis
+  reconstruction fixtures;
 - PEPO-only, refactor-only, and combined bond-growth accounts;
 - total-growth preflight guard;
 - asymmetric gauge-layout fixture;
@@ -357,10 +383,11 @@ accepted combined carrier.
 ### 11.2 Focused engineering evidence
 
 All results below were rerun from clean fork commit
-`12838e4e1d32abb619c607d71ac3393018ce7b56`:
+`6fbbf74cd36686ed30a4d8865697ce46e47056c1`:
 
-- GCAPEPS scoped ordinary suite: `97 passed`, one optional `kahypar` warning;
-- complete experimental collection: `97 tests collected`, clause gate passed;
+- GCAPEPS scoped ordinary suite: `99 passed`, one optional `kahypar` warning;
+- unfiltered complete experimental collection: `99 tests collected`, both
+  clause gates passed;
 - isolated `gcapeps-sdim` live suite: `9 passed`;
 - Ruff import check: passed using the fork `.pixi/envs/docs/bin/ruff`;
 - Ruff format check: passed using the same fork Pixi tool, not the `ecs`
@@ -377,7 +404,8 @@ The coverage number is a code-execution diagnostic, not a scientific metric.
 - the fork gives executable structural witnesses for the untruncated tree
   construction;
 - exact-small action and finite-basis evidence can falsify concrete numerical
-  implementation defects;
+  implementation defects, including the reviewed common-factor, degree-two-root,
+  and single-root construction errors;
 - none of these artifacts supplies a generic a posteriori PEPS contraction
   certificate or upgrades the theorem beyond representation feasibility.
 
@@ -386,7 +414,8 @@ rows above.
 
 ### 11.4 Release evidence
 
-- fork commit pushed to `origin/gcapeps-carrier`: confirmed;
+- fork commit `6fbbf74cd36686ed30a4d8865697ce46e47056c1` pushed to
+  `origin/gcapeps-carrier`: confirmed;
 - full upstream Quimb test suite: not run;
 - remote CI: not inspected in this packet;
 - parent ECS fresh-process aggregate acceptance: not run;
@@ -410,7 +439,8 @@ This packet does not establish any of the following:
 - SDIM supplies prime-d qutrit residual evolution;
 - leakage qutrits, composite-d tableaus, or qutrit GCAPEPS are implemented;
 - the same-IR dense state-action check is an independent oracle;
-- finite fixtures prove arbitrary-size operator equality.
+- finite fixtures prove operator equality for arbitrary graph, active rank,
+  existing bond dimension, gauge, or system size.
 
 ## 13. Next implementation gates
 
@@ -418,9 +448,9 @@ This packet does not establish any of the following:
    validator that records a certified `rho(Q)` factor and updates only the
    refactor and total accounts.
 2. Keep the PEPO Eq. (17) account unchanged and independently guarded.
-3. If stronger exact-small operator evidence is needed, construct a dense PEPO,
-   Choi matrix, or explicitly bounded full-basis reconstruction independent of
-   the current residual state and record the exact ceiling.
+3. If evidence beyond the three fixed full-basis fixtures is needed, expand
+   graph, rank, existing-bond, and gauge coverage, or add an independently
+   implemented dense-PEPO or Choi comparison with an explicit ceiling.
 4. Treat every result above the dense ceiling as structurally checked and
    semantically uncertified unless an independently justified conditional
    contraction class is added.
