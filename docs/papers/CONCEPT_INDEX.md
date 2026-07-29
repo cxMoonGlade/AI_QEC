@@ -5,9 +5,9 @@ relationships appear here. This is routing metadata; the cited PDF and locator r
 the evidence.
 
 - corpus status: active
-- sources: 44
-- concept nodes: 154
-- source-located relationships: 154
+- sources: 47
+- concept nodes: 162
+- source-located relationships: 162
 - dangling relationships: 0
 
 ## bond environment (concept)
@@ -45,6 +45,10 @@ the evidence.
 ## Pauli group (concept)
 
 - **defines** — Stabilizer states and Clifford operations for systems of arbitrary dimensions, and modular arithmetic — `PDF p. 2, Sec. II.A, paragraph before Eq. (4)`, PDF p. 2 — The Pauli group contains the \(d^{2n}\) operators \(XZ(a)\) multiplied by phases \(\zeta^\delta\), where \(\zeta\) is a square root of \(\omega\) and \(\delta\in\mathbb Z_{2d}\). ([docs/papers/reading_notes/hostens_stabilizer_clifford_arbitrary_dimension_quant_ph_0408190v2_source_review.md](reading_notes/hostens_stabilizer_clifford_arbitrary_dimension_quant_ph_0408190v2_source_review.md))
+
+## retains the system-environment correlations (concept)
+
+- **supports** — Non-Markovianity and System-Environment Correlations in a Microscopic Collision Model — `Sec. I.B, Eq. (11) and following comparison`, PDF p. 4 — Strategy 2 retains the system-environment correlations through the ancilla's interaction with its next neighbor and erases an ancilla only after its active role expires. ([docs/papers/reading_notes/mccloskey_paternostro_collision_1402.4639v3_source_review.md](reading_notes/mccloskey_paternostro_collision_1402.4639v3_source_review.md))
 
 ## stabilizer state (concept)
 
@@ -109,6 +113,10 @@ the evidence.
 ## OBD (limitation)
 
 - **contradicts** — Classical simulability of Clifford+T circuits with Clifford-augmented matrix product states — `Appendix C, Eq. (C1) and explanatory paragraph`, PDF p. 24 — For the six five-qubit Pauli strings listed in Eq. (C1), the source reports that an entanglement barrier prevents OBD from finding the needed disentangler, while OFD succeeds with the long-range gate \(CX_{1,5}\). ([docs/papers/reading_notes/liu_clark_clifford_augmented_mps_2412.17209v2_source_review.md](reading_notes/liu_clark_clifford_augmented_mps_2412.17209v2_source_review.md))
+
+## one fixed pair (limitation)
+
+- **limits** — Measure for the degree of non-Markovian behavior of quantum processes in open systems — `Concluding paragraphs`, PDF p. 4 — An observed positive trace-distance increase for one fixed pair supplies a non-Markovian signature and a lower bound on the optimized measure. ([docs/papers/reading_notes/breuer_laine_piilo_nonmarkovianity_0908.0238v2_source_review.md](reading_notes/breuer_laine_piilo_nonmarkovianity_0908.0238v2_source_review.md))
 
 ## PEPS layout (limitation)
 
@@ -242,6 +250,10 @@ the evidence.
 
 - **defines** — Efficient Time Evolution of 2D Open-Quantum Lattice Models with Long-Range Interactions using Tensor Networks — `Section V.C and Appendix D, pages 8-9 and 18`, PDF p. 18 — The iterative simple-update truncation reuses previous-step isometries on every non-target bond, performs a QR and truncated SVD on the remaining bond, updates the isometries and bond weight, and repeats over all bonds. ([docs/papers/reading_notes/tepepo_2d_open_system_tn_2512.01781.md](reading_notes/tepepo_2d_open_system_tn_2512.01781.md))
 
+## Markovian embedding (method)
+
+- **supports** — System-environment correlations and Markovian embedding of quantum non-Markovian dynamics — `Sec. V, Eqs. (7)–(10)`, PDF p. 5 — For \(d=1\), the joint state of \(S\) and the advancing last-collided ancilla evolves through a composition of CPTP maps that is a Markovian embedding of the generally non-Markovian reduced \(S\) map. ([docs/papers/reading_notes/campbell_markovian_embedding_1805.09626v2_source_review.md](reading_notes/campbell_markovian_embedding_1805.09626v2_source_review.md))
+
 ## neighborhood tensor update (method)
 
 - **defines** — Time evolution of an infinite projected entangled pair state: a neighborhood tensor update — `Sec. II, Figs. 3--4`, PDF p. 4 — Neighborhood tensor update contracts a finite nearest-neighbor double-layer cluster exactly to obtain a metric that is Hermitian and nonnegative to machine precision. ([docs/papers/reading_notes/dziarmaga_ntu_2107.06635_source_review.md](reading_notes/dziarmaga_ntu_2107.06635_source_review.md))
@@ -338,6 +350,10 @@ the evidence.
 
 - **defines** — Non-Clifford Crosstalk Noise in Surface Codes Using Hybrid Stabilizer-Tensor Network Methods — `Sec. III.B, Eqs. (4)–(5), implementation circuit, and Fig. 1 caption`, PDF p. 3 — The source models gate-based nearest-neighbour noise as a coherent ZZ crosstalk channel \(e^{i\theta Z_1Z_2}\rho e^{-i\theta Z_1Z_2}\) applied after entangling gates, with \(\theta=J_{ZZ}t_g\). ([docs/papers/reading_notes/harper_hybrid_surface_code_2605.29514v1_source_review.md](reading_notes/harper_hybrid_surface_code_2605.29514v1_source_review.md))
 
+## collision Hamiltonian (model)
+
+- **defines** — System-environment correlations and Markovian embedding of quantum non-Markovian dynamics — `Sec. II, Eq. (2)`, PDF p. 2 — The source defines a pairwise collision Hamiltonian \(-\frac12(J_xXX+J_yYY+J_zZZ)\) for either a system–ancilla pair or an ancilla–ancilla pair. ([docs/papers/reading_notes/campbell_markovian_embedding_1805.09626v2_source_review.md](reading_notes/campbell_markovian_embedding_1805.09626v2_source_review.md))
+
 ## depolarizing leakage extension (model)
 
 - **defines** — Quantification and Characterization of Leakage Errors — `Sec. VI.A.2, Eqs. (46)--(47)`, PDF p. 8 — The depolarizing leakage extension of a computational-subspace channel is the model in Eq. (46), parameterized by leakage and seepage rates and completely depolarizing maps between the two subspaces. ([docs/papers/reading_notes/wood_gambetta_leakage_diagnostics_pra_97_032306.md](reading_notes/wood_gambetta_leakage_diagnostics_pra_97_032306.md))
@@ -397,6 +413,14 @@ the evidence.
 ## locally purified tensor network (model)
 
 - **defines** — A positive tensor network approach for simulating open quantum many-body systems — `Main text, Eq. (3) and Fig. 1(a)`, PDF p. 2 — A locally purified tensor network represents the density operator as `rho = X X^dagger`, with `X` decomposed into local tensors carrying physical, bond, and Kraus indices. ([docs/papers/reading_notes/werner_positive_tensor_network_open_systems_1412.5746.md](reading_notes/werner_positive_tensor_network_open_systems_1412.5746.md))
+
+## memory depth (model)
+
+- **defines** — System-environment correlations and Markovian embedding of quantum non-Markovian dynamics — `Sec. V opening paragraph`, PDF p. 5 — The source reinterprets the ancilla–ancilla interaction range \(d\) as the memory depth. ([docs/papers/reading_notes/campbell_markovian_embedding_1805.09626v2_source_review.md](reading_notes/campbell_markovian_embedding_1805.09626v2_source_review.md))
+
+## partial-SWAP unitary (model)
+
+- **defines** — Non-Markovianity and System-Environment Correlations in a Microscopic Collision Model — `Sec. I, Eqs. (1)–(2)`, PDF p. 2 — The source models a system–ancilla collision by the partial-SWAP unitary \(\widehat U_{S,j}(\gamma)=\cos\gamma\,I+i\sin\gamma\,\widehat S_{S,j}\). ([docs/papers/reading_notes/mccloskey_paternostro_collision_1402.4639v3_source_review.md](reading_notes/mccloskey_paternostro_collision_1402.4639v3_source_review.md))
 
 ## Pauli-twirled crosstalk channel (model)
 
@@ -577,6 +601,14 @@ the evidence.
 ## thermal equilibrium population (observable)
 
 - **defines** — Exact and Efficient Stabilizer Simulation of Thermal-Relaxation Noise for Quantum Error Correction — `Sec. II.A, Eqs. (10) and (15)`, PDF p. 3 — The thermal equilibrium population is `p_1=n_bar/(1+2n_bar)`, while the total population-relaxation rate is `gamma(2n_bar+1)`. ([docs/papers/reading_notes/garner_thermal_relaxation_2512.09189_source_review.md](reading_notes/garner_thermal_relaxation_2512.09189_source_review.md))
+
+## trace distance (observable)
+
+- **defines** — Measure for the degree of non-Markovian behavior of quantum processes in open systems — `Eq. (1)`, PDF p. 1 — The source defines the trace distance as \(D(\rho_1,\rho_2)=\frac12\operatorname{tr}|\rho_1-\rho_2|\), with values between zero and one. ([docs/papers/reading_notes/breuer_laine_piilo_nonmarkovianity_0908.0238v2_source_review.md](reading_notes/breuer_laine_piilo_nonmarkovianity_0908.0238v2_source_review.md))
+
+## trace-distance rate (observable)
+
+- **defines** — Measure for the degree of non-Markovian behavior of quantum processes in open systems — `Eq. (10) and the following two paragraphs`, PDF p. 2 — The source defines the trace-distance rate \(\sigma(t,\rho_{1,2}(0))=\frac{d}{dt}D(\rho_1(t),\rho_2(t))\) and calls a process non-Markovian when this rate is positive for some time and some initial pair. ([docs/papers/reading_notes/breuer_laine_piilo_nonmarkovianity_0908.0238v2_source_review.md](reading_notes/breuer_laine_piilo_nonmarkovianity_0908.0238v2_source_review.md))
 
 ## weight-six supercheck (observable)
 

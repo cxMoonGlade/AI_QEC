@@ -295,6 +295,736 @@ the formal result supplies performance, Record, multiround, qutrit/SDIM,
 leakage, loopy-PEPS, global truncation-error, generic PEPS, or general
 efficiency evidence.
 
+## Preregistered pending GCAPEPS finite-memory bond-32 metrics
+
+This subsection freezes the metric semantics for
+`docs/simulator_validation/GCAPEPS_FINITE_MEMORY_BOND32_PREREG_2026-07-29.md`.
+It is pending: no quantity becomes current evidence until the independent
+dense, plain-Quimb, GCAPEPS, timing, and SDIM owners exist, pass their controls,
+and a clean held-out artifact is published.  Width means the width of the
+two-row system--memory ladder, not code distance or qudit dimension.
+
+Epistemic classes are fixed before execution.  The BLP trace-distance object is
+source-defined, while the named `>1e-10` decision threshold is class-(c).
+Directional hypotheses `H_E` and `H_F` are class-(b) project predictions with
+the exact one-sided/tie bands below.  Fidelity `high/degraded/low` labels and
+positive-cap detection are class-(c) bounded gates.  Timing and memory are
+`engineering-performance-only`, not class-(a/b) scientific predictions and not
+accuracy, acceptance, portability, or asymptotic claims.
+
+For raw complete vector \(v\) in q0-most-significant-bit order, with system
+axes first and memory axes second, before any division, normalization,
+reduction, Schmidt decomposition, fidelity, or entropy calculation require
+one-dimensional shape `(2**(2*w),)`, exact dtype `complex128`, and finite real
+and imaginary parts.  With `z=np.vdot(v,v)` computed in `complex128`, record the
+raw C-order byte hash, `abs(imag(z))`, and `real(z)`; require
+`abs(imag(z))<=1e-12` and finite `real(z)>0`.  This applies to every dense and
+candidate vector, including each finite-ensemble path.  Only after this gate may
+metric-local normalization, reduction, and comparison begin.
+
+Every persisted numerical array uses the preregistered exact `ndarray-v1`
+object with key set `(encoding,dtype,shape,order,nbytes,data_sha256,data_base64)`.
+Complex vectors/states/tensors use little-endian `"<c16"`; real gauges/spectra
+use `"<f8"`; source arrays are already C-contiguous c128/f64 in a required
+little-endian environment.  The payload is exact `a.tobytes(order="C")` encoded
+as canonical padded RFC-4648 Base64 with no whitespace and a lower-case SHA-256.
+The comparator rejects wrong/extra keys, booleans in shape/nbytes, wrong
+dtype/rank/shape/order/length, noncanonical Base64, hash disagreement,
+nonfinite decoded values, or any raw-byte round-trip mismatch before use.  It
+reconstructs the registered ndarray from decoded bytes; a hash without the raw
+bytes is never a metric input.  A vector's `data_sha256` equals its independently
+recorded pre-metric C-order hash.
+
+\[
+A=\operatorname{reshape}_{C}(v;2^w,2^w),\qquad
+\rho_S=AA^\dagger/\operatorname{Re}z.
+\]
+
+Field ownership is strict.  Each plain/GC evidence worker owns only its raw
+candidate vectors and checkpoint-local raw validation fields, candidate-only
+guards, local spectra/tails/events, signed-pullback rows, algorithm
+bonds/resources, and the frame-aware canonical final-carrier hash.  It receives
+neither dense nor peer
+candidate artifacts and cannot form a two-input trace distance.  Every vector
+is marked `source_branch="instrumented_replay"`.  The terminal
+comparator alone reads the neutral fixture, dense, both candidate, and SDIM artifacts and computes
+all cross-artifact quantities below: `F_raw`, its correction and `F`, `D_pure`,
+trace distance, `d_rel`, `d_norm`, raw/normalized `d2` and `dinf`,
+signed/absolute norm error, `S1/S2` errors, checkpoint
+candidate-versus-dense trace-distance error, \(\Delta F\), and every associated
+verdict.  That comparator imports no Stim, SDIM, Quimb, GCAPEPS, or ECS; it joins
+already emitted values/strings and recomputes numerical metrics from raw
+artifacts only.
+
+For every dense or candidate reduced state, the max-entry residuals are
+
+\[
+h_\rho=\max_{ij}|\rho_{ij}-\rho^*_{ji}|,\qquad
+t_\rho=|\operatorname{Tr}\rho-1|.
+\]
+
+Both must be at most `1e-12` before forming the metric-local Hermitian copy
+\(\rho_H=(\rho+\rho^\dagger)/2\).  For
+\((\lambda,V)=\operatorname{eigh}(\rho_H)\), require minimum eigenvalue at
+least `-1e-12` and max-entry eigenpair and reconstruction residuals at most
+`1e-10`.  Eigenvalues in `[-1e-12,0)` are clipped only after recording
+\(m_-=\sum_j\max(0,-\lambda_j)\le10^{-12}\), then divided by their positive
+sum.  The pre-normalization sum, normalization factor, and
+\(h_\rho/2\) Hermitization correction are recorded; stored states are unchanged.
+Entropies use the resulting \(\tilde\lambda\) and base-2 logarithms,
+
+\[
+S_1=-\sum_j\tilde\lambda_j\log_2\tilde\lambda_j,
+\qquad
+S_2=-\log_2\sum_j\tilde\lambda_j^2,
+\]
+
+with \(0\log_2 0=0\).  Trace distance uses
+\(\tfrac12\sum_j|\operatorname{eigvalsh}(\rho_{H,1}-\rho_{H,2})_j|\).
+
+The normalized Schmidt values are the singular values of \(A\) divided by
+\(\|v\|_2\).  Numerical rank counts values greater than `1e-12` times the
+largest normalized value.  The registered entanglement hypothesis applies only
+at `(width=7, axis_family=3, p_event=p_star, rounds=R_star)` to exact dense
+input trajectory 1:
+
+\[
+S_1(R_\star)>S_1(1)+10^{-10}.
+\]
+
+It is a terminal-versus-first-round hypothesis, not monotonic-growth evidence.
+
+Two BLP-style objects are distinct.  For the fixed `CARRIER` mask,
+
+\[
+D_r^{\rm carrier}
+=\tfrac12\|\rho_{S,1}(r)-\rho_{S,2}(r)\|_1,
+\qquad
+W_{\rm carrier}=\sum_{r=1}^{R}\max(0,D_r^{\rm carrier}-D_{r-1}^{\rm carrier}),
+\qquad
+\delta_{\max}^{\rm carrier}=\max_{1\le r\le R}(D_r^{\rm carrier}-D_{r-1}^{\rm carrier}).
+\]
+
+For the 32 equally weighted dense-only `BLPENSEMBLE` paths,
+
+\[
+\bar\rho_{S,a}(r)=\tfrac1{32}\sum_{m=0}^{31}\rho_{S,a,m}(r),
+\quad
+\bar D_r=\tfrac12\|\bar\rho_{S,1}(r)-\bar\rho_{S,2}(r)\|_1,
+\quad
+\bar W=\sum_{r=1}^{R}\max(0,\bar D_r-\bar D_{r-1}),
+\quad
+\bar\delta_{\max}=\max_{1\le r\le R}(\bar D_r-\bar D_{r-1}).
+\]
+
+The density matrices are averaged before trace distance.  Averaging pathwise
+distances, deduplicating coincident endpoint masks, or comparing a one-mask
+candidate against the ensemble is forbidden.  Both initial distances must be
+one within `1e-12`.  Only the corresponding named maximum increment greater
+than `1e-10` gates a witness; each summed \(W\) is report-only.  A pass is
+respectively `BLP_WITNESSED_FIXED_MASK` or
+`BLP_WITNESSED_FINITE_32_MASK_ENSEMBLE` for that named pair and map only; the
+corresponding `NO_WITNESS_*_FOR_REGISTERED_PAIR` result is not a Markovian
+verdict.  Persistent memory, entanglement, bond growth, or a candidate-only
+revival is not a BLP witness.
+
+At `p_event=0`, exact fixed-path and 32-path ensemble controls require every
+event bit and active rotation count to be structurally zero, every-round
+system--memory \(S_1,S_2\le10^{-12}\) for both inputs, both named trace-distance
+trajectories within `1e-12` of one, and no maximum increment above `1e-10`.
+Failure is a negative-control failure.  Candidate fidelity and checkpoint
+trace-distance errors remain ordinary faithfulness diagnostics and never become
+candidate BLP evidence.
+
+At every materialized candidate checkpoint, the only candidate trace-distance
+diagnostic is the terminal comparator's
+\(|D_r^{\rm candidate}-D_r^{\rm dense}|\) for the fixed `CARRIER` mask.  A
+single-input evidence worker cannot form it.  Sparse-checkpoint increments are
+never summed or named a candidate BLP measure or BLP-measure error.
+
+For dense reference \(x\) and candidate \(y\), both raw `complex128` complete
+vectors, the mandatory metrics are
+
+\[
+F_{\rm raw}=\frac{|\langle x|y\rangle|^2}
+{\langle x|x\rangle\langle y|y\rangle},
+\]
+
+\[
+d_{\rm rel}=\frac{2\|x-y\|_2}{\|x\|_2+\|y\|_2},
+\qquad
+d_{\rm norm}=\frac{2|\|x\|_2-\|y\|_2|}
+{\|x\|_2+\|y\|_2}.
+\]
+
+Both norm-squared denominators and \(F_{\rm raw}\) must be finite; each
+denominator must be strictly positive; and \(F_{\rm raw}<0\) fails.  The raw
+value and `fidelity_roundoff_correction=max(0,F_raw-1)` are mandatory.
+Set \(F=\min(1,F_{\rm raw})\) only when the correction is at most `1e-12`; a
+larger excess fails.  Thus a gross \(F_{\rm raw}>1\) cannot be hidden by the
+pure-state distance calculation.  Zero/nonfinite denominators and nonfinite or
+negative raw fidelity also fail.
+
+After that gate, \(D_{\rm pure}=\sqrt{1-F}\).  No square root or
+fidelity clipping is evaluated before the gate passes.
+
+Writing \(n_x=\|x\|_2\), \(n_y=\|y\|_2\),
+\(\hat x=x/n_x\), and \(\hat y=y/n_y\), the mandatory companion metrics are
+
+\[
+d_{2,\rm raw}=\|x-y\|_2,\qquad
+d_{\infty,\rm raw}=\max_j|x_j-y_j|,
+\]
+
+\[
+d_{2,\rm normalized}=\|\hat x-\hat y\|_2,\qquad
+d_{\infty,\rm normalized}=\max_j|\hat x_j-\hat y_j|,
+\]
+
+\[
+\Delta n_{\rm raw}=n_y-n_x,\qquad
+e_{n,\rm raw}=|\Delta n_{\rm raw}|,\qquad
+e_{S_k}=|S_k^{\rm candidate}-S_k^{\rm dense}|\quad(k=1,2).
+\]
+
+Both raw norms are recorded.  Stored vectors are hashed before any metric-local
+normalization.  Phase fitting, coordinate permutation, dtype casting, or
+normalizing stored candidate/reference payloads is forbidden.
+
+An independent small vector/matrix known-answer suite must exercise the raw
+vector gate; permitted tiny-negative eigenvalue clipping; gross negativity,
+non-Hermiticity, trace, eigenpair, and reconstruction failures; and hand-check
+`F`, `D_pure`, trace distance, `d_rel`, `d_norm`, raw/normalized `d2`/`dinf`,
+signed/absolute norm error, and `S1/S2` error.  Zero/nonfinite vectors fail
+before division.  This validates the metric implementation, not the candidate state.
+
+The stress-cell comparison is
+
+\[
+\Delta F=\min_a F_{\rm GC}^{(a)}(R_\star)
+-\min_a F_{\rm plain}^{(a)}(R_\star),
+\]
+
+with `supported` for \(\Delta F>10^{-10}\), `tie/inconclusive` for
+\(|\Delta F|\le10^{-10}\), and `falsified` for \(\Delta F<-10^{-10}\).
+The project-only labels `high` (\(F\ge0.99\)), `degraded`
+(\(0.95\le F<0.99\)), and `low` (\(F<0.95\)) describe only a bounded output.
+
+A local split is a positive bond-32 cap event only if
+
+```text
+full_bond_dimension > 32
+kept_bond_dimension == 32
+discarded_squared_weight > 1e-12
+cause == "max_bond"
+configured_max_bond == 32
+```
+
+The stress verdict is eligible only if plain/GC crossed with both registered
+inputs all independently satisfy that rule.  Full and kept spectra, discarded
+weight/fraction, and cause are local class-(c) diagnostics, never a whole-state,
+observable, probability, Record, or accumulated-error certificate.
+Complete vectors, full/kept spectra, tail weights/fractions, positive-event
+counts, candidate-only guards, signed-pullback rows, algorithm bonds/resources,
+and the frame-aware canonical final-carrier hash are mandatory in evidence
+schemas.  Cross-artifact
+state metrics and verdicts are forbidden there and mandatory only in the
+terminal comparator schema.  Performance schemas omit vectors, guards,
+spectra/tails/events, and cross-artifact metrics rather than emit null/zero; they
+retain only algorithm bond fields, logical/process memory, the same
+frame-aware canonical final-carrier hash, and timing.
+
+Calibration cap discovery uses separate calibration-only probe workers.  A
+probe executes only the instrumented candidate path, creates an uncapped shadow
+from the immediate pre-split state for every selected two-site split, and has no
+complete no-shadow branch, vector output, cross-artifact metric, or timing-role
+output.  It stops only after the physical operation containing the first
+positive split has fully validated and committed, before the next operation;
+for GC, one operation includes exact lowering, every routed compression split,
+and commit.  If no positive split occurs it completes the trajectory.  Its
+output is limited to cap rows, the stop locator, provenance, logical/process
+resource observations, and raw worker/supervisor duration.  A probe-positive
+path that is full-evidence-negative is an invalid control, never a selected
+cell.  Each probe launch is counted before launch against the shared 100-attempt
+Stage-B/C calibration ceiling.
+
+Bond resources use exactly `max_exact_precompression_bond` (GC only and null
+for plain), `max_committed_bond`, and `final_committed_bond`.  The first records
+the exact routed transient before native compression; the latter two observe
+only committed states.  Plain physical-PEPS and GC residual-PEPS bonds are
+separate diagnostics and never a common physical-entanglement or accuracy
+metric.
+
+Timing is engineering-performance-only.  Worker wall spans use
+`time.perf_counter_ns`; CPU spans use main-process user-plus-system
+`time.process_time_ns`; integer offsets are relative to process-local roots.
+Those CPU spans include the worker's native threads but not a short-lived child
+process.  The live unit-cgroup `cpu.stat[usage_usec]` is the separately named
+child-inclusive process diagnostic and never substitutes for a worker span or
+enters the main-process CPU ratio.
+Every span has exact `duration=end-start`; every parent has exact
+`duration=sum(direct children)+unattributed`, with no tolerance.  Zero-duration
+leaves are legal; negative durations and nonpositive ratio/root values are not.
+
+Warmups are exactly `plain,gc`; measured order is exactly
+`plain[0],gc[0],gc[1],plain[1],plain[2],gc[2]`.  The aggregation key is
+`(case_id,lane,trajectory_id=1,scope,round_index,operation_index,step_index,kind)`.
+Each key retains the three raw wall/CPU samples and reports median, unscaled
+`MAD=median(abs(x-median(x)))`, minimum, and maximum over exactly indices
+`0,1,2`.  Values never pool across round/operation/step/kind.
+`state_update_only` is summed per worker before the three-worker aggregate.
+Evidence, dense, SDIM, comparator, and workflow spans are singleton raw values
+with no fabricated aggregate fields.
+
+The primary input-1 ratios are
+
+\[
+R_{T,\rm wall}=\frac{\operatorname{median}(T^{\rm algo,wall}_{\rm GC})}
+ {\operatorname{median}(T^{\rm algo,wall}_{\rm plain})},\qquad
+R_{T,\rm cpu}=\frac{\operatorname{median}(T^{\rm algo,cpu}_{\rm GC})}
+ {\operatorname{median}(T^{\rm algo,cpu}_{\rm plain})},
+\]
+
+with analogous same-direction `ratio_gc_over_plain` for measured fresh-process
+supervisor-launch wall and the completed trajectory-1 evidence-worker total.
+Only the first three performance-derived ratios—algorithm wall, algorithm CPU,
+and supervisor-launch wall—require exactly three of three completed measured
+workers per lane and 3/3 final-carrier-hash equality to the matching evidence
+branch.  The evidence ratio is a singleton raw plain/GC comparison, never a
+fabricated 3/3 population.  Any missing, censored, nonfinite, or nonpositive
+required sample makes the affected ratio and band unavailable; completed rows
+and reasons remain.  Evidence trajectory 2 has a separate singleton descriptive
+ratio.
+
+`validation_and_evidence_materialization` is absent, not zero, in performance
+workers.
+
+For evidence, `candidate_algorithm_case_e2e` and `state_update_only` contain
+exactly the first complete no-shadow trajectory.  After its scalar/ledger/hash
+fields are frozen and carrier released, the entire second trajectory is nested
+as
+`validation_and_evidence_materialization/instrumented_replay_total`, including
+its initialization, every repeated frame/tableau/PEPS update, validator,
+commit, uncapped shadow, checkpoint lift/contraction, materialization, hash
+comparison, and release.  None may be primary algorithm time or unattributed.
+The raw candidate arrays come from this instrumented replay; its final-carrier
+hash must equal the no-shadow hash.  `evidence_worker_total` and singleton
+`R_evidence` contain both trajectories and serialization; performance executes
+only the no-shadow trajectory.
+
+`case_workflow_supervisor_wall_ns` is the absolute serial per-cell
+total across dense, evidence, performance, SDIM, and comparator launches and
+has no lane ratio.  Its end is immediately after the last required child
+launch receipt for that cell is atomically published and before any case-summary
+publication; summary-publication duration is an external publisher result, not
+part of the self-contained workflow total.  An early stop is marked partial and
+excluded from complete workflow aggregates.  Calibration and heldout totals
+never mix.  Only
+\(R_{T,wall}\) receives the descriptive bands: GC faster below `0.80`, same
+order on `[0.80,1.25]`, and GC overhead above `1.25`.  These are not
+acceptance, portability, or asymptotic claims.
+
+Every clean exit-zero worker result uses two length-prefixed canonical-JSON
+frames on stdout.
+Scientific array construction/validation occurs before `serialization`; that
+leaf rechecks raw hashes, builds each `ndarray-v1` Base64 wrapper, and constructs
+the core canonical bytes, but excludes stdout writes/trailer.  The worker root
+then ends.  It samples
+`resource.getrusage(resource.RUSAGE_SELF)` and constructs/writes a small late
+telemetry trailer outside the worker root.
+
+Before loading evaluator output, the root runner sets `PR_SET_DUMPABLE=0`,
+requires `PR_GET_DUMPABLE==0`, and binds its PID, proc start time, real uid/gid,
+and non-dumpability.  One no-scientific-input preflight uses only the
+noninteractive systemd-255 system manager; user-manager and later manager
+fallback are forbidden.  Every service has `DynamicUser=yes`, a host uid
+distinct from the runner and other live services, and only the frozen numeric
+repository-read supplementary gid.  It must be denied the evaluator root, the
+runner's `/proc` root/fd/mem, ptrace, and `process_vm_readv`.
+
+The root atomically publishes and externally hashes
+`outputs/external_baselines/gcapeps_finite_memory_bond32/manager_preflight_receipt.json`
+under `.manager_preflight_receipt.v1`, without a self complete digest.  The
+publisher uses a held parent dirfd, temporary-file fsync, no-replace rename,
+parent fsync, `O_NOFOLLOW` reopen, and exact destination identity.  Inventory
+and every later child rehash and bind its schema/projection/length/complete SHA;
+the calibration report and amendment retain the same manager/security
+projection.  Failed preflight starts no inventory or science.
+
+Every child uses a never-reused transient service and exactly one `ExecStart`
+under `systemd-run --system --no-block --no-ask-password`; `--wait`, `--pipe`,
+`--collect`, user-manager execution, and fallback placement are forbidden.  The
+unit has `Type=oneshot`, `RemainAfterExit=yes`, `Restart=no`, `DynamicUser=yes`,
+the frozen numeric `SupplementaryGroups`, `PrivateUsers=yes`,
+`ProtectSystem=strict`, `ProtectHome=read-only`, read-only repository access,
+an inaccessible exact run-output root, `NoNewPrivileges=yes`, private tmp,
+devices, and network, `RestrictSUIDSGID=yes`, `LimitCORE=0`, control-group kill,
+memory/tasks accounting, and the preregistered timeout properties.  It has exact
+`CPUAffinity=<selected_cpu_decimal>` for the single minimum CPU in the runner's
+preflighted affinity; `AllowedCPUs`, inherited multi-CPU affinity, or any second
+placement rule is forbidden, and every child proves the same singleton effective
+affinity.  Each launch has exact
+`RuntimeDirectory=gcapeps-fm-<launch_id>`, `RuntimeDirectoryMode=0755`, and
+`RuntimeDirectoryPreserve=no`; the directory contains no evaluator state, and
+the sole failure-snapshot path is
+`/run/gcapeps-fm-<launch_id>/failure_snapshot.json`.  Every effective property
+is read back verbatim.
+
+Performance units use `MemoryMax=12884901888` and `TimeoutStartSec=600s`; all
+other children use `MemoryMax=25769803776` and `TimeoutStartSec=1800s`.  Every
+unit uses `RuntimeMaxSec=infinity`, `MemorySwapMax=0`, and `TasksMax=32`.
+Calibration separately arms its absolute 12-hour monotonic watchdog; only its
+recorded cgroup kill is the deadline-censor initiator.  Binary file caps are
+exact:
+
+| role class | `core_max` | `trailer_max` | `LimitFSIZE` |
+|---|---:|---:|---:|
+| dense reference | 1073741824 | 16777216 | 1090519056 |
+| plain/GC evidence | 268435456 | 16777216 | 285212688 |
+| fixture, probe, performance, inventory, SDIM, comparator, control | 67108864 | 16777216 | 83886096 |
+
+`raw.stderr` has a 1048576-byte post-write validation cap in addition to the
+role-wide kernel `LimitFSIZE`; the trusted helper refuses to write, and the
+supervisor refuses to accept, a failure snapshot above 1048576 bytes.  Ordinary
+stdin is capped at 67108864 bytes and comparator stdin at 4294967296
+bytes.  The supervisor holds a device/inode-sealed dirfd for a fixed mode-0700
+spool parent outside the denied output root.  Before every launch its child set
+is empty; it creates one fresh canonical absolute `spool_abs` with only
+mode-0600 `fixture.stdin`, `raw.stdout`, `raw.stderr`, and
+`failure_snapshot.copy`.  The exact unit properties are
+
+```text
+StandardInput=file:<spool_abs>/fixture.stdin
+StandardOutput=file:<spool_abs>/raw.stdout
+StandardError=file:<spool_abs>/raw.stderr
+```
+
+PID 1 opens those inodes before the distinct `DynamicUser` runs.  The child gets
+only fds 0/1/2 and cannot traverse the supervisor-owned spool; relative paths,
+symlinks, identity drift, auxiliary descriptors, extra entries, or paths outside
+the sealed parent are invalid.
+
+Every child's sole scientific/protocol input is a bounded, sealed stdin
+container under
+`error_coupling_simulator.external.gcapeps_finite_memory.input_transport.v1`:
+
+```text
+u64be(manifest_len) || canonical_manifest ||
+repeat in manifest entry order:
+    u64be(artifact_len) || exact_artifact_bytes
+```
+
+The manifest is capped at 16777216 bytes and 64 entries and binds the role,
+ordered unique allowlisted names, schemas, exact byte lengths, and SHA-256
+values.  Before allocation the child `fstat`s fd 0, enforces its total stdin
+cap, reads only the eight-byte manifest prefix, uses checked integer arithmetic,
+requires exact container-size equality, then hashes each bounded entry before
+parsing it.  The exact `role_parameters` schema is not an artifact entry.  Define
+the only production entry sequences:
+
+```text
+I_CAL  = (manager_preflight_receipt,
+          sdim_inventory_envelope, sdim_inventory_launch_receipt)
+I_HELD = I_CAL || (target_amendment,)
+B_CAL  = I_CAL  || (neutral_fixture_envelope,
+                    neutral_fixture_launch_receipt)
+B_HELD = I_HELD || (neutral_fixture_envelope,
+                    neutral_fixture_launch_receipt)
+X      = (dense_envelope, dense_launch_receipt,
+          plain_input1_envelope, plain_input1_launch_receipt,
+          plain_input2_envelope, plain_input2_launch_receipt,
+          gc_input1_envelope, gc_input1_launch_receipt,
+          gc_input2_envelope, gc_input2_launch_receipt,
+          sdim_envelope, sdim_launch_receipt)
+```
+
+| run partition | child role | ordered artifact entry sequence |
+|---|---|---|
+| bootstrap | sacrificial manager preflight | empty |
+| bootstrap | SDIM inventory collector | `(manager_preflight_receipt,)` |
+| calibration | neutral-fixture emitter | `I_CAL` |
+| held-out | neutral-fixture emitter | `I_HELD` |
+| calibration | dense reference / BLP ensemble | `B_CAL` |
+| held-out | dense reference / BLP ensemble | `B_HELD` |
+| calibration | plain or GC probe/evidence | `B_CAL` |
+| held-out | plain or GC evidence/performance | `B_HELD` |
+| calibration | SDIM computation | `B_CAL` |
+| held-out | SDIM computation | `B_HELD` |
+| calibration | terminal comparator | `B_CAL || X` |
+| held-out | terminal comparator | `B_HELD || X` |
+
+The four evidence pairs inside `X` stay in the displayed order.  There is no
+production wildcard, optional artifact entry, or other role; corruption
+controls use separately enumerated synthetic roles.  A calibration performance
+container is forbidden; performance exists only in held-out.  Thus held-out input always
+includes `target_amendment`; an SDIM computation receives no dense, plain,
+GC/candidate, comparator, or performance bytes; a candidate receives no dense,
+peer-candidate, SDIM-result, or comparator bytes; and only the terminal
+comparator receives cross-role numerical evidence.
+
+Before writing the container, the supervisor opens every source with
+`O_NOFOLLOW`, verifies its bound inode/schema/length and externally owned
+complete-file SHA-256, and copies the exact bytes without re-encoding.  It
+fsyncs `fixture.stdin` and the spool directory, reopens/fstats the stdin inode,
+then reparses the complete container with the same bounds and requires each
+entry length/hash to equal both its bytes and the external source hash.  The
+final node envelope binds the container byte length/SHA-256 and ordered entry
+name/source-SHA sequence.  Missing, extra, duplicated, reordered, oversize,
+hash-mismatched, or noncanonical input is `invalid_control`; “reads an artifact”
+always means consuming this sealed stdin copy, never opening the output tree.
+
+A clean worker writes exactly two frames and empty stderr, flushes and `fsync`s
+stdout, then self-stops with uncatchable `SIGSTOP`.  The supervisor requires the
+live stopped `MainPID`, exactly one process in `cgroup.procs`, and every cgroup
+thread stopped.  Before allocating or parsing JSON it `fstat`s the sealed
+stdout/stderr inodes, applies the role's `LimitFSIZE`/stderr caps, reads only the
+first eight bytes, checks unsigned `L_core<=core_max`, uses checked addition to
+locate the second prefix, checks `L_trailer<=trailer_max`, and requires exactly
+`8 + L_core + 8 + L_trailer == raw_stdout_st_size` before either bounded
+payload read.  Overflow, short/truncated prefixes, oversize, or one extra byte
+is `invalid_control`, never a resource censor.
+
+While tasks remain stopped, the supervisor reads live-ControlGroup
+`memory.peak/current/swap.current`, every `memory.events` key,
+`pids.current/peak`, every `pids.events` key, and `cpu.stat`.  Clean evidence
+requires zero swap; zero `memory.events[max]`, `oom`, `oom_kill`, and
+`oom_group_kill`; zero `pids.events[max]`; and `pids.peak<=32`.
+`cpu.stat[usage_usec]` is a child-inclusive lifecycle diagnostic.  It is kept
+separate from worker `process_time_ns`, which is main-process-only and alone
+enters the CPU ratio.  After `SIGCONT`, clean termination must be
+`active/exited`, `Result=success`, `ExecMainCode=exited`,
+`ExecMainStatus=0`, and `MainPID=0`; the retained pre-stop systemd `MemoryPeak`
+equals live `memory.peak`, while the final helper-inclusive retained peak is
+recorded separately before unload.
+
+The declared `ExecStopPost` helper writes only a failed service's canonical
+`.systemd_failure_snapshot.v1` as mode 0644 at the exact RuntimeDirectory path,
+refusing payloads above 1048576 bytes.  It captures the live cgroup facts,
+fsyncs both the snapshot and runtime-directory fd, then sends uncatchable
+`SIGSTOP` to itself before exit.  A pre-existing file, wrong identity, missing
+stopped `ControlPID`, or helper failure is invalid.  Within a 10-second monotonic
+helper-barrier deadline, strictly inside `TimeoutStopSec=15s`, the supervisor
+opens with `O_NOFOLLOW`, validates and hashes the snapshot, copies those exact
+bytes into the sealed `failure_snapshot.copy`, fsyncs the copy, then sends
+`SIGCONT`.  It requires clean helper exit and removal of the non-preserved
+RuntimeDirectory before unload.  On service success the helper is a no-op, the
+copy remains empty, and the runtime directory is still removed.  This is
+supervisor infrastructure, never candidate output or a timing/memory sample; a
+launch failure before unit creation records explicit null cgroup fields.
+
+Trusted manager/supervisor facts are classified before child bytes.  A start
+timeout is a supervisor censor only before both the self-stop barrier and
+`SIGCONT`; a timeout after either is lifecycle `invalid_control`.  The only
+external censors are the registered absolute-deadline kill, OOM/oom-kill,
+nonzero `memory.events[max]`, nonzero `pids.events[max]`, or exact pre-/post-unit
+launch-resource events.  Configuration, permission, executable, path, D-Bus,
+unit-name, namespace, or property failures are invalid.  External-censor stdout
+may be absent or truncated and is retained as bounded opaque bytes; if exactly
+two frames are present they must still be canonical, and an extra byte remains
+invalid.  Only a clean released exit-zero unit can produce `completed_result`
+or `worker_censor`; malformed/nonfinite/schema-invalid clean frames,
+unexpected exit/signal/core, and late failures are invalid.  An early PASS never
+overrides a later terminal fact.
+
+Every child-byte disposition remains provisional through a 30-second bounded
+cleanup.  After live/failure evidence is captured, the supervisor stops or
+reset-fails the unit, records the final helper-inclusive systemd `MemoryPeak`,
+requires `LoadState=not-found`, then atomically no-replace-renames the sealed
+spool into `<run_output_abs>/raw_spools/<launch_id>`, fsyncs both parents,
+reopens every quarantined inode, and proves the outside spool parent empty.
+Cleanup, unload, or quarantine failure changes the final kind to
+`invalid_control`, publishes no science result, and prevents later science.
+
+Only after cleanup and quarantine does the supervisor atomically publish the
+final `.node_terminal.v1` envelope with exactly one of `completed_result`,
+`worker_censor`, `supervisor_censor`, or `invalid_control`, binding the applicable
+validated frames or bounded raw hashes plus unit/cgroup, exit, failure-snapshot,
+final-peak, cleanup, and quarantine facts.  It contains no encompassing launch
+duration.  The supervisor-launch clock ends immediately after that envelope;
+only then is `.launch_receipt.v1` atomically published, binding the envelope's
+complete-file SHA, final kind, cleanup/quarantine facts, and
+`supervisor_launch_wall_ns`.  Receipt publication is outside the span; a failed
+receipt is root-level invalid and cannot be repaired by the earlier envelope.
+`R_launch` reads only three complete measured receipts, and parent reports own
+their complete-file SHAs.  Calibration eligibility additionally uses
+`.calibration_publication_receipt.v1` to bind the report commit offset and final
+class.
+
+All result core frames, trailers, final envelopes, amendments, and reports use
+exactly `json.dumps(value, ensure_ascii=True, allow_nan=False, sort_keys=True,`
+`separators=(",", ":")).encode("utf-8")`, with no trailing newline.
+`result_projection_sha256` hashes that canonical projection after removing
+exactly that field and nothing else; forbidden nonfinite numbers fail before
+publication.
+
+Every persisted JSON artifact in this protocol uses one publication primitive.
+The publisher holds the destination parent dirfd, creates a same-directory
+mode-0644 temporary file with `O_CREAT|O_EXCL|O_NOFOLLOW`, writes the already
+canonical bytes, fsyncs the file, uses
+`renameat2(..., RENAME_NOREPLACE)`, and fsyncs the parent.  It then reopens the
+destination relative to the held dirfd with `O_NOFOLLOW`, requires the expected
+device/inode/mode-0644/link-count-one identity, rereads exactly those bytes, and
+externally records byte length and SHA-256.  Publication receipts use the same
+primitive; no artifact may weaken the sequence or rewrite a destination.
+
+The supervisor or parent report separately owns every nonterminal complete-file
+SHA; a file never self-hashes.  The held-out terminal path is
+`outputs/external_baselines/gcapeps_finite_memory_bond32/heldout_report.json`
+with schema
+`error_coupling_simulator.external.gcapeps_finite_memory.bond32_comparison.v1`.
+It owns child envelope/receipt SHAs, forbids its own complete-file SHA field,
+and retains `result_projection_sha256`.  After publication the outer runner
+hashes the exact destination bytes; tracked note
+`docs/simulator_validation/GCAPEPS_FINITE_MEMORY_BOND32_RESULT_2026-07-29.md`
+later persists that SHA without claiming its own containing commit.
+
+Logical resource bytes use four nonoverlapping base categories:
+
+- `carrier_tensor_bytes` for raw `candidate._psi` arrays, with
+  `tensor_role` equal to exactly one of `plain_physical`, `gc_residual`;
+- `gauge_spectrum_bytes` for live gauge-store arrays only;
+- `frame_bytes` for canonical live-frame payload, exactly zero for plain;
+- `ledger_bytes` for algorithm-owned physical/construction/compression/
+  frame-update/signed-pullback ledgers only.
+
+Timing, memory, provenance, result, comparison, shadow spectra, and tail rows are
+excluded from `ledger_bytes`.  Their sum is `total_owned_logical_bytes`.
+Underlying NumPy roots are deduplicated by identity within one category; a root
+alias across categories is rejected.  Frame/ledger sizes are canonical-JSON
+UTF-8 lengths.
+
+Evidence additionally owns `evidence_auxiliary_array_bytes` for the complete
+instrumented branch, uncapped shadows, vectors, and literal lifts, plus
+`evidence_auxiliary_ledger_bytes` for that branch's frame/ledgers, full/kept
+spectra, tails, and evidence metadata.  At each evidence sample,
+
+```text
+evidence_owned_logical_bytes =
+    current_base_total_owned_logical_bytes
+    + evidence_auxiliary_array_bytes
+    + evidence_auxiliary_ledger_bytes
+```
+
+The no-shadow branch executes the complete trajectory from the registered
+initial fixture, freezes its base scalar/ledger/transcript/final-carrier-hash
+values in memory without constructing core bytes, and releases it before the
+instrumented branch executes the same complete trajectory from a byte-identical
+initial fixture.  Within that instrumented
+branch only, each uncapped split shadow starts from the immediate pre-split
+state.  Every shadow is a complete carrier copy: its tensors/gauges enter the
+auxiliary-array category and its separately owned frame/history/ledgers enter
+the auxiliary-ledger category.  No complete branches coexist unless both are
+fully counted.  Only the no-shadow branch owns base algorithm resource fields;
+the second branch is evidence-only.  After no-shadow release,
+`current_base_total_owned_logical_bytes=0`; retained result metadata is excluded
+from algorithm logical bytes.  The two final-carrier hashes must agree.
+Dense and comparator processes separately use `dense_reference_array_bytes`
+and `comparator_array_bytes`; those bytes never enter plain/GC lane totals.
+
+Algorithm/evidence workers report
+`final_committed_owned_logical_bytes`,
+`max_committed_owned_logical_bytes`, and
+`max_sampled_algorithm_owned_logical_bytes`; evidence workers additionally
+report `max_sampled_evidence_owned_logical_bytes`, while performance workers
+omit it.  Dense/comparator workers report their separately named sampled maxima.
+`max_committed` observes one current committed carrier after predecessor release;
+`max_sampled_algorithm` includes old-committed plus uncommitted-candidate
+coexistence.  Sampling covers initialization, candidate creation, named
+substeps, pre/post commit, predecessor release, complete instrumented-branch
+creation, shadow creation/completion/pre-release, and vector/lift
+materialization/pre-release.  Every registered persistent auxiliary crosses a
+hook.
+
+Python-object, allocator, cache, interpreter, and between-sample ephemeral
+library/SVD workspaces are excluded from logical bytes.  The post-root/pre-trailer
+`resource.getrusage(resource.RUSAGE_SELF).ru_maxrss` sample is KiB and converts
+by `*1024`; the live pre-release cgroup snapshot and retained systemd
+`MemoryPeak` are bytes.  Process peaks supplement but do not replace logical sampling.
+Neither memory family is an accuracy certificate.
+
+Candidate inputs are discriminated by `run_partition`.  `CALIBRATION` forbids
+all amendment/held-out identities and binds the theory-only commit,
+preregistration/hash, calibration pair/seed/stage/attempt, fixture,
+implementation, and environment.  `HELDOUT` requires the clean amendment
+commit/tree/file hash and exact held-out cell/list identity.  Both reject every
+dense/comparator path, hash, value, vector, metric, verdict, and locator
+recursively.  In both partitions a fresh distinct-`DynamicUser` system service
+receives only its role-allowlisted entries in the sealed `input_transport.v1`
+stdin container through the absolute inode-sealed `StandardInput=file:`; argv
+contains no artifact path and no auxiliary descriptor exists.  The candidate
+never receives dense or comparator truth.  The comparator alone later receives
+the full neutral-fixture, dense, candidate, and SDIM byte bundle.  Candidate
+`InaccessiblePaths=` names the exact output root, and a corruption process must
+be denied both the known dense path and the runner's proc root/fd/mem and
+cross-process read attacks.  A clean candidate can return only the two stdout
+frames and empty stderr; all effective security/input identities are recorded.
+
+Held-out execution uses the fixed serial node order.  Any dense, evidence,
+SDIM, or comparator scientific censor skips every later node in the current
+cell, marks that cell/sweep incomplete, and continues with the next cell.  A
+performance-only censor is the sole exception: later scientific nodes continue
+and only timing is unavailable.  If an SDIM censor occurs after completed
+performance, its raw performance rows remain but the cell and Q4 terminal
+classification are unavailable.  Any invalid control stops the current cell
+and all later cells.
+
+The planned metric owners are the independent dense-reference worker, separate
+plain/GC evidence workers, separate plain/GC performance workers, and the
+terminal comparator
+`scripts/external_baselines/compare_gcapeps_finite_memory_bond32.py`, as frozen
+in `docs/NUMERICAL_PROVENANCE.md`.  For every calibration Stage-D seed and
+held-out cell/input/preparation hash/prefix/actual-collision locator, the SDIM
+worker emits its signed Pauli body/sign plus an independently replayed Stim
+body/sign and their internal equality, without reading GC evidence.  The
+neutral fixture owns, before any worker, the exact lexicographically ordered
+request-key sequence whose key is
+
+```text
+K = (run_partition, case_id, input_id,
+     input_preparation_transcript_sha256,
+     shared_evolution_transcript_sha256, round_prefix,
+     collision_ordinal, round_index, site_index, axis_index,
+     physical_pauli_body)
+```
+
+`round_prefix` and `round_index` are one-based; `collision_ordinal`,
+`site_index`, and `axis_index` are zero-based, with axes `0,1,2 = X,Y,Z`.
+`physical_pauli_body` is the complete q0-to-last `IXYZ` word of length `2*w`,
+and `case_id` is the exact fixture-owned held-out cell id or calibration Stage-D
+pair/seed id.  No extra or coercible key field is legal.
+
+Let `E` be that fixture sequence, `S` and `T` the SDIM and independently built
+Stim sequences, and `G_raw` the concatenation without deduplication of the two
+GC evidence sequences.  Each source first rejects local duplicates, and the
+comparator separately rejects duplicates across the GC artifacts before forming
+`G=sorted(G_raw)`.  Without reading GC evidence, the SDIM worker requires exact
+ordered equality `E == S == T`.  The comparator alone receives all four sources
+and, before any signed-value comparison, requires exact ordered-sequence
+bijection `E == S == T == G`, equal cardinality, and exactly one occurrence of
+every key.  `sdim_equals_stim=true` and an inner-join intersection are not
+coverage evidence.  Missing, extra, duplicate, reordered, cross-input,
+wrong-preparation, wrong-prefix, or wrong-collision rows are hard invalid
+controls.  SDIM owns no
+numeric state metric and enters no GC/plain timing ratio; its singleton raw
+worker/supervisor duration is engineering telemetry only.  The comparator
+imports no Stim/SDIM/Quimb/GCAPEPS/ECS backend.
+
+Exactly one SDIM inventory collector runs after implementation freeze but before
+the calibration wall root.  It emits its `.sdim_inventory.v1` core only through
+the standard two-frame stdout/self-stop protocol and receives only the
+preflight-receipt identity.  After cleanup and raw-spool quarantine, its one
+ordinary final supervisor envelope is atomically published directly at
+`outputs/external_baselines/gcapeps_finite_memory_bond32/sdim_inventory.json`.
+That file's top-level schema is `.node_terminal.v1`; its nested role-specific
+core is the unchanged `.sdim_inventory.v1`.  There is no second re-encoded core file.
+The subsequent launch receipt binds this envelope, while the collector can
+receive or record neither its own envelope nor its launch-receipt complete-file
+SHA.  The supervisor freezes and later children bind the top/core schemas,
+inventory-state hash, result-projection hash, envelope complete-file SHA, and
+launch-receipt complete-file SHA.  Every SDIM replay rederives byte-identical
+live installed state, and regeneration requires a new calibration.  Worker and
+launch durations are bootstrap telemetry and enter no case or efficiency ratio.
+
 ## Bounded research diagnostics
 
 Two research surfaces have current owners but do not certify the production record:

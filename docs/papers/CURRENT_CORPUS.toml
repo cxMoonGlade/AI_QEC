@@ -1,8 +1,8 @@
 schema = "error_coupling_simulator.literature.corpus_manifest.v1"
 status = "active"
-corpus_sha256 = "9e7f5329166a8230db5274125978ecb67b868c21be68ca37d79886bf4fff823c"
-note_count = 44
-paper_fact_count = 652
+corpus_sha256 = "d4f56873bd176ec182b446012d68d647118516548c24400da686b8298580defe"
+note_count = 47
+paper_fact_count = 699
 
 [[notes]]
 path = "docs/papers/reading_notes/arsenijevic_bankovic_damping_1606.01145_source_review.md"
@@ -19,11 +19,25 @@ source_version = "v3"
 source_sha256 = "4b4f244f949b0d1e862ff44e6328f33abab93654cd64a7e5f1ada0467ccaafd7"
 
 [[notes]]
+path = "docs/papers/reading_notes/breuer_laine_piilo_nonmarkovianity_0908.0238v2_source_review.md"
+note_sha256 = "50c3eb8d8bd9db226e8a7f1b216ae4e5363353891cac9a3aae9c76c6cf842de6"
+source_id = "arxiv:0908.0238"
+source_version = "v2"
+source_sha256 = "9e05b98a5b6a902be4fa8d4d2662b7e9b7592d150ddef6bf74a8d6e9f9bf4553"
+
+[[notes]]
 path = "docs/papers/reading_notes/bultink_repetitive_parity_leakage_1905.12731v1.md"
 note_sha256 = "9894725a1c730c832a6788cef0c604b615731871e433d1b42743a9ae12d5b97f"
 source_id = "arxiv:1905.12731"
 source_version = "v1"
 source_sha256 = "b7f831dc66b329d583c892483160c937b773dec1cc2f52edf33b32e15d1b563d"
+
+[[notes]]
+path = "docs/papers/reading_notes/campbell_markovian_embedding_1805.09626v2_source_review.md"
+note_sha256 = "23f0dfb5efe0913f8fff5eb340895ec6a2c1960abddc83fd586c12cc098ba3c3"
+source_id = "arxiv:1805.09626"
+source_version = "v2"
+source_sha256 = "619f3a5fe047481ef1fc434255e63e0ca3428ca594805a34d9897ec0e9fb4fd5"
 
 [[notes]]
 path = "docs/papers/reading_notes/chang_clifford_disentanglers_2606.12056v1_source_review.md"
@@ -178,6 +192,13 @@ note_sha256 = "87f10ff117f65d92fdd665669f8c62d81c8c2f2bf3be7e173a2bd328c0df8ef1"
 source_id = "arxiv:2012.12233"
 source_version = "v1"
 source_sha256 = "c9d066eabc2cf1e4769f4d733737e0330a7882663a48894ed7f6073a0f502b48"
+
+[[notes]]
+path = "docs/papers/reading_notes/mccloskey_paternostro_collision_1402.4639v3_source_review.md"
+note_sha256 = "7ac36da1ef52995c5737eb7d0e50767a1fc902dcbc83812bef1150e470927984"
+source_id = "arxiv:1402.4639"
+source_version = "v3"
+source_sha256 = "eee6e79e1f217b1c041ae524867c2785c773a9eb9050020927d1b485a0a846cc"
 
 [[notes]]
 path = "docs/papers/reading_notes/miyamura_heralded_leakage_2607.17204v1.md"
