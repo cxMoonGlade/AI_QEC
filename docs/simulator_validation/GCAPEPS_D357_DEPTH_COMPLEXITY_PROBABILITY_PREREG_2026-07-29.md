@@ -158,4 +158,3 @@ Forbidden conclusions: physical multi-round QEC correctness, stochastic
 trajectory frequency, Record faithfulness, matched state accuracy, a universal
 GCAPEPS speedup, small-bond guarantee, efficient PEPS contraction, interaction
 model, threshold, or asymptotic scaling law.
-

@@ -71,4 +71,3 @@ physical_multi_round_QEC_claim = forbidden
 stochastic_error_occurrence_claim = forbidden
 generic_speedup_or_asymptotic_claim = forbidden
 ```
-
