@@ -53,6 +53,10 @@ EXPECTED_PIXI_SHA256 = (
     "2f301e44ac4caa9e137d505e5d0606fd029182d4df6f9e3add80bc077effea87"
 )
 EXPECTED_STIM_VERSION = "1.16.0"
+EXPECTED_QUIMB_VERSION = "1.14.1.dev83+g6fbbf74cd"
+EXPECTED_GENERATED_QUIMB_VERSION_SHA256 = (
+    "abc0aa87777df73c9abba1945ec7772d62530324b3b47365fbd1a2c4f109a629"
+)
 EXPECTED_SYSTEMD_MAJOR = 255
 MAIN_PIXI_ENVIRONMENT = "testpymid"
 CONTROLS_SCHEMA = "error_coupling_simulator.external.gcapeps_n8_r3_controls_only.v1"
@@ -1182,6 +1186,65 @@ def _provision_environment_variables(private_root: Path) -> dict[str, str]:
     return environment
 
 
+def _remove_expected_pixi_project_residue(
+    *,
+    fork_checkout: Path,
+    detached_prefix: Path,
+) -> dict[str, Any]:
+    """Remove only the two deterministic ignored files Pixi just generated."""
+
+    checkout = fork_checkout.resolve(strict=True)
+    prefix = detached_prefix.resolve(strict=True)
+    pixi_directory = checkout / ".pixi"
+    pixi_info = pixi_directory.lstat()
+    if pixi_directory.is_symlink() or not stat.S_ISDIR(pixi_info.st_mode):
+        raise RuntimeError("Pixi project residue is not one real directory")
+    entries = sorted(path.name for path in pixi_directory.iterdir())
+    if entries != ["envs"]:
+        raise RuntimeError("Pixi project residue contains unexpected entries")
+    environments_link = pixi_directory / "envs"
+    if not stat.S_ISLNK(environments_link.lstat().st_mode):
+        raise RuntimeError("Pixi detached environments marker is not a symlink")
+    resolved_environments = environments_link.resolve(strict=True)
+    if resolved_environments != prefix.parent:
+        raise RuntimeError("Pixi detached environments marker target drifted")
+
+    generated_version = checkout / "quimb" / "_version.py"
+    version_info = generated_version.lstat()
+    if (
+        generated_version.is_symlink()
+        or not stat.S_ISREG(version_info.st_mode)
+        or _sha256_file(generated_version)
+        != EXPECTED_GENERATED_QUIMB_VERSION_SHA256
+    ):
+        raise RuntimeError("generated Quimb version file drifted")
+    tracked = _run_captured(
+        [
+            "git",
+            "-C",
+            str(checkout),
+            "ls-files",
+            "--",
+            ".pixi",
+            "quimb/_version.py",
+        ],
+        timeout_seconds=30,
+    )
+    if tracked["stdout"].strip():
+        raise RuntimeError("refusing to remove a tracked Pixi project path")
+
+    generated_version.unlink()
+    environments_link.unlink()
+    pixi_directory.rmdir()
+    return {
+        "removed_generated_paths": [".pixi/envs", "quimb/_version.py"],
+        "generated_version_sha256": EXPECTED_GENERATED_QUIMB_VERSION_SHA256,
+        "detached_environments_target": str(resolved_environments),
+        "tracked_path_check": tracked,
+        "fork_pristine_cleanup_is_exact": True,
+    }
+
+
 def provision_locked_main_environment(
     *,
     pixi_executable: Path,
@@ -1255,6 +1318,10 @@ def provision_locked_main_environment(
     python_executable = (prefix / "bin" / "python").resolve(strict=True)
     if not python_executable.is_file():
         raise RuntimeError("detached Pixi environment has no Python")
+    pixi_project_cleanup = _remove_expected_pixi_project_residue(
+        fork_checkout=fork_checkout,
+        detached_prefix=prefix,
+    )
     runtime_check = _run_captured(
         [
             str(python_executable),
@@ -1262,9 +1329,11 @@ def provision_locked_main_environment(
             "-B",
             "-c",
             (
-                "import json,platform,stim;"
+                "import json,pathlib,platform,quimb,stim;"
                 "print(json.dumps({'python':platform.python_version(),"
-                "'stim':stim.__version__},sort_keys=True))"
+                "'stim':stim.__version__,'quimb':quimb.__version__,"
+                "'quimb_file':str(pathlib.Path(quimb.__file__).resolve())},"
+                "sort_keys=True))"
             ),
         ],
         cwd=fork_checkout,
@@ -1275,8 +1344,11 @@ def provision_locked_main_environment(
     if (
         not str(runtime["python"]).startswith("3.13.")
         or runtime["stim"] != EXPECTED_STIM_VERSION
+        or runtime["quimb"] != EXPECTED_QUIMB_VERSION
+        or Path(runtime["quimb_file"]).resolve(strict=True)
+        != (fork_checkout / "quimb" / "__init__.py").resolve(strict=True)
     ):
-        raise RuntimeError("main Pixi Python/Stim versions drifted")
+        raise RuntimeError("main Pixi Python/Stim/Quimb identity drifted")
     fork_after = verify_frozen_fork_checkout(fork_checkout)
     if fork_after != fork_before:
         raise RuntimeError("fork changed while provisioning detached environment")
@@ -1296,6 +1368,7 @@ def provision_locked_main_environment(
         "info_command": info,
         "runtime_check": runtime_check,
         "runtime": runtime,
+        "pixi_project_cleanup": pixi_project_cleanup,
         "fork_pristine_before_and_after": True,
     }
 
