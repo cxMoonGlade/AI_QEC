@@ -17,32 +17,37 @@ Mutation testing is retired; verification is unit tests plus the coverage gate.
 
 ## Read first, in this order
 
-1. **`docs/simulator_validation/PEPS_D5_COMPLETE_STATE_FIDELITY_RESULTS_2026-07-26.md`** —
+1. **`docs/simulator_validation/GCAPEPS_N8_R3_DUAL_CANDIDATE_DIFFERENTIAL_LITERATURE_CLOSURE_2026-07-29.md` and its matching preregistration** —
+   freezes the pending n=8, active-rank-3 plain-Quimb-versus-GCAPEPS candidate state-action
+   differential, one untimed NumPy exact-small anchor, and the fixture-only timing protocol. There
+   is no target result yet; neither candidate is ground truth, and no Record, generic faithfulness,
+   truncation, scaling, or general-efficiency claim is authorized.
+2. **`docs/simulator_validation/PEPS_D5_COMPLETE_STATE_FIDELITY_RESULTS_2026-07-26.md`** —
    the first direct 25-qubit 5-by-5 PEPS result. Quimb and Pepsy both exceed
    `F=0.9998` at `D=2` and `F=0.9999995` at `D=4`; both are
    resource-unavailable at `D=8,16`, so the registered five-point verdict is
    `inconclusive_partial`. This is a high-fidelity coherent pure-state result,
    not leakage, Kraus, a QEC Record, or a scaling claim.
-2. **`docs/simulator_validation/CUDAQ_PECOS_XZZX_D7_REPRODUCTION_2026-07-26.md`** — read this
+3. **`docs/simulator_validation/CUDAQ_PECOS_XZZX_D7_REPRODUCTION_2026-07-26.md`** — read this
    **before** the capability record below. An independent rerun finds that **neither runtime
    produces a usable XZZX d7 multi-round non-Pauli Record**: both execute, and both emit Records
    dominated by bond truncation. The capability record's PECOS "YES" is wrong; its CUDA-Q "NO" is
    right in substance and wrong in its reason. Contains the controls that decide it — a noiseless
    injection control, a stabilizer reference, and a p→0 control on the same code path — plus the
    d3 exactness threshold that validates the probe.
-3. **`docs/simulator_validation/CUDAQ_PECOS_XZZX_D7_CAPABILITY_2026-07-26.md`** — the original
+4. **`docs/simulator_validation/CUDAQ_PECOS_XZZX_D7_CAPABILITY_2026-07-26.md`** — the original
    environment-and-execution check prompted by the failed broad differentiator claim. CUDA-Q
    completes an ideal d7/r2 XZZX Record but its full-data two-Kraus target times out or
    native-crashes; PECOS natively builds d7/r7 checkerboard XZZX and executes coherent non-Pauli
    MPS Records, but its scalable MPS has no dissipative Kraus binding. Read its exact boundary
    before saying either "existing products already do the whole leakage job" or "nothing else can
    do XZZX d7 non-Pauli multi-round."
-4. **`docs/simulator_validation/PEPS_PEPO_LITERATURE_LIBRARY_LANDSCAPE_2026-07-26.md`** — the
+5. **`docs/simulator_validation/PEPS_PEPO_LITERATURE_LIBRARY_LANDSCAPE_2026-07-26.md`** — the
    AnySearch-backed PEPS/PEPO literature and software audit. `pepsy` is the closest adjacent
    product but does not compose its PEPS and leakage-trajectory paths; TNQS is the best inspected
    qutrit-PEPS adapter base; YASTN is the independent finite-PEPS comparator. Schuch supplies an
    exact worst-case complexity boundary, not a d7 impossibility or resource estimate.
-5. **`docs/simulator_validation/ENGINEERING_ROWS_LITERATURE_CHECK_2026-07-26.md`** — read this
+6. **`docs/simulator_validation/ENGINEERING_ROWS_LITERATURE_CHECK_2026-07-26.md`** — read this
    **before** the landscape audit below, because it refutes that audit's central section. All three
    surviving engineering differentiator rows are occupied: row 2 by Clader et al. PRA 103, 052428
    (2021) §III, row 3 by TeNPy `7f1d95560645` `algorithms/algorithm.py:493` (a truncation-budget
@@ -51,23 +56,23 @@ Mutation testing is retired; verification is unit tests plus the coverage gate.
    unoccupied" section has nothing left in it. Three of the rows also contain checkable errors about
    code already cloned under `external/`. Read before writing any scope, novelty, or completion
    sentence.
-6. **`docs/simulator_validation/EXTERNAL_LANDSCAPE_AUDIT_2026-07-26.md`** — still the record of what
+7. **`docs/simulator_validation/EXTERNAL_LANDSCAPE_AUDIT_2026-07-26.md`** — still the record of what
    was surveyed and of what is already solved elsewhere, which remains useful. Its "What remains
    unoccupied" section is superseded by the check above and is pending rewrite. `stim` supplies
    geometry, schedule and detector fold at any distance, and the nearest published work is listed
    with locators.
-7. **`docs/simulator_validation/LEAKAGE_FRAME_LITERATURE_CLOSURE_2026-07-26.md`** — closes the
+8. **`docs/simulator_validation/LEAKAGE_FRAME_LITERATURE_CLOSURE_2026-07-26.md`** — closes the
    current leakage-conditioned frame question at documentation scope. It distinguishes physical
    parity-Record content, a one-bit marginal relabeling, and an unestablished exact
    trajectory-conditioned frame. Its source-only companions are the Ghosh, Bultink, Varbanov, and
    Miyamura notes in `docs/papers/reading_notes/`.
-8. **`docs/simulator_validation/2002.07119-claim-audit.md`** — project application of Varbanov v1.
+9. **`docs/simulator_validation/2002.07119-claim-audit.md`** — project application of Varbanov v1.
    Read it for the individual-defect/supercheck distinction, Appendix-G ancilla bookkeeping analog,
    Appendix-B schedule-scoped coherence null, and the printed D11-D13 algebra defects.
-9. **`docs/simulator_validation/HANDOFF_MUTATION_SCOPE_AND_BASELINE_LEGS_2026-07-25.md`** — open
+10. **`docs/simulator_validation/HANDOFF_MUTATION_SCOPE_AND_BASELINE_LEGS_2026-07-25.md`** — open
    items 2 through 7 are still open. Item 1 is discharged; its follow-on was deliberately reverted
    rather than fixed, because the mutation layer is being retired.
-10. **`docs/service_status.json`**, the `restricted_axis1_1d_mps` note and `excluded_surfaces` — the
+11. **`docs/service_status.json`**, the `restricted_axis1_1d_mps` note and `excluded_surfaces` — the
    claim boundary. It answers most scope questions outright.
 
 ## Recently landed — read before touching the same surface

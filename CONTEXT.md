@@ -49,10 +49,18 @@ Eq. (5) generator/phase decomposition, coherent signed pullback, small-local-uni
 exact local Clifford refactorization, Pauli expectations, and measurement/reset branches. SDIM is
 only a version-pinned fail-closed optional qubit seam without canonical live-backend acceptance;
 generalized-qutrit residual semantics and the paper's 20/90-candidate optimizer are not present.
-This is not a canonical detector/observable Record, leakage-qutrit semantics, controlled finite-bond
-approximation, or scalable PEPS evidence. The existing full-PEPS XZZX v2 preregistration does not
-authorize CAPEPS target execution, Record-law claims, or an efficiency comparison; CAPEPS-specific
-literature closure and preregistration remain open.
+The dedicated 2026-07-29 closure and preregistration freeze one n=8,
+active-rank-3, untruncated differential between two equal-status candidate
+state-action lanes: plain Quimb PEPO-on-PEPS and GCAPEPS. An
+untimed NumPy-only exact-small anchor is frozen by design but not yet
+implemented. Once implemented and passing its controls, it may qualify only
+this one input-state action; it is not a performance lane or physical ground
+truth. Target execution remains
+control-, environment-, provenance-, and publication-gated. This does not
+create a canonical detector/observable Record, generic Carrier faithfulness,
+leakage-qutrit semantics, controlled finite-bond approximation, scalable PEPS
+evidence, or a general efficiency comparison. Record, leakage/qutrit,
+truncation, scaling, and efficiency certification remain open.
 
 The source-conditioned dense-qubit process and static data-qutrit XZZX leakage process are not one
 integrated product. Their missing bridge is an implementation fact. No field-wide literature-gap

@@ -5,6 +5,10 @@ This file defines only metrics that have a current implementation or registered 
 metrics are measurements of that object, not substitutes for it. The binding product boundary is
 `docs/SIMULATOR.md`, and the machine-readable owner map is `docs/service_status.json`.
 
+The final preregistered-pending section freezes formulas for work that has not yet acquired a
+current implementation or test owner. It is not part of the current certification ledger and cannot
+make a result claim-bearing until its named activation conditions are met.
+
 ## Registration rule
 
 A quantitative result is claim-bearing only when it declares:
@@ -122,6 +126,105 @@ the full record comparison. In particular:
 
 The current PEPS/FET entropy falsifier is unresolved, so no PEPS/FET metric in this section carries
 a passed record-faithfulness verdict.
+
+## Preregistered pending GCAPEPS differential metrics
+
+This section freezes only the planned `n=8`, active-rank-`3`, untruncated
+plain-Quimb-versus-GCAPEPS fixture. None of the paths below is a current owner
+until the path exists,
+its independent contract tests pass, and `tests/CODEBOOK.md` plus the service catalog name the
+implemented surface. Until then these formulas are non-current preregistration entries, not
+simulator evidence.
+
+Let \(y_q\) be the ordinary-Quimb physical PEPS vector and \(y_g\) the GCAPEPS physical vector
+obtained by the frozen literal complex128 Clifford lift of its residual PEPS
+vector. Both inputs must
+be finite one-dimensional length-256 `complex128` arrays in the frozen q0-most-significant-bit
+coordinate, with finite strictly positive norms and denominators. No phase fit, normalization,
+dtype cast, or coordinate permutation is permitted. Define
+
+\[
+d_\infty=\lVert y_g-y_q\rVert_\infty,\qquad
+d_2=\lVert y_g-y_q\rVert_2,
+\]
+
+\[
+d_{\rm rel}=\frac{2d_2}{\lVert y_g\rVert_2+\lVert y_q\rVert_2},\qquad
+d_{\rm norm}=
+\frac{2\left|\lVert y_g\rVert_2-\lVert y_q\rVert_2\right|}
+{\lVert y_g\rVert_2+\lVert y_q\rVert_2},
+\]
+
+\[
+F_{\rm raw}=
+\frac{|\langle y_q|y_g\rangle|^2}
+{\langle y_q|y_q\rangle\langle y_g|y_g\rangle}.
+\]
+
+Set
+`fidelity_roundoff_correction=max(0.0,F_raw-1.0)`. Use
+`F=min(1.0,F_raw)` only when `fidelity_roundoff_correction <= 1e-12`; a larger correction is a
+failure rather than a clipping license. The frozen class-(c) complex128 agreement gates are
+`d_rel <= 2e-11`, `d_norm <= 2e-11`, `1-F <= 1e-12`, and
+`fidelity_roundoff_correction <= 1e-12`. Absolute `d_inf` and `d2` are mandatory report-only
+diagnostics and never determine `AGREE`. The pair family is evaluated after the Clifford prefix and
+after the final rank-three update.
+
+The planned untimed independent NumPy anchor will construct a residual vector
+from the closed-form four-amplitude
+input plus literal bitwise Pauli action, and constructs a physical vector independently from
+`|0^8>`, literal complex128 preparation/Clifford gates, and literal bitwise signed physical-Pauli
+action. The two anchor formulations must first agree under the same literal lift. GC
+residual is then
+graded against anchor residual, while plain physical and lifted-GC physical vectors are separately
+graded against anchor physical, using the same formulas, bands, raw phase convention, and no fit,
+normalization, cast, or permutation. The anchor will be required to import no
+Quimb, Stim, SDIM, or GCAPEPS and
+will contribute no timing or memory sample. After implementation and controls,
+it may qualify only this single `n=8` input-state action; it
+does not prove all-input operator equality, generic PEPS truth, a detector/observable Record law, or
+carrier faithfulness.
+
+The planned engineering timing instrument uses one discarded fresh-process warmup per candidate lane
+in order `plain,gcapeps`, then six measured fresh workers per lane in serial alternating pair order
+`plain,gcapeps`; `gcapeps,plain`, repeated three times. Every child is fully reaped before the next.
+It reports every raw integer-nanosecond sample, median, and median absolute deviation. Its primary
+samples are
+
+```text
+plain_update = physical_clifford + pepo_build + pepo_apply
+gcapeps_update = tableau_prefix + coherent_ir_build + carrier_apply
+```
+
+with materialization excluded and reported separately. The planned GCAPEPS sample must
+declare `includes_exact_small_internal_dense_and_norm_checks=true`; it is not a pure kernel timing.
+Define
+
+\[
+R_{\rm update}=
+\frac{\operatorname{median}(t_{\rm plain})}
+{\operatorname{median}(t_{\rm gcapeps})},\qquad
+R_{\rm RSS}=
+\frac{\operatorname{median}(\mathrm{RSS}_{\rm plain})}
+{\operatorname{median}(\mathrm{RSS}_{\rm gcapeps})}.
+\]
+
+The directional hypothesis `R_update > 1` is report-only, not an acceptance
+gate. Efficiency is interpretable only when the candidate differential, every
+anchor
+qualification row, and the required SDIM signed-frame corroboration pass.
+Even then it describes only the frozen fixture, machine, fork commit, lowering, and worker envelope;
+it is not a general efficiency, asymptotic scaling, contraction-complexity, Record, production, or
+finite-truncation claim.
+
+| Pending quantity | Planned owner; activation condition |
+|---|---|
+| Frozen fixture and candidate vectors | `scripts/external_baselines/emit_gcapeps_n8_r3_fixture.py`, `plain_quimb_n8_r3_worker.py`, and `gcapeps_n8_r3_worker.py`; pending implementation and exact fixture/shape/dtype tests |
+| Independent exact-small anchor rows | `scripts/external_baselines/gcapeps_n8_r3_dense_anchor.py`; pending prohibited-import, dual-formulation, corruption, and one-input state-action tests |
+| Symmetric pair/anchor metrics and verdict algebra | `scripts/external_baselines/compare_gcapeps_n8_r3_differential.py`; pending independent formula, raw-phase, roundoff, non-finite/zero-denominator, report-only, and shared-corruption tests |
+| Signed frame corroboration | `scripts/external_baselines/gcapeps_n8_r3_sdim_worker.py`; pending exact Stim/SDIM sign comparison; non-PASS makes qualification and efficiency ineligible but never changes pair/anchor metrics or enters a numeric ratio |
+| Fresh-worker timing and publication | `scripts/external_baselines/run_gcapeps_n8_r3_differential.py`; pending worker isolation/order, resource-envelope, identity, and atomic-publication tests |
+| Complete pending test surface | `tests/test_external_gcapeps_n8_r3_differential.py`; absent until implemented and therefore not a current acceptance owner |
 
 ## Bounded research diagnostics
 
