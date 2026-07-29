@@ -797,6 +797,30 @@ def test_worker_environment_and_systemd_command_are_fail_closed(tmp_path: Path) 
         )
 
 
+
+def test_gc_construction_pytest_is_isolated_and_cannot_write_bytecode() -> None:
+    controls = _load_script(
+        CONTROLS_PATH,
+        "run_gcapeps_n8_r3_controls_pytest_command",
+    )
+    command = controls.build_gc_construction_pytest_command(
+        python_executable=Path(sys.executable),
+        fork_checkout=REPO,
+    )
+
+    assert command[:7] == [
+        str(Path(sys.executable)),
+        "-I",
+        "-B",
+        "-m",
+        "pytest",
+        "-q",
+        "--tb=short",
+    ]
+    assert command[7:9] == ["-p", "no:cacheprovider"]
+    assert tuple(command[-4:]) == controls.GC_CONSTRUCTION_TEST_IDS
+
+
 def test_gc_coherent_event_term_binding_rejects_coefficient_and_sign_drift() -> None:
     gc_worker = _load_script(
         GC_WORKER_PATH,

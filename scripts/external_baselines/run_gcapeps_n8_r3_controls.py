@@ -776,6 +776,7 @@ def build_gc_construction_pytest_command(
     return [
         str(python_executable),
         "-I",
+        "-B",
         "-m",
         "pytest",
         "-q",
