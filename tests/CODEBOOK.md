@@ -76,11 +76,18 @@ held-out fixture. Its numerical rows use only the preregistration-excluded API
 pilot or synthetic ledgers. The fork-native implementation and focused fork
 tests are bound at commit `e6cbe016f336843925e01a559db26f209fa9d37b`, tree
 `854ff4d5ef692497f017a57250cf8f440e47110f`. Passing these tests is non-formal
-engineering evidence only. The held-out result remains pending until the parent
-owners are committed cleanly and the formal target runner executes. This
-surface supplies no performance, complete Record, qutrit/SDIM, generic PEPS,
-or global truncation-error claim; each split ledger remains local diagnostic
-evidence.
+engineering evidence only. The separately executed formal runner is bound to
+parent commit `1e9517af31f83d174bcbdf656c1955f12227b605`, tree
+`17c17eb549d5f091263e7deaa86476d90420174b`, and is reported in
+`docs/simulator_validation/GCAPEPS_NATIVE_FORCED_TRUNCATION_RESULT_2026-07-29.md`
+as `PASS_BOUNDED_BRIDGE_TRANSIENT_TRUNCATION`. Its raw temporary JSON SHA-256
+is `55d428ceebb38aba91e1fbeb2e2a6d6f1b2f5da944534179ef2f583e4fa65ac7`
+and its canonical content hash is
+`73ca030b410b0bf60f6fc6a1e599064ec21a5c024c8ecfd28955e8f7ad934a58`.
+The test remains deliberately unable to execute that held-out fixture. Neither
+the test nor the formal result supplies performance, complete Record,
+multiround, qutrit/SDIM, leakage, generic PEPS, or global truncation-error
+evidence; each split ledger remains a local cause/resource diagnostic.
 
 `test_literature_tools.py` protects developer-tooling trust boundaries rather than a simulator
 service. Its falsifiers cover explicit-manifest admission, source-PDF and audit-packet hashes,

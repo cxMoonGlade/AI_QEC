@@ -65,18 +65,25 @@ truncation, scaling, and efficiency certification remain open.
 A second 2026-07-29 theory-first packet froze a much narrower
 forced-truncation tracer before implementation: an exact tree-PEPO lane, an
 opt-in Quimb-native one/two-site compilation, and a NumPy-only dense anchor on
-one two-qubit bridge. The native strategy and its fork tests now exist at
-commit `e6cbe016f336843925e01a559db26f209fa9d37b`, tree
-`854ff4d5ef692497f017a57250cf8f440e47110f`; the parent dense anchor, guarded
-runner, and non-formal pilot/corruption tests also exist. The formal held-out
-target has not run and remains pending until those parent owners are committed
-at a clean identity and the target runner is executed. That target is designed
-to discard a nonzero transient Schmidt component even though the final exact
-state has bond one. A future result may establish only a bounded
-path-dependent state-action difference. The per-split discarded weight is not
-a loopy-PEPS, accumulated-error, Born-mass, measurement/reset, or Record
-certificate; the loopy 2-by-2 extension remains a separately preregistered P1
-task.
+one two-qubit bridge. The held-out run is now current as
+`PASS_BOUNDED_BRIDGE_TRANSIENT_TRUNCATION` in
+`docs/simulator_validation/GCAPEPS_NATIVE_FORCED_TRUNCATION_RESULT_2026-07-29.md`.
+It binds parent commit `1e9517af31f83d174bcbdf656c1955f12227b605`,
+tree `17c17eb549d5f091263e7deaa86476d90420174b`, and native fork commit
+`e6cbe016f336843925e01a559db26f209fa9d37b`, tree
+`854ff4d5ef692497f017a57250cf8f440e47110f`. Under `max_bond=1`,
+the first native CNOT discarded the registered positive squared tail `25/169`;
+the complete cap-only vector had `d2=d_inf=5/13` and normalized squared
+fidelity `144/169` against the dense anchor. Exact-tree, uncapped, high-cap,
+and direct controls agreed with that anchor to at most `3.8e-16` over complete
+vectors, while the reconstructed full operator had `d_inf=1.25e-16`. The
+cutoff control reproduced the same vector but a distinct ledger cause, and the
+final exact state had rank one. This establishes only exact-small, two-site
+transient path dependence. The per-split discarded weight remains a local
+diagnostic, not a global error, loopy-PEPS, accumulated-error, Born-mass,
+measurement/reset, or Record certificate; no performance, multiround,
+qutrit/SDIM, leakage, general-PEPS, or general-efficiency claim follows. The
+loopy 2-by-2 extension remains a separately preregistered P1 task.
 
 The source-conditioned dense-qubit process and static data-qutrit XZZX leakage process are not one
 integrated product. Their missing bridge is an implementation fact. No field-wide literature-gap

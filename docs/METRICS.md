@@ -226,14 +226,15 @@ finite-truncation claim.
 | Fresh-worker timing and publication | `scripts/external_baselines/run_gcapeps_n8_r3_differential.py`; pending worker isolation/order, resource-envelope, identity, and atomic-publication tests |
 | Complete pending test surface | `tests/test_external_gcapeps_n8_r3_differential.py`; absent until implemented and therefore not a current acceptance owner |
 
-### Registered GCAPEPS bridge forced-truncation metrics — formal run pending
+### Current bounded GCAPEPS bridge forced-truncation metrics
 
 The following metrics were frozen in
 `docs/simulator_validation/GCAPEPS_NATIVE_FORCED_TRUNCATION_PREREG_2026-07-29.md` before implementation.
 The native strategy, independent dense anchor, guarded parent runner, and
-non-formal contract tests now exist. The formulas apply only to a complete
-length-four `complex128` vector on the registered bridge fixture; no formal
-held-out value has yet been executed or accepted.
+non-formal contract tests now exist, and the held-out result is current at
+`docs/simulator_validation/GCAPEPS_NATIVE_FORCED_TRUNCATION_RESULT_2026-07-29.md`.
+The formulas and observed values apply only to a complete length-four
+`complex128` vector on the registered bridge fixture.
 
 For anchor \(x\) and candidate \(y\),
 
@@ -272,10 +273,27 @@ Current parent owners are
 non-formal acceptance contracts in
 `tests/test_external_gcapeps_native_forced_truncation.py`. The native fork is
 bound to commit `e6cbe016f336843925e01a559db26f209fa9d37b`, tree
-`854ff4d5ef692497f017a57250cf8f440e47110f`. The non-formal tests use only the
-preregistration-excluded API pilot or synthetic ledgers and cannot execute the
-formal target. Observed held-out rows remain pending until the parent owners
-are committed at a clean identity and the formal target runner is executed.
+`854ff4d5ef692497f017a57250cf8f440e47110f`; the formal runner binds parent
+commit `1e9517af31f83d174bcbdf656c1955f12227b605`, tree
+`17c17eb549d5f091263e7deaa86476d90420174b`. The formal verdict is
+`PASS_BOUNDED_BRIDGE_TRANSIENT_TRUNCATION`: the cap-only lane observed the
+positive first-CNOT tail `25/169`, `d2=d_inf=5/13`, and
+`F=144/169`. Exact-tree, uncapped, high-cap, and direct-control complete
+vectors agreed with the anchor to at most `3.8e-16`, and complete operator
+reconstruction had `d_inf=1.25e-16`. The cutoff-loss control produced the same
+complete vector as the cap-only lane while its ledger correctly named cutoff,
+not cap, as the cause. The final exact state had rank one, so this is a
+transient path-dependence witness rather than a final-state bond lower bound.
+
+The raw temporary JSON had SHA-256
+`55d428ceebb38aba91e1fbeb2e2a6d6f1b2f5da944534179ef2f583e4fa65ac7`
+and canonical content hash
+`73ca030b410b0bf60f6fc6a1e599064ec21a5c024c8ecfd28955e8f7ad934a58`.
+The non-formal tests still use only the preregistration-excluded API pilot or
+synthetic ledgers and cannot execute the formal target. Neither those tests nor
+the formal result supplies performance, Record, multiround, qutrit/SDIM,
+leakage, loopy-PEPS, global truncation-error, generic PEPS, or general
+efficiency evidence.
 
 ## Bounded research diagnostics
 
