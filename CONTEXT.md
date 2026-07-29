@@ -62,15 +62,21 @@ leakage-qutrit semantics, controlled finite-bond approximation, scalable PEPS
 evidence, or a general efficiency comparison. Record, leakage/qutrit,
 truncation, scaling, and efficiency certification remain open.
 
-A second 2026-07-29 theory-first packet now freezes a much narrower
+A second 2026-07-29 theory-first packet froze a much narrower
 forced-truncation tracer before implementation: an exact tree-PEPO lane, an
 opt-in Quimb-native one/two-site compilation, and a NumPy-only dense anchor on
-one two-qubit bridge. Its held-out target is designed to discard a nonzero
-transient Schmidt component even though the final exact state has bond one.
-This may establish only a bounded path-dependent state-action difference. The
-per-split discarded weight is not a loopy-PEPS, accumulated-error, Born-mass,
-measurement/reset, or Record certificate; the loopy 2-by-2 extension remains
-a separately preregistered P1 task.
+one two-qubit bridge. The native strategy and its fork tests now exist at
+commit `e6cbe016f336843925e01a559db26f209fa9d37b`, tree
+`854ff4d5ef692497f017a57250cf8f440e47110f`; the parent dense anchor, guarded
+runner, and non-formal pilot/corruption tests also exist. The formal held-out
+target has not run and remains pending until those parent owners are committed
+at a clean identity and the target runner is executed. That target is designed
+to discard a nonzero transient Schmidt component even though the final exact
+state has bond one. A future result may establish only a bounded
+path-dependent state-action difference. The per-split discarded weight is not
+a loopy-PEPS, accumulated-error, Born-mass, measurement/reset, or Record
+certificate; the loopy 2-by-2 extension remains a separately preregistered P1
+task.
 
 The source-conditioned dense-qubit process and static data-qutrit XZZX leakage process are not one
 integrated product. Their missing bridge is an implementation fact. No field-wide literature-gap

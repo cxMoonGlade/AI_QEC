@@ -218,10 +218,12 @@ faithfulness statement, or scalable efficiency result.
 | Pending worker/comparator/publication surface | planned scripts `emit_gcapeps_n8_r3_fixture.py`, `plain_quimb_n8_r3_worker.py`, `gcapeps_n8_r3_dense_anchor.py`, `gcapeps_n8_r3_worker.py`, `compare_gcapeps_n8_r3_differential.py`, `gcapeps_n8_r3_sdim_worker.py`, `run_gcapeps_n8_r3_controls.py`, and `run_gcapeps_n8_r3_differential.py`; planned test `tests/test_external_gcapeps_n8_r3_differential.py`; terminal schema `error_coupling_simulator.external.gcapeps_n8_r3_candidate_state_action_differential.v1` | `interface-identity` pending activation | These are frozen planned paths, not current owners. A path becomes current only after implementation, independent tests, `tests/CODEBOOK.md`, service-catalog synchronization, committed clean provenance, controls, and publication checks all exist and pass. |
 | Runtime timing and memory observations | no preregistered measured value; later payload may contain raw wall nanoseconds, process user/system time, platform-qualified `ru_maxrss`, cgroup `MemoryPeak`, bond/tensor counts, logical bytes, and median/MAD/ratios | `engineering-performance-only` when actually observed | Describes only the frozen fixture, machine, lowering, fork commit, and process envelope. No value is current before a qualifying target run, and no observed resource number proves accuracy, contraction complexity, or general efficiency. |
 
-### Preregistered pending GCAPEPS bridge forced-truncation values
+### Registered GCAPEPS bridge forced-truncation values — formal output pending
 
-These rows are a pre-implementation freeze for
-`GCAPEPS_NATIVE_FORCED_TRUNCATION_PREREG_2026-07-29.md`, not observed output.
+These values were frozen before implementation in
+`docs/simulator_validation/GCAPEPS_NATIVE_FORCED_TRUNCATION_PREREG_2026-07-29.md`. The owner and fork
+identity row is now implemented; every numerical target row remains
+preregistered prediction rather than observed output.
 
 | Pending object | Frozen value | Kind | Boundary |
 |---|---|---|---|
@@ -231,7 +233,7 @@ These rows are a pre-implementation freeze for
 | Exact cap-only predictions | pre-cut singular values `(12/13,5/13)`, gap `7/13`, discarded squared weight `25/169`, raw norm `12/13`, norm squared `144/169`, `d2=d_inf=5/13`, relative norm error `1/13`, normalized squared fidelity `144/169` | class-(a) finite-dimensional identity with `1e-12` class-(c) software band | Exact only for the registered bridge fixture; not a loopy-PEPS or accumulated-error theorem. |
 | No-loss controls | native uncapped `None/0.0`, native high-cap `2/0.0`, and direct literal \(U_{ZZ}\) at `1/0.0` must discard no positive weight and match the dense anchor at `1e-12` bands | `numerical-only` qualification | Qualification precedes interpretation of every lossy row. |
 | Cutoff-cause controls | no-cap relative cutoff `0.4` is inert; no-cap relative cutoff `0.5` discards the same nonzero component as the cap-only target | class-(a) prediction plus class-(c) ledger gate | Equal final states do not establish equal cause; configuration and spectrum are both bound. |
-| Planned owner surface | fork native module/tests plus parent `gcapeps_forced_truncation_dense_anchor.py`, `run_gcapeps_native_forced_truncation.py`, and `test_external_gcapeps_native_forced_truncation.py` | pending `interface-identity` | Exact implementation commit/tree and clean import provenance must be bound before target execution. Existing n8/d357 artifacts stay pinned to fork commit `6fbbf74c`. |
+| Current implementation surface | fork native module/tests at commit `e6cbe016f336843925e01a559db26f209fa9d37b`, tree `854ff4d5ef692497f017a57250cf8f440e47110f`; parent `gcapeps_forced_truncation_dense_anchor.py`, `run_gcapeps_native_forced_truncation.py`, and `test_external_gcapeps_native_forced_truncation.py` | implemented `interface-identity`; formal execution pending | Non-formal tests use only the excluded pilot or synthetic ledgers. A clean committed parent identity and clean import provenance remain mandatory before the held-out run. Existing n8/d357 artifacts stay pinned to fork commit `6fbbf74cd36686ed30a4d8865697ce46e47056c1` and are not rebound. |
 
 For the MCWF grouped writer, "unpublished-stage cleanup" means an ownership-bounded best-effort
 attempt, not a success or durability assertion. Cleanup errors are suppressed in favor of the original

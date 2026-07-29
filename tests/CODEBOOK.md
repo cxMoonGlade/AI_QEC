@@ -69,6 +69,19 @@ mechanics evidence;
 they do not establish the paper's 20/90-candidate optimizer, generalized-qudit
 SDIM execution, finite-bond error, Record fidelity, or efficiency.
 
+`test_external_gcapeps_native_forced_truncation.py` protects the current parent
+bridge supervisor, independent NumPy anchor, metric/ledger serialization,
+repository-identity gates, and corruption refusal without executing the formal
+held-out fixture. Its numerical rows use only the preregistration-excluded API
+pilot or synthetic ledgers. The fork-native implementation and focused fork
+tests are bound at commit `e6cbe016f336843925e01a559db26f209fa9d37b`, tree
+`854ff4d5ef692497f017a57250cf8f440e47110f`. Passing these tests is non-formal
+engineering evidence only. The held-out result remains pending until the parent
+owners are committed cleanly and the formal target runner executes. This
+surface supplies no performance, complete Record, qutrit/SDIM, generic PEPS,
+or global truncation-error claim; each split ledger remains local diagnostic
+evidence.
+
 `test_literature_tools.py` protects developer-tooling trust boundaries rather than a simulator
 service. Its falsifiers cover explicit-manifest admission, source-PDF and audit-packet hashes,
 one-fact locators and checked pages, empty-corpus refusal, project-inference injection, stale live

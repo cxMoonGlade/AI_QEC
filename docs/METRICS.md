@@ -226,12 +226,14 @@ finite-truncation claim.
 | Fresh-worker timing and publication | `scripts/external_baselines/run_gcapeps_n8_r3_differential.py`; pending worker isolation/order, resource-envelope, identity, and atomic-publication tests |
 | Complete pending test surface | `tests/test_external_gcapeps_n8_r3_differential.py`; absent until implemented and therefore not a current acceptance owner |
 
-### Preregistered pending GCAPEPS bridge forced-truncation metrics
+### Registered GCAPEPS bridge forced-truncation metrics — formal run pending
 
-The following metrics are frozen for
-`GCAPEPS_NATIVE_FORCED_TRUNCATION_PREREG_2026-07-29.md` before the native
-strategy or formal target runner exists. They apply only to a complete
-length-four `complex128` vector on the registered bridge fixture.
+The following metrics were frozen in
+`docs/simulator_validation/GCAPEPS_NATIVE_FORCED_TRUNCATION_PREREG_2026-07-29.md` before implementation.
+The native strategy, independent dense anchor, guarded parent runner, and
+non-formal contract tests now exist. The formulas apply only to a complete
+length-four `complex128` vector on the registered bridge fixture; no formal
+held-out value has yet been executed or accepted.
 
 For anchor \(x\) and candidate \(y\),
 
@@ -264,12 +266,16 @@ class-(a) derivation. They may not replace complete-state fidelity or be
 promoted to a loopy-PEPS, accumulated-error, probability, Record-TV, or LER
 bound.
 
-Planned owners are
-`scripts/external_baselines/gcapeps_forced_truncation_dense_anchor.py`,
-`scripts/external_baselines/run_gcapeps_native_forced_truncation.py`, and
-`tests/test_external_gcapeps_native_forced_truncation.py`. Until those owners,
-their independent formula/corruption tests, and a clean committed target run
-exist, every row is pending rather than current evidence.
+Current parent owners are
+`scripts/external_baselines/gcapeps_forced_truncation_dense_anchor.py` and
+`scripts/external_baselines/run_gcapeps_native_forced_truncation.py`, with
+non-formal acceptance contracts in
+`tests/test_external_gcapeps_native_forced_truncation.py`. The native fork is
+bound to commit `e6cbe016f336843925e01a559db26f209fa9d37b`, tree
+`854ff4d5ef692497f017a57250cf8f440e47110f`. The non-formal tests use only the
+preregistration-excluded API pilot or synthetic ledgers and cannot execute the
+formal target. Observed held-out rows remain pending until the parent owners
+are committed at a clean identity and the formal target runner is executed.
 
 ## Bounded research diagnostics
 
