@@ -226,6 +226,51 @@ finite-truncation claim.
 | Fresh-worker timing and publication | `scripts/external_baselines/run_gcapeps_n8_r3_differential.py`; pending worker isolation/order, resource-envelope, identity, and atomic-publication tests |
 | Complete pending test surface | `tests/test_external_gcapeps_n8_r3_differential.py`; absent until implemented and therefore not a current acceptance owner |
 
+### Preregistered pending GCAPEPS bridge forced-truncation metrics
+
+The following metrics are frozen for
+`GCAPEPS_NATIVE_FORCED_TRUNCATION_PREREG_2026-07-29.md` before the native
+strategy or formal target runner exists. They apply only to a complete
+length-four `complex128` vector on the registered bridge fixture.
+
+For anchor \(x\) and candidate \(y\),
+
+\[
+d_\infty=\max_j|x_j-y_j|,\qquad
+d_2=\|x-y\|_2,\qquad
+d_{\rm rel}=\frac{\|x-y\|_2}{\|x\|_2},
+\]
+
+\[
+d_{\rm norm}=\frac{|\|x\|_2-\|y\|_2|}{\|x\|_2},\qquad
+F=\frac{|\langle x|y\rangle|^2}
+{\langle x|x\rangle\langle y|y\rangle}.
+\]
+
+Zero or non-finite denominators fail closed. Fidelity clipping is permitted
+only after recording the positive roundoff excess above one and requiring it
+at most `1e-12`. Exact untruncated/high-cap/direct-control lanes use
+`d_rel<=1e-12`, `d_norm<=1e-12`, and `1-F<=1e-12`. The held-out cap-only lane
+is checked against the exact preregistered values
+`d2=d_inf=5/13`, `d_norm=1/13`, and `F=144/169`, each within absolute
+`1e-12`.
+
+Each native two-site split additionally reports full and kept singular values,
+kept dimension, and discarded squared weight from an uncapped shadow replay
+of the same owned pre-state. The cap-only target must contain a positive
+discarded weight `25/169` within `1e-12`. These split quantities are class-(c)
+cause/resource diagnostics even though the bridge fixture has an independent
+class-(a) derivation. They may not replace complete-state fidelity or be
+promoted to a loopy-PEPS, accumulated-error, probability, Record-TV, or LER
+bound.
+
+Planned owners are
+`scripts/external_baselines/gcapeps_forced_truncation_dense_anchor.py`,
+`scripts/external_baselines/run_gcapeps_native_forced_truncation.py`, and
+`tests/test_external_gcapeps_native_forced_truncation.py`. Until those owners,
+their independent formula/corruption tests, and a clean committed target run
+exist, every row is pending rather than current evidence.
+
 ## Bounded research diagnostics
 
 Two research surfaces have current owners but do not certify the production record:

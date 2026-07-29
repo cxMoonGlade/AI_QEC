@@ -62,6 +62,16 @@ leakage-qutrit semantics, controlled finite-bond approximation, scalable PEPS
 evidence, or a general efficiency comparison. Record, leakage/qutrit,
 truncation, scaling, and efficiency certification remain open.
 
+A second 2026-07-29 theory-first packet now freezes a much narrower
+forced-truncation tracer before implementation: an exact tree-PEPO lane, an
+opt-in Quimb-native one/two-site compilation, and a NumPy-only dense anchor on
+one two-qubit bridge. Its held-out target is designed to discard a nonzero
+transient Schmidt component even though the final exact state has bond one.
+This may establish only a bounded path-dependent state-action difference. The
+per-split discarded weight is not a loopy-PEPS, accumulated-error, Born-mass,
+measurement/reset, or Record certificate; the loopy 2-by-2 extension remains
+a separately preregistered P1 task.
+
 The source-conditioned dense-qubit process and static data-qutrit XZZX leakage process are not one
 integrated product. Their missing bridge is an implementation fact. No field-wide literature-gap
 claim is inferred from that absence.
