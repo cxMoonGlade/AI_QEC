@@ -6,6 +6,22 @@ effective in the first commit containing this file and its closure.**
 Closure:
 `GCAPEPS_D357_UNITARY_PREFIX_PERFORMANCE_LITERATURE_CLOSURE_2026-07-29.md`.
 
+## 0. Pre-implementation correction
+
+Commit `1831883` correctly froze `rounds=2` for all three source circuits but
+mistakenly copied the existing \(d=7,\mathrm{rounds}=7\) full transformed
+Stim hash into Section 2. Before experiment implementation and before any
+target execution, the \(d=7,\mathrm{rounds}=2\) source was reconstructed
+against the existing d7 emitter's `EXPECTED_FINGERPRINTS[2]`. Its correct hash
+is
+`193d56d199b45016d91e8d5742f52fdc4e8e3b74d571891c78e28f7ec4eca6bd`.
+The first-measurement prefix is identical across these round counts, so no
+prefix row, count, stream hash, graph edge, injection site, pullback, timing
+rule, or prediction changes. The incorrect
+`20a32d1cd1293d4d4d6e74d8af04fe7b1300ddb82dbf734f558fb764ad27c4d7`
+value is retained here as the explicit superseded value and must be rejected
+for this fixture.
+
 ## 1. Question charter
 
 Measure current-implementation time, completion/censoring, memory, and
@@ -59,7 +75,7 @@ emitters are respectively:
 ```text
 d3 7067b1241251bd7558e7dc85b2f84bc13a45c1217a49f8fcfa2e51205879ecb0
 d5 be26b8708efe36a027bcf79074bc936de552b1a5d22b35b627d7d9cdbb27f008
-d7 20a32d1cd1293d4d4d6e74d8af04fe7b1300ddb82dbf734f558fb764ad27c4d7
+d7 193d56d199b45016d91e8d5742f52fdc4e8e3b74d571891c78e28f7ec4eca6bd
 ```
 
 The logical Quimb site is the compact integer. The original Stim coordinate
