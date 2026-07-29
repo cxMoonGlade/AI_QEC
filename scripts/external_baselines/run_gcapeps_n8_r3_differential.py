@@ -1392,8 +1392,17 @@ def preflight_systemd_resource_envelope(*, private_root: Path) -> dict[str, Any]
     probe_root = _private_subdirectory(
         private_root.resolve(strict=True), "systemd-probe"
     )
+    preflight_base = {
+        "PATH": "/usr/bin:/bin",
+        "LANG": "C.UTF-8",
+        "LC_ALL": "C.UTF-8",
+    }
+    for name in ("XDG_RUNTIME_DIR", "DBUS_SESSION_BUS_ADDRESS"):
+        value = os.environ.get(name)
+        if value is not None:
+            preflight_base[name] = value
     environment = build_worker_environment(
-        {"PATH": "/usr/bin:/bin", "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8"},
+        preflight_base,
         private_root=probe_root,
     )
     unit_name = f"gcapeps-preflight-{uuid.uuid4().hex}"
