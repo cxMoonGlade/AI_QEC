@@ -82,6 +82,7 @@ _GC_CARRIER_ROLES = frozenset(
         "carrier_committed",
         "evidence_shadow",
         "exact_construction_candidate",
+        "native_execution_candidate",
         "state_carrier_candidate",
         "state_committed_carrier",
         "state_predecessor_carrier",
