@@ -473,7 +473,7 @@ def test_report_rejects_split_policy_drift():
     thread1 = _child(fixture, threads=1, evidence=False)
     thread4 = _child(fixture, threads=4, evidence=False)
     evidence = _child(fixture, threads=1, evidence=True)
-    thread4["split_policy"]["smudge_mode"] = "add"
+    thread4["split_policy"]["smudge_mode"] = "floor"
 
     with pytest.raises(ValueError, match="split policy drifted"):
         runner.build_report(
@@ -484,7 +484,7 @@ def test_report_rejects_split_policy_drift():
         )
 
 
-def test_worker_binds_and_verifies_floor_smudge_mode():
+def test_worker_binds_and_verifies_add_smudge_mode():
     source = WORKER_PATH.read_text(encoding="utf-8")
     assert (
         '"smudge_mode": engine.SPLIT_POLICY["smudge_mode"]' in source

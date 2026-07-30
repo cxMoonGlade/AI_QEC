@@ -67,7 +67,7 @@ EXPECTED_SPLIT_POLICY = {
     "renorm": False,
     "absorb": None,
     "smudge": 1.0e-12,
-    "smudge_mode": "floor",
+    "smudge_mode": "add",
     "power": 1.0,
 }
 
