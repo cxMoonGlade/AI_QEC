@@ -127,6 +127,57 @@ the full record comparison. In particular:
 The current PEPS/FET entropy falsifier is unresolved, so no PEPS/FET metric in this section carries
 a passed record-faithfulness verdict.
 
+## Preregistered GCAPEPS native-repair development metrics
+
+This subsection freezes only the development checks in
+`docs/simulator_validation/GCAPEPS_FINITE_MEMORY_NATIVE_REPAIR_PREREG_2026-07-29.md`.
+They test bounded engineering determinism; they are not PEPS faithfulness, state-accuracy,
+performance, Record, or production claims.
+
+For finite, nonzero, raw `complex128` complete vectors \(x,y\) in the same physical coordinate,
+without phase fitting, normalization, dtype conversion, or coordinate permutation, define
+
+\[
+d_\infty=\max_j|x_j-y_j|,\qquad d_2=\|x-y\|_2,
+\]
+
+\[
+d_{\rm rel}=\frac{2d_2}{\|x\|_2+\|y\|_2},\qquad
+d_{\rm norm}=\frac{2|\|x\|_2-\|y\|_2|}{\|x\|_2+\|y\|_2},
+\]
+
+\[
+F_{\rm raw}=\frac{|\langle x|y\rangle|^2}
+{\langle x|x\rangle\langle y|y\rangle}.
+\]
+
+Every denominator and output must be finite and strictly positive where required. Set
+`fidelity_roundoff_correction=max(0.0,F_raw-1.0)` and use
+`F=min(1.0,F_raw)` only after requiring that correction to be at most `1e-12`; a larger excess
+fails rather than granting a clipping license. At both T3 operation-99 and operation-100
+checkpoints, require `d_rel<=1e-9`, `d_norm<=1e-10`, `1-F<=1e-10`, and
+`fidelity_roundoff_correction<=1e-12`. At each thread setting, the candidate and independent-dense
+materializations form a development-only, report-only paired comparison. The one-versus-four-thread
+candidate comparison remains a metamorphic engineering-determinism check. For T1 operator reconstruction,
+\(d_{\infty,\mathrm{op}}=\max_{i,j}|U_{ij}-U^{\rm ref}_{ij}|\), with the preregistered
+`1e-12` gate.
+
+For a full nonincreasing singular spectrum
+\(\sigma_0\ge\cdots\ge\sigma_{m-1}\ge0\), with finite entries,
+\(\sigma_0>0\), and kept dimension \(k\), the scale-stable relative discarded tail is
+
+\[
+f_{\rm disc}=
+\frac{\sum_{j=k}^{m-1}(\sigma_j/\sigma_0)^2}
+{\sum_{j=0}^{m-1}(\sigma_j/\sigma_0)^2}.
+\]
+
+The T3 truncation nondegeneracy row requires `full_dim=m>32`, `kept_dim=k=32`,
+`cause=max_bond`, and `f_disc>1e-12`. A length-33 equal spectrum has the known answer
+`f_disc=1/33`; multiplying every singular value by the same finite positive scale must leave the
+value unchanged. Invalid/nonfinite spectra and an unscaled-square overflow corruption must fail.
+This local class-(c) cause/resource diagnostic is not a whole-state truncation-error bound.
+
 ## Preregistered pending GCAPEPS differential metrics
 
 This section freezes only the planned `n=8`, active-rank-`3`, untruncated

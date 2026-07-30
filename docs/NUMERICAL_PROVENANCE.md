@@ -198,6 +198,18 @@ explicitly unphysical and must not be called the matched source.
 | PEPS resource guards | pre-cut cap `W_max=160`, abort when a grown bond exceeds `D_abort=40` | `numerical-only` | Orderly resource limits, never a claim that the retained state or record is accurate |
 | PEPS environment truncation | current test uses `eps_fid=1e-8`; 20 ALS sweeps; optimization floor `1e-9`; instability guards `1e-12` and `1e-6`; local rank threshold `NUMERICAL_ZERO=1e-12` | `numerical-only` | Local environment objective only. The B1_3 known-answer cut has stored dimension 12 and independent structural rank 4; production FET preserves the feasible endpoint QR/SVD candidate and accepts rank at most 4 while reconstructing the local map and gamma objective to the registered tolerance. Gauge preparation is regression-gated not to mutate the verdict-driving gamma tensor. Focused owner tests pass, but clean-checkpoint replay, fresh aggregate acceptance, and full-record scientific closure remain pending; no PEPS faithfulness claim follows from this local repair. |
 
+### Preregistered GCAPEPS native-repair development values
+
+These rows bind only the engineering correction preregistered in
+`docs/simulator_validation/GCAPEPS_FINITE_MEMORY_NATIVE_REPAIR_PREREG_2026-07-29.md`.
+They do not amend the formal finite-memory bond-32 target.
+
+| Development object | Frozen value or rule | Kind | Allowed and forbidden interpretation |
+|---|---|---|---|
+| Raw complete-vector and operator differential | Same-coordinate finite nonzero `complex128` vectors; no phase fit, normalization, cast, or permutation; symmetric `d_rel=2*norm(x-y)/(norm(x)+norm(y))` and `d_norm=2*abs(norm(x)-norm(y))/(norm(x)+norm(y))`; guarded `F_raw=abs(vdot(x,y))^2/(vdot(x,x)*vdot(y,y))`; clipping only after `max(0,F_raw-1)<=1e-12`; T1 `operator_d_inf=max_ij abs(U_ij-U_ref_ij)<=1e-12` | `numerical-only` class-(c) engineering gate | Invalid or zero denominators and nonfinite inputs/outputs fail closed. These are complete-array implementation comparisons, not generic state accuracy or PEPS faithfulness. |
+| One-/four-thread checkpoint differential | T3 operation 99 and 100 paired complete vectors require `d_rel<=1e-9`, `d_norm<=1e-10`, `1-F<=1e-10`, and fidelity correction `<=1e-12` | `numerical-only` class-(c) engineering determinism | At each thread setting, candidate-versus-independent-dense is a development-only, report-only paired comparison; one-versus-four-thread candidate comparison remains metamorphic. Neither is a faithfulness or accuracy certificate, timing sample, or speed claim. |
+| Scale-stable local tail | For finite nonnegative nonincreasing singular values with `sigma_0>0`, compute `f_disc=sum((sigma[32:]/sigma_0)^2)/sum((sigma/sigma_0)^2)`; require `full_dim>32`, `kept_dim=32`, `cause=max_bond`, and `f_disc>1e-12` | `numerical-only` class-(c) cause/resource gate | A 33-entry equal spectrum must give `1/33` and remain invariant under any common finite positive scale; invalid/nonfinite spectra and an unscaled-square overflow corruption must fail. This avoids overflow in the registered relative-tail calculation but supplies no global truncation, fidelity, Record, or accumulated-error bound. |
+
 
 ### Preregistered pending GCAPEPS n=8, r=3 differential values
 
