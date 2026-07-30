@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import importlib.util
+import math
 import json
 import os
 from pathlib import Path
@@ -36,6 +37,78 @@ runner = _load("_test_gcapeps_native_thread_runner", RUNNER_PATH)
 worker = _load("_test_gcapeps_native_thread_worker", WORKER_PATH)
 
 
+FORK_ROOT = ROOT / "external/forks/quimb-gcapeps"
+
+
+def _git_value(*args: str) -> str:
+    return subprocess.run(
+        ("git", "-C", str(FORK_ROOT), *args),
+        check=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    ).stdout.strip()
+
+
+FORK_COMMIT = _git_value("rev-parse", "HEAD")
+FORK_TREE = _git_value("rev-parse", "HEAD^{tree}")
+
+
+def _source_identity() -> dict[str, object]:
+    runtime = runner._live_fork_runtime_identity(
+        runner._DEFAULT_FORK_PYTHON
+    )
+    return {
+        "worker_source_sha256": runner._source_sha256(WORKER_PATH),
+        "fixture_owner_source_sha256": runner._source_sha256(
+            runner._FIXTURE_OWNER
+        ),
+        "engine_source_sha256": runner._source_sha256(
+            WORKER_PATH.with_name("gcapeps_finite_memory_engine.py")
+        ),
+        "timing_owner_source_sha256": runner._source_sha256(
+            runner._TIMING_OWNER
+        ),
+        "native_source_sha256": runner._source_sha256(
+            FORK_ROOT / "quimb/experimental/gcapeps/native.py"
+        ),
+        "carrier_source_sha256": runner._source_sha256(
+            FORK_ROOT / "quimb/experimental/gcapeps/carrier.py"
+        ),
+        "fork": {
+            "root": str(FORK_ROOT.resolve(strict=True)),
+            "commit": FORK_COMMIT,
+            "tree": FORK_TREE,
+            "worktree_clean": True,
+            "quimb_import_origin": runtime["quimb_import_origin"],
+            "quimb_version": runtime["quimb_version"],
+        },
+        "python_executable": runtime["python_executable"],
+        "python_version": runtime["python_version"],
+        "numpy_version": runtime["numpy_version"],
+        "stim_version": runtime["stim_version"],
+    }
+
+
+def _refresh_child_integrity(child) -> None:
+    worker_payload = {
+        key: value
+        for key, value in child.items()
+        if key != "supervisor_process_receipt"
+    }
+    projection = dict(worker_payload)
+    projection.pop("result_projection_sha256")
+    child["result_projection_sha256"] = runner._projection_sha256(projection)
+    worker_payload["result_projection_sha256"] = child[
+        "result_projection_sha256"
+    ]
+    raw = runner._canonical_json_bytes(worker_payload) + b"\n"
+    child["supervisor_process_receipt"]["stdout_nbytes"] = len(raw)
+    child["supervisor_process_receipt"]["stdout_sha256"] = (
+        hashlib.sha256(raw).hexdigest()
+    )
+
+
 def _encode(vector: np.ndarray) -> dict[str, object]:
     assert vector.dtype == np.dtype(np.complex128)
     raw = vector.tobytes(order="C")
@@ -61,9 +134,15 @@ def _timing(*, evidence: bool) -> dict[str, object]:
         ("publication_accounting", "core_projection"),
     )
     if evidence:
-        scopes += (("evidence_shadow", "uncapped_shadow_replay:3"),)
+        scopes += (
+            ("evidence_shadow", "uncapped_shadow_replay:3"),
+            ("evidence_shadow", "uncapped_shadow_replay:3"),
+        )
     spans = []
+    child_count = len(scopes) - 1
     for index, (scope, kind) in enumerate(scopes):
+        is_root = index == 0
+        end = child_count + 1 if is_root else index + 1
         spans.append(
             {
                 "span_id": f"span-{index}",
@@ -78,13 +157,13 @@ def _timing(*, evidence: bool) -> dict[str, object]:
                 "kind": kind,
                 "status": "completed",
                 "wall_start_offset_ns": index,
-                "wall_end_offset_ns": index + 1,
-                "wall_duration_ns": 1,
+                "wall_end_offset_ns": end,
+                "wall_duration_ns": end if is_root else 1,
                 "cpu_start_offset_ns": index,
-                "cpu_end_offset_ns": index + 1,
-                "cpu_duration_ns": 1,
-                "child_wall_ns": 0,
-                "child_cpu_ns": 0,
+                "cpu_end_offset_ns": end,
+                "cpu_duration_ns": end if is_root else 1,
+                "child_wall_ns": child_count if is_root else 0,
+                "child_cpu_ns": child_count if is_root else 0,
                 "unattributed_wall_ns": 1,
                 "unattributed_cpu_ns": 1,
             }
@@ -171,28 +250,93 @@ def _child(
         "coordinate_permutation": False,
         "dtype_cast": False,
     }
+    full_spectrum = [1.0] * 32 + [0.01] * 32
+    kept_spectrum = full_spectrum[:32]
+    pre_split_weight = math.fsum(value * value for value in full_spectrum)
+    discarded_weight = math.fsum(
+        value * value for value in full_spectrum[32:]
+    )
+    discarded_fraction = runner._relative_discarded_fraction(
+        full_spectrum,
+        kept_dimension=32,
+    )
     records = []
     for operation_index in (99, 100):
         metadata = _metadata(operation_index)
-        split = {
+        execution_split = {
             "step_index": 3,
+            "gate_role": "test_native_cx",
+            "gate_kind": "CX",
             "edge": [2, 3],
+            "ordered_sites": [2, 3],
+            "configured_max_bond": 32,
+            "configured_cutoff": 0.0,
+            "configured_cutoff_mode": "rel",
             "candidate_kept_bond_dimension": 32,
-            "full_bond_dimension": 64 if evidence else None,
-            "discarded_fraction": 1.0e-4 if evidence else None,
             "cause": (
                 "max_bond"
                 if evidence
                 else "not_observed_without_shadow"
             ),
+            "full_singular_values": full_spectrum if evidence else None,
+            "full_bond_dimension": 64 if evidence else None,
+            "discarded_fraction": discarded_fraction if evidence else None,
+            "dimension_reduced": True if evidence else None,
         }
         metadata["native_execution_ledger"] = {
+            "compiler_revision": "gcapeps_native_pauli_rotation.v1",
+            "plan_digest_sha256": metadata["plan_digest_sha256"],
+            "plan_step_count": 4,
+            "one_site_step_count": 3,
+            "two_site_step_count": 1,
+            "candidate_gate_count_before": operation_index * 4,
+            "candidate_gate_count_after": operation_index * 4 + 4,
+            "shadow_evidence_enabled": evidence,
             "shadow_evidence_bytes": 4096 if evidence else 0,
-            "split_records": [split],
+            "split_records": [execution_split],
+            "any_smudging_applied": True,
         }
-        metadata["native_truncation_ledger"] = (
-            {"split_records": [split]} if evidence else None
-        )
+        if evidence:
+            truncation_split = {
+                "step_index": 3,
+                "gate_role": "test_native_cx",
+                "edge": [2, 3],
+                "ordered_sites": [2, 3],
+                "configured_max_bond": 32,
+                "configured_cutoff": 0.0,
+                "configured_cutoff_mode": "rel",
+                "full_singular_values": full_spectrum,
+                "kept_singular_values": kept_spectrum,
+                "full_bond_dimension": 64,
+                "kept_bond_dimension": 32,
+                "pre_split_weight": pre_split_weight,
+                "discarded_squared_weight": discarded_weight,
+                "discarded_fraction": discarded_fraction,
+                "keep_by_cutoff": 64,
+                "keep_by_cap": 32,
+                "actual_keep": 32,
+                "cause": "max_bond",
+                "dimension_reduced": True,
+                "positive_discarded_weight": True,
+                "positive_discarded_weight_threshold": 1.0e-12,
+                "not_a_global_error_bound": True,
+            }
+            metadata["native_truncation_ledger"] = {
+                "compiler_revision": "gcapeps_native_pauli_rotation.v1",
+                "plan_digest_sha256": metadata["plan_digest_sha256"],
+                "plan_step_count": 4,
+                "two_site_step_count": 1,
+                "split_records": [truncation_split],
+                "positive_discarded_event_count": 1,
+                "dimension_reduction_event_count": 1,
+                "total_discarded_squared_weight_diagnostic_only": (
+                    discarded_weight
+                ),
+                "any_smudging_applied": True,
+                "not_a_global_error_bound": True,
+            }
+        else:
+            metadata["native_truncation_ledger"] = None
         records.append(metadata)
     checkpoints = {
         str(index): {
@@ -202,7 +346,7 @@ def _child(
         }
         for index in (99, 100)
     }
-    return {
+    child = {
         "schema": (
             "error_coupling_simulator.external.gcapeps_finite_memory."
             "native_thread_worker.v1"
@@ -219,6 +363,16 @@ def _child(
             "thread_variables": {
                 name: str(threads) for name in runner.THREAD_VARIABLES
             },
+            "process_variables": {
+                name: "1" for name in runner.PROCESS_VARIABLES
+            },
+            "dynamic_variables": {
+                name: "FALSE" for name in runner.DYNAMIC_VARIABLES
+            },
+            "QUIMB_NUMBA_CACHE": "False",
+            "QUIMB_MPI_SPAWN": "False",
+            "mpi_presence_variables_present": [],
+            "numba_layer_variables_present": [],
             "CUDA_VISIBLE_DEVICES": "",
             "PYTHONHASHSEED": "0",
             "PYTHONPATH_present": False,
@@ -229,8 +383,12 @@ def _child(
             "fixture_projection_sha256": fixture[
                 "result_projection_sha256"
             ],
-            "operation_prefix_count": 101,
-            "operation_prefix_sha256": "d" * 64,
+            "operation_prefix_count": len(
+                runner._fixture_operation_prefix(fixture)
+            ),
+            "operation_prefix_sha256": runner._projection_sha256(
+                runner._fixture_operation_prefix(fixture)
+            ),
             "input_id": 2,
             "stop_after_operation": 100,
             "checkpoint_operations": [99, 100],
@@ -243,15 +401,15 @@ def _child(
         },
         "operation_records": records,
         "checkpoints": checkpoints,
-        "shadow_builder_call_count": 1 if evidence else 0,
-        "shadow_span_count": 1 if evidence else 0,
+        "shadow_builder_call_count": 2 if evidence else 0,
+        "shadow_span_count": 2 if evidence else 0,
         "shadow_evidence_bytes": 8192 if evidence else 0,
         "shadow_builder_instrumentation": {
             "no_shadow_uses_throwing_sentinel": not evidence,
             "evidence_uses_counting_wrapper": evidence,
             "original_builder_restored_before_return": True,
         },
-        "source_identity": {},
+        "source_identity": _source_identity(),
         "stdout_write_included_in_timing": False,
         "claim_boundary": "test fixture",
         "result_projection_sha256": "e" * 64,
@@ -267,6 +425,8 @@ def _child(
             "stderr_nbytes": 0,
         },
     }
+    _refresh_child_integrity(child)
+    return child
 
 
 def _as_legacy(child):
@@ -276,11 +436,15 @@ def _as_legacy(child):
     child["supervisor_process_receipt"]["strategy"] = (
         "exact_tree_then_native_compress"
     )
+    child["shadow_builder_instrumentation"][
+        "no_shadow_uses_throwing_sentinel"
+    ] = False
     for row in child["operation_records"]:
         row["strategy"] = "exact_tree_then_native_compress"
         row["update_strategy"] = (
             "exact_tree_then_native_identity_compress"
         )
+    _refresh_child_integrity(child)
     return child
 
 
@@ -301,6 +465,8 @@ def _replace_checkpoint_vector(child, operation_index, vector):
         "vector": encoded,
     }
 
+    _refresh_child_integrity(child)
+
 
 def test_frozen_fixture_is_exact_operation_100_cell():
     fixture = runner.build_frozen_fixture()
@@ -317,8 +483,15 @@ def test_frozen_fixture_is_exact_operation_100_cell():
     assert operations[100]["physical_pauli_body"] == "IIIYIIIIIIYIII"
 
 
-def test_child_environment_sets_all_five_threads_and_removes_pythonpath():
-    parent = {"PATH": "/bin", "PYTHONPATH": "/forbidden", "KEEP": "yes"}
+def test_child_environment_sets_full_thread_envelope_and_removes_pythonpath():
+    parent = {
+        "PATH": "/bin",
+        "PYTHONPATH": "/forbidden",
+        "KEEP": "yes",
+        "_QUIMB_MPI_LAUNCHED": "inherited",
+        "OMPI_COMM_WORLD_SIZE": "16",
+        "NUMBA_THREADING_LAYER": "workqueue",
+    }
     environment = runner.child_environment(parent, thread_count=4)
     assert environment["KEEP"] == "yes"
     assert "PYTHONPATH" not in environment
@@ -327,6 +500,31 @@ def test_child_environment_sets_all_five_threads_and_removes_pythonpath():
     assert {
         environment[name] for name in runner.THREAD_VARIABLES
     } == {"4"}
+    assert environment["QUIMB_NUM_THREAD_WORKERS"] == "4"
+    assert environment["NUMBA_NUM_THREADS"] == "4"
+    assert {
+        environment[name] for name in runner.PROCESS_VARIABLES
+    } == {"1"}
+    assert {
+        environment[name] for name in runner.DYNAMIC_VARIABLES
+    } == {"FALSE"}
+    assert environment["QUIMB_NUMBA_CACHE"] == "False"
+    assert environment["QUIMB_MPI_SPAWN"] == "False"
+    assert all(
+        name not in environment for name in runner.MPI_PRESENCE_VARIABLES
+    )
+    assert all(
+        name not in environment for name in runner.NUMBA_LAYER_VARIABLES
+    )
+
+
+def test_runner_and_worker_share_exact_execution_environment_policy():
+    assert runner.THREAD_VARIABLES == worker.THREAD_VARIABLES
+    assert runner.PROCESS_VARIABLES == worker.PROCESS_VARIABLES
+    assert runner.DYNAMIC_VARIABLES == worker.DYNAMIC_VARIABLES
+    assert runner.QUIMB_NUMBA_CACHE == worker.QUIMB_NUMBA_CACHE
+    assert runner.MPI_PRESENCE_VARIABLES == worker.MPI_PRESENCE_VARIABLES
+    assert runner.NUMBA_LAYER_VARIABLES == worker.NUMBA_LAYER_VARIABLES
 
 
 def test_worker_validates_environment_before_scientific_imports():
@@ -390,7 +588,15 @@ def test_report_passes_exact_native_pairs_and_positive_witness():
     )
     assert report["passed"] is True
     assert report["verdict"] == "PASS_ENGINEERING_NATIVE_THREAD_REGRESSION"
-    assert report["nondegeneracy_witness"] == {
+    witness = dict(report["nondegeneracy_witness"])
+    fraction = witness.pop("discarded_fraction")
+    assert fraction == pytest.approx(
+        runner._relative_discarded_fraction(
+            [1.0] * 32 + [0.01] * 32,
+            kept_dimension=32,
+        )
+    )
+    assert witness == {
         "operation_index": 99,
         "round_index": 3,
         "split_index": 0,
@@ -399,7 +605,6 @@ def test_report_passes_exact_native_pairs_and_positive_witness():
         "full_bond_dimension": 64,
         "kept_bond_dimension": 32,
         "cause": "max_bond",
-        "discarded_fraction": 1.0e-4,
     }
     assert report["formal_claim_eligible"] is False
     assert report["faithfulness_claim"] is False
@@ -417,6 +622,7 @@ def test_report_fails_on_cross_thread_vector_or_metadata_change():
         vector_delta=1.0e-4,
     )
     thread4["checkpoint_metadata"]["100"]["routing_root"] = 9
+    _refresh_child_integrity(thread4)
     evidence = _child(fixture, threads=1, evidence=True)
     report = runner.build_report(
         fixture=fixture,
@@ -481,6 +687,186 @@ def test_report_rejects_split_policy_drift():
             native_thread1=thread1,
             native_thread4=thread4,
             native_evidence_thread1=evidence,
+        )
+
+
+def test_worker_envelope_rejects_rehashed_unknown_truth_and_source_drift():
+    fixture = runner.build_frozen_fixture()
+    unknown = _child(fixture, threads=1, evidence=False)
+    unknown["evaluator_only_truth"] = {"forbidden": True}
+    _refresh_child_integrity(unknown)
+    with pytest.raises(ValueError, match="top-level key set"):
+        runner._validate_child_identity(
+            unknown,
+            fixture=fixture,
+            thread_count=1,
+            strategy=runner.NATIVE_STRATEGY,
+            shadow_evidence=False,
+        )
+
+    source_drift = _child(fixture, threads=1, evidence=False)
+    source_drift["source_identity"]["engine_source_sha256"] = "0" * 64
+    _refresh_child_integrity(source_drift)
+    with pytest.raises(ValueError, match="source hash"):
+        runner._validate_child_identity(
+            source_drift,
+            fixture=fixture,
+            thread_count=1,
+            strategy=runner.NATIVE_STRATEGY,
+            shadow_evidence=False,
+        )
+
+def test_worker_envelope_rejects_resealed_fork_identity_and_typed_receipt():
+    fixture = runner.build_frozen_fixture()
+    forged_fork = _child(fixture, threads=1, evidence=False)
+    forged_fork["source_identity"]["fork"].update(
+        {
+            "commit": "0" * 40,
+            "tree": "1" * 40,
+            "quimb_version": "forged-version",
+        }
+    )
+    _refresh_child_integrity(forged_fork)
+    with pytest.raises(ValueError, match="fork identity"):
+        runner._validate_child_identity(
+            forged_fork,
+            fixture=fixture,
+            thread_count=1,
+            strategy=runner.NATIVE_STRATEGY,
+            shadow_evidence=False,
+        )
+
+    typed_receipt = _child(fixture, threads=1, evidence=False)
+    typed_receipt["supervisor_process_receipt"].update(
+        {
+            "thread_count": True,
+            "returncode": False,
+            "parent_observed_wall_duration_ns": True,
+            "stdout_nbytes": float(
+                typed_receipt["supervisor_process_receipt"]["stdout_nbytes"]
+            ),
+            "stderr_nbytes": False,
+        }
+    )
+    with pytest.raises(ValueError, match="supervisor process receipt"):
+        runner._validate_child_identity(
+            typed_receipt,
+            fixture=fixture,
+            thread_count=1,
+            strategy=runner.NATIVE_STRATEGY,
+            shadow_evidence=False,
+        )
+
+
+
+
+def test_worker_envelope_rejects_forged_supervisor_and_unsealed_payload():
+    fixture = runner.build_frozen_fixture()
+    forged = _child(fixture, threads=1, evidence=False)
+    forged["supervisor_process_receipt"]["returncode"] = 99
+    with pytest.raises(ValueError, match="supervisor process receipt"):
+        runner._validate_child_identity(
+            forged,
+            fixture=fixture,
+            thread_count=1,
+            strategy=runner.NATIVE_STRATEGY,
+            shadow_evidence=False,
+        )
+
+    unsealed = _child(fixture, threads=1, evidence=False)
+    unsealed["claim_boundary"] += " tampered"
+    with pytest.raises(ValueError, match="stdout receipt|projection hash"):
+        runner._validate_child_identity(
+            unsealed,
+            fixture=fixture,
+            thread_count=1,
+            strategy=runner.NATIVE_STRATEGY,
+            shadow_evidence=False,
+        )
+
+
+def test_worker_envelope_rejects_resealed_wrong_operation_prefix_hash():
+    fixture = runner.build_frozen_fixture()
+    forged = _child(fixture, threads=1, evidence=False)
+    forged["fixture_identity"]["operation_prefix_sha256"] = "0" * 64
+    _refresh_child_integrity(forged)
+
+    with pytest.raises(ValueError, match="worker identity"):
+        runner._validate_child_identity(
+            forged,
+            fixture=fixture,
+            thread_count=1,
+            strategy=runner.NATIVE_STRATEGY,
+            shadow_evidence=False,
+        )
+
+
+def test_evidence_child_requires_positive_shadow_accounting():
+    fixture = runner.build_frozen_fixture()
+    evidence = _child(fixture, threads=1, evidence=True)
+    evidence["shadow_builder_call_count"] = 0
+    evidence["shadow_span_count"] = 0
+    evidence["shadow_evidence_bytes"] = 0
+    _refresh_child_integrity(evidence)
+    with pytest.raises(ValueError, match="shadow accounting"):
+        runner._validate_child_identity(
+            evidence,
+            fixture=fixture,
+            thread_count=1,
+            strategy=runner.NATIVE_STRATEGY,
+            shadow_evidence=True,
+        )
+
+
+def test_evidence_child_rejects_resealed_cross_accounting_and_bad_timing():
+    fixture = runner.build_frozen_fixture()
+    evidence = _child(fixture, threads=1, evidence=True)
+    evidence.update(
+        {
+            "shadow_builder_call_count": 7,
+            "shadow_span_count": 7,
+            "shadow_evidence_bytes": 1,
+        }
+    )
+    _refresh_child_integrity(evidence)
+    with pytest.raises(ValueError, match="ledgers/timing"):
+        runner._validate_child_identity(
+            evidence,
+            fixture=fixture,
+            thread_count=1,
+            strategy=runner.NATIVE_STRATEGY,
+            shadow_evidence=True,
+        )
+
+    bad_timing = _child(fixture, threads=1, evidence=False)
+    root = bad_timing["timing"]["spans"][0]
+    root["wall_duration_ns"] = -1
+    root["cpu_duration_ns"] = -1
+    _refresh_child_integrity(bad_timing)
+    with pytest.raises(ValueError, match="nonnegative integer"):
+        runner._validate_child_identity(
+            bad_timing,
+            fixture=fixture,
+            thread_count=1,
+            strategy=runner.NATIVE_STRATEGY,
+            shadow_evidence=False,
+        )
+
+
+def test_evidence_child_rejects_spectrum_fraction_corruption():
+    fixture = runner.build_frozen_fixture()
+    evidence = _child(fixture, threads=1, evidence=True)
+    evidence["operation_records"][0]["native_execution_ledger"][
+        "split_records"
+    ][0]["discarded_fraction"] = 0.5
+    _refresh_child_integrity(evidence)
+    with pytest.raises(ValueError, match="split evidence"):
+        runner._validate_child_identity(
+            evidence,
+            fixture=fixture,
+            thread_count=1,
+            strategy=runner.NATIVE_STRATEGY,
+            shadow_evidence=True,
         )
 
 

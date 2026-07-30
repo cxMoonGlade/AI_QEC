@@ -36,6 +36,29 @@ THREAD_VARIABLES = (
     "MKL_NUM_THREADS",
     "NUMEXPR_NUM_THREADS",
     "BLIS_NUM_THREADS",
+    "VECLIB_MAXIMUM_THREADS",
+    "OMP_THREAD_LIMIT",
+    "NUMBA_NUM_THREADS",
+    "QUIMB_NUM_THREAD_WORKERS",
+)
+PROCESS_VARIABLES = (
+    "QUIMB_NUM_PROCS",
+    "QUIMB_NUM_MPI_WORKERS",
+)
+DYNAMIC_VARIABLES = (
+    "OMP_DYNAMIC",
+    "MKL_DYNAMIC",
+)
+QUIMB_NUMBA_CACHE = "False"
+MPI_PRESENCE_VARIABLES = (
+    "_QUIMB_MPI_LAUNCHED",
+    "QUIMB_SYNCRO_MPI",
+    "OMPI_COMM_WORLD_SIZE",
+    "PMI_SIZE",
+)
+NUMBA_LAYER_VARIABLES = (
+    "NUMBA_THREADING_LAYER",
+    "NUMBA_THREADING_LAYER_PRIORITY",
 )
 CHECKPOINT_OPERATIONS = (99, 100)
 STOP_AFTER_OPERATION = 100
@@ -48,6 +71,32 @@ _LEGACY_UPDATE_STRATEGY = "exact_tree_then_native_identity_compress"
 _NO_SHADOW_CAUSE = "not_observed_without_shadow"
 _REPOSITORY = Path(__file__).resolve().parents[2]
 _FORK_ROOT = _REPOSITORY / "external/forks/quimb-gcapeps"
+REGISTERED_TRAJECTORY_FIXTURES = {
+    0: {
+        "case_id": "calibration-g2-s0-w7-r4-a3-p3of4",
+        "fixture_projection_sha256": (
+            "18ab72ff38a1689a64499f20a571ff7bbb0e3633ab64c86ff962131a8481adc4"
+        ),
+    },
+    1: {
+        "case_id": "calibration-g2-s1-w7-r4-a3-p3of4",
+        "fixture_projection_sha256": (
+            "d28e6b885f651d57edb1ad54e970f645434757b97f12820333ff718a3d9b14c1"
+        ),
+    },
+    2: {
+        "case_id": "calibration-g2-s2-w7-r4-a3-p3of4",
+        "fixture_projection_sha256": (
+            "4a2abe4d32c15af833d849a62b55c45a3cb23f79383976352efaf02e1f91a463"
+        ),
+    },
+    3: {
+        "case_id": "calibration-g2-s3-w7-r4-a3-p3of4",
+        "fixture_projection_sha256": (
+            "62b57ccab47dcf338bbc9189433db453c55eb3fe78cce5d66f5c1991b6b144aa"
+        ),
+    },
+}
 
 
 def _canonical_json_bytes(value: Any) -> bytes:
@@ -112,8 +161,49 @@ def _parse_fixture(raw: bytes) -> Mapping[str, Any]:
     return value
 
 
+def validate_registered_trajectory_fixture(
+    fixture: Mapping[str, Any],
+    fixture_hash: str,
+) -> None:
+    """Require one exact member of the frozen operation-100 seed family."""
+
+    parameters = fixture.get("parameters")
+    if not isinstance(parameters, Mapping):
+        raise ValueError("registered trajectory parameters must be a mapping")
+    seed = parameters.get("seed")
+    if isinstance(seed, bool) or not isinstance(seed, int):
+        raise ValueError("registered trajectory seed must be a plain integer")
+    expected_identity = REGISTERED_TRAJECTORY_FIXTURES.get(seed)
+    if expected_identity is None:
+        raise ValueError("trajectory seed is outside the registered family")
+    expected_parameters = {
+        "width": 7,
+        "rounds": 4,
+        "axis_family": 3,
+        "p_event_numerator": 3,
+        "gamma_index": 2,
+        "max_bond": 32,
+    }
+    if fixture.get("run_partition") != "CALIBRATION":
+        raise ValueError("registered trajectory must use CALIBRATION")
+    for key, expected in expected_parameters.items():
+        if parameters.get(key) != expected:
+            raise ValueError(f"registered trajectory parameter {key} drifted")
+    if fixture.get("case_id") != expected_identity["case_id"]:
+        raise ValueError("registered trajectory case_id drifted")
+    if (
+        fixture.get("result_projection_sha256") != fixture_hash
+        or fixture_hash
+        != expected_identity["fixture_projection_sha256"]
+    ):
+        raise ValueError("registered trajectory fixture hash drifted")
+    geometry = fixture.get("geometry")
+    if not isinstance(geometry, Mapping) or geometry.get("n_qubits") != 14:
+        raise ValueError("registered trajectory must contain 14 qubits")
+
+
 def validate_child_environment(expected_threads: int) -> dict[str, Any]:
-    """Validate the BLAS envelope before any scientific dependency import."""
+    """Validate the numerical thread envelope before scientific imports."""
 
     if isinstance(expected_threads, bool) or expected_threads not in (1, 4):
         raise ValueError("expected_threads must be exactly 1 or 4")
@@ -121,7 +211,36 @@ def validate_child_environment(expected_threads: int) -> dict[str, Any]:
     observed = {name: os.environ.get(name) for name in THREAD_VARIABLES}
     if any(value != expected for value in observed.values()):
         raise RuntimeError(
-            "all five BLAS thread variables must equal the requested count"
+            "all numerical thread variables must equal the requested count"
+        )
+    observed_processes = {
+        name: os.environ.get(name) for name in PROCESS_VARIABLES
+    }
+    if any(value != "1" for value in observed_processes.values()):
+        raise RuntimeError("all Quimb process variables must equal one")
+    observed_dynamic = {
+        name: os.environ.get(name) for name in DYNAMIC_VARIABLES
+    }
+    if any(value != "FALSE" for value in observed_dynamic.values()):
+        raise RuntimeError("all dynamic thread controls must equal FALSE")
+    if os.environ.get("QUIMB_NUMBA_CACHE") != QUIMB_NUMBA_CACHE:
+        raise RuntimeError("QUIMB_NUMBA_CACHE must be exactly False")
+    if os.environ.get("QUIMB_MPI_SPAWN") != "False":
+        raise RuntimeError("QUIMB_MPI_SPAWN must be exactly False")
+    present_mpi = [
+        name for name in MPI_PRESENCE_VARIABLES if name in os.environ
+    ]
+    if present_mpi:
+        raise RuntimeError(
+            "MPI presence variables must be absent: " + ",".join(present_mpi)
+        )
+    present_numba_layer = [
+        name for name in NUMBA_LAYER_VARIABLES if name in os.environ
+    ]
+    if present_numba_layer:
+        raise RuntimeError(
+            "Numba threading-layer overrides must be absent: "
+            + ",".join(present_numba_layer)
         )
     if os.environ.get("CUDA_VISIBLE_DEVICES") != "":
         raise RuntimeError("CUDA_VISIBLE_DEVICES must be the empty string")
@@ -142,6 +261,12 @@ def validate_child_environment(expected_threads: int) -> dict[str, Any]:
     return {
         "requested_thread_count": expected_threads,
         "thread_variables": observed,
+        "process_variables": observed_processes,
+        "QUIMB_NUMBA_CACHE": QUIMB_NUMBA_CACHE,
+        "dynamic_variables": observed_dynamic,
+        "QUIMB_MPI_SPAWN": "False",
+        "mpi_presence_variables_present": [],
+        "numba_layer_variables_present": [],
         "CUDA_VISIBLE_DEVICES": "",
         "PYTHONHASHSEED": "0",
         "PYTHONPATH_present": False,
@@ -475,22 +600,7 @@ def _run(
 
             native_owner._build_native_evidence_shadow = forbidden_shadow_builder
     fixture_hash = fixture_owner.validate_fixture(fixture)
-    expected_parameters = {
-        "width": 7,
-        "rounds": 4,
-        "axis_family": 3,
-        "p_event_numerator": 3,
-        "seed": 2,
-        "gamma_index": 2,
-        "max_bond": 32,
-    }
-    if fixture["run_partition"] != "CALIBRATION":
-        raise ValueError("T3 fixture must use CALIBRATION")
-    for key, expected in expected_parameters.items():
-        if fixture["parameters"][key] != expected:
-            raise ValueError(f"T3 fixture parameter {key} drifted")
-    if fixture["geometry"]["n_qubits"] != 14:
-        raise ValueError("T3 fixture must contain 14 qubits")
+    validate_registered_trajectory_fixture(fixture, fixture_hash)
     prefix = _operation_prefix(fixture)
     prefix_hash = _projection_sha256(prefix)
 
@@ -742,6 +852,9 @@ def _run(
                     ),
                     "engine_source_sha256": _source_sha256(
                         Path(engine.__file__).resolve(strict=True)
+                    ),
+                    "timing_owner_source_sha256": _source_sha256(
+                        Path(timing_owner.__file__).resolve(strict=True)
                     ),
                     "native_source_sha256": _source_sha256(
                         _FORK_ROOT
