@@ -40,6 +40,7 @@ SPLIT_POLICY = {
     "renorm": False,
     "absorb": None,
     "smudge": 1.0e-12,
+    "smudge_mode": "floor",
     "power": 1.0,
 }
 PAULI_ROTATION_STRATEGY = "exact_tree_then_native_compress"
@@ -465,9 +466,15 @@ class GCState:
                 "method": SPLIT_POLICY["method"],
                 "absorb": SPLIT_POLICY["absorb"],
                 "power": SPLIT_POLICY["power"],
+                "smudge_mode": SPLIT_POLICY["smudge_mode"],
             },
             dtype="complex128",
         )
+        if (
+            circuit.gate_opts.get("smudge_mode")
+            != SPLIT_POLICY["smudge_mode"]
+        ):
+            raise RuntimeError("GC circuit smudge_mode was not retained")
         input_rows = {
             row["input_id"]: row for row in fixture["inputs"]
         }

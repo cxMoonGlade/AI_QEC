@@ -46,6 +46,20 @@ def _dense_checkpoints(fixture, input_id):
     }
 
 
+def test_engine_binds_floor_smudge_mode_to_circuit():
+    engine = _load("gcapeps_finite_memory_engine")
+    fixture = _fixture(p_event_numerator=0)
+
+    state = engine.GCState.initialize(
+        fixture,
+        input_id=2,
+        instrumented=False,
+    )
+
+    assert engine.SPLIT_POLICY["smudge_mode"] == "floor"
+    assert state.circuit.gate_opts["smudge_mode"] == "floor"
+
+
 def test_frame_only_input_and_p0_physical_checkpoints_match_dense():
     engine = _load("gcapeps_finite_memory_engine")
     fixture = _fixture(p_event_numerator=0)

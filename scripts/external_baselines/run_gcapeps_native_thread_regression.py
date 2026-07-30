@@ -59,6 +59,18 @@ _BANDS = {
     "fidelity_roundoff_correction_max": 1.0e-12,
 }
 
+EXPECTED_SPLIT_POLICY = {
+    "max_bond": 32,
+    "cutoff": 0.0,
+    "cutoff_mode": "rel",
+    "method": "svd",
+    "renorm": False,
+    "absorb": None,
+    "smudge": 1.0e-12,
+    "smudge_mode": "floor",
+    "power": 1.0,
+}
+
 
 def _canonical_json_bytes(value: Any) -> bytes:
     return json.dumps(
@@ -459,10 +471,8 @@ def _validate_child_identity(
         )
     ):
         raise ValueError("worker environment receipt is invalid")
-    if child["split_policy"]["max_bond"] != 32:
-        raise ValueError("worker max_bond drifted")
-    if child["split_policy"]["cutoff"] != 0.0:
-        raise ValueError("worker cutoff drifted")
+    if child.get("split_policy") != EXPECTED_SPLIT_POLICY:
+        raise ValueError("worker split policy drifted")
     if not shadow_evidence and (
         child["shadow_builder_call_count"] != 0
         or child["shadow_span_count"] != 0
@@ -690,6 +700,7 @@ def build_report(
         "faithfulness_claim": False,
         "performance_claim": False,
         "selected_strategy": NATIVE_STRATEGY,
+        "split_policy": dict(EXPECTED_SPLIT_POLICY),
         "fixture_identity": {
             "case_id": fixture["case_id"],
             "fixture_projection_sha256": fixture[

@@ -227,9 +227,15 @@ def _initialize_state(
             "method": engine.SPLIT_POLICY["method"],
             "absorb": engine.SPLIT_POLICY["absorb"],
             "power": engine.SPLIT_POLICY["power"],
+            "smudge_mode": engine.SPLIT_POLICY["smudge_mode"],
         },
         dtype="complex128",
     )
+    if (
+        circuit.gate_opts.get("smudge_mode")
+        != engine.SPLIT_POLICY["smudge_mode"]
+    ):
+        raise RuntimeError("GC circuit smudge_mode was not retained")
     input_rows = {row["input_id"]: row for row in fixture["inputs"]}
     input_row = input_rows[INPUT_ID]
     if any(input_row["gc_residual_initial_bits"]):

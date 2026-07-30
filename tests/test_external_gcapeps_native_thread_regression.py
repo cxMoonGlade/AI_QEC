@@ -235,7 +235,7 @@ def _child(
             "stop_after_operation": 100,
             "checkpoint_operations": [99, 100],
         },
-        "split_policy": {"max_bond": 32, "cutoff": 0.0},
+        "split_policy": dict(runner.EXPECTED_SPLIT_POLICY),
         "operation_count": 101,
         "checkpoint_metadata": {
             str(index): records[offset]
@@ -404,6 +404,7 @@ def test_report_passes_exact_native_pairs_and_positive_witness():
     assert report["formal_claim_eligible"] is False
     assert report["faithfulness_claim"] is False
     assert report["performance_claim"] is False
+    assert report["split_policy"] == runner.EXPECTED_SPLIT_POLICY
 
 
 def test_report_fails_on_cross_thread_vector_or_metadata_change():
@@ -465,6 +466,30 @@ def test_requested_legacy_lane_must_be_red_at_operation_100():
         "violates_at_least_one_native_band_at_operation_100"
     ] is True
     assert required_red["passed"] is True
+
+
+def test_report_rejects_split_policy_drift():
+    fixture = runner.build_frozen_fixture()
+    thread1 = _child(fixture, threads=1, evidence=False)
+    thread4 = _child(fixture, threads=4, evidence=False)
+    evidence = _child(fixture, threads=1, evidence=True)
+    thread4["split_policy"]["smudge_mode"] = "add"
+
+    with pytest.raises(ValueError, match="split policy drifted"):
+        runner.build_report(
+            fixture=fixture,
+            native_thread1=thread1,
+            native_thread4=thread4,
+            native_evidence_thread1=evidence,
+        )
+
+
+def test_worker_binds_and_verifies_floor_smudge_mode():
+    source = WORKER_PATH.read_text(encoding="utf-8")
+    assert (
+        '"smudge_mode": engine.SPLIT_POLICY["smudge_mode"]' in source
+    )
+    assert 'circuit.gate_opts.get("smudge_mode")' in source
 
 
 def test_worker_source_has_throwing_and_counting_shadow_instrumentation():
