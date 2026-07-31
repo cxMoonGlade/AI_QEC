@@ -1,8 +1,8 @@
 schema = "error_coupling_simulator.literature.corpus_manifest.v1"
 status = "active"
-corpus_sha256 = "767ff313c29ad1bc09f0e0b61ae5fbde8496461a15e44755a37586bfaae07591"
-note_count = 49
-paper_fact_count = 727
+corpus_sha256 = "a011767bfbeb6095149b9792e8c0372b2bac4e36099b9bb94f8a50e4f417279c"
+note_count = 51
+paper_fact_count = 745
 
 [[notes]]
 path = "docs/papers/reading_notes/arsenijevic_bankovic_damping_1606.01145_source_review.md"
@@ -173,6 +173,13 @@ source_version = "v1"
 source_sha256 = "c201a5645b5b67bac817bcbea5f401f083481d8c541bc3527064f2b2671c32ad"
 
 [[notes]]
+path = "docs/papers/reading_notes/lieb_vershynina_upper_bounds_mixing_rates_1302.3865v4_source_review.md"
+note_sha256 = "28fa15c192b6a50313a3409f52afc0cd2de05b932d8d27169ddc8ce4feef4964"
+source_id = "arxiv:1302.3865"
+source_version = "v4"
+source_sha256 = "f6068e2f2bf441b09b4da071ca51a680fb2bf0c895cac68f853a439c64b600fe"
+
+[[notes]]
 path = "docs/papers/reading_notes/liu_clark_clifford_augmented_mps_2412.17209v2_source_review.md"
 note_sha256 = "392837445ee484dbc8dcbf9226902a4c85d36d90fbd62e6b7122ede7300b748c"
 source_id = "arxiv:2412.17209"
@@ -311,6 +318,13 @@ note_sha256 = "3fddc43ffd5f318164a93e9106e9b951c9c3ff5749686849155a1b2b50212894"
 source_id = "arxiv:2512.01781"
 source_version = "v1"
 source_sha256 = "f1dc03277dc371f0852c8601ba604b8f26fa02c859e895b096b881b427fee2fd"
+
+[[notes]]
+path = "docs/papers/reading_notes/vanacoleyen_entanglement_rates_area_laws_1304.5931v2_source_review.md"
+note_sha256 = "bdc39399e15868ba99aa542033fe73b0a22092fb2b4ae86f4b3216f60a21bb5a"
+source_id = "arxiv:1304.5931"
+source_version = "v2"
+source_sha256 = "5114c36fb30c73fb89bd26e3fafab563360c9124407378109b0ab320a9c5e55b"
 
 [[notes]]
 path = "docs/papers/reading_notes/vanhecke_cluster_expansion_pepo_1912.10512.md"
