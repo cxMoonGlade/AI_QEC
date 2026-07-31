@@ -1,8 +1,8 @@
 schema = "error_coupling_simulator.literature.corpus_manifest.v1"
 status = "active"
-corpus_sha256 = "24e305b2ca808ddeb994c5fc11ba8431d0d3a4fec8b568da7dd38ee352c8ee46"
-note_count = 48
-paper_fact_count = 716
+corpus_sha256 = "767ff313c29ad1bc09f0e0b61ae5fbde8496461a15e44755a37586bfaae07591"
+note_count = 49
+paper_fact_count = 727
 
 [[notes]]
 path = "docs/papers/reading_notes/arsenijevic_bankovic_damping_1606.01145_source_review.md"
@@ -73,6 +73,13 @@ note_sha256 = "6fc308142806b6f27878d3ea5477a6dc751ef7ea58aab4d754e8611670fb75a5"
 source_id = "arxiv:2104.09539"
 source_version = "v2"
 source_sha256 = "809149344e94392151a3935a4ec9615930e19d7aee414a9d022a7ac07036e5e5"
+
+[[notes]]
+path = "docs/papers/reading_notes/dur_entanglement_capabilities_nonlocal_hamiltonians_quant-ph_0006034v2_source_review.md"
+note_sha256 = "3201de65ab3a88521cc6cd1f6862aa794a3f6460f6a3830c116e7a9a08c44aca"
+source_id = "arxiv:quant-ph/0006034"
+source_version = "v2"
+source_sha256 = "9b9c6a7b00857728ae3550c7c24eaac69bdace5cb2b9986b66fddd38d74928bb"
 
 [[notes]]
 path = "docs/papers/reading_notes/dziarmaga_ntu_2107.06635_source_review.md"
