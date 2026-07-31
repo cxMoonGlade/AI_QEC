@@ -1,8 +1,8 @@
 schema = "error_coupling_simulator.literature.corpus_manifest.v1"
 status = "active"
-corpus_sha256 = "d4f56873bd176ec182b446012d68d647118516548c24400da686b8298580defe"
-note_count = 47
-paper_fact_count = 699
+corpus_sha256 = "24e305b2ca808ddeb994c5fc11ba8431d0d3a4fec8b568da7dd38ee352c8ee46"
+note_count = 48
+paper_fact_count = 716
 
 [[notes]]
 path = "docs/papers/reading_notes/arsenijevic_bankovic_damping_1606.01145_source_review.md"
@@ -94,6 +94,13 @@ note_sha256 = "686d8d3a7c24d3ea1ac8ae5d704e1488f1b538da9158cd85072be453af776c1c"
 source_id = "arxiv:2607.01323"
 source_version = "v1"
 source_sha256 = "cf1c6c23a33ac7c73b43c5891cee3a5c77c3ba3d36e8e818afe8f9647d65c13a"
+
+[[notes]]
+path = "docs/papers/reading_notes/fux_disentangling_magic_states_2410.09001v3_source_review.md"
+note_sha256 = "b894caf3c184c8b0aa3b7b1604714067ef87d69ce85261ff972ee54a275cb401"
+source_id = "arxiv:2410.09001"
+source_version = "v3"
+source_sha256 = "18989f0d48b8115daf88bf6d1d13a61e69ba0878fbc0861d45622330cf982cd0"
 
 [[notes]]
 path = "docs/papers/reading_notes/garner_thermal_relaxation_2512.09189_source_review.md"
