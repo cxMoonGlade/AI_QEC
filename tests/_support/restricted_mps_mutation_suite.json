@@ -44,7 +44,7 @@
       "default_scope": false,
       "scope_rationale": "out of default scope: record-construction plumbing. Its values reach the emitted record, which the comparison legs read. Run explicitly when the record layout or manifests change.",
       "lane": "gpu_serial",
-      "jobs": 16
+      "jobs": 8
     },
     {
       "name": "restricted_mps_gpu_04_carrier_program",
@@ -52,7 +52,7 @@
       "default_scope": false,
       "scope_rationale": "out of default scope: carrier program assembly. Run explicitly when the program builder changes.",
       "lane": "gpu_serial",
-      "jobs": 16
+      "jobs": 8
     },
     {
       "name": "restricted_mps_gpu_05_certification",
@@ -60,7 +60,7 @@
       "default_scope": true,
       "scope_rationale": "IN default scope: certify/ is the evaluator that judges every comparison, so no external baseline can validate it -- a broken judge reports agreement that is not there. Its fail-closed guards are also structurally invisible to green tests, since a guard that never fires looks like one that cannot fire. Mutation is the only instrument that reaches this surface.",
       "lane": "gpu_serial",
-      "jobs": 16
+      "jobs": 8
     }
   ]
 }

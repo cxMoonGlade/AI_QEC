@@ -46,7 +46,7 @@
   ],
   "harness": {
     "mutation_gate": {
-      "jobs": 16,
+      "jobs": 8,
       "kill_rate_bar": 0.9
     }
   }

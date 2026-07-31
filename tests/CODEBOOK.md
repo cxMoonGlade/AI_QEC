@@ -282,7 +282,9 @@ run through stock mutmut with exactly four workers and CUDA hidden, then five or
 execution/certification shards run one after another. The first four GPU shards own one module each;
 GPU05 owns both evaluator certification and its isolated NumPy operator-reference module. Every GPU
 shard declares its own `jobs` for the host that runs it — bounded by
-`mutation._GPU_MAX_FRESH_WORKERS`, currently 8 for the aarch64 shards and 16 for the x86 shards —
+`mutation._GPU_MAX_FRESH_WORKERS`, currently 8 everywhere because that is the uniform-speed core
+count of both current hosts — a heterogeneous package gates a lockstep wave at its slowest core,
+so the value tracks the hardware and is not a fixed contract —
 acquires one lease, runs that many concurrent fresh clean-control replicas for admission, and then
 uses fixed waves of at most that many fresh pytest processes on that pinned device. The choice is a
 throughput decision only: the per-mutant timeout is scaled by the same in-shard concurrency, so it is

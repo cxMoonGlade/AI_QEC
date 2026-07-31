@@ -1074,16 +1074,17 @@ def test_restricted_mps_suite_loads_exact_disjoint_cpu_gpu_shards() -> None:
 
     plan = mutation.load_mutation_suite(suite_path)
 
-    # Each GPU shard declares the worker count suited to the host that runs it:
-    # the aarch64 Spark shards use 8, the x86 shards use 16. Only the ordering,
-    # the lanes, and the per-host ceiling are contractual.
+    # Each GPU shard declares the worker count suited to the host that runs it.
+    # Only the ordering, the lanes, and the per-host ceiling are contractual;
+    # the value tracks the host's uniform-speed core count and will change with
+    # the hardware.
     assert [(batch["lane"], batch["jobs"]) for batch in plan["batches"]] == [
         ("cpu_parallel", 4),
         ("gpu_serial", 8),
         ("gpu_serial", 8),
-        ("gpu_serial", 16),
-        ("gpu_serial", 16),
-        ("gpu_serial", 16),
+        ("gpu_serial", 8),
+        ("gpu_serial", 8),
+        ("gpu_serial", 8),
     ]
     batch_modules = [
         set(batch["registry_doc"]["reconcile_modules"])
