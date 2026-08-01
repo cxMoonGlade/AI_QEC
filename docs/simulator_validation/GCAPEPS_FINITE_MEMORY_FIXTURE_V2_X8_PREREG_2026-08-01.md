@@ -380,3 +380,28 @@ artifact was produced and no band was consulted, so nothing is unblinded. Ruling
 3. The infeasibility is recorded as a disclosed defect of amendment 2 item 3i's
    feasibility assumption (no coordinate-level screen was run before freezing the
    vehicle); this amendment is that screen's finding.
+
+## Pre-run amendment 5 (2026-08-01): the section-3b control's vehicle is the development cell
+
+FINDING, second release-token execution: the section-3b inert-checkpoint control is a
+P0 (v1-family) fact, but the runner asked the v1 emitter to build P0 at the first
+CONFIRMATORY coordinates. That is unbuildable BY CONSTRUCTION — P0's HELDOUT
+partition carries v1's own frozen heldout seed, which is not a v2 stream seed and
+whose science namespace stays untouchable under the standing v1 freeze (the v2
+release token releases the v2 namespace only). The v1 emitter refused correctly;
+the run stopped before any witness computation (nothing unblinded; the theta-0 and
+inherited-control gates had already passed, including the amendment-4 w3 vehicle at
+1-F = 1.11e-16). Rulings:
+1. The section-3b control RE-VEHICLES to its own development cell (CALIBRATION
+   s2-g2-r10 w7), where amendment 2 item 8 already binds its numeric cross-check
+   (+7.227e-4 at r8→r9); it runs there as a run-time re-trip, like every other
+   inherited control vehicle. The control certifies a schedule-family property
+   (shipped checkpoint set is witness-blind on P0 while every-round is not); it
+   was never per-confirmatory-cell evidence.
+2. Amendment 2 item 8's phrase "on confirmatory cells the control's value is
+   recorded" is recorded as VOID AS WRITTEN for this control: P0 at v2-heldout
+   coordinates cannot exist. The recording clause survives only where a control
+   actually runs.
+3. The control function gains a fail-closed guard: any non-CALIBRATION vehicle
+   request refuses outright — no control lane may ever build from a heldout seed
+   of either namespace.
