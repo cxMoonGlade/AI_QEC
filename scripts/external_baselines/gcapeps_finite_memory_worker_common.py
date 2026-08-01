@@ -494,8 +494,38 @@ class _GCTrajectoryMemory:
             self.tracker.sample_evidence(sample)
 
 
+_FIXTURE_VALIDATOR_SIBLINGS = {
+    "error_coupling_simulator.external.gcapeps_finite_memory.fixture.v1": (
+        "emit_gcapeps_finite_memory_fixture"
+    ),
+    "error_coupling_simulator.external.gcapeps_finite_memory.fixture.v2": (
+        "emit_gcapeps_finite_memory_fixture_v2"
+    ),
+}
+
+
 def validate_fixture(fixture: Mapping[str, Any]) -> str:
-    emitter = load_sibling("emit_gcapeps_finite_memory_fixture")
+    """Dispatch to the emitter that owns the fixture's declared schema.
+
+    v1 routes to the v1 emitter, v2 to the v2 emitter; any other schema is
+    rejected without fallback.  Each owning emitter then re-checks the
+    schema itself and enforces byte-identical deterministic reconstruction.
+    """
+
+    if not isinstance(fixture, Mapping):
+        raise TypeError("fixture must be a mapping")
+    schema = fixture.get("schema")
+    sibling = (
+        _FIXTURE_VALIDATOR_SIBLINGS.get(schema)
+        if isinstance(schema, str)
+        else None
+    )
+    if sibling is None:
+        raise ValueError(
+            f"unsupported fixture schema: {schema!r}; supported schemas "
+            f"are {sorted(_FIXTURE_VALIDATOR_SIBLINGS)}"
+        )
+    emitter = load_sibling(sibling)
     return emitter.validate_fixture(fixture)
 
 
