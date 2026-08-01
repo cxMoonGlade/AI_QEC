@@ -354,7 +354,7 @@ ENGINEERED_FIXTURE_CLAIM_SENTENCE = (
 # The ONE remaining registered gate: the owner's release of the first
 # heldout build.  No token has been minted yet; at release time the owner
 # mints a token out-of-band and freezes its SHA-256 hex digest here.
-OWNER_RELEASE_TOKEN_SHA256 = None
+OWNER_RELEASE_TOKEN_SHA256 = "01238d227d0debe401d07e16bac748e6150acca3e4ee5fd4e95153c17192302f"
 
 THREAD_VARIABLES = (
     "OMP_NUM_THREADS",
