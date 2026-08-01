@@ -21,6 +21,14 @@ exactly the deltas frozen by
 * ``checkpoint_policy == "every_round"`` (checkpoints are ``0..rounds``).
 * a NEW v2 held-out seed derivation (same construction as v1's
   ``HELDOUT_SEED``, v2 namespace string); v1's held-out seed is never reused.
+  Pre-run amendment 2 item 1 (2026-08-01) widens the held-out namespace
+  admission from one seed to the FIRST TWO seeds of the same derivation
+  stream: the SHA-256 digest of the frozen v2 namespace read as consecutive
+  big-endian 8-byte windows (``hv2-0`` = bytes 0..8 -- byte-identical to the
+  original single-seed derivation -- and ``hv2-1`` = bytes 8..16).  Both
+  seeds inherit every collision and anti-build guard; nothing from either
+  held-out seed may be built before the owner's release of the confirmatory
+  run.
 
 Shared primitives -- canonical JSON/SHA helpers, gate definitions, event
 machinery, geometry, inputs, pullback requests -- are imported from the v1
@@ -90,10 +98,35 @@ FIXTURE_SCHEMA = (
 SCRIPT_REVISION = "gcapeps-finite-memory-neutral-fixture-v2"
 STATE_CONTRACT_VERSION = "gcapeps-finite-memory-state-contract.v2"
 HELDOUT_SEED_NAMESPACE = b"gcapeps-finite-memory-heldout-v2"
-HELDOUT_SEED = int.from_bytes(
-    hashlib.sha256(HELDOUT_SEED_NAMESPACE).digest()[:8],
-    "big",
+_HELDOUT_SEED_DIGEST = hashlib.sha256(HELDOUT_SEED_NAMESPACE).digest()
+# Amendment 2 item 1: exactly the FIRST TWO seeds of the derivation stream
+# are admitted (hv2-0, hv2-1).
+HELDOUT_SEED_ADMITTED_COUNT = 2
+
+
+def heldout_seed(index: int) -> int:
+    """Seed ``hv2-<index>`` of the frozen v2 held-out derivation stream.
+
+    The stream is the SHA-256 digest of ``HELDOUT_SEED_NAMESPACE`` read as
+    consecutive big-endian 8-byte windows; index 0 reproduces the original
+    single-seed derivation (``digest[:8]``) byte-for-byte.
+    """
+
+    if not isinstance(index, int) or isinstance(index, bool):
+        raise TypeError("held-out seed index must be a plain int")
+    if not 0 <= index < len(_HELDOUT_SEED_DIGEST) // 8:
+        raise ValueError(
+            "held-out seed index is outside the v2 derivation stream"
+        )
+    return int.from_bytes(
+        _HELDOUT_SEED_DIGEST[8 * index : 8 * (index + 1)], "big"
+    )
+
+
+HELDOUT_SEEDS = tuple(
+    heldout_seed(index) for index in range(HELDOUT_SEED_ADMITTED_COUNT)
 )
+HELDOUT_SEED = HELDOUT_SEEDS[0]  # hv2-0; the original v2 derivation
 CROSS_ROW_GATE_KIND = "CX"
 CROSS_ROW_ROUND_RESIDUE = 0  # the CX is applied when round_index % 2 == 0
 CROSS_ROW_LAYER_INDEX = 6  # after memory reverse-CX (4, 5), before collisions
@@ -102,8 +135,17 @@ CROSS_ROW_LAYER_NAME = "cross_row_cx"
 THINNING_MODULUS = 2
 THINNING_KEEP_RESIDUE = 0
 
-if HELDOUT_SEED == V1_HELDOUT_SEED:
-    raise RuntimeError("v2 held-out seed collided with v1's held-out seed")
+# Collision guards, inherited by EVERY admitted stream seed (amendment 2
+# item 1): no admitted v2 seed may collide with v1's held-out seed, and the
+# admitted seeds must be pairwise distinct.
+for _admitted_seed in HELDOUT_SEEDS:
+    if _admitted_seed == V1_HELDOUT_SEED:
+        raise RuntimeError(
+            "v2 held-out seed collided with v1's held-out seed"
+        )
+if len(set(HELDOUT_SEEDS)) != len(HELDOUT_SEEDS):
+    raise RuntimeError("v2 held-out stream seeds collided with each other")
+del _admitted_seed
 
 
 def _cross_row_sites(width: int) -> tuple[int, int]:
@@ -441,9 +483,10 @@ def _build_fixture_unvalidated(
                 "calibration fixtures cannot materialize BLPENSEMBLE"
             )
     else:
-        if seed != HELDOUT_SEED:
+        if seed not in HELDOUT_SEEDS:
             raise ValueError(
-                "held-out fixture must use the frozen v2 held-out seed"
+                "held-out fixture must use one of the two frozen v2 "
+                "held-out seeds (hv2-0, hv2-1; amendment 2 item 1)"
             )
         if rounds not in {1, 2, *CALIBRATION_ROUNDS}:
             raise ValueError("held-out rounds are outside the frozen union")

@@ -395,6 +395,55 @@ def test_heldout_seed_is_v2_seed_with_collision_guards() -> None:
         )
 
 
+def test_heldout_stream_widening_inherited_from_v2_without_building() -> None:
+    """Amendment 2 item 1: the arm inherits the widened two-seed admission
+    (hv2-0, hv2-1) with every guard.  Refusal paths and derivation strings
+    only; no held-out fixture is built."""
+
+    emitter = _load_arm()
+    v2 = _load_v2()
+    v1 = _load_v1()
+    digest = hashlib.sha256(b"gcapeps-finite-memory-heldout-v2").digest()
+    assert emitter.HELDOUT_SEEDS == v2.HELDOUT_SEEDS
+    assert emitter.HELDOUT_SEEDS == tuple(
+        int.from_bytes(digest[8 * index : 8 * (index + 1)], "big")
+        for index in range(2)
+    )
+    assert all(seed != v1.HELDOUT_SEED for seed in emitter.HELDOUT_SEEDS)
+
+    # Second seed admitted: the seed gate precedes the rounds gate, so an
+    # out-of-union rounds request must fail on ROUNDS, never on the seed.
+    with pytest.raises(ValueError, match="held-out rounds"):
+        emitter.build_fixture(
+            run_partition="HELDOUT",
+            width=3,
+            rounds=3,
+            axis_family=3,
+            p_event_numerator=4,
+            seed=emitter.HELDOUT_SEEDS[1],
+            gamma_index=2,
+            run_blpensemble=False,
+        )
+
+    # Third stream seed refused outright.
+    with pytest.raises(ValueError, match="two frozen v2\\s+held-out seeds"):
+        emitter.build_fixture(
+            run_partition="HELDOUT",
+            width=3,
+            rounds=1,
+            axis_family=3,
+            p_event_numerator=4,
+            seed=v2.heldout_seed(2),
+            gamma_index=2,
+            run_blpensemble=False,
+        )
+
+    # Both admitted seeds refused in the CALIBRATION context, like the first.
+    for seed in emitter.HELDOUT_SEEDS:
+        with pytest.raises(ValueError, match="outside the frozen grid"):
+            emitter.build_fixture(**_calibration_arguments(seed=seed))
+
+
 def test_grid_gate_rejects_out_of_grid_cells() -> None:
     emitter = _load_arm()
 

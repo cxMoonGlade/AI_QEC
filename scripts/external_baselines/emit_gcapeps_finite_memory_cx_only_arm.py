@@ -109,20 +109,30 @@ if FIXTURE_SCHEMA in {_V1.FIXTURE_SCHEMA, _V2.FIXTURE_SCHEMA}:
 
 # Held-out namespace collision guards.  The arm mints NO namespace of its
 # own: P2 compares the arms against X8 on the same cells, so the arm's
-# held-out seed IS the v2 held-out seed.  Recompute the v2 derivation from
-# its frozen namespace bytes to pin drift, and re-assert the v1 collision
-# guard so this arm cannot silently bind v1's held-out partition.
-HELDOUT_SEED = V2_HELDOUT_SEED
-if HELDOUT_SEED != int.from_bytes(
-    hashlib.sha256(_V2.HELDOUT_SEED_NAMESPACE).digest()[:8],
-    "big",
+# held-out seeds ARE the v2 held-out seeds (amendment 2 item 1 widened the
+# admission to the first two stream seeds hv2-0/hv2-1; the arm inherits
+# both, with every guard).  Recompute the v2 derivation stream from its
+# frozen namespace bytes to pin drift, and re-assert the v1 collision guard
+# so this arm cannot silently bind v1's held-out partition.
+HELDOUT_SEEDS = _V2.HELDOUT_SEEDS
+HELDOUT_SEED = HELDOUT_SEEDS[0]
+_heldout_digest = hashlib.sha256(_V2.HELDOUT_SEED_NAMESPACE).digest()
+if HELDOUT_SEEDS != tuple(
+    int.from_bytes(_heldout_digest[8 * index : 8 * (index + 1)], "big")
+    for index in range(len(HELDOUT_SEEDS))
 ):
     raise RuntimeError(
         "v2 held-out seed derivation drifted; the arm cannot bind the "
         "shared P2 cells"
     )
-if HELDOUT_SEED == V1_HELDOUT_SEED:
-    raise RuntimeError("v2 held-out seed collided with v1's held-out seed")
+for _admitted_seed in HELDOUT_SEEDS:
+    if _admitted_seed == V1_HELDOUT_SEED:
+        raise RuntimeError(
+            "v2 held-out seed collided with v1's held-out seed"
+        )
+if len(set(HELDOUT_SEEDS)) != len(HELDOUT_SEEDS):
+    raise RuntimeError("v2 held-out stream seeds collided with each other")
+del _admitted_seed, _heldout_digest
 
 
 def _cross_row_clifford_contract(width: int) -> dict[str, Any]:
@@ -411,10 +421,11 @@ def _build_fixture_unvalidated(
                 "calibration fixtures cannot materialize BLPENSEMBLE"
             )
     else:
-        if seed != HELDOUT_SEED:
+        if seed not in HELDOUT_SEEDS:
             raise ValueError(
-                "held-out arm fixture must use the frozen v2 held-out seed "
-                "shared by the P2 cells"
+                "held-out arm fixture must use one of the two frozen v2 "
+                "held-out seeds shared by the P2 cells (hv2-0, hv2-1; "
+                "amendment 2 item 1)"
             )
         if rounds not in {1, 2, *CALIBRATION_ROUNDS}:
             raise ValueError("held-out rounds are outside the frozen union")

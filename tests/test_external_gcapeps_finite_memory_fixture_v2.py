@@ -467,6 +467,104 @@ def test_v2_heldout_seed_construction_differs_from_v1() -> None:
         )
 
 
+# ------------------------------------------------------------------
+# Amendment 2 item 1: held-out namespace admission widened to the FIRST
+# TWO seeds of the same derivation stream (hv2-0, hv2-1).  Every test in
+# this block exercises refusal paths and derivation strings ONLY; no
+# held-out fixture is ever built here.
+# ------------------------------------------------------------------
+
+
+def test_heldout_stream_derivation_is_reproducible_and_guarded() -> None:
+    emitter = _load_v2()
+    v1 = _load_v1()
+    digest = hashlib.sha256(b"gcapeps-finite-memory-heldout-v2").digest()
+
+    # hv2-0 is byte-identical to the original single-seed derivation;
+    # hv2-1 is the SAME derivation at the second 8-byte window.
+    assert emitter.heldout_seed(0) == int.from_bytes(digest[:8], "big")
+    assert emitter.heldout_seed(1) == int.from_bytes(digest[8:16], "big")
+    assert emitter.HELDOUT_SEEDS == (
+        emitter.heldout_seed(0),
+        emitter.heldout_seed(1),
+    )
+    assert emitter.HELDOUT_SEED_ADMITTED_COUNT == 2
+    assert len(emitter.HELDOUT_SEEDS) == 2
+    assert emitter.HELDOUT_SEED == emitter.HELDOUT_SEEDS[0]
+
+    # Collision guards inherited by BOTH admitted seeds.
+    assert emitter.HELDOUT_SEEDS[0] != emitter.HELDOUT_SEEDS[1]
+    for seed in emitter.HELDOUT_SEEDS:
+        assert seed != v1.HELDOUT_SEED
+        assert seed not in range(4)  # never a calibration seed
+
+    # The derivation stream is bounded and typed.
+    with pytest.raises(ValueError, match="outside the v2 derivation"):
+        emitter.heldout_seed(4)
+    with pytest.raises(ValueError, match="outside the v2 derivation"):
+        emitter.heldout_seed(-1)
+    with pytest.raises(TypeError, match="plain int"):
+        emitter.heldout_seed(True)
+
+
+def test_second_heldout_seed_admitted_without_building() -> None:
+    """hv2-1 passes the seed admission gate.
+
+    Proven WITHOUT building anything held-out: the admission check
+    precedes the rounds check, so an out-of-union ``rounds`` request with
+    hv2-1 must fail on the ROUNDS gate, not the seed gate.
+    """
+
+    emitter = _load_v2()
+    with pytest.raises(ValueError, match="held-out rounds"):
+        emitter.build_fixture(
+            run_partition="HELDOUT",
+            width=3,
+            rounds=3,  # outside the frozen union {1, 2} | calibration
+            axis_family=3,
+            p_event_numerator=4,
+            seed=emitter.HELDOUT_SEEDS[1],
+            gamma_index=2,
+            run_blpensemble=False,
+        )
+
+
+def test_third_stream_seed_is_refused() -> None:
+    emitter = _load_v2()
+    third = emitter.heldout_seed(2)
+    assert third not in emitter.HELDOUT_SEEDS
+    with pytest.raises(ValueError, match="two frozen v2\\s+held-out seeds"):
+        emitter.build_fixture(
+            run_partition="HELDOUT",
+            width=3,
+            rounds=1,
+            axis_family=3,
+            p_event_numerator=4,
+            seed=third,
+            gamma_index=2,
+            run_blpensemble=False,
+        )
+
+
+def test_both_heldout_seeds_refused_in_calibration_context() -> None:
+    """Both stream seeds are refused by the CALIBRATION admission exactly
+    like the first always was; nothing is built on the refusal path."""
+
+    emitter = _load_v2()
+    for seed in emitter.HELDOUT_SEEDS:
+        with pytest.raises(ValueError, match="outside the frozen grid"):
+            emitter.build_fixture(
+                run_partition="CALIBRATION",
+                width=7,
+                rounds=4,
+                axis_family=3,
+                p_event_numerator=3,
+                seed=seed,
+                gamma_index=2,
+                run_blpensemble=False,
+            )
+
+
 def test_grid_gate_rejects_out_of_grid_cells() -> None:
     emitter = _load_v2()
 

@@ -4,6 +4,18 @@
 This module intentionally has no GCAPEPS, Stim, SDIM, dense-reference, or
 comparator import.  It applies the neutral physical operation ledger directly
 to Quimb's native ``CircuitPEPSSimpleUpdate`` path.
+
+The frozen split policy caps every committed two-site split at
+``max_bond = 32``.  Pre-run amendment 2 item 3(i) of
+``docs/simulator_validation/GCAPEPS_FINITE_MEMORY_FIXTURE_V2_X8_PREREG_2026-08-01.md``
+adds ONE explicit uncapped-bond override for the confirmatory harness's
+inherited "untruncated run F = 1" control lane: the keyword-only
+``execute_plain(..., untruncated_control=True)`` builds the circuit with
+``max_bond=None``, applies every committed split uncapped, and stamps the
+result payload ``"untruncated_control": True``.  The override is refused for
+instrumented/evidence runs (it exists for the control lane only), and the
+default ``untruncated_control=False`` path is byte-identical to the
+pre-amendment engine.
 """
 
 from __future__ import annotations
@@ -340,18 +352,33 @@ class PlainState:
     input_id: int
     circuit: Any
     max_committed_bond: int
+    untruncated_control: bool = False
 
     @classmethod
-    def initialize(cls, fixture: Mapping[str, Any], input_id: int):
+    def initialize(
+        cls,
+        fixture: Mapping[str, Any],
+        input_id: int,
+        *,
+        untruncated_control: bool = False,
+    ):
+        if not isinstance(untruncated_control, bool):
+            raise TypeError("untruncated_control must be a bool")
         geometry = fixture["geometry"]
         parameters = fixture["parameters"]
         if parameters["max_bond"] != SPLIT_POLICY["max_bond"]:
             raise ValueError("fixture max_bond disagrees with plain policy")
+        # Amendment 2 item 3(i): the untruncated F=1 control lane lifts the
+        # execution cap only; the fixture identity still declares the frozen
+        # cap and is validated against it above.
+        effective_max_bond = (
+            None if untruncated_control else SPLIT_POLICY["max_bond"]
+        )
         edges = tuple(tuple(edge) for edge in geometry["graph_edges"])
         circuit = qtn.CircuitPEPSSimpleUpdate(
             N=geometry["n_qubits"],
             edges=edges,
-            max_bond=SPLIT_POLICY["max_bond"],
+            max_bond=effective_max_bond,
             cutoff=SPLIT_POLICY["cutoff"],
             renorm=SPLIT_POLICY["renorm"],
             gauge_smudge=SPLIT_POLICY["smudge"],
@@ -383,7 +410,7 @@ class PlainState:
                 _matrix("X"),
                 (site,),
                 circuit.gauges,
-                max_bond=SPLIT_POLICY["max_bond"],
+                max_bond=effective_max_bond,
                 cutoff=SPLIT_POLICY["cutoff"],
                 cutoff_mode=SPLIT_POLICY["cutoff_mode"],
                 method=SPLIT_POLICY["method"],
@@ -402,6 +429,7 @@ class PlainState:
             input_id=input_id,
             circuit=circuit,
             max_committed_bond=1,
+            untruncated_control=untruncated_control,
         )
 
     def copy(self):
@@ -410,6 +438,7 @@ class PlainState:
             input_id=self.input_id,
             circuit=_independent_circuit_copy(self.circuit),
             max_committed_bond=self.max_committed_bond,
+            untruncated_control=self.untruncated_control,
         )
 
     def apply_operation(
@@ -421,6 +450,12 @@ class PlainState:
         ownership_callback=None,
     ) -> dict[str, Any] | None:
         _require_optional_ownership_callback(ownership_callback)
+        if instrumented and self.untruncated_control:
+            raise ValueError(
+                "the uncapped-bond override is reachable only from the "
+                "confirmatory harness's control lane; instrumented/"
+                "evidence runs are refused (amendment 2 item 3(i))"
+            )
 
         def span(name: str):
             if span_factory is None:
@@ -488,7 +523,11 @@ class PlainState:
                     self.circuit,
                     matrix,
                     targets,
-                    max_bond=SPLIT_POLICY["max_bond"],
+                    max_bond=(
+                        None
+                        if self.untruncated_control
+                        else SPLIT_POLICY["max_bond"]
+                    ),
                 )
             _emit_ownership(
                 ownership_callback,
@@ -710,8 +749,19 @@ def execute_plain(
     instrumented: bool,
     materialize_checkpoints: bool,
     stop_after_first_positive_operation: bool = False,
+    untruncated_control: bool = False,
 ) -> dict[str, Any]:
-    state = PlainState.initialize(fixture, input_id)
+    if not isinstance(untruncated_control, bool):
+        raise TypeError("untruncated_control must be a bool")
+    if untruncated_control and instrumented:
+        raise ValueError(
+            "the uncapped-bond override is reachable only from the "
+            "confirmatory harness's control lane; instrumented/evidence "
+            "runs are refused (amendment 2 item 3(i))"
+        )
+    state = PlainState.initialize(
+        fixture, input_id, untruncated_control=untruncated_control
+    )
     checkpoints: dict[int, np.ndarray] = {}
     if materialize_checkpoints and 0 in fixture["checkpoints"]:
         checkpoints[0] = state.state_vector()
@@ -738,7 +788,7 @@ def execute_plain(
             checkpoints[round_row["round_index"]] = state.state_vector()
         if stop_locator is not None:
             break
-    return {
+    result = {
         "state": state,
         "checkpoint_vectors": checkpoints,
         "split_records": split_records,
@@ -748,3 +798,8 @@ def execute_plain(
         "final_committed_bond": int(state.circuit._psi.max_bond() or 1),
         "final_carrier_hash": state.final_carrier_hash(),
     }
+    if untruncated_control:
+        # Amendment 2 item 3(i): the control lane stamps its payload; the
+        # default path stays byte-identical and carries no stamp.
+        result["untruncated_control"] = True
+    return result

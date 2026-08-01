@@ -167,6 +167,120 @@ def test_plain_ownership_callback_covers_shadow_release_and_substeps():
     assert "uncapped_shadow" in release[2]
 
 
+def _spy_two_site_caps(engine):
+    """Wrap the module-level two-site split to record every max_bond."""
+
+    original = engine._apply_raw_two_site
+    recorded = []
+
+    def spy(circuit, matrix, where, *, max_bond):
+        recorded.append(max_bond)
+        return original(circuit, matrix, where, max_bond=max_bond)
+
+    engine._apply_raw_two_site = spy
+    return recorded, original
+
+
+def test_plain_untruncated_override_default_off_is_byte_identical_capped():
+    """Amendment 2 item 3(i): default untruncated_control=False keeps the
+    frozen capped behavior -- every committed split at max_bond 32, the
+    capped circuit construction, and no control stamp in the payload."""
+
+    engine = _load("plain_quimb_finite_memory_engine")
+    fixture = _fixture(p=4)
+    recorded, original = _spy_two_site_caps(engine)
+    try:
+        result = engine.execute_plain(
+            fixture,
+            input_id=2,
+            instrumented=False,
+            materialize_checkpoints=True,
+        )
+    finally:
+        engine._apply_raw_two_site = original
+    assert recorded, "the p=4 fixture must exercise two-site splits"
+    assert all(cap == engine.SPLIT_POLICY["max_bond"] for cap in recorded)
+    assert result["state"].circuit.gate_opts["max_bond"] == (
+        engine.SPLIT_POLICY["max_bond"]
+    )
+    assert result["state"].untruncated_control is False
+    assert "untruncated_control" not in result
+
+
+def test_plain_untruncated_override_opt_on_uncapped_circuit_and_stamp():
+    engine = _load("plain_quimb_finite_memory_engine")
+    fixture = _fixture(p=4)
+    recorded, original = _spy_two_site_caps(engine)
+    try:
+        result = engine.execute_plain(
+            fixture,
+            input_id=2,
+            instrumented=False,
+            materialize_checkpoints=True,
+            untruncated_control=True,
+        )
+    finally:
+        engine._apply_raw_two_site = original
+    assert recorded, "the p=4 fixture must exercise two-site splits"
+    assert all(cap is None for cap in recorded)
+    assert result["state"].circuit.gate_opts["max_bond"] is None
+    assert result["state"].untruncated_control is True
+    assert result["untruncated_control"] is True
+    # On this small fixture the frozen cap never binds, so the uncapped
+    # control must agree with the committed capped evolution.
+    capped = engine.execute_plain(
+        fixture,
+        input_id=2,
+        instrumented=False,
+        materialize_checkpoints=True,
+    )
+    for checkpoint in fixture["checkpoints"]:
+        assert_allclose(
+            result["checkpoint_vectors"][checkpoint],
+            capped["checkpoint_vectors"][checkpoint],
+            rtol=0.0,
+            atol=1.0e-12,
+        )
+
+
+def test_plain_untruncated_override_is_refused_for_instrumented_runs():
+    engine = _load("plain_quimb_finite_memory_engine")
+    fixture = _fixture(p=4, rounds=1, axis=1)
+    with np.testing.assert_raises_regex(
+        ValueError, "control lane.*instrumented"
+    ):
+        engine.execute_plain(
+            fixture,
+            input_id=1,
+            instrumented=True,
+            materialize_checkpoints=False,
+            untruncated_control=True,
+        )
+    state = engine.PlainState.initialize(
+        fixture, 1, untruncated_control=True
+    )
+    operation = next(
+        operation
+        for row in fixture["carrier_path"]["round_ledger"]
+        for operation in row["operations"]
+        if len(operation["targets"]) == 2
+    )
+    with np.testing.assert_raises_regex(
+        ValueError, "control lane.*instrumented"
+    ):
+        state.apply_operation(operation, instrumented=True)
+    with np.testing.assert_raises_regex(
+        TypeError, "untruncated_control must be a bool"
+    ):
+        engine.execute_plain(
+            fixture,
+            input_id=1,
+            instrumented=False,
+            materialize_checkpoints=False,
+            untruncated_control=1,
+        )
+
+
 def test_plain_ownership_callback_must_return_none():
     engine = _load("plain_quimb_finite_memory_engine")
     fixture = _fixture(p=0, rounds=1, axis=1)
