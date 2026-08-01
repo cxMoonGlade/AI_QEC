@@ -314,3 +314,47 @@ six that P1/P2 and amendment-1 items 2 and 4 adjudicate.
    numeric cross-check (+7.227e-4 at r8→r9) binds on the development cell only; on
    confirmatory cells the control's value is recorded and any deviation is a reported
    finding, not an automatic refusal (the refusal surfaces remain the frozen gates).
+
+## Pre-run amendment 3 (2026-08-01): fifteen-cell frame, parallel topology, owner ratifications
+
+Owner-decided 2026-08-01, after review and landing of the confirmatory package
+(commit e2a5b8c). Append-only; per-cell bands and all gate semantics are unchanged —
+only the frame size, the derived adjudication counts, and two numeric/topology
+selections change, before any heldout byte has ever been derived.
+
+1. **Fifteen-cell confirmatory frame.** Two heldout seeds give too little replication;
+   the frame becomes FIVE heldout seeds × γ-index {1, 2, 3} × w7 r10 × the X8 arm
+   (registered input pair internal to each cell) = 15 confirmatory cells. Seed
+   derivation, frozen: with D0 = sha256(b"gcapeps-finite-memory-heldout-v2") and
+   D1 = sha256(D0), the seeds hv2-0..hv2-4 are the consecutive non-overlapping
+   big-endian 8-byte windows [D0[0:8], D0[8:16], D0[16:24], D0[24:32], D1[0:8]] —
+   a deterministic hash-chain stream with zero new inputs; hv2-0 remains
+   byte-identical to the originally frozen seed and hv2-1 to the landed second seed.
+   All five inherit every collision and anti-build guard, pairwise distinctness is
+   guarded, and NOTHING from any heldout seed may be built before the owner's
+   release token.
+2. **Adjudication counts rescale by fraction, not by renegotiation.** Amendment 1
+   item 2 chose the strict 2/3 fraction (≥4/6); the same fractions apply verbatim to
+   15: P1 guard and P2 X8 majority = **≥ 10/15**; thin-only minority = **≤ 5/15**;
+   any count strictly between 5 and 10 scores the affected sub-claim NOT-CONFIRMED.
+   The strict all-below-margin rule (amendment 1 item 4) now reads over all 15 cells.
+3. **Parallel execution topology.** Confirmatory cells execute in PARALLEL as fresh
+   single-threaded child processes (thread envelope pinned per child, exactly as the
+   serial design), with the acceptance-supervisor discipline: the immutable plan is
+   written before any child launches, bounded concurrent jobs, one aggregation
+   writer, atomic summary publication. Parallelism changes wall clock only; every
+   per-cell computation, gate, and record is identical to the serial semantics, and
+   the runner must refuse if any child reports a thread envelope other than 1.
+4. **Untruncated F=1 band: 1e-12, owner-selected** (was 1e-10 in the landed package).
+   If the control cannot meet 1e-12 for a numerically justified reason, that is a
+   dated-erratum FINDING with the measured value — never a silent widening.
+5. **Engineered-fixture claim boundary.** The v2 fixture is an engineered-schedule,
+   witness-positive TEST ARTICLE: the even-round cross-row CX, its pinned position,
+   and the halved collision density were selected by screening precisely to produce
+   the witness. No generic-noise or naturally-occurring-non-Markovianity inference
+   may ride on any v2 result, in any report; v2 results certify instrument
+   capability only. The harness payload claim_boundary must carry this sentence.
+6. **Owner ratifications recorded.** The hv2 derivation reading (consecutive 8-byte
+   windows of the frozen digest, item 1's chain extension) and the plain-engine
+   untruncated_control override (control-lane-only, instrumented-refused) are
+   ratified as reviewed and landed in e2a5b8c.
