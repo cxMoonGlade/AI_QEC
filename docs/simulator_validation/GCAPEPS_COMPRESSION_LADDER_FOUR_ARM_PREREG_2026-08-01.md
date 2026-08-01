@@ -161,3 +161,26 @@ found under-specified.
 7. **Arm E boundary.** The post-hoc composition arm E (l2bp-init + ALS fit) is
    outside this preregistration's arm table and may not enter the registered
    comparison without a frozen amendment carrying its own predictions.
+
+## Pre-registered-run amendment 2 (2026-08-01): registered cells and provenance stamps
+
+Recorded BEFORE the registered execution; no C/D/E result exists for any cell named
+fresh below.
+
+1. **Registered cells.** The registered comparison runs all four arms on the w7 r4
+   γ-index-2 CALIBRATION cells at seeds **0, 1, 3** (never executed under arms C/D;
+   FRESH), inputs 1 and 2. Seed 2 is additionally re-executed and reported as
+   DEVELOPMENT-REPLICATE context only (its development results were inspected; it
+   carries no registered standing). All frozen predictions (P1, P2a, P2b, ordering,
+   P3 gates), bands, FLOOR rule, and controls apply per fresh cell unchanged. Arms A
+   and B are executed fresh on every registered cell (the development A/B artifacts
+   were seed-2 only and are never promoted).
+2. **Provenance stamps (review conditions 1–2).** Every registered artifact records:
+   the main-repository HEAD commit, the fork commit (batched lane landed as
+   `87ad6ad6`), the sha256 of this preregistration file at run time, the committed
+   runner script's own sha256, the fork pixi lock hash, and the interpreter version.
+   The runner is a committed script under `scripts/external_baselines/`; the
+   development harnesses in `.scratch` retain no registered standing.
+3. **Cold-start control scope.** One cold-start arm-C replicate per FRESH cell
+   (input 1, round-4 comparison), same disclosed scheme; fired results are reported
+   under the registered initialization-sensitivity designation.
