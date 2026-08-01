@@ -358,3 +358,25 @@ selections change, before any heldout byte has ever been derived.
    windows of the frozen digest, item 1's chain extension) and the plain-engine
    untruncated_control override (control-lane-only, instrumented-refused) are
    ratified as reviewed and landed in e2a5b8c.
+
+## Pre-run amendment 4 (2026-08-01): untruncated-control vehicle after measured infeasibility
+
+Owner-decided 2026-08-01, during the first release-token execution. FINDING: the
+inherited "untruncated run F = 1" control is computationally INFEASIBLE at the
+confirmatory coordinates — an uncapped plain child on the loopy w7 r10 lattice was
+measured at 2 h 17 min CPU and 11 GB RSS, still growing (uncapped bond growth is
+exponential on the 2×7 cycle graph; the control's v1-native context was w3-scale).
+The aborted attempt built only the first cell's controls fixture; no adjudication
+artifact was produced and no band was consulted, so nothing is unblinded. Rulings:
+1. The untruncated F = 1 control is RE-VEHICLED to the v1-native feasible
+   coordinates: one uncapped plain child per run on a w3-scale fixture through the
+   IDENTICAL code path (plain engine, untruncated_control opt, fidelity-vs-dense
+   gate at the amendment-3 1e-12 band). On-coordinate (w7) pipeline integrity
+   remains covered by the existing exact-regime agreement gates and the capped
+   err_cell lanes.
+2. Control children gain a RESOURCE REFUSAL guard (wall-clock timeout): a control
+   that exceeds its budget refuses the run with the measured evidence — never
+   hangs, never silently degrades.
+3. The infeasibility is recorded as a disclosed defect of amendment 2 item 3i's
+   feasibility assumption (no coordinate-level screen was run before freezing the
+   vehicle); this amendment is that screen's finding.
