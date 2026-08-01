@@ -1,8 +1,15 @@
 schema = "error_coupling_simulator.literature.corpus_manifest.v1"
 status = "active"
-corpus_sha256 = "a011767bfbeb6095149b9792e8c0372b2bac4e36099b9bb94f8a50e4f417279c"
-note_count = 51
-paper_fact_count = 745
+corpus_sha256 = "62cb9a585d51166e4e8c22072bc3469374c9b5016f405017bc3188dbf60abfc0"
+note_count = 53
+paper_fact_count = 764
+
+[[notes]]
+path = "docs/papers/reading_notes/aaronson_gottesman_stabilizer_circuits_0406196v5_source_review.md"
+note_sha256 = "5190f7bb010c6645d49dc7fe4bfbb1aaca060fe84b6cd6bee9fce86fa4c6a70c"
+source_id = "arxiv:quant-ph/0406196"
+source_version = "v5"
+source_sha256 = "ef9e472536b380b60c365ca6a03b92680a43d725cfe5f8189a8325fc16bc11ef"
 
 [[notes]]
 path = "docs/papers/reading_notes/arsenijevic_bankovic_damping_1606.01145_source_review.md"
@@ -262,6 +269,13 @@ note_sha256 = "93825f62cb6e7c9d5aa1cec3e9aa05c787c7aea382339f370b5c0afd66f2cbcb"
 source_id = "arxiv:2309.15642"
 source_version = "v3"
 source_sha256 = "aafacaf117d5a3a536760900800f473ef2c806f0c4485838e24db44712bc7fc6"
+
+[[notes]]
+path = "docs/papers/reading_notes/pleasance_collision_order_njp_27_114514_source_review.md"
+note_sha256 = "1fa50d3d408a2dc089044c883ba022cc31c413c287a4d9bce6759b58a3d384be"
+source_id = "doi:10.1088/1367-2630/ae1b31"
+source_version = "version-of-record"
+source_sha256 = "81cc766164072cd022202357fec314684e8b0c28a2bfebd6132c1639af022426"
 
 [[notes]]
 path = "docs/papers/reading_notes/qian_clifford_augmented_dmrg_2405.09217v2_source_review.md"
