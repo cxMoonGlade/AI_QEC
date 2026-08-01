@@ -66,6 +66,8 @@ INPUT_ID = 2
 NATIVE_STRATEGY = "native_simple_update"
 LEGACY_STRATEGY = "exact_tree_then_native_compress"
 STRATEGIES = (NATIVE_STRATEGY, LEGACY_STRATEGY)
+THREAD_COUNT_CHOICES = (1, 2, 4, 8)
+DEGENERATE_BOUNDARY_CHOICES = ("trim_cluster",)
 _NATIVE_UPDATE_STRATEGY = "native_graph_local_pauli_rotation_simple_update"
 _LEGACY_UPDATE_STRATEGY = "exact_tree_then_native_identity_compress"
 _NO_SHADOW_CAUSE = "not_observed_without_shadow"
@@ -205,8 +207,11 @@ def validate_registered_trajectory_fixture(
 def validate_child_environment(expected_threads: int) -> dict[str, Any]:
     """Validate the numerical thread envelope before scientific imports."""
 
-    if isinstance(expected_threads, bool) or expected_threads not in (1, 4):
-        raise ValueError("expected_threads must be exactly 1 or 4")
+    if (
+        isinstance(expected_threads, bool)
+        or expected_threads not in THREAD_COUNT_CHOICES
+    ):
+        raise ValueError("expected_threads must be exactly 1, 2, 4, or 8")
     expected = str(expected_threads)
     observed = {name: os.environ.get(name) for name in THREAD_VARIABLES}
     if any(value != expected for value in observed.values()):
@@ -332,13 +337,29 @@ def _initialize_state(
     fixture: Mapping[str, Any],
     strategy: str,
     shadow_evidence: bool,
+    degenerate_boundary: str | None,
 ):
     """Construct the same finite-memory state with an explicit GC strategy."""
 
+    if degenerate_boundary is not None and (
+        degenerate_boundary not in DEGENERATE_BOUNDARY_CHOICES
+    ):
+        raise ValueError(
+            "degenerate_boundary must be None or exactly 'trim_cluster'"
+        )
     geometry = fixture["geometry"]
     parameters = fixture["parameters"]
     if parameters["max_bond"] != engine.SPLIT_POLICY["max_bond"]:
         raise ValueError("fixture max_bond disagrees with GC split policy")
+    gate_opts = {
+        "cutoff_mode": engine.SPLIT_POLICY["cutoff_mode"],
+        "method": engine.SPLIT_POLICY["method"],
+        "absorb": engine.SPLIT_POLICY["absorb"],
+        "power": engine.SPLIT_POLICY["power"],
+        "smudge_mode": engine.SPLIT_POLICY["smudge_mode"],
+    }
+    if degenerate_boundary is not None:
+        gate_opts["degenerate_boundary"] = degenerate_boundary
     circuit = engine.qtn.CircuitPEPSSimpleUpdate(
         N=geometry["n_qubits"],
         edges=tuple(tuple(edge) for edge in geometry["graph_edges"]),
@@ -347,13 +368,7 @@ def _initialize_state(
         renorm=engine.SPLIT_POLICY["renorm"],
         gauge_smudge=engine.SPLIT_POLICY["smudge"],
         equilibrate_every=None,
-        gate_opts={
-            "cutoff_mode": engine.SPLIT_POLICY["cutoff_mode"],
-            "method": engine.SPLIT_POLICY["method"],
-            "absorb": engine.SPLIT_POLICY["absorb"],
-            "power": engine.SPLIT_POLICY["power"],
-            "smudge_mode": engine.SPLIT_POLICY["smudge_mode"],
-        },
+        gate_opts=gate_opts,
         dtype="complex128",
     )
     if (
@@ -361,6 +376,14 @@ def _initialize_state(
         != engine.SPLIT_POLICY["smudge_mode"]
     ):
         raise RuntimeError("GC circuit smudge_mode was not retained")
+    # The fork also reads QUIMB_DEGENERATE_BOUNDARY as a gate_opts default.
+    # The CLI flag is the only sanctioned control surface here, so any
+    # disagreement (an environment-injected value in default mode, or a
+    # dropped injection in trim mode) is rejected loudly.
+    if circuit.gate_opts.get("degenerate_boundary") != degenerate_boundary:
+        raise RuntimeError(
+            "GC circuit degenerate_boundary disagrees with the CLI request"
+        )
     input_rows = {row["input_id"]: row for row in fixture["inputs"]}
     input_row = input_rows[INPUT_ID]
     if any(input_row["gc_residual_initial_bits"]):
@@ -561,11 +584,22 @@ def _run(
     environment_receipt: Mapping[str, Any],
     strategy: str,
     shadow_evidence: bool,
+    degenerate_boundary: str | None,
 ) -> dict[str, Any]:
     if strategy not in STRATEGIES:
         raise ValueError("unsupported GC strategy")
     if strategy == LEGACY_STRATEGY and shadow_evidence:
         raise ValueError("legacy diagnostic does not use native shadow evidence")
+    if degenerate_boundary is not None and (
+        degenerate_boundary not in DEGENERATE_BOUNDARY_CHOICES
+    ):
+        raise ValueError(
+            "degenerate_boundary must be None or exactly 'trim_cluster'"
+        )
+    if strategy == LEGACY_STRATEGY and degenerate_boundary is not None:
+        raise ValueError(
+            "legacy diagnostic does not support degenerate-boundary trimming"
+        )
 
     # These imports happen only after validate_child_environment.
     import numpy as np
@@ -629,6 +663,7 @@ def _run(
                 fixture=fixture,
                 strategy=strategy,
                 shadow_evidence=shadow_evidence,
+                degenerate_boundary=degenerate_boundary,
             )
         operation_count = 0
         stopped = False
@@ -798,6 +833,12 @@ def _run(
                     raise ValueError(
                         "evidence shadow builder/span/byte accounting differs"
                     )
+            # The committed default split policy is emitted verbatim; the
+            # opt-in degenerate-boundary trim augments a copy only, so the
+            # engine module's frozen SPLIT_POLICY is never mutated.
+            split_policy = dict(engine.SPLIT_POLICY)
+            if degenerate_boundary is not None:
+                split_policy["degenerate_boundary"] = degenerate_boundary
             core = {
                 "schema": SCHEMA,
                 "formal_claim_eligible": False,
@@ -821,7 +862,7 @@ def _run(
                     "stop_after_operation": STOP_AFTER_OPERATION,
                     "checkpoint_operations": list(CHECKPOINT_OPERATIONS),
                 },
-                "split_policy": dict(engine.SPLIT_POLICY),
+                "split_policy": split_policy,
                 "operation_count": operation_count,
                 "checkpoint_metadata": {
                     str(index): checkpoint_metadata[index]
@@ -880,6 +921,10 @@ def _run(
                 ),
                 "result_projection_sha256": "",
             }
+            if degenerate_boundary is not None:
+                # Flag-mode-only metadata key: the default payload stays
+                # byte-identical to the committed regression surface.
+                core["configured_degenerate_boundary"] = degenerate_boundary
     native_owner._build_native_evidence_shadow = original_shadow_builder
     timing = timer.finish()
     result = {
@@ -898,13 +943,28 @@ def _run(
 
 def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--thread-count", type=int, choices=(1, 4), required=True)
+    parser.add_argument(
+        "--thread-count",
+        type=int,
+        choices=THREAD_COUNT_CHOICES,
+        required=True,
+    )
     parser.add_argument(
         "--strategy",
         choices=STRATEGIES,
         default=NATIVE_STRATEGY,
     )
     parser.add_argument("--shadow-evidence", action="store_true")
+    parser.add_argument(
+        "--degenerate-boundary",
+        choices=DEGENERATE_BOUNDARY_CHOICES,
+        default=None,
+        help=(
+            "opt-in Stage-0 amended lane: inject the fork's degeneracy-"
+            "aware boundary trim into the circuit gate_opts and record it "
+            "in the payload; absent means byte-identical default behavior"
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -917,6 +977,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         environment_receipt=environment,
         strategy=args.strategy,
         shadow_evidence=args.shadow_evidence,
+        degenerate_boundary=args.degenerate_boundary,
     )
     sys.stdout.buffer.write(_canonical_json_bytes(result))
     sys.stdout.buffer.write(b"\n")

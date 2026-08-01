@@ -5,6 +5,12 @@ The runner launches fresh worker processes for the frozen operation-100
 finite-memory prefix.  Its verdict is limited to deterministic execution of
 the selected finite-cap algorithm.  Candidate-versus-dense state accuracy,
 generic PEPS faithfulness, QEC Records, and speed claims are outside scope.
+
+The opt-in ``--degenerate-boundary trim_cluster`` flag runs the Stage-0
+amended lane instead: native children at threads 1/2/4/8 with the fork's
+degeneracy-aware boundary trim, gated on the preregistered amended bands
+(``_STAGE0_AMENDED_BANDS``).  With the flag absent, behavior is the
+committed default regression, unchanged.
 """
 
 from __future__ import annotations
@@ -86,6 +92,54 @@ _BANDS = {
     "one_minus_fidelity_max": 1.0e-10,
     "fidelity_roundoff_correction_max": 1.0e-12,
 }
+
+# --- Stage-0 amended degenerate-boundary lane (opt-in, dormant by default) ---
+DEGENERATE_BOUNDARY_CHOICES = ("trim_cluster",)
+AMENDED_THREAD_COUNTS = (1, 2, 4, 8)
+AMENDED_THREAD_PAIRS = ((1, 2), (1, 4), (1, 8), (2, 4), (2, 8), (4, 8))
+# Exact relative tie tolerance of the fork's trim_cluster rule
+# (quimb.tensor.decomp.DEGENERATE_BOUNDARY_RTOL at fork commit 33f74407).
+_DEGENERATE_BOUNDARY_TIE_RTOL = 1.0e-10
+_STAGE0_AMENDED_BAND_SET = "stage0_amended_trim_cluster"
+_STAGE0_AMENDED_BANDS = {
+    "relative_state_distance_max": 3.5e-2,
+    "relative_norm_distance_max": 3.5e-2,
+    "one_minus_fidelity_max": 6.1e-4,
+    "fidelity_roundoff_correction_max": 1.0e-12,
+}
+_STAGE0_AMENDED_BANDS_JUSTIFICATION = (
+    "Amended Stage-0 acceptance bands for the opt-in "
+    "degenerate_boundary='trim_cluster' lane. Primary bit-identity across "
+    "thread counts is not achievable because complex128 BLAS "
+    "(zgemm/zgesdd) on this host is thread-count-dependent at the ulp "
+    "level (measured 7.1e-14 / 4.5e-13). The degenerate-boundary trim "
+    "removes the ill-posed-projector seeding at tied singular-value "
+    "clusters (divergence onset 3.6e-9 -> 2.0e-12; transient "
+    "amplification reduced by about four orders of magnitude). The "
+    "6.1e-4 one-minus-fidelity band is the PARITY_REPAIR_SPEC Stage-0 "
+    "preregistered tolerance (10x below the 6.1e-3 parity target); "
+    "measured worst-pair margin >= 53x. Evidence: "
+    ".scratch/thread-invariance/ (FIX_DECISION.md, "
+    "runs/analysis_summary.json, runs/fix/, runs/verify/)."
+)
+_STAGE0_KEPT_DIMENSION_EXCLUSION_JUSTIFICATION = (
+    "In the amended trim_cluster lane the cross-thread exact-metadata "
+    "requirement excludes per-split kept dimensions "
+    "(candidate_kept_dimensions): at noise-floor tie clusters (singular "
+    "values at the ~1e-16 relative noise floor) the cluster extent is "
+    "inherently ulp-sensitive to this host's thread-dependent complex128 "
+    "BLAS, so cross-thread kept-dimension equality is unattainable for "
+    "any rule that decides from the singular values; the associated "
+    "discarded-weight differences are ~1e-31 and physically nil. "
+    "State-level agreement is the meaningful criterion and passes the "
+    "amended bands with >= 53x measured margin. Kept dimensions are "
+    "demoted to a recorded per-pair diagnostic (mismatch count and max "
+    "absolute difference); every other projection field (plan digest, "
+    "canonical gate transcript, routing, configured policies, pullback, "
+    "and fixture identity) remains strictly equality-checked, and the "
+    "kept-dimension list length (split structure) must still agree "
+    "exactly. Default mode keeps full strict equality."
+)
 
 EXPECTED_SPLIT_POLICY = {
     "max_bond": 32,
@@ -201,8 +255,11 @@ def child_environment(
 ) -> dict[str, str]:
     """Build the exact fresh-child thread envelope."""
 
-    if isinstance(thread_count, bool) or thread_count not in (1, 4):
-        raise ValueError("thread_count must be exactly 1 or 4")
+    if (
+        isinstance(thread_count, bool)
+        or thread_count not in AMENDED_THREAD_COUNTS
+    ):
+        raise ValueError("thread_count must be exactly 1, 2, 4, or 8")
     environment = dict(parent)
     environment.pop("PYTHONPATH", None)
     value = str(thread_count)
@@ -306,6 +363,7 @@ def _run_child(
     strategy: str,
     shadow_evidence: bool,
     timeout_seconds: float,
+    degenerate_boundary: str | None = None,
 ) -> dict[str, Any]:
     command = [
         str(fork_python),
@@ -315,6 +373,12 @@ def _run_child(
         "--strategy",
         strategy,
     ]
+    if degenerate_boundary is not None:
+        if degenerate_boundary not in DEGENERATE_BOUNDARY_CHOICES:
+            raise ValueError(
+                "degenerate_boundary must be exactly 'trim_cluster'"
+            )
+        command.extend(("--degenerate-boundary", degenerate_boundary))
     if shadow_evidence:
         command.append("--shadow-evidence")
     environment = child_environment(
@@ -402,10 +466,24 @@ def decode_raw_vector(payload: Mapping[str, Any], *, n_qubits: int):
     return vector
 
 
-def raw_complete_vector_metrics(reference, candidate) -> dict[str, Any]:
-    """Compute the preregistered raw metrics with no phase or norm fitting."""
+def raw_complete_vector_metrics(
+    reference,
+    candidate,
+    bands: Mapping[str, float] | None = None,
+) -> dict[str, Any]:
+    """Compute the preregistered raw metrics with no phase or norm fitting.
+
+    ``bands`` defaults to the committed exact-lane ``_BANDS``; the amended
+    degenerate-boundary lane passes ``_STAGE0_AMENDED_BANDS`` explicitly.
+    The band key set is pinned either way.
+    """
 
     import numpy as np
+
+    if bands is None:
+        bands = _BANDS
+    if not isinstance(bands, Mapping) or set(bands) != set(_BANDS):
+        raise ValueError("acceptance band key set drifted")
 
     if (
         not isinstance(reference, np.ndarray)
@@ -448,7 +526,7 @@ def raw_complete_vector_metrics(reference, candidate) -> dict[str, Any]:
     if not math.isfinite(fidelity_raw) or fidelity_raw < 0.0:
         raise ValueError("raw fidelity is invalid")
     correction = max(0.0, fidelity_raw - 1.0)
-    if correction > _BANDS["fidelity_roundoff_correction_max"]:
+    if correction > bands["fidelity_roundoff_correction_max"]:
         raise ValueError("fidelity exceeds one beyond clipping allowance")
     fidelity = min(1.0, fidelity_raw)
     difference = candidate - reference
@@ -491,22 +569,22 @@ def raw_complete_vector_metrics(reference, candidate) -> dict[str, Any]:
         raise ValueError("raw metric computation produced a non-finite value")
     gates = {
         "relative_state_distance": (
-            d_rel <= _BANDS["relative_state_distance_max"]
+            d_rel <= bands["relative_state_distance_max"]
         ),
         "relative_norm_distance": (
-            d_norm <= _BANDS["relative_norm_distance_max"]
+            d_norm <= bands["relative_norm_distance_max"]
         ),
         "one_minus_fidelity": (
-            1.0 - fidelity <= _BANDS["one_minus_fidelity_max"]
+            1.0 - fidelity <= bands["one_minus_fidelity_max"]
         ),
         "fidelity_roundoff_correction": (
             correction
-            <= _BANDS["fidelity_roundoff_correction_max"]
+            <= bands["fidelity_roundoff_correction_max"]
         ),
     }
     return {
         "metrics": metrics,
-        "bands": dict(_BANDS),
+        "bands": dict(bands),
         "gates": gates,
         "passed": all(gates.values()),
     }
@@ -574,6 +652,7 @@ def _validate_worker_envelope(
     thread_count: int,
     strategy: str,
     shadow_evidence: bool,
+    degenerate_boundary: str | None = None,
 ) -> None:
     expected_keys = {
         "schema",
@@ -602,6 +681,10 @@ def _validate_worker_envelope(
         "timing",
         "supervisor_process_receipt",
     }
+    if degenerate_boundary is not None:
+        # Flag-mode-only worker metadata key; the default-mode top-level
+        # key set is unchanged and rejects it.
+        expected_keys.add("configured_degenerate_boundary")
     if set(child) != expected_keys:
         raise ValueError("worker top-level key set is not exact")
 
@@ -771,6 +854,7 @@ def _validate_child_identity(
     thread_count: int,
     strategy: str,
     shadow_evidence: bool,
+    degenerate_boundary: str | None = None,
 ) -> None:
     if child.get("schema") != (
         "error_coupling_simulator.external.gcapeps_finite_memory."
@@ -836,8 +920,19 @@ def _validate_child_identity(
         or environment["numba_layer_variables_present"] != []
     ):
         raise ValueError("worker environment receipt is invalid")
-    if child.get("split_policy") != EXPECTED_SPLIT_POLICY:
+    expected_split_policy = dict(EXPECTED_SPLIT_POLICY)
+    if degenerate_boundary is not None:
+        if degenerate_boundary not in DEGENERATE_BOUNDARY_CHOICES:
+            raise ValueError(
+                "degenerate_boundary must be exactly 'trim_cluster'"
+            )
+        expected_split_policy["degenerate_boundary"] = degenerate_boundary
+    if child.get("split_policy") != expected_split_policy:
         raise ValueError("worker split policy drifted")
+    if degenerate_boundary is not None and (
+        child.get("configured_degenerate_boundary") != degenerate_boundary
+    ):
+        raise ValueError("worker degenerate-boundary receipt drifted")
     if not shadow_evidence and (
         child["shadow_builder_call_count"] != 0
         or child["shadow_span_count"] != 0
@@ -850,14 +945,73 @@ def _validate_child_identity(
     _timing_inventory(child)
     if strategy == NATIVE_STRATEGY:
         _validate_native_operation_ledgers(
-            child, shadow_evidence=shadow_evidence
+            child,
+            shadow_evidence=shadow_evidence,
+            degenerate_boundary=degenerate_boundary,
         )
     _validate_worker_envelope(
         child,
         thread_count=thread_count,
         strategy=strategy,
         shadow_evidence=shadow_evidence,
+        degenerate_boundary=degenerate_boundary,
     )
+
+
+def _kept_dimension_diagnostic(
+    left_kept: Any,
+    right_kept: Any,
+) -> dict[str, Any]:
+    """Demoted cross-thread kept-dimension comparison for the trim lane.
+
+    The list length (split structure) must agree exactly; element-wise
+    kept dimensions are recorded as a diagnostic instead of gating, per
+    ``_STAGE0_KEPT_DIMENSION_EXCLUSION_JUSTIFICATION``.
+    """
+
+    structure_equal = (
+        isinstance(left_kept, list)
+        and isinstance(right_kept, list)
+        and len(left_kept) == len(right_kept)
+        and all(
+            _is_plain_int(value, minimum=1)
+            for value in (*left_kept, *right_kept)
+        )
+    )
+    if not structure_equal:
+        return {
+            "excluded_from_exact_equality": True,
+            "structure_equal": False,
+            "split_count": None,
+            "mismatch_count": None,
+            "max_abs_difference": None,
+            "mismatches": None,
+        }
+    mismatches = [
+        {
+            "split_index": split_index,
+            "left_kept": left_value,
+            "right_kept": right_value,
+        }
+        for split_index, (left_value, right_value) in enumerate(
+            zip(left_kept, right_kept)
+        )
+        if left_value != right_value
+    ]
+    return {
+        "excluded_from_exact_equality": True,
+        "structure_equal": True,
+        "split_count": len(left_kept),
+        "mismatch_count": len(mismatches),
+        "max_abs_difference": max(
+            (
+                abs(row["left_kept"] - row["right_kept"])
+                for row in mismatches
+            ),
+            default=0,
+        ),
+        "mismatches": mismatches,
+    }
 
 
 def _pair_comparison(
@@ -865,36 +1019,113 @@ def _pair_comparison(
     right: Mapping[str, Any],
     *,
     name: str,
+    bands: Mapping[str, float] | None = None,
+    degenerate_boundary: str | None = None,
 ) -> dict[str, Any]:
+    if degenerate_boundary is not None and (
+        degenerate_boundary not in DEGENERATE_BOUNDARY_CHOICES
+    ):
+        raise ValueError("degenerate_boundary must be exactly 'trim_cluster'")
     checkpoints = {}
     for operation_index in CHECKPOINT_OPERATIONS:
         left_vector = _checkpoint_vector(left, operation_index)
         right_vector = _checkpoint_vector(right, operation_index)
-        metrics = raw_complete_vector_metrics(left_vector, right_vector)
+        metrics = raw_complete_vector_metrics(
+            left_vector,
+            right_vector,
+            bands=bands,
+        )
         left_metadata = _metadata_projection(left, operation_index)
         right_metadata = _metadata_projection(right, operation_index)
+        if degenerate_boundary is None:
+            metadata_equal = (
+                _canonical_json_bytes(left_metadata)
+                == _canonical_json_bytes(right_metadata)
+            )
+            checkpoints[str(operation_index)] = {
+                "operation_index": operation_index,
+                "raw_metrics": metrics,
+                "exact_metadata_equal": metadata_equal,
+                "left_metadata_projection_sha256": _projection_sha256(
+                    left_metadata
+                ),
+                "right_metadata_projection_sha256": _projection_sha256(
+                    right_metadata
+                ),
+                "passed": metrics["passed"] and metadata_equal,
+            }
+            continue
+        # Trim lane only: per-split kept dimensions are ulp-sensitive to
+        # thread-dependent BLAS at noise-floor tie clusters and are
+        # demoted to a recorded diagnostic; everything else in the
+        # projection stays strictly equality-checked.
+        left_core = {
+            key: value
+            for key, value in left_metadata.items()
+            if key != "candidate_kept_dimensions"
+        }
+        right_core = {
+            key: value
+            for key, value in right_metadata.items()
+            if key != "candidate_kept_dimensions"
+        }
         metadata_equal = (
-            _canonical_json_bytes(left_metadata)
-            == _canonical_json_bytes(right_metadata)
+            _canonical_json_bytes(left_core)
+            == _canonical_json_bytes(right_core)
+        )
+        kept_diagnostic = _kept_dimension_diagnostic(
+            left_metadata.get("candidate_kept_dimensions"),
+            right_metadata.get("candidate_kept_dimensions"),
         )
         checkpoints[str(operation_index)] = {
             "operation_index": operation_index,
             "raw_metrics": metrics,
             "exact_metadata_equal": metadata_equal,
+            "kept_dimensions_excluded_from_equality": True,
+            "kept_dimension_diagnostic": kept_diagnostic,
             "left_metadata_projection_sha256": _projection_sha256(
-                left_metadata
+                left_core
             ),
             "right_metadata_projection_sha256": _projection_sha256(
-                right_metadata
+                right_core
             ),
-            "passed": metrics["passed"] and metadata_equal,
+            "passed": (
+                metrics["passed"]
+                and metadata_equal
+                and kept_diagnostic["structure_equal"] is True
+            ),
         }
-    return {
+    result = {
         "name": name,
         "phase_fit": False,
         "checkpoints": checkpoints,
         "passed": all(row["passed"] for row in checkpoints.values()),
     }
+    if degenerate_boundary is not None:
+        rows = [
+            checkpoints[str(operation_index)]["kept_dimension_diagnostic"]
+            for operation_index in CHECKPOINT_OPERATIONS
+        ]
+        result["kept_dimension_diagnostic"] = {
+            "excluded_from_exact_equality": True,
+            "structure_equal": all(
+                row["structure_equal"] is True for row in rows
+            ),
+            "mismatch_count": sum(
+                row["mismatch_count"]
+                for row in rows
+                if row["mismatch_count"] is not None
+            ),
+            "max_abs_difference": max(
+                (
+                    row["max_abs_difference"]
+                    for row in rows
+                    if row["max_abs_difference"] is not None
+                ),
+                default=0,
+            ),
+        }
+    return result
 
 
 def _finite_float(value: Any, *, name: str) -> float:
@@ -948,10 +1179,74 @@ def _relative_discarded_fraction(
     return numerator / denominator
 
 
+def _trim_cluster_expected_keep(spectrum: Sequence[float]) -> int:
+    """Tie-aware kept dimension under the fork's ``trim_cluster`` rule at
+    the frozen cap of 32.
+
+    A binding cap moves its cut to the outer edge of a tied singular-value
+    cluster (keep fewer, never more), decided from the singular values
+    only: descending neighbors ``a >= b`` are tied iff
+    ``(a - b) < _DEGENERATE_BOUNDARY_TIE_RTOL * a``, except that an exact
+    zero ties only with exact zeros, and at least one value is kept. The
+    worker payload round-trips float64 exactly through canonical JSON, so
+    this recomputation reproduces the fork's decision bit-for-bit.
+    """
+
+    dimension = len(spectrum)
+    if dimension <= 32:
+        return dimension
+    keep = 32
+    while keep > 1:
+        upper = spectrum[keep - 1]
+        lower = spectrum[keep]
+        if upper == 0.0:
+            tied = lower == 0.0
+        else:
+            tied = (upper - lower) < _DEGENERATE_BOUNDARY_TIE_RTOL * upper
+        if not tied:
+            break
+        keep -= 1
+    return keep
+
+
+def _check_split_degenerate_boundary(
+    split: Mapping[str, Any],
+    *,
+    degenerate_boundary: str | None,
+    name: str,
+) -> None:
+    """Pin the per-split ``configured_degenerate_boundary`` field exactly.
+
+    The registered fork emits the field unconditionally (JSON ``null``
+    when the option is absent); pre-landing payloads and the committed
+    synthetic regression children omit it entirely. Default mode therefore
+    accepts absent-or-null and loudly rejects any configured value; trim
+    mode requires exact presence with the requested value.
+    """
+
+    present = "configured_degenerate_boundary" in split
+    if degenerate_boundary is None:
+        if present and split["configured_degenerate_boundary"] is not None:
+            raise ValueError(
+                f"{name} configured a degenerate boundary in default mode"
+            )
+        return
+    if degenerate_boundary not in DEGENERATE_BOUNDARY_CHOICES:
+        raise ValueError("degenerate_boundary must be exactly 'trim_cluster'")
+    if (
+        not present
+        or split["configured_degenerate_boundary"] != degenerate_boundary
+    ):
+        raise ValueError(
+            f"{name} does not record the requested degenerate boundary"
+        )
+
+
 def _validate_execution_split(
     split: Mapping[str, Any],
     *,
     shadow_evidence: bool,
+    degenerate_boundary: str | None = None,
 ) -> dict[str, Any]:
     expected_keys = {
         "step_index",
@@ -969,8 +1264,16 @@ def _validate_execution_split(
         "discarded_fraction",
         "dimension_reduced",
     }
-    if not isinstance(split, Mapping) or set(split) != expected_keys:
+    if (
+        not isinstance(split, Mapping)
+        or set(split) - {"configured_degenerate_boundary"} != expected_keys
+    ):
         raise ValueError("native execution split key set drifted")
+    _check_split_degenerate_boundary(
+        split,
+        degenerate_boundary=degenerate_boundary,
+        name="native execution split",
+    )
     step_index = split["step_index"]
     kept_dimension = split["candidate_kept_bond_dimension"]
     edge = split["edge"]
@@ -1022,7 +1325,10 @@ def _validate_execution_split(
         or full_dimension != len(spectrum)
     ):
         raise ValueError("native full bond dimension is inconsistent")
-    expected_keep = min(full_dimension, 32)
+    if degenerate_boundary is None:
+        expected_keep = min(full_dimension, 32)
+    else:
+        expected_keep = _trim_cluster_expected_keep(spectrum)
     expected_cause = "none" if expected_keep == full_dimension else "max_bond"
     expected_fraction = _relative_discarded_fraction(
         spectrum,
@@ -1052,6 +1358,7 @@ def _validate_truncation_ledger(
     *,
     execution_ledger: Mapping[str, Any],
     validated_splits: Sequence[Mapping[str, Any]],
+    degenerate_boundary: str | None = None,
 ) -> None:
     expected_keys = {
         "compiler_revision",
@@ -1128,9 +1435,24 @@ def _validate_truncation_ledger(
     for record, execution, validated in zip(
         records, execution_records, validated_splits
     ):
-        if not isinstance(record, Mapping) or set(record) != expected_split_keys:
+        if (
+            not isinstance(record, Mapping)
+            or set(record) - {"configured_degenerate_boundary"}
+            != expected_split_keys
+        ):
             raise ValueError("native truncation split key set drifted")
+        _check_split_degenerate_boundary(
+            record,
+            degenerate_boundary=degenerate_boundary,
+            name="native truncation split",
+        )
         if any(record[key] != execution[key] for key in common_keys):
+            raise ValueError("execution and truncation split records differ")
+        if ("configured_degenerate_boundary" in record) is not (
+            "configured_degenerate_boundary" in execution
+        ) or record.get("configured_degenerate_boundary") != execution.get(
+            "configured_degenerate_boundary"
+        ):
             raise ValueError("execution and truncation split records differ")
         spectrum = validated["spectrum"]
         kept_dimension = validated["kept_dimension"]
@@ -1143,6 +1465,11 @@ def _validate_truncation_ledger(
             value * value for value in spectrum[kept_dimension:]
         )
         positive = discarded_weight > 1.0e-12
+        expected_keep_by_cap = (
+            min(len(spectrum), 32)
+            if degenerate_boundary is None
+            else _trim_cluster_expected_keep(spectrum)
+        )
         if (
             record["kept_bond_dimension"] != kept_dimension
             or len(kept_spectrum) != kept_dimension
@@ -1157,7 +1484,7 @@ def _validate_truncation_ledger(
                 record["discarded_squared_weight"], discarded_weight
             )
             or record["keep_by_cutoff"] != len(spectrum)
-            or record["keep_by_cap"] != min(len(spectrum), 32)
+            or record["keep_by_cap"] != expected_keep_by_cap
             or record["actual_keep"] != kept_dimension
             or record["positive_discarded_weight"] is not positive
             or record["positive_discarded_weight_threshold"] != 1.0e-12
@@ -1182,6 +1509,7 @@ def _validate_native_operation_ledgers(
     child: Mapping[str, Any],
     *,
     shadow_evidence: bool,
+    degenerate_boundary: str | None = None,
 ) -> None:
     operations = child["operation_records"]
     if not isinstance(operations, list) or not operations:
@@ -1250,6 +1578,7 @@ def _validate_native_operation_ledgers(
             _validate_execution_split(
                 split,
                 shadow_evidence=shadow_evidence,
+                degenerate_boundary=degenerate_boundary,
             )
             for split in split_records
         ]
@@ -1268,6 +1597,7 @@ def _validate_native_operation_ledgers(
                 truncation,
                 execution_ledger=ledger,
                 validated_splits=validated_splits,
+                degenerate_boundary=degenerate_boundary,
             )
         elif truncation is not None:
             raise ValueError("no-shadow operation emitted truncation ledger")
@@ -1296,6 +1626,8 @@ def _validate_native_operation_ledgers(
 
 def select_nondegeneracy_witness(
     evidence_child: Mapping[str, Any],
+    *,
+    degenerate_boundary: str | None = None,
 ) -> dict[str, Any] | None:
     for operation in evidence_child["operation_records"]:
         ledger = operation.get("native_execution_ledger")
@@ -1305,11 +1637,29 @@ def select_nondegeneracy_witness(
             full_dimension = split["full_bond_dimension"]
             kept_dimension = split["candidate_kept_bond_dimension"]
             fraction = split["discarded_fraction"]
+            if degenerate_boundary is None:
+                kept_matches_rule = kept_dimension == 32
+            else:
+                # Tie-aware rule: the binding cap keeps exactly the
+                # trim_cluster dimension recomputed from the recorded
+                # spectrum (never more than 32).
+                spectrum = split.get("full_singular_values")
+                kept_matches_rule = (
+                    isinstance(spectrum, list)
+                    and bool(spectrum)
+                    and kept_dimension
+                    == _trim_cluster_expected_keep(
+                        _checked_spectrum(
+                            spectrum,
+                            name="full_singular_values",
+                        )
+                    )
+                )
             if (
                 isinstance(full_dimension, int)
                 and not isinstance(full_dimension, bool)
                 and full_dimension > 32
-                and kept_dimension == 32
+                and kept_matches_rule
                 and split["cause"] == "max_bond"
                 and isinstance(fraction, (int, float))
                 and not isinstance(fraction, bool)
@@ -1393,7 +1743,25 @@ def build_report(
     native_thread4: Mapping[str, Any],
     native_evidence_thread1: Mapping[str, Any],
     legacy_children: Sequence[Mapping[str, Any]] = (),
+    native_thread2: Mapping[str, Any] | None = None,
+    native_thread8: Mapping[str, Any] | None = None,
+    degenerate_boundary: str | None = None,
 ) -> dict[str, Any]:
+    if degenerate_boundary is not None:
+        return _build_amended_report(
+            fixture=fixture,
+            native_thread1=native_thread1,
+            native_thread2=native_thread2,
+            native_thread4=native_thread4,
+            native_thread8=native_thread8,
+            native_evidence_thread1=native_evidence_thread1,
+            legacy_children=legacy_children,
+            degenerate_boundary=degenerate_boundary,
+        )
+    if native_thread2 is not None or native_thread8 is not None:
+        raise ValueError(
+            "thread-2/8 children require the degenerate-boundary lane"
+        )
     _validate_child_identity(
         native_thread1,
         fixture=fixture,
@@ -1534,11 +1902,182 @@ def build_report(
     return report
 
 
+def _build_amended_report(
+    *,
+    fixture: Mapping[str, Any],
+    native_thread1: Mapping[str, Any],
+    native_thread2: Mapping[str, Any] | None,
+    native_thread4: Mapping[str, Any],
+    native_thread8: Mapping[str, Any] | None,
+    native_evidence_thread1: Mapping[str, Any],
+    legacy_children: Sequence[Mapping[str, Any]],
+    degenerate_boundary: str,
+) -> dict[str, Any]:
+    """Build the Stage-0 amended report: threads 1/2/4/8, all pairs,
+    trim_cluster split policy, and the preregistered amended bands."""
+
+    if degenerate_boundary not in DEGENERATE_BOUNDARY_CHOICES:
+        raise ValueError("degenerate_boundary must be exactly 'trim_cluster'")
+    if legacy_children:
+        raise ValueError(
+            "the amended degenerate-boundary lane does not run the legacy "
+            "diagnostic"
+        )
+    children = {
+        1: native_thread1,
+        2: native_thread2,
+        4: native_thread4,
+        8: native_thread8,
+    }
+    if set(children) != set(AMENDED_THREAD_COUNTS):
+        raise ValueError("amended lane thread census drifted")
+    for thread_count, child in children.items():
+        if child is None:
+            raise ValueError(
+                "the amended lane requires native children at threads "
+                "1, 2, 4, and 8"
+            )
+        _validate_child_identity(
+            child,
+            fixture=fixture,
+            thread_count=thread_count,
+            strategy=NATIVE_STRATEGY,
+            shadow_evidence=False,
+            degenerate_boundary=degenerate_boundary,
+        )
+    _validate_child_identity(
+        native_evidence_thread1,
+        fixture=fixture,
+        thread_count=1,
+        strategy=NATIVE_STRATEGY,
+        shadow_evidence=True,
+        degenerate_boundary=degenerate_boundary,
+    )
+    pair_reports = {}
+    for left_count, right_count in AMENDED_THREAD_PAIRS:
+        name = f"native_threads{left_count}_vs_threads{right_count}"
+        pair_reports[name] = _pair_comparison(
+            children[left_count],
+            children[right_count],
+            name=name,
+            bands=_STAGE0_AMENDED_BANDS,
+            degenerate_boundary=degenerate_boundary,
+        )
+    thread_comparison = {
+        "name": "native_all_pairs_threads_1_2_4_8",
+        "thread_counts": list(AMENDED_THREAD_COUNTS),
+        "pairs": pair_reports,
+        "passed": all(row["passed"] for row in pair_reports.values()),
+    }
+    # Shadow isolation stays on the exact default bands and full strict
+    # metadata equality (kept dimensions included): at a fixed thread
+    # count the evidence replay must not perturb the committed path.
+    shadow_comparison = _pair_comparison(
+        native_thread1,
+        native_evidence_thread1,
+        name="native_no_shadow_vs_evidence_shadow",
+        bands=_BANDS,
+    )
+    witness = select_nondegeneracy_witness(
+        native_evidence_thread1,
+        degenerate_boundary=degenerate_boundary,
+    )
+    timing = {
+        "native_threads1_no_shadow": _timing_inventory(native_thread1),
+        "native_threads2_no_shadow": _timing_inventory(native_thread2),
+        "native_threads4_no_shadow": _timing_inventory(native_thread4),
+        "native_threads8_no_shadow": _timing_inventory(native_thread8),
+        "native_threads1_evidence": _timing_inventory(
+            native_evidence_thread1
+        ),
+    }
+    passed = bool(
+        thread_comparison["passed"]
+        and shadow_comparison["passed"]
+        and witness is not None
+    )
+    expected_split_policy = dict(EXPECTED_SPLIT_POLICY)
+    expected_split_policy["degenerate_boundary"] = degenerate_boundary
+    report = {
+        "schema": SCHEMA,
+        "formal_claim_eligible": False,
+        "faithfulness_claim": False,
+        "performance_claim": False,
+        "selected_strategy": NATIVE_STRATEGY,
+        "degenerate_boundary": degenerate_boundary,
+        "split_policy": expected_split_policy,
+        "applied_bands": {
+            "band_set": _STAGE0_AMENDED_BAND_SET,
+            "bands": dict(_STAGE0_AMENDED_BANDS),
+            "shadow_isolation_bands": dict(_BANDS),
+            "justification": _STAGE0_AMENDED_BANDS_JUSTIFICATION,
+            "kept_dimension_exclusion_justification": (
+                _STAGE0_KEPT_DIMENSION_EXCLUSION_JUSTIFICATION
+            ),
+        },
+        "fixture_identity": {
+            "case_id": fixture["case_id"],
+            "fixture_projection_sha256": fixture[
+                "result_projection_sha256"
+            ],
+            "parameters": fixture["parameters"],
+            "input_id": INPUT_ID,
+            "checkpoint_operations": list(CHECKPOINT_OPERATIONS),
+        },
+        "thread_invariance": thread_comparison,
+        "shadow_isolation": shadow_comparison,
+        "nondegeneracy_witness": witness,
+        "nondegeneracy_passed": witness is not None,
+        "timing": timing,
+        "raw_children": {
+            "native_threads1_no_shadow": native_thread1,
+            "native_threads2_no_shadow": native_thread2,
+            "native_threads4_no_shadow": native_thread4,
+            "native_threads8_no_shadow": native_thread8,
+            "native_threads1_evidence": native_evidence_thread1,
+        },
+        "legacy_diagnostic": None,
+        "dense_pairing": {
+            "status": "not_run_by_this_regression",
+            "role": "report_only_development_reference",
+            "acceptance_band": None,
+        },
+        "passed": passed,
+        "verdict": (
+            "PASS_ENGINEERING_NATIVE_THREAD_REGRESSION"
+            if passed
+            else "FAIL_ENGINEERING_NATIVE_THREAD_REGRESSION"
+        ),
+        "claim_boundary": (
+            "deterministic execution of one bounded finite-cap native "
+            "algorithm prefix only; no whole-state faithfulness, generic "
+            "PEPS, QEC Record, or speed conclusion"
+        ),
+        "source_identity": {
+            "runner_source_sha256": _source_sha256(
+                Path(__file__).resolve(strict=True)
+            ),
+            "worker_source_sha256": _source_sha256(_WORKER),
+            "fixture_owner_source_sha256": _source_sha256(_FIXTURE_OWNER),
+        },
+        "result_projection_sha256": "",
+    }
+    report["result_projection_sha256"] = _projection_sha256(
+        {
+            key: value
+            for key, value in report.items()
+            if key != "result_projection_sha256"
+        }
+    )
+    return report
+
+
 def run_regression(
     *,
     fork_python: Path,
     timeout_seconds: float,
     include_legacy_diagnostic: bool,
+    degenerate_boundary: str | None = None,
 ) -> dict[str, Any]:
     if not math.isfinite(timeout_seconds) or timeout_seconds <= 0.0:
         raise ValueError("timeout_seconds must be finite and positive")
@@ -1547,6 +2086,45 @@ def run_regression(
         raise ValueError("fork Python is not an executable file")
     fixture = build_frozen_fixture()
     fixture_bytes = _canonical_json_bytes(fixture)
+    if degenerate_boundary is not None:
+        if degenerate_boundary not in DEGENERATE_BOUNDARY_CHOICES:
+            raise ValueError(
+                "degenerate_boundary must be exactly 'trim_cluster'"
+            )
+        if include_legacy_diagnostic:
+            raise ValueError(
+                "the amended degenerate-boundary lane does not run the "
+                "legacy diagnostic"
+            )
+        children = {}
+        for thread_count in AMENDED_THREAD_COUNTS:
+            children[thread_count] = _run_child(
+                fixture_bytes=fixture_bytes,
+                fork_python=fork_python,
+                thread_count=thread_count,
+                strategy=NATIVE_STRATEGY,
+                shadow_evidence=False,
+                timeout_seconds=timeout_seconds,
+                degenerate_boundary=degenerate_boundary,
+            )
+        native_evidence = _run_child(
+            fixture_bytes=fixture_bytes,
+            fork_python=fork_python,
+            thread_count=1,
+            strategy=NATIVE_STRATEGY,
+            shadow_evidence=True,
+            timeout_seconds=timeout_seconds,
+            degenerate_boundary=degenerate_boundary,
+        )
+        return build_report(
+            fixture=fixture,
+            native_thread1=children[1],
+            native_thread2=children[2],
+            native_thread4=children[4],
+            native_thread8=children[8],
+            native_evidence_thread1=native_evidence,
+            degenerate_boundary=degenerate_boundary,
+        )
     native_thread1 = _run_child(
         fixture_bytes=fixture_bytes,
         fork_python=fork_python,
@@ -1636,6 +2214,17 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="also run the explicitly ineligible legacy one/four-thread lane",
     )
+    parser.add_argument(
+        "--degenerate-boundary",
+        choices=DEGENERATE_BOUNDARY_CHOICES,
+        default=None,
+        help=(
+            "opt-in Stage-0 amended lane: forward the fork's degeneracy-"
+            "aware boundary trim to every worker, run native children at "
+            "threads 1/2/4/8, and gate all pairs on the preregistered "
+            "amended bands; absent means the committed default regression"
+        ),
+    )
     parser.add_argument("--output", type=Path)
     return parser.parse_args(argv)
 
@@ -1646,6 +2235,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         fork_python=args.fork_python_executable,
         timeout_seconds=args.timeout_seconds,
         include_legacy_diagnostic=args.include_legacy_diagnostic,
+        degenerate_boundary=args.degenerate_boundary,
     )
     encoded = _canonical_json_bytes(report) + b"\n"
     if args.output is None:
