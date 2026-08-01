@@ -1064,3 +1064,32 @@ def test_development_dry_run_on_calibration_cell(runner, tmp_path):
 
     # incomplete frame: adjudication reports it rather than deciding
     assert payload["adjudication"]["p1"]["verdict"] == "INCOMPLETE_FRAME"
+
+
+# --------------------------------------------- amendment 5: section-3b vehicle
+
+
+def test_inert_control_vehicle_is_the_frozen_development_cell(runner):
+    """Amendment 5 item 1: the section-3b control runs on its own dev
+    cell; P0 at v2-heldout coordinates is unbuildable by construction."""
+
+    assert runner.INERT_CONTROL_CELL == {
+        "run_partition": "CALIBRATION",
+        "seed": 2,
+        "gamma_index": 2,
+        "rounds": 10,
+    }
+
+
+def test_inert_control_refuses_non_calibration_vehicles(runner, oracle):
+    """Amendment 5 item 3: fail-closed guard — no control lane may build
+    from a heldout seed of either namespace."""
+
+    heldout_cell = {
+        "run_partition": "HELDOUT",
+        "seed": runner.V2_HELDOUT_SEEDS[0],
+        "gamma_index": 1,
+        "rounds": 10,
+    }
+    with pytest.raises(runner.Refusal, match="amendment 5"):
+        runner.inert_checkpoint_control(oracle, heldout_cell)

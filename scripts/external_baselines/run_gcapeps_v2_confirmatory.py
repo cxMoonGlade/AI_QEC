@@ -2289,14 +2289,33 @@ DEV_CELL_REFERENCE = {
     "p0_all_rounds_witness": "+7.227e-4",
     "p0_all_rounds_location": "r8->r9",
 }
+# Amendment 5 item 1: the section-3b control is a P0 (v1-family) fact and
+# re-vehicles to its own development cell -- P0 at v2-heldout coordinates
+# is unbuildable by construction (v1 carries its own frozen heldout seed
+# and its science namespace stays untouchable under the standing freeze).
+INERT_CONTROL_CELL = {
+    "run_partition": "CALIBRATION",
+    "seed": 2,
+    "gamma_index": 2,
+    "rounds": 10,
+}
 
 
 def inert_checkpoint_control(
     oracle: DenseOracle, cell: dict
 ) -> dict:
     """P0 under the shipped checkpoint set must report NO WITNESS while
-    the all-rounds set reports a positive witness (prereg section 3b)."""
+    the all-rounds set reports a positive witness (prereg section 3b).
 
+    Vehicle: the frozen development cell (amendment 5 item 1); the
+    numeric cross-check binds there per amendment 2 item 8."""
+
+    if cell.get("run_partition") != "CALIBRATION":
+        raise Refusal(
+            "section-3b control vehicle must be CALIBRATION (amendment 5 "
+            "item 3): no control lane may build from a heldout seed of "
+            "either namespace"
+        )
     emitter = _load_sibling("emit_gcapeps_finite_memory_fixture")
     fixture = emitter.build_fixture(
         run_partition=cell["run_partition"],
@@ -3219,9 +3238,12 @@ def main(argv=None) -> int:
                 "execution is refused until they land"
             )
 
-        # section 3b inert-checkpoint control (amendment 2 item 8:
-        # recorded on fresh cells, not fatal)
-        inert_control = inert_checkpoint_control(oracle, cells[0])
+        # section 3b inert-checkpoint control on its frozen development
+        # vehicle (amendment 5 item 1; numeric cross-check binds there
+        # per amendment 2 item 8)
+        inert_control = inert_checkpoint_control(
+            oracle, INERT_CONTROL_CELL
+        )
         print(
             "[controls] inert shipped-checkpoint control as expected: "
             f"{inert_control['as_expected']}",
