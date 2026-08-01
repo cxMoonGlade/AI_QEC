@@ -263,3 +263,54 @@ discharge artifacts live on gitignored paths.
    Masot-Llima (arXiv:2602.15942) T/N-regime paper_fact note row must be admitted
    before any report cites regime placement. Reporting rules from rereview minors:
    rotation counts are cited as rotations, not events (M7).
+
+## Pre-run amendment 2 (2026-08-01): confirmatory frame arithmetic and harness ambiguity rulings
+
+Appended after the confirmatory-harness build surfaced eight ambiguities (FA-1..FA-8
+in the harness build report); owner-decided 2026-08-01. Append-only; no frozen band
+or prediction is altered. Amendment 1 item 1 contained an arithmetic defect, corrected
+here: a witness cell CONSUMES the registered input pair (the BLP distinguishability
+D(r) is computed between the two inputs' trajectories), so "× inputs {1,2}" cannot
+multiply cells, and one heldout seed × γ{1,2,3} yields three witness cells, not the
+six that P1/P2 and amendment-1 items 2 and 4 adjudicate.
+
+1. **Six-cell confirmatory frame, frozen (FA-1).** The confirmatory cells are exactly:
+   heldout seeds {hv2-0, hv2-1} — the FIRST TWO seeds of the existing v2 heldout
+   derivation stream — × γ-index {1, 2, 3} × w7 r10 × the X8 arm, each cell carrying
+   the registered input pair internally. Six cells, structurally congruent to the six
+   development screening cells. This requires widening the emitter's heldout
+   namespace admission from one seed to two, as a separate owner-reviewed diff;
+   the second seed inherits every collision/anti-build guard, and NOTHING from either
+   heldout seed may be built before the owner's release of the confirmatory run.
+2. **X5-θ0 vehicle by equivalence (FA-2).** At θ = 0 every rotation is the identity
+   and thinning acts only on rotations, so the X5-variant θ=0 Clifford stream equals
+   the CX-only arm's stream operation-for-operation. The mandatory X5-θ0 anchor arm
+   is REALIZED AS the landed cx-only-arm emitter at θ=0; the harness must verify and
+   print the op-for-op equivalence at run time (already demonstrated in the dry run).
+   X5-measured numbers remain citable only as X5's (amendment 1 item 7).
+3. **Inherited-control surfaces (FA-5).** (i) The "untruncated run F = 1" control is
+   retained: a separate owner-reviewed diff adds an explicit uncapped-bond override
+   to the plain engine, reachable ONLY from the confirmatory harness's control lane;
+   the control's semantics are unchanged. (ii) The "LOCAL-alphabet F = 1" inherited
+   row is AMENDED DOWN with justification: no implementation exists anywhere in the
+   repository, rebuilding one is new mechanism code carrying its own validation debt,
+   and the remaining controls (untruncated F=1; θ0-plus-no-CX constancy with firing
+   corruption trip; the dual θ0 gates; the §3b controls) cover the pipeline-integrity
+   surface it addressed. Its removal is a disclosed weakening, not a silent one.
+4. **err_cell definition (FA-3).** Both operational definitions — trajectory-level
+   max_r |D_r^plain − D_r^dense| and state-level max reduced trace distance over
+   checkpoints and inputs — are computed and recorded; the run REFUSES if they ever
+   classify a cell differently under the 10×-margin rule.
+5. **Arms are controls, not cells (FA-4).** The CX-only and thin-only arms run on the
+   same six coordinates as P2 controls; they are never additional confirmatory cells
+   and never carry witness adjudication weight outside P2.
+6. **Minority semantics (FA-6).** "Minority" for the thin-only sub-claim is the
+   complement of the ≥4/6 majority rule: ≤2/6 is a minority PASS for that sub-claim;
+   exactly 3/6 scores the sub-claim NOT-CONFIRMED (mirrors amendment 1 item 2).
+7. **P1 read conjunctively (FA-7).** Per cell, P1 requires guard AND magnitude band
+   AND location band simultaneously; the three components are additionally reported
+   separately for audit.
+8. **Fresh-cell control deviations (FA-8).** The §3b inert-checkpoint control's
+   numeric cross-check (+7.227e-4 at r8→r9) binds on the development cell only; on
+   confirmatory cells the control's value is recorded and any deviation is a reported
+   finding, not an automatic refusal (the refusal surfaces remain the frozen gates).
