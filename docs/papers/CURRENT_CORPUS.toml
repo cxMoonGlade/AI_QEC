@@ -1,8 +1,8 @@
 schema = "error_coupling_simulator.literature.corpus_manifest.v1"
 status = "active"
-corpus_sha256 = "62cb9a585d51166e4e8c22072bc3469374c9b5016f405017bc3188dbf60abfc0"
+corpus_sha256 = "6a85f4c6dec435bd944e74b858bd4e46d4a25a592ede5e213e0c0ea52f46acee"
 note_count = 53
-paper_fact_count = 764
+paper_fact_count = 768
 
 [[notes]]
 path = "docs/papers/reading_notes/aaronson_gottesman_stabilizer_circuits_0406196v5_source_review.md"
@@ -202,7 +202,7 @@ source_sha256 = "5d7e010293770b0c97ac9c0b88075710ceda3a68988da7933dd2130621d8269
 
 [[notes]]
 path = "docs/papers/reading_notes/masot_limits_clifford_disentangling_2602.15942v2_source_review.md"
-note_sha256 = "2afe4b4d19b3b9e0331279476e544559cdd5b1674e8be1b2153f1222c719e5c5"
+note_sha256 = "55ec5e5cb94d5b0d2ed1c3cef360a9f3474f99fa94b694958a1af00551606932"
 source_id = "arxiv:2602.15942"
 source_version = "v2"
 source_sha256 = "ec572bd96d4a937667c2c6fb9c1996da92ff359072050c2fe47b501ed80aa83e"

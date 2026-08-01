@@ -16,7 +16,7 @@ audit_packet_sha256 = "49cc95ccf98d83dd16bb342cca20c28861a7783753162fbc62e942033
 admission_status = "source_only_reviewed"
 admission_reviewer = "independent_masot_2602_source_review_2026_07_27"
 admission_date = "2026-07-27"
-visually_checked_pages = [1, 2, 3, 5, 6, 7, 9, 13, 14, 15, 17]
+visually_checked_pages = [1, 2, 3, 4, 5, 6, 7, 9, 13, 14, 15, 17]
 +++
 # Full-text review — Masot-Llima et al., “Limits of Clifford Disentangling in Tensor Network States”
 
@@ -141,6 +141,30 @@ Fact ID: masot-nonclifford-accumulation
 Source locator: Sec. IV, Fig. 7 and accompanying discussion
 PDF page: 7
 Claim: On the reported random Clifford-plus-rotation MPS workloads, the source observes residual entanglement accumulation whose onset is delayed for smaller rotation angles.
+
+## Three-regime T-gate-density intervals [paper_fact]
+Fact ID: masot-tn-regime-intervals
+Source locator: Sec. II.B, first paragraph after Fig. 3
+PDF page: 4
+Claim: The source states that three distinct behaviors emerge in the disentangled entanglement entropy as a function of the \(T\)-gate density, with regimes corresponding to the intervals \(0<T<N\), \(N<T<2N\), and \(T\geq 2N\).
+
+## Per-regime disentangled-entropy behavior [paper_fact]
+Fact ID: masot-tn-regime-behaviors
+Source locator: Sec. II.B, three-regime paragraphs before and after Definition 3
+PDF page: 4
+Claim: The source states that in the first regime the cooling procedure is highly effective, often reducing the entanglement to zero; that in the second regime (\(N<T<2N\)) entanglement accumulates at a rate comparable to the uncooled dynamics shown in Fig. 3; and that in the third and last regime (\(T\geq 2N\)) the entropy stabilizes, with its asymptotic value corresponding to the approximate finite-\(N\) Haar-random bound \(S_b(N)=1-1/(N\log(2))\).
+
+## Haar-saturation delay under disentangling [paper_fact]
+Fact ID: masot-haar-saturation-delay
+Source locator: Sec. II.B, final paragraph before Sec. III
+PDF page: 4
+Claim: The source states that the entropy of these circuits reaches the value of Haar-random states soon after \(N\) \(T\)-gates on average, which is delayed to soon after \(2N\) \(T\)-gates when applying disentangling.
+
+## Regime vocabulary for arbitrary rotation angles [paper_fact]
+Fact ID: masot-regime-vocabulary-rotations
+Source locator: Sec. IV, final paragraph of the Fig. 7 discussion
+PDF page: 7
+Claim: For the Fig. 7 rotation-angle experiment the source describes the initial phase (\(T<N\)) as defining a 'classical' regime where CTN simulation is efficient, states that linear entropy scaling re-emerges beyond this critical point, and states that the growth rate is proportional to the rotation angle, which consequently delays the saturation threshold.
 
 ## No PEPS result [literature_gap]
 Fact ID: masot-gap-peps
