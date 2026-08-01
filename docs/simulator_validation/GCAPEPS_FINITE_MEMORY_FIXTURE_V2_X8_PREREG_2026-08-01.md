@@ -198,3 +198,68 @@ simplifications bounded? **yes** | controls registered? **yes** |
 **preregistration gate: pass** — with two execution blockers on record: (i) R0
 thread-invariance FAIL at HEAD blocks every claim-bearing run; (ii) the four
 to-demonstrate corruption trips must be shown before the first confirmatory run.
+
+## Pre-run amendment 1 (2026-08-01): rereview-condition discharges and frozen adjudications
+
+Appended after the independent pre-run rereview
+(PASS-CONDITIONAL, 8 conditions; `.scratch/gcapeps-fixture-v2/rereview/
+INDEPENDENT_REREVIEW.md`) and the §3a corruption-trip discharge
+(4/4 demonstrated; `.scratch/gcapeps-fixture-v2/corruption_trips/
+TRIPS_DISCHARGE.md`, run log exit 0). Nothing above this line changes; no frozen
+band or prediction is altered. Load-bearing numbers are restated here because the
+discharge artifacts live on gitignored paths.
+
+1. **Confirmatory cell frame (C1).** The confirmatory cells are exactly: the single
+   v2-heldout seed the landed emitter admits (emitter heldout-namespace guard,
+   lines 443–447) × inputs {1, 2} × the X8 arm, plus the mandatory X5-variant θ=0
+   arm of item 3. The frozen text's "fresh seeds" (plural) is recorded as a text
+   defect: the heldout namespace contains one seed by design. No other cell may run
+   under this preregistration.
+2. **P2 majority semantics (C2).** "Majority" means ≥ 4 of 6. Exactly 3/6 scores
+   NOT-CONFIRMED (MISS). The tie is frozen now because the development X7 rate sat
+   at exactly 3/6.
+3. **Non-flat θ=0 corruption vehicle (C3).** The X8 θ=0 anchor trajectory is flat
+   (D ≡ 1), so the sign-corruption falsifier could pass vacuously there. The
+   X5-variant θ=0 arm is MANDATORY as the corruption vehicle (discharged
+   demonstration: dense agreement 2.0e-15; the 1→0→1 Clifford recurrence at
+   r7–r9; three sign-corruption variants each collapse an exact instrument
+   value to 0.0). Because the θ=0 D-trajectory is provably sign-blind
+   (letters-only), the confirmatory harness runs BOTH gates: the D-trajectory gate
+   AND the inner-product/A–G reproduction gate.
+4. **All-below-margin adjudication (C4; owner-decided 2026-08-01: strict).** If all
+   six confirmatory cells report WITNESS_BELOW_MARGIN, the outcome scores as a
+   fixture-capability MISS at the current carrier error floors — this fixture
+   cannot certify the witness with these carriers — and the confirmatory claim
+   dies. It is NOT evidence of witness absence. Revisiting requires a NEW
+   preregistration round anchored on a demonstrably lower MEASURED err_cell; the
+   development margins (1.5×–31×) were computed against an err_cell never measured
+   on the modified fixture, and this clause forecloses post-unblinding floor
+   shopping.
+5. **R0 discharge against the row's own criterion (C5).** R0 is discharged by
+   commit edb8ae8 (Stage-0 amended acceptance, threads 1/2/4/8; flag-off control
+   still FAILs). The row's criterion — thread variance ≤ (smallest discriminating
+   difference)/10 = 1e-4 — is met by the MEASURED value, not by the band: the
+   committed runner records a ≥ 53× worst-pair margin against its 6.1e-4 fallback
+   band, i.e. measured worst-pair 1-F ≤ 1.2e-5 < 1e-4. The band alone would NOT
+   satisfy the criterion. The confirmatory run's provenance must re-record the
+   measured worst-pair value from its own Stage-0 evidence and the run is REFUSED
+   if that value exceeds 1e-4.
+6. **Geometry acknowledgment (C8).** The v2 geometry remains exactly-MPS under rung
+   fusion (the central cross-row CX(3,10) is a rung gate). Escape from v1-death-3
+   is via the §4 no-carrier-claim bound only. No PEPS/2D-representational-content
+   claim may ride on this fixture in any report.
+7. **Corruption-trip discharge nuances (§3a).** All four to-demonstrate trips fired
+   with non-corrupted controls passing. Binding nuances: (i) item 3's dual-gate
+   requirement; (ii) the "≥ 1e-2" insertion-shift parenthetical is the verifier's
+   X5 measurement — X8's own end-of-round shift measures 7.696e-3 (still ~10⁷× the
+   emitter guard); X5-measured numbers are citable only as X5's (also rereview M3).
+8. **Inherited v1 exactness controls.** The confirmatory harness must re-trip the
+   inherited v1 exactness controls at run time (§3a inherited row); the four
+   demonstrations above do not cover them.
+9. **Remaining pre-run engineering (C6, C7), recorded.** (i) Production emitters
+   for the CX-only and thin-only P2 arms; (ii) the engine v2-schema dispatch /
+   every-round-checkpoint diff (owner-reviewed, load-bearing surface); (iii) the
+   committed confirmatory harness embedding items 3, 5, and 8; (iv) the
+   Masot-Llima (arXiv:2602.15942) T/N-regime paper_fact note row must be admitted
+   before any report cites regime placement. Reporting rules from rereview minors:
+   rotation counts are cited as rotations, not events (M7).
