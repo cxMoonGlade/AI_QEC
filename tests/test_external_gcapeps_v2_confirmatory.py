@@ -27,6 +27,13 @@ AND the amendment-3 rescalings/topology of
   byte-identical per-cell payloads between --jobs 1 and --jobs 3;
 * the 1e-12 untruncated band (amendment 3 item 4) and the
   engineered-fixture claim-boundary sentence (amendment 3 item 5);
+* the amendment-4 untruncated-control vehicle (item 1: the control is
+  re-vehicled to ONE uncapped plain child per run on the frozen w3
+  v1-native vehicle -- the committed plain-engine tests' engineering
+  coordinates -- gated at the unchanged 1e-12 band) and the
+  control-child resource-refusal guard (item 2: a frozen wall-clock
+  budget; timeout kills the child process-group-clean and refuses with
+  the measured elapsed time, never hangs);
 * arm schema routing: X8 / cx_only / thin_only route to their owning
   emitters and schemas; unknown arms are refused;
 * a development-mode dry run on a CALIBRATION cell only, recording the
@@ -45,6 +52,7 @@ import copy
 import importlib.util
 import json
 from pathlib import Path
+import re
 import subprocess
 import sys
 
@@ -614,6 +622,99 @@ def test_untruncated_band_is_1e_12(runner):
     assert runner.UNTRUNCATED_ONE_MINUS_F_MAX == 1.0e-12
 
 
+def test_untruncated_control_vehicle_is_w3_v1_native(runner):
+    """Amendment 4 item 1: the untruncated F=1 control is re-vehicled to
+    the v1-native w3 coordinates -- exactly the committed plain-engine
+    tests' engineering fixture (the ``_fixture`` helper defaults in
+    tests/test_external_plain_quimb_finite_memory_engine.py) -- and the
+    builder refuses degenerate or v2-heldout-colliding vehicles."""
+
+    assert runner.UNTRUNCATED_VEHICLE == "w3_v1_native_per_amendment_4"
+    assert runner.UNTRUNCATED_VEHICLE_COORDINATES == {
+        "run_partition": "HELDOUT",  # the v1 emitter's partition label;
+        # the v1 line is CLOSED and this is the committed tests' w3
+        # engineering fixture, NOT a v2 heldout build
+        "width": 3,
+        "rounds": 2,
+        "axis_family": 3,
+        "p_event_numerator": 2,
+        "gamma_index": 0,
+    }
+    assert runner.UNTRUNCATED_VEHICLE_INPUT_ID == 1
+
+    fixture, fixture_hash = runner.build_untruncated_vehicle_fixture()
+    emitter = runner._load_sibling("emit_gcapeps_finite_memory_fixture")
+    # v1-native: the v1 schema, the v1 emitter's own frozen seed, and a
+    # projection hash the v1 validator reproduces.
+    assert fixture["schema"].endswith("gcapeps_finite_memory.fixture.v1")
+    assert fixture["parameters"]["width"] == 3
+    assert fixture["parameters"]["seed"] == emitter.HELDOUT_SEED
+    assert emitter.validate_fixture(fixture) == fixture_hash
+    # anti-build guard: the vehicle seed is NOT a v2 heldout stream seed
+    assert fixture["parameters"]["seed"] not in runner.V2_HELDOUT_SEEDS
+    # the fidelity gate reads every-round checkpoints
+    rounds = fixture["parameters"]["rounds"]
+    assert sorted(fixture["checkpoints"]) == list(range(rounds + 1))
+    # non-degenerate: the vehicle exercises rotations AND entangling CX
+    ledger = fixture["carrier_path"]["round_ledger"]
+    assert sum(len(r["collision_rotations"]) for r in ledger) > 0
+    assert any(
+        op.get("gate_kind") == "CX"
+        for row in ledger
+        for op in row["operations"]
+    )
+
+
+def test_control_child_timeout_constant_is_frozen(runner):
+    """Amendment 4 item 2: the control-child wall-clock budget is a
+    frozen constant; changing it is an amendment, not a tweak."""
+
+    assert runner.CONTROL_CHILD_TIMEOUT_SECONDS == 600
+
+
+def test_control_child_timeout_guard_refuses_with_elapsed_evidence(
+    runner, monkeypatch
+):
+    """Amendment 4 item 2: a control child that exceeds its wall-clock
+    budget is killed process-group-clean and the run REFUSES with the
+    measured elapsed time in the message -- it never hangs."""
+
+    monkeypatch.setattr(runner, "CONTROL_CHILD_TIMEOUT_SECONDS", 0.5)
+    sleeping_child = [
+        sys.executable,
+        "-c",
+        "import time; time.sleep(600)",
+    ]
+    import time as _time
+
+    started = _time.monotonic()
+    with pytest.raises(runner.Refusal) as excinfo:
+        runner._run_control_child(sleeping_child, label="unit-test")
+    wall = _time.monotonic() - started
+    message = str(excinfo.value)
+    assert "amendment 4 item 2" in message
+    assert "wall-clock budget of 0.5s" in message
+    assert "process-group-clean" in message
+    # measured elapsed evidence rides in the refusal message
+    elapsed_match = re.search(r"measured\s+elapsed\s+([0-9.]+)s", message)
+    assert elapsed_match is not None
+    assert float(elapsed_match.group(1)) >= 0.5
+    # never hangs: the guard returned promptly, not after the child's
+    # 600-second sleep
+    assert wall < 30.0
+
+
+def test_run_control_child_passes_through_a_fast_child(runner):
+    """The guard is transparent for a child that finishes in budget."""
+
+    completed = runner._run_control_child(
+        [sys.executable, "-c", "print('ok-child')"],
+        label="unit-test",
+    )
+    assert completed.returncode == 0
+    assert "ok-child" in completed.stdout
+
+
 def test_engineered_fixture_claim_sentence_is_frozen(runner):
     """Amendment 3 item 5: the payload claim_boundary carries this exact
     sentence (presence in a real payload is asserted by the dry run)."""
@@ -921,6 +1022,18 @@ def test_development_dry_run_on_calibration_cell(runner, tmp_path):
     assert "amendment 2 item 3(i)" in (
         controls["untruncated_f_equals_1"]["detail"]
     )
+    # amendment 4 item 1: the wired control names the w3 v1-native
+    # vehicle even when NOT_RUN with the plain lane off
+    assert controls["untruncated_f_equals_1"]["vehicle"] == (
+        runner.UNTRUNCATED_VEHICLE
+    )
+    assert "amendment 4 item 1" in (
+        controls["untruncated_f_equals_1"]["detail"]
+    )
+    # amendment 4 provisions ride on every payload
+    provisions = payload["amendment_4_provisions"]
+    assert runner.UNTRUNCATED_VEHICLE in provisions["item_1"]
+    assert "resource-refusal" in provisions["item_2"]
     assert controls["local_alphabet_f_equals_1"]["status"] == (
         "REMOVED_BY_AMENDMENT_2_ITEM_3II"
     )

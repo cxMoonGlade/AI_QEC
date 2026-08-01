@@ -2,8 +2,9 @@
 """Confirmatory-run harness for the GCAPEPS finite-memory fixture v2 (X8).
 
 Governing preregistration (frozen; read it in full, INCLUDING "Pre-run
-amendment 1 (2026-08-01)", "Pre-run amendment 2 (2026-08-01)", AND "Pre-run
-amendment 3 (2026-08-01)" at the end):
+amendment 1 (2026-08-01)", "Pre-run amendment 2 (2026-08-01)", "Pre-run
+amendment 3 (2026-08-01)", AND "Pre-run amendment 4 (2026-08-01)" at the
+end):
   docs/simulator_validation/GCAPEPS_FINITE_MEMORY_FIXTURE_V2_X8_PREREG_2026-08-01.md
 This script is the committed confirmatory harness required by amendment 1
 item 9(iii): it embeds amendment-1 item 3 (mandatory X5-variant theta=0
@@ -18,7 +19,14 @@ fixture-capability MISS).  Amendment 3 additionally freezes the fifteen-cell
 frame (item 1: five hash-chain heldout seeds hv2-0..hv2-4 x gamma{1,2,3} x
 w7 r10 x X8), the parallel fresh-child execution topology (item 3), the
 untruncated F=1 band at 1e-12 (item 4), and the engineered-fixture claim
-boundary sentence carried by every payload (item 5).
+boundary sentence carried by every payload (item 5).  Amendment 4
+re-vehicles the untruncated F=1 control to the v1-native feasible w3
+coordinates after the MEASURED w7 infeasibility (item 1: one uncapped
+plain child per run on the w3 vehicle through the identical code path,
+gated at the same 1e-12 band) and adds the control-child resource-refusal
+guard (item 2: a frozen wall-clock budget; a control that exceeds it is
+killed process-group-clean and the run REFUSES with the measured elapsed
+time -- it never hangs).
 
 Carrier lanes.  The frozen preregistration names exactly two lanes for the
 confirmatory measurement: the DENSE oracle (prereg section 3; every headline
@@ -66,7 +74,7 @@ Preconditions (all printed, all fatal on failure):
     (``external/forks/quimb-gcapeps/.pixi/envs/testpymid/bin/python``),
     the only build carrying quimb's ``CircuitPEPSSimpleUpdate`` path;
   * no scientific module is imported before the thread envelope is set;
-  * the preregistration file exists, hashes, and carries ALL THREE
+  * the preregistration file exists, hashes, and carries ALL FOUR
     pre-run amendment headings (a stale pre-amendment copy is refused);
   * registered mode: clean load-bearing main-repository surfaces, clean
     fork tree, and a Stage-0 evidence file whose MEASURED worst-pair
@@ -111,7 +119,13 @@ flagging them:
         control is retained and wired to the plain engine's explicit
         uncapped-bond override (``execute_plain(...,
         untruncated_control=True)``), reachable ONLY from this harness's
-        control lane; the control's semantics are unchanged.  (ii) The
+        control lane; the control's semantics are unchanged.
+        RE-VEHICLED by amendment 4 item 1 after the measured w7
+        infeasibility: the control now runs as ONE uncapped plain child
+        per run on the frozen w3 v1-native vehicle through the identical
+        code path, gated at the same 1e-12 band; the w7 pipeline stays
+        covered by the exact-regime agreement gates and the capped
+        err_cell lanes.  (ii) The
         "LOCAL-alphabet F = 1" inherited row is AMENDED DOWN with
         justification: no implementation exists anywhere in the
         repository, rebuilding one is new mechanism code carrying its own
@@ -162,6 +176,7 @@ import math
 import os
 from pathlib import Path
 import re
+import signal
 import subprocess
 import sys
 import tempfile
@@ -182,6 +197,7 @@ PREREG = REPO / PREREG_RELATIVE
 AMENDMENT_HEADING = "## Pre-run amendment 1 (2026-08-01)"
 AMENDMENT_2_HEADING = "## Pre-run amendment 2 (2026-08-01)"
 AMENDMENT_3_HEADING = "## Pre-run amendment 3 (2026-08-01)"
+AMENDMENT_4_HEADING = "## Pre-run amendment 4 (2026-08-01)"
 RUNNER_RELATIVE = "scripts/external_baselines/run_gcapeps_v2_confirmatory.py"
 
 SCHEMA = (
@@ -265,6 +281,39 @@ VERDICT_CAPABILITY_MISS = (
 # reason, that is a dated-erratum FINDING recorded with the measured value
 # -- never a silent widening of this constant.
 UNTRUNCATED_ONE_MINUS_F_MAX = 1.0e-12
+
+# Amendment 4 item 1: the untruncated F=1 control is RE-VEHICLED to the
+# v1-native feasible coordinates after the MEASURED w7 infeasibility (an
+# uncapped plain child on the loopy w7 r10 lattice ran 2 h 17 min CPU at
+# 11 GB RSS, still growing; the control's v1-native context was w3-scale).
+# ONE uncapped plain child per run executes on this frozen w3 vehicle
+# through the IDENTICAL code path (plain engine, untruncated_control opt,
+# fidelity-vs-dense gate at the amendment-3 1e-12 band).  The coordinates
+# are exactly the committed plain-engine tests' w3 engineering fixture
+# (tests/test_external_plain_quimb_finite_memory_engine.py ``_fixture``
+# defaults): the v1 emitter's engineering partition at width 3.  The
+# ``seed`` is the v1 emitter's own frozen HELDOUT_SEED (namespace
+# "gcapeps-finite-memory-heldout-v1", the CLOSED v1 line) and is NOT a v2
+# heldout seed; the builder refuses outright if it ever collides with the
+# v2 heldout stream.  On-coordinate (w7) pipeline integrity remains
+# covered by the exact-regime agreement gates and the capped err_cell
+# lanes.
+UNTRUNCATED_VEHICLE = "w3_v1_native_per_amendment_4"
+UNTRUNCATED_VEHICLE_COORDINATES = {
+    "run_partition": "HELDOUT",  # v1 emitter partition label; v1 line CLOSED
+    "width": 3,
+    "rounds": 2,
+    "axis_family": 3,
+    "p_event_numerator": 2,
+    "gamma_index": 0,
+}
+UNTRUNCATED_VEHICLE_INPUT_ID = 1  # exactly ONE uncapped child per run
+
+# Amendment 4 item 2: control children gain a RESOURCE REFUSAL guard.  A
+# control child that exceeds this frozen wall-clock budget is killed
+# process-group-clean and the run REFUSES with the measured elapsed time
+# in the message -- the control never hangs and never silently degrades.
+CONTROL_CHILD_TIMEOUT_SECONDS = 600
 
 # Arm registry: schema-dispatched emitters (arm -> sibling emitter module,
 # expected fixture schema).  The X5 theta=0 arm is intentionally absent
@@ -466,6 +515,14 @@ def collect_provenance_stamps(mode: str) -> dict:
             "cannot govern a confirmatory run (this harness enforces the "
             "fifteen-cell frame, the rescaled adjudication counts, the "
             "parallel topology, and the 1e-12 untruncated band)"
+        )
+    if AMENDMENT_4_HEADING.encode("utf-8") not in prereg_bytes:
+        raise Refusal(
+            "the preregistration file does not carry the pre-run "
+            f"amendment-4 heading {AMENDMENT_4_HEADING!r}; a stale copy "
+            "cannot govern a confirmatory run (this harness enforces the "
+            "re-vehicled w3 untruncated control and the control-child "
+            "resource-refusal guard)"
         )
 
     main_head = _run_git(REPO, "rev-parse", "HEAD")
@@ -1472,7 +1529,9 @@ def run_plain_child(
     (``untruncated_control=True``) for the inherited "untruncated run
     F = 1" control, and is reachable ONLY through this harness's control
     lane (the engine itself refuses the override on instrumented/evidence
-    runs).
+    runs).  Amendment 4 item 1 re-vehicles that control: the parent
+    launches exactly ONE ``--untruncated`` child per run, on the frozen
+    w3 v1-native vehicle fixture, through this same child body.
     """
 
     import numpy as np
@@ -1516,10 +1575,15 @@ def run_plain_child(
 
 
 def _spawn_plain_children(
-    np, fixture_path: Path, scratch_dir: Path, tag: str, *,
-    untruncated: bool = False,
+    np, fixture_path: Path, scratch_dir: Path, tag: str
 ) -> tuple[dict, dict]:
-    """Fresh plain-lane child per input; returns (states, summaries)."""
+    """Fresh capped plain-lane child per input; returns (states, summaries).
+
+    This is the err_cell measurement lane at the frozen cap; it is
+    intentionally untouched by amendment 4 (which re-vehicles only the
+    untruncated CONTROL children, see
+    ``_spawn_untruncated_control_child``).
+    """
 
     plain_states = {}
     child_summaries = {}
@@ -1541,8 +1605,6 @@ def _spawn_plain_children(
             "--child-output",
             str(npz_path),
         ]
-        if untruncated:
-            command.append("--untruncated")
         completed = subprocess.run(
             command, capture_output=True, text=True
         )
@@ -1553,17 +1615,178 @@ def _spawn_plain_children(
                 + completed.stderr
             )
         summary = json.loads(completed.stdout.splitlines()[-1])
-        if untruncated and summary.get("untruncated_control") is not True:
-            raise Refusal(
-                "the untruncated control child did not certify the "
-                "uncapped run (missing untruncated_control stamp)"
-            )
         child_summaries[input_id] = summary
         with np.load(npz_path) as archive:
             plain_states[input_id] = {
                 int(key[1:]): archive[key] for key in archive.files
             }
     return plain_states, child_summaries
+
+
+def _run_control_child(
+    command: list, *, label: str, timeout_seconds: float | None = None
+) -> subprocess.CompletedProcess:
+    """Run one control child under the amendment-4 resource-refusal guard.
+
+    Amendment 4 item 2: every control child subprocess gets a wall-clock
+    timeout (frozen default ``CONTROL_CHILD_TIMEOUT_SECONDS``).  The
+    child runs in its own process group; on timeout the WHOLE group is
+    killed (SIGKILL to the group, reaped, and verified gone) and the run
+    REFUSES with the measured elapsed time in the message -- the control
+    never hangs and never silently degrades.
+    """
+
+    budget = (
+        CONTROL_CHILD_TIMEOUT_SECONDS
+        if timeout_seconds is None
+        else timeout_seconds
+    )
+    started = time.monotonic()
+    process = subprocess.Popen(
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        start_new_session=True,  # own process group, killable as a unit
+    )
+    try:
+        stdout, stderr = process.communicate(timeout=budget)
+    except subprocess.TimeoutExpired:
+        elapsed = time.monotonic() - started
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        process.communicate()  # reap the child and drain/close its pipes
+        # Verify process-group-clean: the group must be gone before the
+        # refusal is allowed to surface.
+        deadline = time.monotonic() + 10.0
+        while time.monotonic() < deadline:
+            try:
+                os.killpg(process.pid, 0)
+            except ProcessLookupError:
+                break
+            time.sleep(0.05)
+        else:
+            raise Refusal(
+                f"resource-refusal guard (amendment 4 item 2): the "
+                f"{label} control child exceeded its wall-clock budget "
+                f"of {budget}s (measured elapsed {elapsed:.3f}s) AND its "
+                "process group did not terminate after SIGKILL; manual "
+                "cleanup is required"
+            )
+        raise Refusal(
+            f"resource-refusal guard (amendment 4 item 2): the {label} "
+            f"control child exceeded its wall-clock budget of {budget}s "
+            f"and was killed process-group-clean after a measured "
+            f"elapsed {elapsed:.3f}s; the run is refused rather than "
+            "left hanging"
+        )
+    return subprocess.CompletedProcess(
+        command, process.returncode, stdout, stderr
+    )
+
+
+def build_untruncated_vehicle_fixture() -> tuple[dict, str]:
+    """Build the frozen w3 v1-native untruncated-control vehicle fixture.
+
+    Amendment 4 item 1: the vehicle is built with the v1 emitter
+    (``emit_gcapeps_finite_memory_fixture.build_fixture``) at EXACTLY the
+    committed plain-engine tests' w3 engineering coordinates
+    (``UNTRUNCATED_VEHICLE_COORDINATES`` + the v1 emitter's own frozen
+    seed).  Returns ``(fixture, projection_hash)``.
+
+    Anti-build guard: the v1 seed belongs to the CLOSED v1 line
+    (namespace "gcapeps-finite-memory-heldout-v1"); if it ever collides
+    with a v2 heldout stream seed, the build refuses outright -- NOTHING
+    from a v2 heldout seed may be built by a control lane.
+    """
+
+    emitter = _load_sibling("emit_gcapeps_finite_memory_fixture")
+    seed = emitter.HELDOUT_SEED
+    if seed in V2_HELDOUT_SEEDS:
+        raise Refusal(
+            "the untruncated-control vehicle seed collides with a v2 "
+            "heldout stream seed; the control lane must never build "
+            "from a v2 heldout seed and the run is refused"
+        )
+    fixture = emitter.build_fixture(
+        seed=seed,
+        run_blpensemble=False,
+        **UNTRUNCATED_VEHICLE_COORDINATES,
+    )
+    fixture_hash = emitter.validate_fixture(fixture)
+    rounds = fixture["parameters"]["rounds"]
+    if sorted(fixture["checkpoints"]) != list(range(rounds + 1)):
+        raise Refusal(
+            "the untruncated-control vehicle does not carry every-round "
+            "checkpoints; the frozen w3 coordinates guarantee them and "
+            "a drifted vehicle cannot certify the control"
+        )
+    ledger = fixture["carrier_path"]["round_ledger"]
+    rotation_count = sum(len(r["collision_rotations"]) for r in ledger)
+    cx_count = sum(
+        1
+        for round_row in ledger
+        for op in round_row["operations"]
+        if op.get("gate_kind") == "CX"
+    )
+    if rotation_count == 0 or cx_count == 0:
+        raise Refusal(
+            "the untruncated-control vehicle is degenerate (collision "
+            f"rotations {rotation_count}, CX operations {cx_count}); a "
+            "vehicle exercising neither rotations nor entangling gates "
+            "cannot certify the uncapped path and the run is refused"
+        )
+    return fixture, fixture_hash
+
+
+def _spawn_untruncated_control_child(
+    np, fixture_path: Path, scratch_dir: Path, tag: str
+) -> tuple[dict, dict]:
+    """Exactly ONE uncapped control child (amendment 4 items 1 and 2).
+
+    Launches the single ``--plain-child --untruncated`` subprocess on
+    the w3 vehicle under the resource-refusal guard; returns
+    ``(checkpoint_states, child_summary)`` for the frozen vehicle input.
+    """
+
+    if not FORK_PYTHON.exists():
+        raise Refusal(
+            "the untruncated control lane needs the fork pixi "
+            f"interpreter ({FORK_PYTHON}); it is missing on this checkout"
+        )
+    input_id = UNTRUNCATED_VEHICLE_INPUT_ID
+    npz_path = scratch_dir / f"plain_{tag}_in{input_id}.npz"
+    command = [
+        str(FORK_PYTHON),
+        str(Path(__file__).resolve(strict=True)),
+        "--plain-child",
+        "--fixture-json",
+        str(fixture_path),
+        "--input",
+        str(input_id),
+        "--child-output",
+        str(npz_path),
+        "--untruncated",
+    ]
+    completed = _run_control_child(
+        command, label="untruncated w3-vehicle"
+    )
+    if completed.returncode != 0:
+        raise Refusal(
+            "the untruncated control child failed for input "
+            f"{input_id}:\n" + completed.stdout + completed.stderr
+        )
+    summary = json.loads(completed.stdout.splitlines()[-1])
+    if summary.get("untruncated_control") is not True:
+        raise Refusal(
+            "the untruncated control child did not certify the "
+            "uncapped run (missing untruncated_control stamp)"
+        )
+    with np.load(npz_path) as archive:
+        states = {int(key[1:]): archive[key] for key in archive.files}
+    return states, summary
 
 
 def plain_lane_err_cell(
@@ -1631,54 +1854,76 @@ def plain_lane_err_cell(
 
 def untruncated_f1_control(
     oracle: DenseOracle,
-    fixture: dict,
-    fixture_path: Path,
-    dense_states: dict,
     scratch_dir: Path,
     tag: str,
 ) -> dict:
-    """Inherited "untruncated run F = 1" control (amendment 2 item 3(i)).
+    """Inherited "untruncated run F = 1" control, re-vehicled by
+    amendment 4 item 1.
 
-    Runs the plain engine's explicit uncapped-bond override in fresh
-    control-lane children and checks the v1-ledgered fidelity (normalized
-    squared overlap with the independent dense state, same input
-    trajectory) at every checkpoint for both registered inputs.
+    Builds the frozen w3 v1-native vehicle fixture, runs EXACTLY ONE
+    uncapped plain child on it through the identical code path (plain
+    engine, ``untruncated_control`` opt, ``--plain-child`` protocol)
+    under the amendment-4 resource-refusal guard, and gates the
+    v1-ledgered fidelity (normalized squared overlap with the
+    independent dense state, same input trajectory) at every checkpoint
+    against the amendment-3 1e-12 band.
     """
 
     np = oracle.np
-    plain_states, child_summaries = _spawn_plain_children(
-        np, fixture_path, scratch_dir, f"{tag}_untrunc", untruncated=True
+    fixture, fixture_hash = build_untruncated_vehicle_fixture()
+    fixture_path = scratch_dir / f"fixture_untrunc_vehicle_{tag}.json"
+    fixture_path.write_text(json.dumps(fixture, sort_keys=True))
+    input_id = UNTRUNCATED_VEHICLE_INPUT_ID
+    dense_states = oracle.round_states(fixture, input_id)
+    plain_states, child_summary = _spawn_untruncated_control_child(
+        np, fixture_path, scratch_dir, f"{tag}_untrunc"
     )
-    expected_rounds = sorted(dense_states[1])
+    expected_rounds = sorted(dense_states)
+    if sorted(plain_states) != expected_rounds:
+        raise Refusal(
+            "untruncated control did not materialize every-round "
+            "checkpoints"
+        )
     worst = 0.0
     worst_locator = None
-    for input_id in (1, 2):
-        if sorted(plain_states[input_id]) != expected_rounds:
+    for round_index in expected_rounds:
+        x = plain_states[round_index]
+        y = dense_states[round_index]
+        nx = float(np.real(np.vdot(x, x)))
+        ny = float(np.real(np.vdot(y, y)))
+        if nx <= 0.0 or ny <= 0.0:
             raise Refusal(
-                "untruncated control did not materialize every-round "
-                "checkpoints"
+                "untruncated control state has nonpositive norm"
             )
-        for round_index in expected_rounds:
-            x = plain_states[input_id][round_index]
-            y = dense_states[input_id][round_index]
-            nx = float(np.real(np.vdot(x, x)))
-            ny = float(np.real(np.vdot(y, y)))
-            if nx <= 0.0 or ny <= 0.0:
-                raise Refusal(
-                    "untruncated control state has nonpositive norm"
-                )
-            fidelity = float(abs(np.vdot(x, y)) ** 2 / (nx * ny))
-            one_minus_f = 1.0 - fidelity
-            if one_minus_f > worst:
-                worst = one_minus_f
-                worst_locator = {
-                    "input_id": input_id,
-                    "round_index": round_index,
-                }
+        fidelity = float(abs(np.vdot(x, y)) ** 2 / (nx * ny))
+        one_minus_f = 1.0 - fidelity
+        if one_minus_f > worst:
+            worst = one_minus_f
+            worst_locator = {
+                "input_id": input_id,
+                "round_index": round_index,
+            }
     return {
         "control": "untruncated_f_equals_1",
-        "ruling": "amendment 2 item 3(i); semantics unchanged from v1",
-        "children": child_summaries,
+        "vehicle": UNTRUNCATED_VEHICLE,
+        "ruling": (
+            "amendment 2 item 3(i) semantics at the amendment-4 item-1 "
+            "vehicle: re-vehicled to the v1-native w3 coordinates after "
+            "the measured w7 infeasibility; one uncapped plain child "
+            "per run through the identical code path, gated at the "
+            "amendment-3 1e-12 band"
+        ),
+        "vehicle_fixture_hash": fixture_hash,
+        "vehicle_case_id": fixture["case_id"],
+        "vehicle_fixture_schema": fixture["schema"],
+        "vehicle_coordinates": {
+            **UNTRUNCATED_VEHICLE_COORDINATES,
+            "seed": fixture["parameters"]["seed"],
+        },
+        "vehicle_input_id": input_id,
+        "child_count": 1,
+        "children": {input_id: child_summary},
+        "control_child_timeout_seconds": CONTROL_CHILD_TIMEOUT_SECONDS,
         "worst_one_minus_fidelity": float(worst),
         "worst_locator": worst_locator,
         "threshold": UNTRUNCATED_ONE_MINUS_F_MAX,
@@ -1938,12 +2183,15 @@ def inherited_exactness_controls(
     Implemented: theta=0-plus-no-CX arm has constant D (inherited Clifford
     stream only, layers <= 5), plus a corruption re-trip (every collision
     rotation restored at its true theta must move D; harness-chosen
-    vehicle, disclosed below), and -- ruled by amendment 2 item 3(i) --
-    the "untruncated run F = 1" control wired to the plain engine's
-    explicit uncapped-bond override through this harness's control lane
-    (it runs whenever the plain lane runs; registered mode always runs
-    the plain lane).  The "LOCAL-alphabet F = 1" row is REMOVED by
-    amendment 2 item 3(ii) as a disclosed weakening, not a silent one.
+    vehicle, disclosed below), and -- ruled by amendment 2 item 3(i),
+    RE-VEHICLED by amendment 4 item 1 -- the "untruncated run F = 1"
+    control wired to the plain engine's explicit uncapped-bond override
+    through this harness's control lane, executed as exactly ONE
+    uncapped child per run on the frozen w3 v1-native vehicle under the
+    amendment-4 resource-refusal guard (it runs whenever the plain lane
+    runs; registered mode always runs the plain lane).  The
+    "LOCAL-alphabet F = 1" row is REMOVED by amendment 2 item 3(ii) as a
+    disclosed weakening, not a silent one.
     """
 
     width = fixture["parameters"]["width"]
@@ -1976,24 +2224,18 @@ def inherited_exactness_controls(
     trip_fired = bool(corrupted_spread > GUARD)
 
     if plain_lane == "subprocess":
-        fixture_path = scratch_dir / f"fixture_controls_{tag}.json"
-        fixture_path.write_text(json.dumps(fixture, sort_keys=True))
-        dense_states = {
-            1: oracle.round_states(fixture, 1),
-            2: oracle.round_states(fixture, 2),
-        }
-        untruncated = untruncated_f1_control(
-            oracle, fixture, fixture_path, dense_states, scratch_dir, tag
-        )
+        untruncated = untruncated_f1_control(oracle, scratch_dir, tag)
     else:
         untruncated = {
             "control": "untruncated_f_equals_1",
+            "vehicle": UNTRUNCATED_VEHICLE,
             "status": "NOT_RUN",
             "detail": (
                 "development dry run with --plain-lane off; the wired "
-                "control (amendment 2 item 3(i)) runs whenever the plain "
-                "lane runs, and registered mode always runs the plain "
-                "lane"
+                "control (amendment 2 item 3(i), re-vehicled to the w3 "
+                "v1-native vehicle by amendment 4 item 1) runs whenever "
+                "the plain lane runs, and registered mode always runs "
+                "the plain lane"
             ),
         }
 
@@ -2758,7 +3000,9 @@ def _parse_args(argv=None) -> argparse.Namespace:
         action="store_true",
         help=(
             "plain-child only: run the control lane's uncapped-bond "
-            "override (amendment 2 item 3(i))"
+            "override (amendment 2 item 3(i); the parent launches "
+            "exactly one such child per run on the w3 v1-native vehicle "
+            "per amendment 4 item 1)"
         ),
     )
     return parser.parse_args(argv)
@@ -2945,11 +3189,14 @@ def main(argv=None) -> int:
         )
         untruncated_row = controls["untruncated_f_equals_1"]
         print(
-            "[controls] untruncated F=1 (amendment 2 item 3(i)): "
+            "[controls] untruncated F=1 (amendment 2 item 3(i); vehicle "
+            f"{untruncated_row['vehicle']}, amendment 4 item 1): "
             + (
                 f"passed={untruncated_row['passed']} "
                 f"worst_one_minus_fidelity="
-                f"{untruncated_row['worst_one_minus_fidelity']:.3e}"
+                f"{untruncated_row['worst_one_minus_fidelity']:.3e} "
+                f"vehicle_fixture_hash="
+                f"{untruncated_row['vehicle_fixture_hash']}"
                 if "passed" in untruncated_row
                 else untruncated_row["status"]
             ),
@@ -3107,6 +3354,32 @@ def main(argv=None) -> int:
                     "verbatim in claim_boundary"
                 ),
             },
+            "amendment_4_provisions": {
+                "item_1": (
+                    "untruncated F=1 control re-vehicled to the "
+                    "v1-native w3 coordinates after the measured w7 "
+                    "infeasibility: one uncapped plain child per run on "
+                    f"the {UNTRUNCATED_VEHICLE!r} vehicle through the "
+                    "identical code path, gated at the amendment-3 "
+                    "1e-12 band; on-coordinate (w7) pipeline integrity "
+                    "stays covered by the exact-regime agreement gates "
+                    "and the capped err_cell lanes"
+                ),
+                "item_2": (
+                    "control children run under a resource-refusal "
+                    "guard: frozen wall-clock budget "
+                    f"{CONTROL_CHILD_TIMEOUT_SECONDS}s; on timeout the "
+                    "child is killed process-group-clean and the run "
+                    "refuses with the measured elapsed time -- never "
+                    "hangs, never silently degrades"
+                ),
+                "item_3": (
+                    "the w7 infeasibility is a disclosed defect of "
+                    "amendment 2 item 3(i)'s feasibility assumption (no "
+                    "coordinate-level screen before freezing the "
+                    "vehicle); amendment 4 records that screen's finding"
+                ),
+            },
             "amendment_2_rulings": {
                 "FA-1": (
                     "ruled by amendment 2 item 1; rescaled by amendment "
@@ -3127,7 +3400,9 @@ def main(argv=None) -> int:
                 "FA-5": (
                     "ruled by amendment 2 item 3 (untruncated F=1 wired "
                     "to the plain override; LOCAL-alphabet removed as a "
-                    "disclosed weakening)"
+                    "disclosed weakening); the untruncated control is "
+                    "re-vehicled to the w3 v1-native vehicle by "
+                    "amendment 4 item 1"
                 ),
                 "FA-6": "ruled by amendment 2 item 6 (minority semantics)",
                 "FA-7": "ruled by amendment 2 item 7 (P1 conjunctive)",
