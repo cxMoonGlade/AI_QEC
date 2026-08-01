@@ -21,14 +21,18 @@ exactly the deltas frozen by
 * ``checkpoint_policy == "every_round"`` (checkpoints are ``0..rounds``).
 * a NEW v2 held-out seed derivation (same construction as v1's
   ``HELDOUT_SEED``, v2 namespace string); v1's held-out seed is never reused.
-  Pre-run amendment 2 item 1 (2026-08-01) widens the held-out namespace
-  admission from one seed to the FIRST TWO seeds of the same derivation
-  stream: the SHA-256 digest of the frozen v2 namespace read as consecutive
-  big-endian 8-byte windows (``hv2-0`` = bytes 0..8 -- byte-identical to the
-  original single-seed derivation -- and ``hv2-1`` = bytes 8..16).  Both
-  seeds inherit every collision and anti-build guard; nothing from either
-  held-out seed may be built before the owner's release of the confirmatory
-  run.
+  Pre-run amendment 2 item 1 (2026-08-01) widened the held-out namespace
+  admission from one seed to the first two stream seeds; pre-run amendment 3
+  item 1 (2026-08-01) widens it to the FIRST FIVE seeds of the same
+  deterministic hash-chain stream: with ``D0 = sha256(namespace)`` and
+  ``D1 = sha256(D0)``, the seeds ``hv2-0..hv2-4`` are the consecutive
+  non-overlapping big-endian 8-byte windows
+  ``[D0[0:8], D0[8:16], D0[16:24], D0[24:32], D1[0:8]]``.  ``hv2-0`` remains
+  byte-identical to the originally frozen single-seed derivation and
+  ``hv2-1`` to the landed second seed; the chain adds zero new inputs.  All
+  five seeds inherit every collision and anti-build guard, pairwise
+  distinctness is guarded, and nothing from any held-out seed may be built
+  before the owner's release of the confirmatory run.
 
 Shared primitives -- canonical JSON/SHA helpers, gate definitions, event
 machinery, geometry, inputs, pullback requests -- are imported from the v1
@@ -98,28 +102,37 @@ FIXTURE_SCHEMA = (
 SCRIPT_REVISION = "gcapeps-finite-memory-neutral-fixture-v2"
 STATE_CONTRACT_VERSION = "gcapeps-finite-memory-state-contract.v2"
 HELDOUT_SEED_NAMESPACE = b"gcapeps-finite-memory-heldout-v2"
-_HELDOUT_SEED_DIGEST = hashlib.sha256(HELDOUT_SEED_NAMESPACE).digest()
-# Amendment 2 item 1: exactly the FIRST TWO seeds of the derivation stream
-# are admitted (hv2-0, hv2-1).
-HELDOUT_SEED_ADMITTED_COUNT = 2
+# Amendment 3 item 1 (2026-08-01): the derivation is the frozen two-digest
+# hash chain D0 = sha256(namespace), D1 = sha256(D0), read as consecutive
+# non-overlapping big-endian 8-byte windows; exactly the FIRST FIVE stream
+# seeds are admitted (hv2-0..hv2-4).  hv2-0 stays byte-identical to the
+# originally frozen single-seed derivation (D0[0:8]) and hv2-1 to the
+# landed second seed (D0[8:16]).
+_HELDOUT_SEED_DIGEST_0 = hashlib.sha256(HELDOUT_SEED_NAMESPACE).digest()
+_HELDOUT_SEED_DIGEST_1 = hashlib.sha256(_HELDOUT_SEED_DIGEST_0).digest()
+_HELDOUT_SEED_STREAM = _HELDOUT_SEED_DIGEST_0 + _HELDOUT_SEED_DIGEST_1
+HELDOUT_SEED_ADMITTED_COUNT = 5
 
 
 def heldout_seed(index: int) -> int:
     """Seed ``hv2-<index>`` of the frozen v2 held-out derivation stream.
 
-    The stream is the SHA-256 digest of ``HELDOUT_SEED_NAMESPACE`` read as
-    consecutive big-endian 8-byte windows; index 0 reproduces the original
-    single-seed derivation (``digest[:8]``) byte-for-byte.
+    The stream is the frozen hash chain ``D0 = sha256(namespace)``,
+    ``D1 = sha256(D0)`` read as consecutive big-endian 8-byte windows
+    (amendment 3 item 1); index 0 reproduces the original single-seed
+    derivation (``D0[:8]``) byte-for-byte, and index 4 is ``D1[0:8]``.
+    Only the frozen two-digest chain is derivable here; anything past its
+    windows is outside the stream.
     """
 
     if not isinstance(index, int) or isinstance(index, bool):
         raise TypeError("held-out seed index must be a plain int")
-    if not 0 <= index < len(_HELDOUT_SEED_DIGEST) // 8:
+    if not 0 <= index < len(_HELDOUT_SEED_STREAM) // 8:
         raise ValueError(
             "held-out seed index is outside the v2 derivation stream"
         )
     return int.from_bytes(
-        _HELDOUT_SEED_DIGEST[8 * index : 8 * (index + 1)], "big"
+        _HELDOUT_SEED_STREAM[8 * index : 8 * (index + 1)], "big"
     )
 
 
@@ -127,6 +140,17 @@ HELDOUT_SEEDS = tuple(
     heldout_seed(index) for index in range(HELDOUT_SEED_ADMITTED_COUNT)
 )
 HELDOUT_SEED = HELDOUT_SEEDS[0]  # hv2-0; the original v2 derivation
+# Amendment 3 regression guard: the chain extension must not move the two
+# previously admitted seeds -- hv2-0 is D0[0:8] and hv2-1 is D0[8:16],
+# byte-identical to the amendment-2 (and original) derivation.
+if HELDOUT_SEEDS[0] != int.from_bytes(_HELDOUT_SEED_DIGEST_0[0:8], "big"):
+    raise RuntimeError(
+        "hv2-0 drifted from the originally frozen derivation D0[0:8]"
+    )
+if HELDOUT_SEEDS[1] != int.from_bytes(_HELDOUT_SEED_DIGEST_0[8:16], "big"):
+    raise RuntimeError(
+        "hv2-1 drifted from the landed second-seed derivation D0[8:16]"
+    )
 CROSS_ROW_GATE_KIND = "CX"
 CROSS_ROW_ROUND_RESIDUE = 0  # the CX is applied when round_index % 2 == 0
 CROSS_ROW_LAYER_INDEX = 6  # after memory reverse-CX (4, 5), before collisions
@@ -136,8 +160,9 @@ THINNING_MODULUS = 2
 THINNING_KEEP_RESIDUE = 0
 
 # Collision guards, inherited by EVERY admitted stream seed (amendment 2
-# item 1): no admitted v2 seed may collide with v1's held-out seed, and the
-# admitted seeds must be pairwise distinct.
+# item 1, extended over all five by amendment 3 item 1): no admitted v2
+# seed may collide with v1's held-out seed, and the admitted seeds must be
+# pairwise distinct.
 for _admitted_seed in HELDOUT_SEEDS:
     if _admitted_seed == V1_HELDOUT_SEED:
         raise RuntimeError(
@@ -485,8 +510,8 @@ def _build_fixture_unvalidated(
     else:
         if seed not in HELDOUT_SEEDS:
             raise ValueError(
-                "held-out fixture must use one of the two frozen v2 "
-                "held-out seeds (hv2-0, hv2-1; amendment 2 item 1)"
+                "held-out fixture must use one of the five frozen v2 "
+                "held-out seeds (hv2-0..hv2-4; amendment 3 item 1)"
             )
         if rounds not in {1, 2, *CALIBRATION_ROUNDS}:
             raise ValueError("held-out rounds are outside the frozen union")

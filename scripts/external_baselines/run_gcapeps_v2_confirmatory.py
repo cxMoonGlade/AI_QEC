@@ -2,7 +2,8 @@
 """Confirmatory-run harness for the GCAPEPS finite-memory fixture v2 (X8).
 
 Governing preregistration (frozen; read it in full, INCLUDING "Pre-run
-amendment 1 (2026-08-01)" AND "Pre-run amendment 2 (2026-08-01)" at the end):
+amendment 1 (2026-08-01)", "Pre-run amendment 2 (2026-08-01)", AND "Pre-run
+amendment 3 (2026-08-01)" at the end):
   docs/simulator_validation/GCAPEPS_FINITE_MEMORY_FIXTURE_V2_X8_PREREG_2026-08-01.md
 This script is the committed confirmatory harness required by amendment 1
 item 9(iii): it embeds amendment-1 item 3 (mandatory X5-variant theta=0
@@ -10,8 +11,14 @@ dual gates), item 5 (Stage-0 measured worst-pair re-record + 1e-4 refusal),
 and item 8 (inherited v1 exactness controls re-tripped at run time), plus
 the frozen metric ladder (v1 BLP objects, guard 1e-10, the 10 x err_cell
 two-sided margin, verdict vocabulary) and the frozen adjudication rules
-(item 2 majority >= 4 of 6 with 3/6 = NOT-CONFIRMED; item 4 strict
-all-below-margin = fixture-capability MISS).
+rescaled by fraction under amendment 3 item 2 (majority >= 10 of 15;
+thin-only minority <= 5/15; any count strictly between 5 and 10 scores
+NOT-CONFIRMED; amendment-1 item 4 strict all-below-margin over all 15 =
+fixture-capability MISS).  Amendment 3 additionally freezes the fifteen-cell
+frame (item 1: five hash-chain heldout seeds hv2-0..hv2-4 x gamma{1,2,3} x
+w7 r10 x X8), the parallel fresh-child execution topology (item 3), the
+untruncated F=1 band at 1e-12 (item 4), and the engineered-fixture claim
+boundary sentence carried by every payload (item 5).
 
 Carrier lanes.  The frozen preregistration names exactly two lanes for the
 confirmatory measurement: the DENSE oracle (prereg section 3; every headline
@@ -29,10 +36,10 @@ Modes:
                        mode structurally cannot build a HELDOUT fixture.
   --mode registered    enforces every amendment gate, refuses dirty
                        load-bearing surfaces and a dirty fork, and is the
-                       only path to HELDOUT cells.  The six-cell
-                       confirmatory frame is FROZEN by amendment 2 item 1
-                       (see below); with amendment 2 landed, exactly ONE
-                       gate remains before the first heldout build: the
+                       only path to HELDOUT cells.  The fifteen-cell
+                       confirmatory frame is FROZEN by amendment 3 item 1
+                       (see below); with amendments 2 and 3 landed, exactly
+                       ONE gate remains before the first heldout build: the
                        owner-release token (``--owner-release-token``).  No
                        token has been minted yet -- the owner mints it at
                        release time and freezes its SHA-256 in
@@ -40,14 +47,27 @@ Modes:
                        execution currently refuses at that gate and nowhere
                        else.
 
+Execution topology (amendment 3 item 3).  Confirmatory cells execute in
+PARALLEL as fresh single-threaded child processes: the immutable plan (cell
+list + per-cell config) is written and SHA-256-hashed BEFORE any child
+launches; children are separate ``subprocess`` invocations of this runner's
+own ``--cell-child``/``--cell`` mode (fresh interpreter each, thread
+envelope pinned to 1 per child exactly as the serial design); concurrency
+is bounded by ``--jobs`` (default ``min(15, cores - 2)``); the parent is
+the ONE aggregation writer and publishes the summary atomically
+(write-then-rename); the parent REFUSES if any child's payload reports a
+thread envelope other than 1.  Parallelism changes wall clock only --
+``--jobs 1`` is the serial path and produces byte-identical per-cell
+payloads.
+
 Preconditions (all printed, all fatal on failure):
   * interpreter: the canonical ``ecs`` environment (numpy + stim); the
     plain-lane children run under the fork pixi interpreter
     (``external/forks/quimb-gcapeps/.pixi/envs/testpymid/bin/python``),
     the only build carrying quimb's ``CircuitPEPSSimpleUpdate`` path;
   * no scientific module is imported before the thread envelope is set;
-  * the preregistration file exists, hashes, and carries BOTH pre-run
-    amendment headings (a stale pre-amendment copy is refused);
+  * the preregistration file exists, hashes, and carries ALL THREE
+    pre-run amendment headings (a stale pre-amendment copy is refused);
   * registered mode: clean load-bearing main-repository surfaces, clean
     fork tree, and a Stage-0 evidence file whose MEASURED worst-pair
     one-minus-fidelity is <= 1e-4 (amendment 1 item 5);
@@ -59,14 +79,16 @@ revisions of this harness flagged were owner-decided on 2026-08-01 as
 pre-run amendment 2; this harness now ENFORCES those rulings rather than
 flagging them:
 
-  FA-1  RULED by amendment 2 item 1.  The confirmatory cells are exactly
-        heldout seeds {hv2-0, hv2-1} (the FIRST TWO seeds of the existing
-        v2 heldout derivation stream) x gamma-index {1, 2, 3} x w7 r10 x
-        the X8 arm, each cell carrying the registered input pair
-        internally: six cells, structurally congruent to the six
-        development screening cells (``FROZEN_CONFIRMATORY_CELLS``).
-        NOTHING from either heldout seed may be built before the owner's
-        release of the confirmatory run (the owner-release token gate).
+  FA-1  RULED by amendment 2 item 1, RESCALED by amendment 3 item 1.  The
+        confirmatory cells are exactly heldout seeds {hv2-0..hv2-4} (the
+        FIRST FIVE seeds of the frozen v2 hash-chain derivation stream:
+        D0 = sha256(namespace), D1 = sha256(D0), consecutive big-endian
+        8-byte windows) x gamma-index {1, 2, 3} x w7 r10 x the X8 arm,
+        each cell carrying the registered input pair internally: fifteen
+        cells, structurally congruent to the development screening cells
+        (``FROZEN_CONFIRMATORY_CELLS``).  NOTHING from any heldout seed
+        may be built before the owner's release of the confirmatory run
+        (the owner-release token gate).
   FA-2  RULED by amendment 2 item 2 (X5-theta0 vehicle by equivalence).
         At theta = 0 every rotation is the identity and thinning acts only
         on rotations, so the X5-variant theta=0 Clifford stream equals the
@@ -82,7 +104,7 @@ flagging them:
         computed and recorded; the run REFUSES if they ever classify a
         cell differently under the 10x-margin rule.
   FA-4  RULED by amendment 2 item 5.  The CX-only and thin-only arms run
-        on the same six coordinates as P2 controls; they are never
+        on the same fifteen coordinates as P2 controls; they are never
         additional confirmatory cells and never carry witness adjudication
         weight outside P2.
   FA-5  RULED by amendment 2 item 3.  (i) The "untruncated run F = 1"
@@ -98,10 +120,11 @@ flagging them:
         theta0 gates; the section 3b controls) cover the
         pipeline-integrity surface it addressed.  Its removal is a
         disclosed weakening, not a silent one.
-  FA-6  RULED by amendment 2 item 6.  "Minority" for the thin-only
-        sub-claim is the complement of the >= 4/6 majority rule: <= 2/6 is
-        a minority PASS; exactly 3/6 scores NOT-CONFIRMED (mirrors
-        amendment 1 item 2).
+  FA-6  RULED by amendment 2 item 6, RESCALED by amendment 3 item 2.
+        "Minority" for the thin-only sub-claim is the complement of the
+        >= 10/15 majority rule: <= 5/15 is a minority PASS; any count
+        strictly between 5 and 10 scores NOT-CONFIRMED (the same strict
+        2/3 fraction as amendment 1 item 2, applied verbatim to 15).
   FA-7  RULED by amendment 2 item 7.  P1 is read conjunctively per cell
         (guard AND magnitude band AND location band simultaneously); the
         three components are additionally reported separately for audit.
@@ -117,10 +140,15 @@ rotation counts are cited as rotations, not events; no
 PEPS/2D-representational-content claim rides on this fixture (the v2
 geometry remains exactly-MPS under rung fusion).
 
-Run (development dry run, CALIBRATION only):
+Run (development dry run, CALIBRATION only; --jobs 3 exercises the
+amendment-3 parallel topology on a three-cell development set):
   conda run -n ecs python \
       scripts/external_baselines/run_gcapeps_v2_confirmatory.py \
       --mode development --cell s2-g2-r10 --plain-lane off
+  conda run -n ecs python \
+      scripts/external_baselines/run_gcapeps_v2_confirmatory.py \
+      --mode development --cell s0-g1-r10 --cell s1-g2-r10 \
+      --cell s2-g3-r10 --plain-lane off --jobs 3
 """
 
 from __future__ import annotations
@@ -153,12 +181,28 @@ PREREG_RELATIVE = (
 PREREG = REPO / PREREG_RELATIVE
 AMENDMENT_HEADING = "## Pre-run amendment 1 (2026-08-01)"
 AMENDMENT_2_HEADING = "## Pre-run amendment 2 (2026-08-01)"
+AMENDMENT_3_HEADING = "## Pre-run amendment 3 (2026-08-01)"
 RUNNER_RELATIVE = "scripts/external_baselines/run_gcapeps_v2_confirmatory.py"
 
 SCHEMA = (
     "error_coupling_simulator.external."
     "gcapeps_finite_memory.fixture_v2_confirmatory.v1"
 )
+# Amendment 3 item 3 artifacts: the immutable pre-launch plan and the
+# per-cell child payload.  Unsupported versions are rejected, no fallback.
+PLAN_SCHEMA = (
+    "error_coupling_simulator.external."
+    "gcapeps_finite_memory.fixture_v2_confirmatory_plan.v1"
+)
+CELL_CHILD_SCHEMA = (
+    "error_coupling_simulator.external."
+    "gcapeps_finite_memory.fixture_v2_confirmatory_cell.v1"
+)
+# Registered cell children re-verify the owner-release gate themselves (a
+# child invocation must never be a bypass around it); the parent hands the
+# token to its children through this environment variable, never on a
+# command line.
+OWNER_RELEASE_TOKEN_ENV = "ECS_V2_OWNER_RELEASE_TOKEN"
 
 DEVELOPMENT_LABEL = (
     "DEVELOPMENT dry run on CALIBRATION cells only; nonclaim-bearing; "
@@ -171,16 +215,22 @@ REGISTERED_LABEL = (
 
 # ---------------------------------------------------------------------
 # frozen metric and adjudication constants (prereg sections 2/2a/2b +
-# amendment items 2, 4, 5; v1-ledgered BLP objects)
+# amendment 1 items 2, 4, 5, rescaled by fraction under amendment 3
+# item 2; v1-ledgered BLP objects)
 # ---------------------------------------------------------------------
 GUARD = 1.0e-10  # v1-registered numerical guard for the BLP objects
 MARGIN_FACTOR = 10.0  # two-sided margin: WITNESS needs > 10 x err_cell
 ANCHOR_TOL = 1.0e-12  # theta=0 Stim-vs-dense agreement (prereg section 3)
 P3_FLAT_TOL = 1.0e-12  # P3: every X8-theta0 increment below 1e-12
 CAP = 32
-CELL_COUNT = 6  # P1/P2/items 2 and 4 adjudicate exactly six cells
-MAJORITY_MIN = 4  # amendment item 2: majority means >= 4 of 6
-TIE_COUNT = 3  # amendment item 2: exactly 3/6 scores NOT-CONFIRMED
+# Amendment 3 item 2: the strict 2/3 fraction of amendment 1 item 2 applies
+# verbatim to the fifteen-cell frame -- majority >= 10/15, minority <= 5/15,
+# and any count strictly between 5 and 10 scores NOT-CONFIRMED (the
+# amendment-1 tie semantics, widened from the single 3/6 count to the whole
+# strictly-between zone).
+CELL_COUNT = 15  # P1/P2/items 2 and 4 adjudicate exactly fifteen cells
+MAJORITY_MIN = 10  # amendment 3 item 2: majority means >= 10 of 15
+MINORITY_MAX = 5  # amendment 3 item 2: minority means <= 5 of 15
 P1_MAGNITUDE_BAND = (1.0e-3, 1.0e-1)
 P1_LOCATION_ROUNDS = (1, 5)  # location within rounds 1..5
 STAGE0_WORST_PAIR_MAX = 1.0e-4  # amendment item 5 refusal threshold
@@ -209,9 +259,12 @@ VERDICT_CAPABILITY_MISS = (
 # Amendment 2 item 3(i): the inherited "untruncated run F = 1" control,
 # wired to the plain engine's explicit uncapped-bond override.  Fidelity is
 # the v1-ledgered normalized squared overlap with the independent dense
-# state for the same input trajectory; the pass band reuses the v1 1e-10
-# numerical decision band (bond32 prereg H_F).
-UNTRUNCATED_ONE_MINUS_F_MAX = 1.0e-10
+# state for the same input trajectory.  The pass band is 1e-12,
+# owner-selected by amendment 3 item 4 (it was 1e-10 in the landed
+# package).  If the control cannot meet 1e-12 for a numerically justified
+# reason, that is a dated-erratum FINDING recorded with the measured value
+# -- never a silent widening of this constant.
+UNTRUNCATED_ONE_MINUS_F_MAX = 1.0e-12
 
 # Arm registry: schema-dispatched emitters (arm -> sibling emitter module,
 # expected fixture schema).  The X5 theta=0 arm is intentionally absent
@@ -240,28 +293,31 @@ P2_CONTROL_ARMS = ("cx_only", "thin_only")
 THETA0_REQUIRED_GATES = ("d_trajectory", "inner_product_ag")
 
 # ---------------------------------------------------------------------
-# frozen confirmatory cell frame (amendment 2 item 1).  The HELDOUT seed
+# frozen confirmatory cell frame (amendment 3 item 1).  The HELDOUT seed
 # values appear here only as frozen configuration; this module never
 # builds a HELDOUT fixture until the owner-release token gate passes.
 # ---------------------------------------------------------------------
-_HELDOUT_SEED_DIGEST = hashlib.sha256(
+_HELDOUT_SEED_DIGEST_0 = hashlib.sha256(
     b"gcapeps-finite-memory-heldout-v2"
 ).digest()
-# The first two seeds of the existing v2 heldout derivation stream: the
-# namespace digest read as consecutive big-endian 8-byte windows (hv2-0 is
-# byte-identical to the original single-seed derivation).
+_HELDOUT_SEED_DIGEST_1 = hashlib.sha256(_HELDOUT_SEED_DIGEST_0).digest()
+_HELDOUT_SEED_STREAM = _HELDOUT_SEED_DIGEST_0 + _HELDOUT_SEED_DIGEST_1
+# The first five seeds of the frozen v2 heldout hash-chain derivation
+# stream (amendment 3 item 1): D0 = sha256(namespace), D1 = sha256(D0),
+# read as consecutive non-overlapping big-endian 8-byte windows.  hv2-0 is
+# byte-identical to the original single-seed derivation and hv2-1 to the
+# landed second seed; hv2-4 is D1[0:8].
 V2_HELDOUT_SEEDS = tuple(
-    int.from_bytes(_HELDOUT_SEED_DIGEST[8 * index : 8 * (index + 1)], "big")
-    for index in range(2)
+    int.from_bytes(_HELDOUT_SEED_STREAM[8 * index : 8 * (index + 1)], "big")
+    for index in range(5)
 )
 V2_HELDOUT_SEED = V2_HELDOUT_SEEDS[0]  # hv2-0
 HELDOUT_SEED_LABELS = {
-    V2_HELDOUT_SEEDS[0]: "hv2-0",
-    V2_HELDOUT_SEEDS[1]: "hv2-1",
+    seed: f"hv2-{index}" for index, seed in enumerate(V2_HELDOUT_SEEDS)
 }
 FROZEN_CONFIRMATORY_CONSTRAINTS = {
     "run_partition": "HELDOUT",
-    "seeds": V2_HELDOUT_SEEDS,  # amendment 2 item 1: hv2-0 and hv2-1
+    "seeds": V2_HELDOUT_SEEDS,  # amendment 3 item 1: hv2-0..hv2-4
     "witness_arm": "X8",
     "inputs": (1, 2),  # the registered pair; both are consumed per cell
     "mandatory_anchor_arm": (
@@ -269,10 +325,10 @@ FROZEN_CONFIRMATORY_CONSTRAINTS = {
         "amendment 2 item 2)"
     ),
 }
-# The exact six confirmatory cells (amendment 2 item 1): heldout seeds
-# {hv2-0, hv2-1} x gamma-index {1, 2, 3} x w7 r10 x the X8 arm, each cell
+# The exact fifteen confirmatory cells (amendment 3 item 1): heldout seeds
+# {hv2-0..hv2-4} x gamma-index {1, 2, 3} x w7 r10 x the X8 arm, each cell
 # consuming the registered input pair internally; structurally congruent
-# to the six development screening cells.
+# to the development screening cells.
 FROZEN_CONFIRMATORY_CELLS = tuple(
     {
         "seed": seed,
@@ -285,6 +341,14 @@ FROZEN_CONFIRMATORY_CELLS = tuple(
     }
     for seed in V2_HELDOUT_SEEDS
     for gamma_index in (1, 2, 3)
+)
+
+# Amendment 3 item 5: the frozen engineered-fixture claim-boundary sentence
+# that every harness payload must carry, verbatim.
+ENGINEERED_FIXTURE_CLAIM_SENTENCE = (
+    "engineered-schedule witness-positive test article; no generic-noise "
+    "or naturally-occurring-non-Markovianity inference may ride on any v2 "
+    "result; v2 results certify instrument capability only."
 )
 
 # The ONE remaining registered gate: the owner's release of the first
@@ -395,6 +459,14 @@ def collect_provenance_stamps(mode: str) -> dict:
             "cannot govern a confirmatory run (this harness enforces the "
             "amendment-2 rulings)"
         )
+    if AMENDMENT_3_HEADING.encode("utf-8") not in prereg_bytes:
+        raise Refusal(
+            "the preregistration file does not carry the pre-run "
+            f"amendment-3 heading {AMENDMENT_3_HEADING!r}; a stale copy "
+            "cannot govern a confirmatory run (this harness enforces the "
+            "fifteen-cell frame, the rescaled adjudication counts, the "
+            "parallel topology, and the 1e-12 untruncated band)"
+        )
 
     main_head = _run_git(REPO, "rev-parse", "HEAD")
     main_status = _run_git(
@@ -456,6 +528,7 @@ def collect_provenance_stamps(mode: str) -> dict:
         "preregistration_sha256": hashlib.sha256(prereg_bytes).hexdigest(),
         "preregistration_carries_amendment_1": True,
         "preregistration_carries_amendment_2": True,
+        "preregistration_carries_amendment_3": True,
         "runner_path": RUNNER_RELATIVE,
         "runner_source_sha256": _sha256_file(runner_path),
         "interpreter_version": sys.version,
@@ -571,7 +644,7 @@ def stage0_gate(evidence_path: Path) -> dict:
 
 
 # ======================================================================
-# cell frame (amendment 2 item 1: frozen six-cell list) + owner release
+# cell frame (amendment 3 item 1: frozen fifteen-cell list) + owner release
 # ======================================================================
 
 
@@ -579,7 +652,7 @@ def parse_cell(text: str) -> dict:
     """Parse ``s<seed>-g<gamma>-r<rounds>`` or ``hv2-<k>-g<gamma>-r<rounds>``.
 
     The ``hv2-<k>`` form names the k-th frozen heldout stream seed
-    (amendment 2 item 1) without spelling out its 20-digit value.
+    (amendment 3 item 1) without spelling out its 20-digit value.
     """
 
     match = re.fullmatch(r"(?:s(\d+)|hv2-(\d+))-g(\d+)-r(\d+)", text)
@@ -592,8 +665,8 @@ def parse_cell(text: str) -> dict:
         stream_index = int(match.group(2))
         if stream_index >= len(V2_HELDOUT_SEEDS):
             raise argparse.ArgumentTypeError(
-                "only hv2-0 and hv2-1 are admitted heldout stream seeds "
-                "(amendment 2 item 1)"
+                "only hv2-0..hv2-4 are admitted heldout stream seeds "
+                "(amendment 3 item 1)"
             )
         seed = V2_HELDOUT_SEEDS[stream_index]
     else:
@@ -621,15 +694,16 @@ def resolve_cells(mode: str, requested: list) -> list:
 
     Development: CALIBRATION grid cells only (the emitters enforce the
     frozen calibration identity: w7, rounds in the calibration set, axis
-    family 3, p 3/4, seeds 0..3).  A request naming EITHER HELDOUT seed is
+    family 3, p 3/4, seeds 0..3).  A request naming ANY HELDOUT seed is
     refused outright: development mode must be structurally unable to
     build a HELDOUT fixture.
 
-    Registered: the six-cell confirmatory frame is FROZEN by amendment 2
-    item 1 (``FROZEN_CONFIRMATORY_CELLS``).  With no ``--cell`` request the
-    frozen frame is resolved verbatim; an explicit request must match the
-    frozen frame exactly (any other cell is refused).  Resolution builds
-    nothing: every heldout build stays behind the owner-release token gate.
+    Registered: the fifteen-cell confirmatory frame is FROZEN by
+    amendment 3 item 1 (``FROZEN_CONFIRMATORY_CELLS``).  With no ``--cell``
+    request the frozen frame is resolved verbatim; an explicit request must
+    match the frozen frame exactly (any other cell is refused).  Resolution
+    builds nothing: every heldout build stays behind the owner-release
+    token gate.
     """
 
     if mode == "development":
@@ -639,7 +713,7 @@ def resolve_cells(mode: str, requested: list) -> list:
             if cell["seed"] in V2_HELDOUT_SEEDS:
                 raise Refusal(
                     "development mode refuses the v2 HELDOUT seeds "
-                    "(hv2-0, hv2-1); dry runs are CALIBRATION-only"
+                    "(hv2-0..hv2-4); dry runs are CALIBRATION-only"
                 )
             if cell["seed"] not in range(4):
                 raise Refusal(
@@ -656,26 +730,26 @@ def resolve_cells(mode: str, requested: list) -> list:
     for cell in requested:
         if cell["seed"] not in V2_HELDOUT_SEEDS:
             raise Refusal(
-                "registered mode accepts only the two frozen v2 heldout "
-                "seeds hv2-0 and hv2-1 (amendment 2 item 1; emitter "
+                "registered mode accepts only the five frozen v2 heldout "
+                "seeds hv2-0..hv2-4 (amendment 3 item 1; emitter "
                 f"heldout-namespace guard); got seed {cell['seed']}"
             )
     requested_keys = sorted(_frame_key(cell) for cell in requested)
     frame_keys = sorted(_frame_key(cell) for cell in frame)
     if requested_keys != frame_keys:
         raise Refusal(
-            "registered mode runs exactly the frozen six-cell confirmatory "
-            "frame {hv2-0, hv2-1} x gamma{1,2,3} x w7 r10 x X8 "
-            "(amendment 2 item 1); the requested cell list differs from "
-            "it.  Omit --cell to run the frozen frame verbatim."
+            "registered mode runs exactly the frozen fifteen-cell "
+            "confirmatory frame {hv2-0..hv2-4} x gamma{1,2,3} x w7 r10 x "
+            "X8 (amendment 3 item 1); the requested cell list differs "
+            "from it.  Omit --cell to run the frozen frame verbatim."
         )
     return frame
 
 
 def enforce_owner_release(mode: str, token: str | None) -> dict:
     """The ONE remaining registered gate: owner release of the first
-    heldout build (amendment 2 item 1: "NOTHING from either heldout seed
-    may be built before the owner's release of the confirmatory run")."""
+    heldout build (amendment 3 item 1: "NOTHING from any heldout seed may
+    be built before the owner's release token")."""
 
     if mode != "registered":
         if token is not None:
@@ -687,7 +761,7 @@ def enforce_owner_release(mode: str, token: str | None) -> dict:
     if token is None:
         raise Refusal(
             "OWNER-RELEASE GATE: every other registered gate is wired and "
-            "the six-cell confirmatory frame is frozen (amendment 2 "
+            "the fifteen-cell confirmatory frame is frozen (amendment 3 "
             "item 1); the ONE remaining gate before the first heldout "
             "build is the owner's release.  Pass --owner-release-token "
             "<token>.  No token has been minted yet -- the owner mints it "
@@ -1641,13 +1715,14 @@ def classify_cell_witness(blp: dict, err_cell: float | None) -> dict:
 
 
 def adjudicate_margin_outcome(cell_verdicts: list) -> dict:
-    """Amendment item 4 (owner-decided: strict).
+    """Amendment 1 item 4 (owner-decided: strict), read over all 15 cells
+    per amendment 3 item 2.
 
-    If all six confirmatory cells report WITNESS_BELOW_MARGIN the outcome
-    scores as a fixture-capability MISS at the current carrier error
-    floors and the confirmatory claim dies; it is NOT evidence of witness
-    absence, and revisiting requires a NEW preregistration anchored on a
-    demonstrably lower MEASURED err_cell.
+    If all fifteen confirmatory cells report WITNESS_BELOW_MARGIN the
+    outcome scores as a fixture-capability MISS at the current carrier
+    error floors and the confirmatory claim dies; it is NOT evidence of
+    witness absence, and revisiting requires a NEW preregistration
+    anchored on a demonstrably lower MEASURED err_cell.
     """
 
     complete = len(cell_verdicts) == CELL_COUNT
@@ -1655,7 +1730,10 @@ def adjudicate_margin_outcome(cell_verdicts: list) -> dict:
         verdict == VERDICT_BELOW_MARGIN for verdict in cell_verdicts
     )
     row = {
-        "rule": "amendment item 4 (strict, owner-decided 2026-08-01)",
+        "rule": (
+            "amendment 1 item 4 (strict, owner-decided 2026-08-01); "
+            "read over all 15 cells per amendment 3 item 2"
+        ),
         "cell_count": len(cell_verdicts),
         "cell_verdicts": list(cell_verdicts),
         "all_below_margin": bool(all_below),
@@ -1678,22 +1756,25 @@ def adjudicate_margin_outcome(cell_verdicts: list) -> dict:
 
 
 def _majority_verdict(count: int, total: int) -> str:
-    """Amendment item 2: majority means >= 4 of 6; exactly 3/6 is a MISS."""
+    """Amendment 3 item 2: majority means >= 10 of 15; any count strictly
+    between 5 and 10 scores NOT-CONFIRMED (the amendment-1 tie semantics,
+    widened from the single 3/6 count to the whole strictly-between
+    zone)."""
 
     if total != CELL_COUNT:
         return "INCOMPLETE_FRAME"
     if count >= MAJORITY_MIN:
         return "CONFIRMED"
-    if count == TIE_COUNT:
-        return "NOT_CONFIRMED_MISS_AT_TIE"
+    if count > MINORITY_MAX:
+        return "NOT_CONFIRMED_MISS_STRICTLY_BETWEEN"
     return "NOT_CONFIRMED_MISS"
 
 
 def adjudicate_p1(cell_rows: list) -> dict:
-    """P1: positive dense witness above guard in >= 4 of the 6 cells,
-    magnitude in [1e-3, 1e-1], location within rounds 1..5 (ruled by
-    amendment 2 item 7: conjunctive per cell; components additionally
-    reported separately for audit)."""
+    """P1: positive dense witness above guard in >= 10 of the 15 cells
+    (amendment 3 item 2), magnitude in [1e-3, 1e-1], location within
+    rounds 1..5 (ruled by amendment 2 item 7: conjunctive per cell;
+    components additionally reported separately for audit)."""
 
     per_cell = []
     qualifying = 0
@@ -1744,16 +1825,17 @@ def adjudicate_p1(cell_rows: list) -> dict:
 def adjudicate_p2(
     x8_rows: list, cx_rows: list, thin_rows: list
 ) -> dict:
-    """P2 interaction effect with amendment-1-item-2 majority semantics.
+    """P2 interaction effect with the majority semantics of amendment 1
+    item 2 rescaled by fraction under amendment 3 item 2.
 
-    The arms run as controls on the same six coordinates, never as
+    The arms run as controls on the same fifteen coordinates, never as
     additional confirmatory cells (ruled by amendment 2 item 5).
     Sub-claims (each mapped to a majority assertion; the thin-only
     minority mapping is ruled by amendment 2 item 6):
-      cx_only:   NO positive witness above guard in >= 4 of 6 cells;
+      cx_only:   NO positive witness above guard in >= 10 of 15 cells;
       thin_only: positive witness in a minority == no positive witness in
-                 >= 4 of 6 cells;
-      X8:        positive witness above guard in >= 4 of 6 cells.
+                 >= 10 of 15 cells;
+      X8:        positive witness above guard in >= 10 of 15 cells.
     Distinguisher: if the thin-only arm matches X8's witness rate, the CX
     lever is not established -- that outcome kills the X8 mechanism
     reading and is reported as such.
@@ -1807,9 +1889,11 @@ def adjudicate_p2(
         "thin_only_matches_x8_rate": rates_match,
         "verdict": verdict,
         "minority_ruling": (
-            "ruled by amendment 2 item 6: minority claims mapped to "
-            "complementary majority claims; <= 2/6 is a minority PASS and "
-            "exactly 3/6 scores NOT-CONFIRMED (mirrors amendment 1 item 2)"
+            "ruled by amendment 2 item 6, rescaled by amendment 3 item 2: "
+            "minority claims mapped to complementary majority claims; "
+            "<= 5/15 is a minority PASS and any count strictly between 5 "
+            "and 10 scores NOT-CONFIRMED (the strict 2/3 fraction of "
+            "amendment 1 item 2 applied verbatim to 15)"
         ),
     }
     if rates_match:
@@ -2047,6 +2131,9 @@ def run_cell(
         distances = oracle.blp_trajectory(states_1, states_2, width=width)
         blp = blp_objects(distances)
         instruments = frame_instruments(oracle.np, fixture)
+        # Wall clock is PRINTED, never recorded: amendment 3 item 3 fixes
+        # that parallelism changes wall clock only, so the per-cell record
+        # must be byte-identical between --jobs 1 and --jobs N.
         row = {
             "cell_id": cell_id,
             "arm": arm,
@@ -2055,7 +2142,6 @@ def run_cell(
             "fixture_hash": fixture_hash,
             "blp": blp,
             "frame_instruments": instruments,
-            "wall_seconds": time.perf_counter() - started,
         }
         if arm == "X8":
             row["p4"] = adjudicate_p4(instruments)
@@ -2118,7 +2204,8 @@ def run_cell(
             f"[{cell_id}] arm={arm} witness_max={blp['max_increment']:+.6e} "
             f"at {blp['max_increment_location']} "
             f"above_guard={blp['positive_above_guard']} "
-            f"pullback_mean={instruments['mean_pulled_back_weight']}",
+            f"pullback_mean={instruments['mean_pulled_back_weight']} "
+            f"wall_seconds={time.perf_counter() - started:.3f}",
             flush=True,
         )
         arm_rows[arm] = row
@@ -2217,6 +2304,361 @@ def build_theta0_context(oracle: DenseOracle, cell: dict) -> dict:
 
 
 # ======================================================================
+# parallel execution topology (amendment 3 item 3)
+# ======================================================================
+
+
+def resolve_jobs(requested, cell_count: int) -> int:
+    """Bounded ``--jobs`` (amendment 3 item 3): default min(15, cores-2).
+
+    The bound is the fifteen-cell frozen frame; the effective pool never
+    exceeds the number of cells actually resolved.  ``--jobs 1`` is the
+    serial path (same topology, concurrency one).
+    """
+
+    if requested is None:
+        cores = os.cpu_count() or 1
+        requested = min(15, max(1, cores - 2))
+    if not isinstance(requested, int) or isinstance(requested, bool):
+        raise Refusal("--jobs must be a plain int")
+    if requested < 1:
+        raise Refusal("--jobs must be >= 1")
+    if requested > 15:
+        raise Refusal(
+            "--jobs is bounded above by the fifteen-cell frozen frame "
+            f"(amendment 3 item 3); got {requested}"
+        )
+    return min(requested, cell_count)
+
+
+def check_child_thread_envelope(payload: dict) -> None:
+    """Amendment 3 item 3: the parent REFUSES if any child's payload
+    reports a thread envelope other than 1."""
+
+    envelope = payload.get("thread_envelope")
+    if envelope != 1:
+        raise Refusal(
+            f"cell child {payload.get('cell_id')!r} reported thread "
+            f"envelope {envelope!r} (variables: "
+            f"{payload.get('thread_envelope_variables')!r}); every child "
+            "must run pinned to a single thread (amendment 3 item 3) and "
+            "the run is refused"
+        )
+
+
+def resolve_child_cell(mode: str, cell: dict) -> dict:
+    """Resolve the ONE cell a ``--cell-child`` invocation may execute.
+
+    Development children reuse the run-level resolution (CALIBRATION
+    only; heldout seeds structurally refused).  Registered children must
+    name a member of the frozen fifteen-cell frame AND re-verify the
+    owner-release gate themselves (token via ``OWNER_RELEASE_TOKEN_ENV``):
+    a direct child invocation is never a bypass around the release gate.
+    """
+
+    if mode == "development":
+        return resolve_cells("development", [cell])[0]
+    for frame_cell in FROZEN_CONFIRMATORY_CELLS:
+        if _frame_key(frame_cell) == _frame_key(cell):
+            release = enforce_owner_release(
+                mode, os.environ.get(OWNER_RELEASE_TOKEN_ENV)
+            )
+            if release.get("status") != "RELEASED":
+                raise Refusal(
+                    "registered cell child: owner release did not verify"
+                )
+            return dict(frame_cell)
+    raise Refusal(
+        "registered cell child: the requested cell is not a member of "
+        "the frozen fifteen-cell confirmatory frame (amendment 3 item 1)"
+    )
+
+
+def _thread_envelope_report() -> tuple[int, dict]:
+    """The child's own thread-envelope stamp: 1 iff every pinned variable
+    is exactly "1"."""
+
+    variables = {name: os.environ.get(name) for name in THREAD_VARIABLES}
+    pinned = all(value == "1" for value in variables.values())
+    return (1 if pinned else 0), variables
+
+
+def run_cell_child(
+    *,
+    mode: str,
+    cell_request: dict,
+    plain_lane: str,
+    plan_path,
+    plan_sha256: str,
+    output_path,
+) -> dict:
+    """Child body for one confirmatory cell (amendment 3 item 3).
+
+    Runs in a fresh single-threaded interpreter: verifies the immutable
+    plan (bytes hash to the parent-declared sha256 and this cell is a
+    plan member), resolves its one cell (registered children re-verify
+    the owner-release gate), executes ``run_cell`` exactly as the serial
+    design, and writes ONE deterministic per-cell payload.  Wall clock is
+    printed, never recorded, so the payload is byte-identical between
+    ``--jobs 1`` and ``--jobs N`` runs.
+    """
+
+    plan_path = Path(plan_path)
+    plan_bytes = plan_path.read_bytes()
+    measured_sha = hashlib.sha256(plan_bytes).hexdigest()
+    if measured_sha != plan_sha256:
+        raise Refusal(
+            "cell child: the plan file does not hash to the "
+            "parent-declared sha256; the immutable plan was altered "
+            f"after launch ({measured_sha} != {plan_sha256})"
+        )
+    plan = json.loads(plan_bytes)
+    if plan.get("schema") != PLAN_SCHEMA:
+        raise Refusal(
+            f"cell child: unsupported plan schema {plan.get('schema')!r}; "
+            f"this child accepts only {PLAN_SCHEMA!r}"
+        )
+    if plan.get("mode") != mode or plan.get("plain_lane") != plain_lane:
+        raise Refusal(
+            "cell child: the requested mode/plain-lane disagree with the "
+            "immutable plan"
+        )
+    cell = resolve_child_cell(mode, cell_request)
+    cell_id = cell_label(cell)
+    plan_row = {**cell, "cell_id": cell_id}
+    if plan_row not in plan.get("cells", []):
+        raise Refusal(
+            f"cell child: cell {cell_id} (config {plan_row!r}) is not a "
+            "member of the immutable plan"
+        )
+    thread_envelope, envelope_variables = _thread_envelope_report()
+    scratch_dir = Path(plan["scratch_dir"])
+    scratch_dir.mkdir(parents=True, exist_ok=True)
+    oracle = DenseOracle()
+    cell_result = run_cell(
+        oracle, cell, plain_lane=plain_lane, scratch_dir=scratch_dir
+    )
+    payload = {
+        "schema": CELL_CHILD_SCHEMA,
+        "plan_sha256": plan_sha256,
+        "mode": mode,
+        "plain_lane": plain_lane,
+        "cell_id": cell_id,
+        "cell": cell,
+        "thread_envelope": thread_envelope,
+        "thread_envelope_variables": envelope_variables,
+        "cell_result": cell_result,
+    }
+    _atomic_write_json(Path(output_path), payload)
+    print(
+        f"[child {cell_id}] thread envelope {thread_envelope} "
+        f"(pinned variables: {len(envelope_variables)}); payload "
+        f"{output_path}",
+        flush=True,
+    )
+    return payload
+
+
+def execute_cells_parallel(
+    cells: list,
+    *,
+    mode: str,
+    plain_lane: str,
+    jobs: int,
+    run_scratch: Path,
+    owner_release_token: str | None = None,
+) -> tuple[list, dict]:
+    """Execute the confirmatory cells in parallel fresh children.
+
+    Amendment 3 item 3, acceptance-supervisor discipline: the immutable
+    plan (cell list + per-cell config) is written and hashed BEFORE any
+    child launches; children are separate ``subprocess`` invocations of
+    this runner's own ``--cell-child`` mode (fresh interpreter each,
+    thread envelope pinned per child); concurrency is bounded by
+    ``jobs``; the parent is the ONE aggregation writer; the parent
+    REFUSES if any child's payload reports a thread envelope other
+    than 1.  Parallelism changes wall clock only: results aggregate in
+    plan order and the per-cell payloads are byte-identical to the
+    serial (``jobs=1``) path.
+
+    The plan intentionally excludes ``jobs``: the plan freezes WHAT is
+    computed; the pool width changes wall clock only, and keeping it out
+    of the plan keeps the plan hash (and therefore every child payload)
+    identical across ``--jobs`` settings.
+    """
+
+    run_scratch.mkdir(parents=True, exist_ok=True)
+    run_dir = Path(
+        tempfile.mkdtemp(dir=str(run_scratch), prefix=f"cells_{mode}_")
+    )
+    plan = {
+        "schema": PLAN_SCHEMA,
+        "mode": mode,
+        "plain_lane": plain_lane,
+        "scratch_dir": str(run_scratch),
+        "topology": (
+            "fresh single-threaded child process per confirmatory cell "
+            "(amendment 3 item 3)"
+        ),
+        "cells": [{**cell, "cell_id": cell_label(cell)} for cell in cells],
+    }
+    plan_path = run_dir / "plan.json"
+    _atomic_write_json(plan_path, plan)
+    plan_sha = _sha256_file(plan_path)
+    print(
+        "[plan] immutable plan written and hashed BEFORE any child "
+        f"launch: {plan_path} sha256={plan_sha} cells={len(cells)} "
+        f"jobs={jobs}",
+        flush=True,
+    )
+
+    runner_path = Path(__file__).resolve(strict=True)
+    child_env = os.environ.copy()
+    if owner_release_token is not None:
+        child_env[OWNER_RELEASE_TOKEN_ENV] = owner_release_token
+    pending = list(enumerate(cells))
+    running: dict = {}
+    child_rows: list = [None] * len(cells)
+
+    def launch(index: int, cell: dict) -> None:
+        cell_id = cell_label(cell)
+        output_path = run_dir / f"cell_{index:02d}_{cell_id}.json"
+        command = [
+            sys.executable,
+            str(runner_path),
+            "--cell-child",
+            "--mode",
+            mode,
+            "--cell",
+            cell_id,
+            "--plain-lane",
+            plain_lane,
+            "--plan",
+            str(plan_path),
+            "--plan-sha256",
+            plan_sha,
+            "--child-output",
+            str(output_path),
+        ]
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=child_env,
+        )
+        running[index] = (process, cell, output_path)
+        print(
+            f"[parent] launched child {index + 1}/{len(cells)} for cell "
+            f"{cell_id} (pid {process.pid})",
+            flush=True,
+        )
+
+    try:
+        while pending or running:
+            while pending and len(running) < jobs:
+                next_index, next_cell = pending.pop(0)
+                launch(next_index, next_cell)
+            finished = [
+                index
+                for index, (process, _, _) in running.items()
+                if process.poll() is not None
+            ]
+            if not finished:
+                time.sleep(0.05)
+                continue
+            for index in finished:
+                process, cell, output_path = running.pop(index)
+                stdout, stderr = process.communicate()
+                cell_id = cell_label(cell)
+                for line in stdout.splitlines():
+                    print(f"  |{cell_id}| {line}", flush=True)
+                if process.returncode != 0:
+                    raise Refusal(
+                        f"cell child {cell_id} failed (exit "
+                        f"{process.returncode}):\n{stdout}{stderr}"
+                    )
+                try:
+                    payload = json.loads(output_path.read_text())
+                except (OSError, ValueError) as error:
+                    raise Refusal(
+                        f"cell child {cell_id} left no readable payload: "
+                        f"{error}"
+                    ) from error
+                if payload.get("schema") != CELL_CHILD_SCHEMA:
+                    raise Refusal(
+                        f"cell child {cell_id} payload schema "
+                        f"{payload.get('schema')!r} is not "
+                        f"{CELL_CHILD_SCHEMA!r}"
+                    )
+                if payload.get("plan_sha256") != plan_sha:
+                    raise Refusal(
+                        f"cell child {cell_id} executed against a "
+                        "different plan hash"
+                    )
+                if payload.get("cell_id") != cell_id:
+                    raise Refusal(
+                        f"cell child {cell_id} payload names cell "
+                        f"{payload.get('cell_id')!r}"
+                    )
+                check_child_thread_envelope(payload)
+                child_rows[index] = {
+                    "cell_id": cell_id,
+                    "payload_path": str(output_path),
+                    "payload_sha256": _sha256_file(output_path),
+                    "thread_envelope": payload["thread_envelope"],
+                    "returncode": process.returncode,
+                    "cell_result": payload["cell_result"],
+                }
+    except BaseException:
+        for process, _cell, _path in running.values():
+            process.kill()
+        for process, _cell, _path in running.values():
+            process.wait()
+        raise
+
+    if _sha256_file(plan_path) != plan_sha:
+        raise Refusal(
+            "the immutable plan file changed during execution; the run "
+            "is refused"
+        )
+
+    # ONE aggregation writer: only this parent assembles cell results
+    # (in plan order, never completion order) and publishes the summary.
+    cell_results = [row["cell_result"] for row in child_rows]
+    topology = {
+        "rule": "amendment 3 item 3 (parallel execution topology)",
+        "jobs": jobs,
+        "plan_path": str(plan_path),
+        "plan_sha256": plan_sha,
+        "plan_written_before_any_child_launch": True,
+        "children": [
+            {
+                key: row[key]
+                for key in (
+                    "cell_id",
+                    "payload_path",
+                    "payload_sha256",
+                    "thread_envelope",
+                    "returncode",
+                )
+            }
+            for row in child_rows
+        ],
+        "aggregation_writer": (
+            "parent process only (one writer; atomic write-then-rename "
+            "publication)"
+        ),
+        "child_process_model": (
+            "fresh single-threaded interpreter per cell; thread envelope "
+            "pinned to 1 per child; a child reporting any other envelope "
+            "refuses the run"
+        ),
+    }
+    return cell_results, topology
+
+
+# ======================================================================
 # CLI
 # ======================================================================
 
@@ -2260,8 +2702,18 @@ def _parse_args(argv=None) -> argparse.Namespace:
         help=(
             "cell spec s<seed>-g<gamma_index>-r<rounds> or "
             "hv2-<k>-g<gamma_index>-r<rounds>; repeatable.  Registered "
-            "mode runs the frozen six-cell frame; omit --cell there or "
-            "name the frame exactly"
+            "mode runs the frozen fifteen-cell frame; omit --cell there "
+            "or name the frame exactly"
+        ),
+    )
+    parser.add_argument(
+        "--jobs",
+        type=int,
+        default=None,
+        help=(
+            "bounded concurrent cell children (amendment 3 item 3); "
+            "default min(15, cores - 2); --jobs 1 is the serial path "
+            "with identical per-cell payloads"
         ),
     )
     parser.add_argument(
@@ -2297,6 +2749,10 @@ def _parse_args(argv=None) -> argparse.Namespace:
     parser.add_argument("--fixture-json", type=Path, default=None)
     parser.add_argument("--input", type=int, choices=(1, 2), default=None)
     parser.add_argument("--child-output", type=Path, default=None)
+    # cell-child protocol (amendment 3 item 3 parallel topology)
+    parser.add_argument("--cell-child", action="store_true")
+    parser.add_argument("--plan", type=Path, default=None)
+    parser.add_argument("--plan-sha256", default=None)
     parser.add_argument(
         "--untruncated",
         action="store_true",
@@ -2335,6 +2791,33 @@ def main(argv=None) -> int:
             "--untruncated is the plain-child control lane only "
             "(amendment 2 item 3(i)); it is not a run-level option"
         )
+    if args.cell_child:
+        if (
+            args.mode is None
+            or args.cell is None
+            or len(args.cell) != 1
+            or args.plain_lane is None
+            or args.plan is None
+            or args.plan_sha256 is None
+            or args.child_output is None
+        ):
+            return refuse(
+                "--cell-child needs --mode, exactly one --cell, "
+                "--plain-lane, --plan, --plan-sha256, --child-output"
+            )
+        try:
+            _set_thread_envelope()
+            run_cell_child(
+                mode=args.mode,
+                cell_request=args.cell[0],
+                plain_lane=args.plain_lane,
+                plan_path=args.plan,
+                plan_sha256=args.plan_sha256,
+                output_path=args.child_output,
+            )
+        except Refusal as error:
+            return refuse(str(error))
+        return 0
 
     if args.mode is None:
         return refuse("--mode is required")
@@ -2404,6 +2887,14 @@ def main(argv=None) -> int:
             plain_lane = "subprocess"  # margin rule needs err_cell
         elif plain_lane is None:
             plain_lane = "off"
+
+        # amendment 3 item 3: bounded parallel cell children
+        jobs = resolve_jobs(args.jobs, len(cells))
+        print(
+            f"execution topology: {jobs} bounded parallel cell "
+            f"child(ren) for {len(cells)} cell(s) (amendment 3 item 3)",
+            flush=True,
+        )
 
         scratch_root = (
             REPO / ".scratch" / "gcapeps-fixture-v2" / "confirmatory"
@@ -2490,16 +2981,17 @@ def main(argv=None) -> int:
             flush=True,
         )
 
-        # state phase: per-cell arms
-        cell_results = [
-            run_cell(
-                oracle,
-                cell,
-                plain_lane=plain_lane,
-                scratch_dir=run_scratch,
-            )
-            for cell in cells
-        ]
+        # state phase: per-cell arms in fresh single-threaded children
+        # (amendment 3 item 3; plan written and hashed before any launch;
+        # ONE aggregation writer -- this parent)
+        cell_results, execution_topology = execute_cells_parallel(
+            cells,
+            mode=mode,
+            plain_lane=plain_lane,
+            jobs=jobs,
+            run_scratch=run_scratch,
+            owner_release_token=args.owner_release_token,
+        )
 
         # adjudication
         x8_rows = [row["arms"]["X8"] for row in cell_results]
@@ -2534,7 +3026,7 @@ def main(argv=None) -> int:
         if mode == "development":
             adjudication["standing"] = (
                 "DEVELOPMENT_DRY_RUN_NONCLAIM: adjudication preview on "
-                "CALIBRATION cells; the frozen 6-cell frame (amendment 2 "
+                "CALIBRATION cells; the frozen 15-cell frame (amendment 3 "
                 "item 1) is registered-only and no verdict here carries "
                 "standing"
             )
@@ -2552,7 +3044,10 @@ def main(argv=None) -> int:
                 "bounded dense BLP witness measurement on the frozen "
                 "fixture-v2 (X8) family; no truncation, carrier, PEPS/2D, "
                 "QEC Record, or LER claim; the v2 geometry remains "
-                "exactly-MPS under rung fusion (amendment item 6)"
+                "exactly-MPS under rung fusion (amendment item 6); "
+                # amendment 3 item 5: the frozen engineered-fixture
+                # sentence, carried verbatim by every payload.
+                + ENGINEERED_FIXTURE_CLAIM_SENTENCE
             ),
             "lanes": {
                 "headline": "dense oracle (every headline number)",
@@ -2584,10 +3079,39 @@ def main(argv=None) -> int:
             "theta0_dual_gate_results": theta0_results,
             "inherited_exactness_controls": controls,
             "inert_checkpoint_control": inert_control,
+            "execution_topology": execution_topology,
             "cells": cell_results,
             "adjudication": adjudication,
+            "amendment_3_provisions": {
+                "item_1": (
+                    "fifteen-cell frame: five hash-chain heldout seeds "
+                    "hv2-0..hv2-4 x gamma{1,2,3} x w7 r10 x X8"
+                ),
+                "item_2": (
+                    "adjudication rescaled by fraction: majority >= "
+                    "10/15, minority <= 5/15, strictly-between "
+                    "NOT-CONFIRMED; strict all-below-margin over all 15"
+                ),
+                "item_3": (
+                    "parallel fresh single-threaded children; immutable "
+                    "pre-launch plan; one aggregation writer; atomic "
+                    "publication; envelope-1 refusal"
+                ),
+                "item_4": (
+                    "untruncated F=1 band 1e-12, owner-selected; misses "
+                    "for numerically justified reasons are dated-erratum "
+                    "findings, never silent widenings"
+                ),
+                "item_5": (
+                    "engineered-fixture claim-boundary sentence carried "
+                    "verbatim in claim_boundary"
+                ),
+            },
             "amendment_2_rulings": {
-                "FA-1": "ruled by amendment 2 item 1 (frozen six-cell frame)",
+                "FA-1": (
+                    "ruled by amendment 2 item 1; rescaled by amendment "
+                    "3 item 1 (frozen fifteen-cell frame)"
+                ),
                 "FA-2": (
                     "ruled by amendment 2 item 2 (X5-theta0 vehicle by "
                     "equivalence; op-for-op verified at run time)"

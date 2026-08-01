@@ -1,23 +1,32 @@
 """Refusal-path and dry-run controls for the fixture-v2 confirmatory harness.
 
-Covers, per the amendment-1 embedding contract AND the amendment-2 rulings
-of ``scripts/external_baselines/run_gcapeps_v2_confirmatory.py``:
+Covers, per the amendment-1 embedding contract, the amendment-2 rulings,
+AND the amendment-3 rescalings/topology of
+``scripts/external_baselines/run_gcapeps_v2_confirmatory.py``:
 
-* the frozen six-cell frame (amendment 2 item 1): registered mode resolves
-  exactly heldout {hv2-0, hv2-1} x gamma{1,2,3} x w7 r10; off-frame cells
-  are refused; both HELDOUT seeds are refused in development; out-of-grid
-  cells are refused by the emitter gate;
-* the owner-release gate: with amendment 2 landed it is the ONE remaining
-  registered gate before the first heldout build; no token exists yet, so
-  every registered execution refuses there (and only there);
+* the frozen fifteen-cell frame (amendment 3 item 1): registered mode
+  resolves exactly heldout {hv2-0..hv2-4} x gamma{1,2,3} x w7 r10;
+  off-frame cells are refused; every HELDOUT seed is refused in
+  development; out-of-grid cells are refused by the emitter gate;
+* the owner-release gate: it is the ONE remaining registered gate before
+  the first heldout build; no token exists yet, so every registered
+  execution refuses there (and only there), and a direct ``--cell-child``
+  invocation is never a bypass around it;
 * the Stage-0 measured-value gate (amendment 1 item 5): a measured
   worst-pair value above 1e-4 refuses the run; a passing value is
   re-recorded;
 * dual-gate wiring (amendment 1 item 3) on the X5-theta0 vehicle adopted
   by amendment 2 item 2, with the run-time op-for-op equivalence
   verification;
-* the strict all-below-margin adjudication table (amendment 1 item 4):
-  six WITNESS_BELOW_MARGIN cells score a fixture-capability MISS;
+* the rescaled adjudication counts (amendment 3 item 2): majority
+  >= 10/15, minority <= 5/15, strictly-between NOT-CONFIRMED, and the
+  strict all-below-margin table over all fifteen cells;
+* the parallel execution topology (amendment 3 item 3): immutable plan
+  hashed before any child launches, bounded --jobs, fresh single-threaded
+  children, ONE aggregation writer, thread-envelope refusal, and
+  byte-identical per-cell payloads between --jobs 1 and --jobs 3;
+* the 1e-12 untruncated band (amendment 3 item 4) and the
+  engineered-fixture claim-boundary sentence (amendment 3 item 5);
 * arm schema routing: X8 / cx_only / thin_only route to their owning
   emitters and schemas; unknown arms are refused;
 * a development-mode dry run on a CALIBRATION cell only, recording the
@@ -25,8 +34,9 @@ of ``scripts/external_baselines/run_gcapeps_v2_confirmatory.py``:
   plain lane off; LOCAL-alphabet removed by item 3(ii)).
 
 ABSOLUTE constraint honored: nothing here builds a HELDOUT fixture.  The
-heldout seeds appear only as frozen configuration; every fixture built in
-this file is CALIBRATION, and the dry-run test asserts that.
+heldout seeds appear only as frozen configuration and refusal-path
+requests; every fixture built in this file is CALIBRATION, and the
+dry-run test asserts that.
 """
 
 from __future__ import annotations
@@ -102,26 +112,21 @@ def _passing_stage0_payload(runner, worst: float) -> dict:
 
 
 def test_registered_mode_refuses_non_heldout_seed(runner):
-    with pytest.raises(runner.Refusal, match="two frozen v2 heldout"):
+    with pytest.raises(runner.Refusal, match="five frozen v2 heldout"):
         runner.resolve_cells(
             "registered", [{"seed": 2, "gamma_index": 2, "rounds": 10}]
         )
 
 
-def test_registered_mode_resolves_the_frozen_six_cell_frame(runner):
-    """Amendment 2 item 1: the frame is frozen, not caller-chosen.
+def test_registered_mode_resolves_the_frozen_fifteen_cell_frame(runner):
+    """Amendment 3 item 1: the frame is frozen, not caller-chosen.
 
     Resolution builds NOTHING; it returns the frozen coordinates only."""
 
     frame = runner.resolve_cells("registered", [])
-    assert len(frame) == 6
+    assert len(frame) == 15
     assert [runner.cell_label(cell) for cell in frame] == [
-        "hv2-0-g1-r10",
-        "hv2-0-g2-r10",
-        "hv2-0-g3-r10",
-        "hv2-1-g1-r10",
-        "hv2-1-g2-r10",
-        "hv2-1-g3-r10",
+        f"hv2-{k}-g{g}-r10" for k in range(5) for g in (1, 2, 3)
     ]
     for cell in frame:
         assert cell["run_partition"] == "HELDOUT"
@@ -134,18 +139,47 @@ def test_registered_mode_resolves_the_frozen_six_cell_frame(runner):
     # An explicit request matching the frame exactly also resolves.
     requested = [
         runner.parse_cell(f"hv2-{k}-g{g}-r10")
-        for k in (0, 1)
+        for k in range(5)
         for g in (1, 2, 3)
     ]
     assert runner.resolve_cells("registered", requested) == frame
 
 
+def test_heldout_seed_stream_is_the_frozen_hash_chain(runner):
+    """Amendment 3 item 1: five seeds from the two-digest hash chain,
+    hv2-0/hv2-1 byte-identical to the previously landed pair."""
+
+    import hashlib as _hashlib
+
+    digest_0 = _hashlib.sha256(
+        b"gcapeps-finite-memory-heldout-v2"
+    ).digest()
+    digest_1 = _hashlib.sha256(digest_0).digest()
+    stream = digest_0 + digest_1
+    assert runner.V2_HELDOUT_SEEDS == tuple(
+        int.from_bytes(stream[8 * index : 8 * (index + 1)], "big")
+        for index in range(5)
+    )
+    # Regression: the chain extension moved neither previously frozen seed.
+    assert runner.V2_HELDOUT_SEEDS[0] == int.from_bytes(
+        digest_0[:8], "big"
+    )
+    assert runner.V2_HELDOUT_SEEDS[1] == int.from_bytes(
+        digest_0[8:16], "big"
+    )
+    assert len(set(runner.V2_HELDOUT_SEEDS)) == 5
+    assert runner.HELDOUT_SEED_LABELS == {
+        seed: f"hv2-{index}"
+        for index, seed in enumerate(runner.V2_HELDOUT_SEEDS)
+    }
+
+
 def test_registered_mode_refuses_off_frame_heldout_cells(runner):
-    """Any heldout-seed cell outside the frozen six-cell list refuses."""
+    """Any heldout-seed cell outside the frozen fifteen-cell list refuses."""
 
     for off_frame in (
         [{"seed": runner.V2_HELDOUT_SEEDS[0], "gamma_index": 0, "rounds": 10}],
-        [{"seed": runner.V2_HELDOUT_SEEDS[1], "gamma_index": 2, "rounds": 4}],
+        [{"seed": runner.V2_HELDOUT_SEEDS[4], "gamma_index": 2, "rounds": 4}],
         [
             {
                 "seed": runner.V2_HELDOUT_SEEDS[0],
@@ -154,7 +188,7 @@ def test_registered_mode_refuses_off_frame_heldout_cells(runner):
             }
         ],  # a strict subset of the frame is not the frame
     ):
-        with pytest.raises(runner.Refusal, match="frozen six-cell"):
+        with pytest.raises(runner.Refusal, match="frozen fifteen-cell"):
             runner.resolve_cells("registered", off_frame)
 
 
@@ -162,17 +196,19 @@ def test_parse_cell_accepts_hv2_labels_and_bounds_them(runner):
     assert runner.parse_cell("hv2-0-g1-r10")["seed"] == (
         runner.V2_HELDOUT_SEEDS[0]
     )
-    assert runner.parse_cell("hv2-1-g3-r10")["seed"] == (
-        runner.V2_HELDOUT_SEEDS[1]
+    assert runner.parse_cell("hv2-4-g3-r10")["seed"] == (
+        runner.V2_HELDOUT_SEEDS[4]
     )
     import argparse as _argparse
 
-    with pytest.raises(_argparse.ArgumentTypeError, match="hv2-0 and hv2-1"):
-        runner.parse_cell("hv2-2-g1-r10")
+    with pytest.raises(
+        _argparse.ArgumentTypeError, match=r"hv2-0\.\.hv2-4"
+    ):
+        runner.parse_cell("hv2-5-g1-r10")
 
 
-@pytest.mark.parametrize("seed_index", [0, 1])
-def test_development_mode_refuses_both_heldout_seeds(runner, seed_index):
+@pytest.mark.parametrize("seed_index", [0, 1, 2, 3, 4])
+def test_development_mode_refuses_every_heldout_seed(runner, seed_index):
     with pytest.raises(runner.Refusal, match="CALIBRATION-only"):
         runner.resolve_cells(
             "development",
@@ -417,7 +453,9 @@ def test_x5_theta0_equivalence_mismatch_refuses(runner, monkeypatch):
 
 
 def test_strict_all_below_margin_scores_fixture_capability_miss(runner):
-    verdicts = [runner.VERDICT_BELOW_MARGIN] * 6
+    """Amendment 1 item 4 read over all 15 cells (amendment 3 item 2)."""
+
+    verdicts = [runner.VERDICT_BELOW_MARGIN] * 15
     row = runner.adjudicate_margin_outcome(verdicts)
     assert row["fired"] is True
     assert row["outcome"] == runner.VERDICT_CAPABILITY_MISS
@@ -427,16 +465,40 @@ def test_strict_all_below_margin_scores_fixture_capability_miss(runner):
 
 
 def test_mixed_margin_table_does_not_fire(runner):
-    verdicts = [runner.VERDICT_BELOW_MARGIN] * 5 + [runner.VERDICT_WITNESS]
+    verdicts = [runner.VERDICT_BELOW_MARGIN] * 14 + [runner.VERDICT_WITNESS]
     row = runner.adjudicate_margin_outcome(verdicts)
     assert row["fired"] is False
     assert "outcome" not in row
 
 
 def test_incomplete_frame_does_not_fire_the_strict_rule(runner):
-    verdicts = [runner.VERDICT_BELOW_MARGIN] * 2
-    row = runner.adjudicate_margin_outcome(verdicts)
-    assert row["fired"] is False
+    # Neither a two-cell fragment nor the SUPERSEDED six-cell frame is a
+    # complete fifteen-cell table.
+    for count in (2, 6):
+        verdicts = [runner.VERDICT_BELOW_MARGIN] * count
+        row = runner.adjudicate_margin_outcome(verdicts)
+        assert row["fired"] is False
+
+
+def test_majority_verdict_boundaries_at_fifteen(runner):
+    """Amendment 3 item 2 boundary counts: 10/15 confirms, 9/15 is
+    strictly-between, 5/15 is a plain miss, and the superseded six-cell
+    total is an incomplete frame."""
+
+    assert runner.CELL_COUNT == 15
+    assert runner.MAJORITY_MIN == 10
+    assert runner.MINORITY_MAX == 5
+    assert runner._majority_verdict(15, 15) == "CONFIRMED"
+    assert runner._majority_verdict(10, 15) == "CONFIRMED"
+    assert runner._majority_verdict(9, 15) == (
+        "NOT_CONFIRMED_MISS_STRICTLY_BETWEEN"
+    )
+    assert runner._majority_verdict(6, 15) == (
+        "NOT_CONFIRMED_MISS_STRICTLY_BETWEEN"
+    )
+    assert runner._majority_verdict(5, 15) == "NOT_CONFIRMED_MISS"
+    assert runner._majority_verdict(0, 15) == "NOT_CONFIRMED_MISS"
+    assert runner._majority_verdict(4, 6) == "INCOMPLETE_FRAME"
 
 
 def test_margin_classification_vocabulary(runner):
@@ -457,23 +519,41 @@ def test_margin_classification_vocabulary(runner):
     )
 
 
-def test_p2_majority_tie_scores_not_confirmed(runner):
-    def rows(positive_count, total=6):
+def test_p2_strictly_between_scores_not_confirmed(runner):
+    """Amendment 3 item 2 on the thin-only minority mapping: <= 5/15
+    positives is a minority PASS; 6/15 positives (complement 9/15) is in
+    the strictly-between zone and scores NOT-CONFIRMED."""
+
+    def rows(positive_count, total=15):
         return [
             {"blp": {"positive_above_guard": index < positive_count}}
             for index in range(total)
         ]
 
-    verdict = runner.adjudicate_p2(rows(4), rows(0), rows(3))
+    # Boundary count 6: thin-only positives 6 -> complement 9 -> strictly
+    # between 5 and 10 -> NOT-CONFIRMED.
+    verdict = runner.adjudicate_p2(rows(10), rows(0), rows(6))
     assert verdict["sub_claims"]["thin_only_witness_minority"] == (
-        "NOT_CONFIRMED_MISS_AT_TIE"
+        "NOT_CONFIRMED_MISS_STRICTLY_BETWEEN"
     )
     assert verdict["verdict"] == "NOT_CONFIRMED_MISS"
 
-    confirmed = runner.adjudicate_p2(rows(4), rows(0), rows(1))
+    # Boundary count 5: thin-only positives 5 -> complement 10 -> a
+    # minority PASS; with X8 at exactly 10/15 the claim confirms.
+    confirmed = runner.adjudicate_p2(rows(10), rows(0), rows(5))
+    assert confirmed["sub_claims"]["thin_only_witness_minority"] == (
+        "CONFIRMED"
+    )
     assert confirmed["verdict"] == "CONFIRMED"
 
-    killed = runner.adjudicate_p2(rows(4), rows(0), rows(4))
+    # Boundary count 9: X8 at 9/15 is strictly between and cannot confirm.
+    between = runner.adjudicate_p2(rows(9), rows(0), rows(0))
+    assert between["sub_claims"]["x8_witness_majority"] == (
+        "NOT_CONFIRMED_MISS_STRICTLY_BETWEEN"
+    )
+    assert between["verdict"] == "NOT_CONFIRMED_MISS"
+
+    killed = runner.adjudicate_p2(rows(10), rows(0), rows(10))
     assert killed["thin_only_matches_x8_rate"] is True
     assert killed["mechanism_reading"] == (
         "CX_LEVER_NOT_ESTABLISHED_X8_MECHANISM_READING_KILLED"
@@ -523,6 +603,219 @@ def test_tampered_fixture_is_refused_by_routing_validation(runner):
         emitter.validate_fixture(tampered)
 
 
+# ------------------------------------------------------- amendment 3 gates
+
+
+def test_untruncated_band_is_1e_12(runner):
+    """Amendment 3 item 4: the untruncated F=1 band is 1e-12 (was 1e-10);
+    misses for numerically justified reasons are dated-erratum findings,
+    never silent widenings of this constant."""
+
+    assert runner.UNTRUNCATED_ONE_MINUS_F_MAX == 1.0e-12
+
+
+def test_engineered_fixture_claim_sentence_is_frozen(runner):
+    """Amendment 3 item 5: the payload claim_boundary carries this exact
+    sentence (presence in a real payload is asserted by the dry run)."""
+
+    assert runner.ENGINEERED_FIXTURE_CLAIM_SENTENCE == (
+        "engineered-schedule witness-positive test article; no "
+        "generic-noise or naturally-occurring-non-Markovianity inference "
+        "may ride on any v2 result; v2 results certify instrument "
+        "capability only."
+    )
+
+
+def test_child_thread_envelope_refusal(runner):
+    """Amendment 3 item 3: the parent refuses any child payload whose
+    thread envelope is not exactly 1."""
+
+    runner.check_child_thread_envelope(
+        {"cell_id": "s2-g2-r10", "thread_envelope": 1}
+    )
+    for bad in (2, 0, None, "1"):
+        with pytest.raises(runner.Refusal, match="thread"):
+            runner.check_child_thread_envelope(
+                {"cell_id": "s2-g2-r10", "thread_envelope": bad}
+            )
+
+
+def test_resolve_jobs_is_bounded(runner):
+    """Amendment 3 item 3: --jobs is bounded (default min(15, cores-2)),
+    never exceeds the cell count, and refuses out-of-bound requests."""
+
+    assert 1 <= runner.resolve_jobs(None, 15) <= 15
+    assert runner.resolve_jobs(None, 1) == 1
+    assert runner.resolve_jobs(3, 2) == 2
+    assert runner.resolve_jobs(15, 15) == 15
+    with pytest.raises(runner.Refusal, match="jobs"):
+        runner.resolve_jobs(0, 15)
+    with pytest.raises(runner.Refusal, match="bounded"):
+        runner.resolve_jobs(16, 15)
+
+
+def test_cell_child_refuses_plan_hash_mismatch(runner, tmp_path):
+    """A cell child must refuse when the plan bytes do not hash to the
+    parent-declared sha256 (immutable-plan verification)."""
+
+    plan_path = tmp_path / "plan.json"
+    plan_path.write_text(
+        json.dumps(
+            {
+                "schema": runner.PLAN_SCHEMA,
+                "mode": "development",
+                "plain_lane": "off",
+                "scratch_dir": str(tmp_path),
+                "cells": [],
+            }
+        )
+    )
+    completed = _run_cli(
+        [
+            "--cell-child",
+            "--mode",
+            "development",
+            "--cell",
+            "s2-g2-r10",
+            "--plain-lane",
+            "off",
+            "--plan",
+            str(plan_path),
+            "--plan-sha256",
+            "0" * 64,
+            "--child-output",
+            str(tmp_path / "child.json"),
+        ]
+    )
+    assert completed.returncode == 2
+    assert "REFUSED" in completed.stdout
+    assert "does not hash" in completed.stdout
+    assert not (tmp_path / "child.json").exists()
+
+
+def test_cell_child_is_not_an_owner_release_bypass(runner, tmp_path):
+    """ABSOLUTE: a direct registered --cell-child invocation refuses at
+    the owner-release gate before any heldout fixture could be built."""
+
+    import hashlib as _hashlib
+
+    plan_path = tmp_path / "plan.json"
+    plan_path.write_text(
+        json.dumps(
+            {
+                "schema": runner.PLAN_SCHEMA,
+                "mode": "registered",
+                "plain_lane": "subprocess",
+                "scratch_dir": str(tmp_path),
+                "cells": [],
+            }
+        )
+    )
+    plan_sha = _hashlib.sha256(plan_path.read_bytes()).hexdigest()
+    completed = _run_cli(
+        [
+            "--cell-child",
+            "--mode",
+            "registered",
+            "--cell",
+            "hv2-0-g1-r10",
+            "--plain-lane",
+            "subprocess",
+            "--plan",
+            str(plan_path),
+            "--plan-sha256",
+            plan_sha,
+            "--child-output",
+            str(tmp_path / "child.json"),
+        ]
+    )
+    assert completed.returncode == 2
+    assert "REFUSED" in completed.stdout
+    assert "OWNER-RELEASE GATE" in completed.stdout
+    assert not (tmp_path / "child.json").exists()
+
+
+def test_parallel_jobs_byte_identity_on_calibration_dev_set(
+    runner, tmp_path
+):
+    """Amendment 3 item 3, serial-semantics proof: --jobs 1 and --jobs 3
+    on a three-cell CALIBRATION development set produce byte-identical
+    per-cell payloads, the immutable plan is written and hashed BEFORE
+    any child launches, every child stamps thread envelope 1, and the
+    parent is the one aggregation writer."""
+
+    # r10 cells: the theta0 d_trajectory gate needs the full ten-round
+    # window for the Clifford recurrence to appear on cells[0].
+    cell_specs = ["s0-g1-r10", "s1-g2-r10", "s2-g3-r10"]
+    payloads = {}
+    child_bytes = {}
+    for jobs in (1, 3):
+        output = tmp_path / f"parallel_jobs{jobs}.json"
+        arguments = ["--mode", "development"]
+        for spec in cell_specs:
+            arguments += ["--cell", spec]
+        arguments += [
+            "--plain-lane",
+            "off",
+            "--jobs",
+            str(jobs),
+            "--output",
+            str(output),
+        ]
+        completed = _run_cli(arguments)
+        assert completed.returncode == 0, (
+            completed.stdout + completed.stderr
+        )
+        stdout = completed.stdout
+        plan_at = stdout.index(
+            "immutable plan written and hashed BEFORE any child launch"
+        )
+        first_launch_at = stdout.index("[parent] launched child")
+        assert plan_at < first_launch_at  # plan strictly before any child
+
+        payload = json.loads(output.read_text())
+        topology = payload["execution_topology"]
+        assert topology["jobs"] == jobs
+        assert topology["plan_written_before_any_child_launch"] is True
+        assert len(topology["children"]) == 3
+        for child in topology["children"]:
+            assert child["thread_envelope"] == 1
+            assert child["returncode"] == 0
+        assert "one writer" in topology["aggregation_writer"]
+        payloads[jobs] = payload
+        child_bytes[jobs] = {
+            child["cell_id"]: Path(child["payload_path"]).read_bytes()
+            for child in topology["children"]
+        }
+        # every fixture stayed CALIBRATION (absolute constraint)
+        for cell_row in payload["cells"]:
+            assert cell_row["cell"]["run_partition"] == "CALIBRATION"
+
+    # The plan hash is identical across --jobs settings (the plan freezes
+    # WHAT is computed; jobs changes wall clock only) ...
+    assert payloads[1]["execution_topology"]["plan_sha256"] == (
+        payloads[3]["execution_topology"]["plan_sha256"]
+    )
+    # ... and every per-cell payload is byte-identical.
+    assert sorted(child_bytes[1]) == sorted(child_bytes[3]) == sorted(
+        cell_specs
+    )
+    for cell_id in cell_specs:
+        assert child_bytes[1][cell_id] == child_bytes[3][cell_id]
+    sha_by_cell_1 = {
+        child["cell_id"]: child["payload_sha256"]
+        for child in payloads[1]["execution_topology"]["children"]
+    }
+    sha_by_cell_3 = {
+        child["cell_id"]: child["payload_sha256"]
+        for child in payloads[3]["execution_topology"]["children"]
+    }
+    assert sha_by_cell_1 == sha_by_cell_3
+    # The aggregated records agree exactly as well.
+    assert payloads[1]["cells"] == payloads[3]["cells"]
+    assert payloads[1]["adjudication"] == payloads[3]["adjudication"]
+
+
 # ---------------------------------------------------------------- dry run
 
 
@@ -559,6 +852,22 @@ def test_development_dry_run_on_calibration_cell(runner, tmp_path):
     assert payload["adjudication"]["standing"].startswith(
         "DEVELOPMENT_DRY_RUN_NONCLAIM"
     )
+
+    # amendment 3 item 5: the engineered-fixture sentence rides on the
+    # payload claim boundary, verbatim
+    assert runner.ENGINEERED_FIXTURE_CLAIM_SENTENCE in (
+        payload["claim_boundary"]
+    )
+
+    # amendment 3 item 3: the parallel topology is recorded -- immutable
+    # plan hashed before launch, fresh children with envelope 1, one
+    # aggregation writer
+    topology = payload["execution_topology"]
+    assert topology["plan_written_before_any_child_launch"] is True
+    assert len(topology["plan_sha256"]) == 64
+    assert len(topology["children"]) == 1
+    assert topology["children"][0]["thread_envelope"] == 1
+    assert "one writer" in topology["aggregation_writer"]
 
     # absolute constraint: nothing built a HELDOUT fixture
     for cell_row in payload["cells"]:

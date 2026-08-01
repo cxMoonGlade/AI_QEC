@@ -468,39 +468,53 @@ def test_v2_heldout_seed_construction_differs_from_v1() -> None:
 
 
 # ------------------------------------------------------------------
-# Amendment 2 item 1: held-out namespace admission widened to the FIRST
-# TWO seeds of the same derivation stream (hv2-0, hv2-1).  Every test in
-# this block exercises refusal paths and derivation strings ONLY; no
-# held-out fixture is ever built here.
+# Amendment 3 item 1: held-out namespace admission widened to the FIRST
+# FIVE seeds of the frozen hash-chain derivation stream (hv2-0..hv2-4;
+# D0 = sha256(namespace), D1 = sha256(D0), consecutive big-endian 8-byte
+# windows).  Every test in this block exercises refusal paths and
+# derivation strings ONLY; no held-out fixture is ever built here.
 # ------------------------------------------------------------------
 
 
 def test_heldout_stream_derivation_is_reproducible_and_guarded() -> None:
     emitter = _load_v2()
     v1 = _load_v1()
-    digest = hashlib.sha256(b"gcapeps-finite-memory-heldout-v2").digest()
+    digest_0 = hashlib.sha256(b"gcapeps-finite-memory-heldout-v2").digest()
+    digest_1 = hashlib.sha256(digest_0).digest()
+    stream = digest_0 + digest_1
 
-    # hv2-0 is byte-identical to the original single-seed derivation;
-    # hv2-1 is the SAME derivation at the second 8-byte window.
-    assert emitter.heldout_seed(0) == int.from_bytes(digest[:8], "big")
-    assert emitter.heldout_seed(1) == int.from_bytes(digest[8:16], "big")
-    assert emitter.HELDOUT_SEEDS == (
-        emitter.heldout_seed(0),
-        emitter.heldout_seed(1),
+    # Amendment 3 regression assertion: hv2-0 stays byte-identical to the
+    # originally frozen single-seed derivation (D0[0:8]) and hv2-1 to the
+    # landed second seed (D0[8:16]) -- the chain extension moved neither.
+    assert emitter.heldout_seed(0) == int.from_bytes(digest_0[:8], "big")
+    assert emitter.heldout_seed(1) == int.from_bytes(digest_0[8:16], "big")
+    assert emitter.HELDOUT_SEEDS[0] == int.from_bytes(digest_0[:8], "big")
+    assert emitter.HELDOUT_SEEDS[1] == int.from_bytes(
+        digest_0[8:16], "big"
     )
-    assert emitter.HELDOUT_SEED_ADMITTED_COUNT == 2
-    assert len(emitter.HELDOUT_SEEDS) == 2
+
+    # The frozen hash-chain derivation: five consecutive non-overlapping
+    # big-endian 8-byte windows of D0 || D1 (hv2-4 is D1[0:8]).
+    assert emitter.HELDOUT_SEEDS == tuple(
+        int.from_bytes(stream[8 * index : 8 * (index + 1)], "big")
+        for index in range(5)
+    )
+    assert emitter.heldout_seed(4) == int.from_bytes(digest_1[:8], "big")
+    assert emitter.HELDOUT_SEED_ADMITTED_COUNT == 5
+    assert len(emitter.HELDOUT_SEEDS) == 5
     assert emitter.HELDOUT_SEED == emitter.HELDOUT_SEEDS[0]
 
-    # Collision guards inherited by BOTH admitted seeds.
-    assert emitter.HELDOUT_SEEDS[0] != emitter.HELDOUT_SEEDS[1]
+    # Collision guards inherited by ALL FIVE admitted seeds: pairwise
+    # distinct, never v1's held-out seed, never a calibration seed.
+    assert len(set(emitter.HELDOUT_SEEDS)) == 5
     for seed in emitter.HELDOUT_SEEDS:
         assert seed != v1.HELDOUT_SEED
         assert seed not in range(4)  # never a calibration seed
 
-    # The derivation stream is bounded and typed.
+    # The derivation stream is bounded (the frozen two-digest chain) and
+    # typed.
     with pytest.raises(ValueError, match="outside the v2 derivation"):
-        emitter.heldout_seed(4)
+        emitter.heldout_seed(8)
     with pytest.raises(ValueError, match="outside the v2 derivation"):
         emitter.heldout_seed(-1)
     with pytest.raises(TypeError, match="plain int"):
@@ -529,28 +543,51 @@ def test_second_heldout_seed_admitted_without_building() -> None:
         )
 
 
-def test_third_stream_seed_is_refused() -> None:
+def test_fifth_heldout_seed_admitted_without_building() -> None:
+    """hv2-4 (amendment 3 item 1) passes the seed admission gate.
+
+    Same anti-build proof as hv2-1: the out-of-union rounds request must
+    fail on the ROUNDS gate, never on the seed gate, and nothing held-out
+    is built."""
+
     emitter = _load_v2()
-    third = emitter.heldout_seed(2)
-    assert third not in emitter.HELDOUT_SEEDS
-    with pytest.raises(ValueError, match="two frozen v2\\s+held-out seeds"):
+    with pytest.raises(ValueError, match="held-out rounds"):
+        emitter.build_fixture(
+            run_partition="HELDOUT",
+            width=3,
+            rounds=3,  # outside the frozen union {1, 2} | calibration
+            axis_family=3,
+            p_event_numerator=4,
+            seed=emitter.HELDOUT_SEEDS[4],
+            gamma_index=2,
+            run_blpensemble=False,
+        )
+
+
+def test_sixth_stream_seed_is_refused() -> None:
+    emitter = _load_v2()
+    sixth = emitter.heldout_seed(5)
+    assert sixth not in emitter.HELDOUT_SEEDS
+    with pytest.raises(ValueError, match="five frozen v2\\s+held-out seeds"):
         emitter.build_fixture(
             run_partition="HELDOUT",
             width=3,
             rounds=1,
             axis_family=3,
             p_event_numerator=4,
-            seed=third,
+            seed=sixth,
             gamma_index=2,
             run_blpensemble=False,
         )
 
 
-def test_both_heldout_seeds_refused_in_calibration_context() -> None:
-    """Both stream seeds are refused by the CALIBRATION admission exactly
-    like the first always was; nothing is built on the refusal path."""
+def test_all_five_heldout_seeds_refused_in_calibration_context() -> None:
+    """All five stream seeds are refused by the CALIBRATION admission
+    exactly like the first always was; nothing is built on the refusal
+    path."""
 
     emitter = _load_v2()
+    assert len(emitter.HELDOUT_SEEDS) == 5
     for seed in emitter.HELDOUT_SEEDS:
         with pytest.raises(ValueError, match="outside the frozen grid"):
             emitter.build_fixture(
