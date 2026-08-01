@@ -16,7 +16,7 @@ audit_packet_sha256 = "0851e0c193d47df5ac789c6fa398a4bd9357bc04611f148aa59d77928
 admission_status = "source_only_reviewed"
 admission_reviewer = "gcamps_independent_source_formula_review_2026_07_27"
 admission_date = "2026-07-27"
-visually_checked_pages = [1, 2, 3, 4, 5, 6, 7, 8]
+visually_checked_pages = [1, 2, 3, 4, 5, 6, 7, 8, 9]
 
 [[relations]]
 predicate = "defines"
@@ -275,6 +275,29 @@ Claim: The source applies a heuristic Clifford \(Q\) to the residual MPS to redu
 The two updates are paired: the residual becomes
 \(Q\lvert\mathrm{MPS}\rangle\), while the leading Clifford acquires
 \(Q^\dagger\) on its right.
+
+## Membership-routing and free-absorption gap [literature_gap]
+Fact ID: gcamps-gap-membership-routing
+Source locator: Sec. 3 workflow paragraphs and Fig. 3, with all body citations of reference [10] in Secs. 1 and 4
+PDF page: 5
+Claim: The source does not define a logical-operator membership test, conditional absorption of a commuted non-Clifford operation into the leading Clifford, or growth of a logical register: the commuted operator is applied directly to the MPS in every case, and every body citation of Fux et al. [10] appears in background or benchmark-comparison context only.
+Gap scope: source_local
+
+The Fig. 3 bottom loop decomposes a non-Clifford gate into a Pauli sum,
+commutes it through \(C\), always applies the result to the MPS, and only
+afterwards optionally applies the heuristic disentangler update
+\(\widetilde C=CQ^\dagger\). Reference [10] is Gerald E. Fux, Benjamin Béri,
+Rosario Fazio, and Emanuele Tirrito, arXiv:2410.09001, listed on PDF page 9
+under the earlier title “Disentangling unitary dynamics with classically
+simulable quantum circuits”. Its seven body citations are “an active area of
+research [10, 13, 22, 29, 30]”, “harnessing the benefits of both [10, 13, 19,
+22, 30]”, and “extensive amount of both entanglement and magic [10, 15, 22]”
+on PDF page 1; “similar scaling behaviour to known results for qubits
+[10, 15, 22]” on PDF page 2; and the Sec. 4 benchmark comparisons
+“extensively studied in qubit systems [10, 15, 22]”, “significant speedup for
+this class of circuit [10, 22]”, and “compared to other work investigating
+the same benchmarking circuit with Clifford augmented methods [10, 22]” on
+PDF page 6.
 
 ## Unique two-qudit entangler counts [paper_fact]
 Fact ID: gcamps-unique-entanglers

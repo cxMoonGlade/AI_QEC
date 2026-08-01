@@ -6,7 +6,7 @@ source_uri = "https://arxiv.org/abs/2410.09001v3"
 source_artifact = "docs/papers/2410.09001v3.pdf"
 source_sha256 = "18989f0d48b8115daf88bf6d1d13a61e69ba0878fbc0861d45622330cf982cd0"
 title = "Disentangling magic states with classically simulable quantum circuits"
-publication_status = "preprint"
+publication_status = "published"
 read_status = "complete"
 evidence_status = "persisted"
 review_scope = "full_text"
@@ -115,6 +115,20 @@ object_id = "fux-output-sampling-cost"
 object_type = "limitation"
 object_label = "output qubits"
 fact_id = "fux-sampling-limitation"
+
+[[relations]]
+predicate = "defines"
+object_id = "fux-nonstabilizer-logical-premise"
+object_type = "concept"
+object_label = "nonstabilizer"
+fact_id = "fux-nonstabilizer-residual-premise"
+
+[[relations]]
+predicate = "derives"
+object_id = "fux-projective-pauli-sampling-reduction"
+object_type = "method"
+object_label = "post-measurement state"
+fact_id = "fux-projective-pauli-sampling"
 +++
 # Full-text review — Fux, Béri, Fazio, and Tirrito, “Disentangling magic states with classically simulable quantum circuits”
 
@@ -127,6 +141,19 @@ Claim: The reviewed source is the arXiv:2410.09001v3 preprint by Gerald E. Fux, 
 The listed affiliations are ICTP Trieste, the T.C.M. Group at the Cavendish
 Laboratory, DAMTP Cambridge, and Università di Napoli “Federico II”. The
 artifact has 8 PDF pages: a main text, an End Matter section, and references.
+
+Publication status (recorded 2026-08-01): the paper is published as
+*Physical Review Letters* 135, 260605 on 24 December 2025, DOI
+10.1103/ggp1-byj1, verified by resolving the DOI to the APS landing page
+“Disentangling Magic States with Classically Simulable Quantum Circuits |
+Phys. Rev. Lett.” and against the INSPIRE literature record for
+arXiv:2410.09001 (imprint date 2025-12-24, journal issue 26, same DOI from
+both APS and arXiv metadata). The reviewed artifact remains the arXiv v3
+preprint PDF bound above by SHA-256; the v3 text has not been diffed against
+the version of record, so every locator and quotation in this note refers to
+the v3 PDF only. Earlier arXiv versions carried the title “Disentangling
+unitary dynamics with classically simulable quantum circuits”, which is how
+some citing papers list this reference.
 
 ## Headline result [paper_fact]
 Fact ID: fux-abstract-result
@@ -150,6 +177,21 @@ state, whereas nonstabilizerness grows only slowly, one phase gate at a time.
 Commuting the phase gates through the Clifford blocks moves nonstabilizerness
 onto the initial state “but generally at the expense of increasing its
 entanglement”.
+
+## Nonstabilizer logical-state premise [paper_fact]
+Fact ID: fux-nonstabilizer-residual-premise
+Source locator: Sec. “Results”, paragraph introducing Fig. 1(b) immediately preceding Theorem 1
+PDF page: 2
+Claim: The setup sentence immediately preceding Theorem 1 applies the gate \(e^{i\phi P}\) to a state of a stabilizer code wherein a (nonstabilizer) logical state \(\lvert\varphi\rangle\) is encoded through a Clifford unitary \(C\), so the theorem constrains the logical state only through the exact encoding \(\lvert\psi\rangle=C(\lvert\varphi\rangle\otimes\lvert0\rangle^{\otimes(N-k)})\) with \(0\le k<N\) and places no stabilizerness requirement on \(\lvert\varphi\rangle\).
+
+The sentence reads: “Here a gate \(e^{i\phi P}\) with phase \(\phi\) and
+\(P\in\mathcal P_N\) (with \(\mathcal P_N\) the \(N\)-qubit Pauli group) is
+applied to a state \(\lvert\psi\rangle\) of a stabilizer code wherein a
+(nonstabilizer) logical state \(\lvert\varphi\rangle\) is encoded through a
+Clifford unitary \(C\).” Theorem 1’s hypothesis line then requires only the
+encoding form with \(0\le k<N\) and that \(P\) not be a logical operator of
+the corresponding \([N,k]\) stabilizer code; the qualifier “(nonstabilizer)”
+makes explicit that the encoded logical state is arbitrary.
 
 ## Disentangling criterion [paper_fact]
 Fact ID: fux-theorem-1-logical-criterion
@@ -274,6 +316,23 @@ Claim: For a generic Hamiltonian \(H=\sum_{j=1}^{M}\omega_j P_j\) with more Paul
 The source states this as a consequence of the gate-count threshold rather than
 as a separate theorem, and points to the End Matter for numerical confirmation
 on a non-integrable one-dimensional Ising chain.
+
+## Projective Pauli sampling reduction [paper_fact]
+Fact ID: fux-projective-pauli-sampling
+Source locator: Paragraph beginning “While computing Pauli expectations” and the following Pauli-based-computation paragraph
+PDF page: 4
+Claim: For sampling projective measurements of \(Z_1,\dots,Z_N\) on \(\lvert\psi(t)\rangle\), any \(\tilde Z_j=\tilde C_t^\dagger Z_j\tilde C_t\) that anticommutes with some \(Z_{j>k}\) yields outcome \(+1\) or \(-1\) with equal probability and a post-measurement state obtained via a Clifford unitary, after which at most \(k\) mutually commuting Pauli measurements remain and the quantum part of the problem is restricted to \(n\le k\) qubits.
+
+The paragraph opens: “While computing Pauli expectations is classically
+efficient, sampling the distribution of projective Pauli measurements is
+harder”, and states that for the setup in Fig. 1(a) with \(t<N-O(1)\) only a
+\(k\le t\) qubit quantum computer is needed. The retained measurements are
+restricted to \(\lvert\mathrm{MPS}^{(k)}\rangle\) “since they have to feature
+\(\mathbb 1\) or \(Z_j\) on qubits \(j>k\) to be retained”. The following
+paragraph calls the approach akin to Pauli based computation and fixes its
+scope: “while PBC is restricted to T-gates, our scheme allows for any
+non-Clifford \(G_j=e^{i\phi_j P_j}\), as long as the Clifford blocks are
+global random, i.e., deep random Clifford circuits.”
 
 ## Output sampling cost [paper_fact]
 Fact ID: fux-sampling-limitation

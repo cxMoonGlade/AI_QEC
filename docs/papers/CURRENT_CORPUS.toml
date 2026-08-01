@@ -1,8 +1,8 @@
 schema = "error_coupling_simulator.literature.corpus_manifest.v1"
 status = "active"
-corpus_sha256 = "6a85f4c6dec435bd944e74b858bd4e46d4a25a592ede5e213e0c0ea52f46acee"
+corpus_sha256 = "3482bcdeb9d2a1929bb4b8e51898590a3a870259ea64f8261c88974159e39da8"
 note_count = 53
-paper_fact_count = 768
+paper_fact_count = 770
 
 [[notes]]
 path = "docs/papers/reading_notes/aaronson_gottesman_stabilizer_circuits_0406196v5_source_review.md"
@@ -111,7 +111,7 @@ source_sha256 = "cf1c6c23a33ac7c73b43c5891cee3a5c77c3ba3d36e8e818afe8f9647d65c13
 
 [[notes]]
 path = "docs/papers/reading_notes/fux_disentangling_magic_states_2410.09001v3_source_review.md"
-note_sha256 = "b894caf3c184c8b0aa3b7b1604714067ef87d69ce85261ff972ee54a275cb401"
+note_sha256 = "772e8a6d923da3bb7f71de9e069873dd17d5a43e7886ffaed6617e6923eead4d"
 source_id = "arxiv:2410.09001"
 source_version = "v3"
 source_sha256 = "18989f0d48b8115daf88bf6d1d13a61e69ba0878fbc0861d45622330cf982cd0"
@@ -132,7 +132,7 @@ source_sha256 = "d2b630d8cee32a4e1ab5302fda3e4f7cee15849577565dff9eb63a10dd10f07
 
 [[notes]]
 path = "docs/papers/reading_notes/harper_gcamps_2511.06672v2.md"
-note_sha256 = "770bad822875f1e301beab5627d4e395daea29f5b74ffaacc7ffffdd4e570f02"
+note_sha256 = "23c8444ea82a095ce374f5e2a3121c7785c67f3462383569e1d9bf1a2a5f86f9"
 source_id = "arxiv:2511.06672"
 source_version = "v2"
 source_sha256 = "880c44e25e9c1fd589a75ca5e824e58a2436c0c35a7ee7dddebbb61d439a0c42"
