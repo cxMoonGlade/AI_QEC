@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 from pathlib import Path
+import sys
 
 import pytest
 
@@ -36,6 +38,15 @@ from tools.literature_schema import (
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+
+# scripts/ is not a package, so the rebuild script is loaded by path. Executing it puts
+# tools/ on sys.path, which is what its own bare ``literature_schema`` import needs.
+_REBUILD_SPEC = importlib.util.spec_from_file_location(
+    "rebuild_current_corpus_manifest",
+    REPO_ROOT / "scripts" / "rebuild_current_corpus_manifest.py",
+)
+rebuild_manifest = importlib.util.module_from_spec(_REBUILD_SPEC)
+_REBUILD_SPEC.loader.exec_module(rebuild_manifest)
 
 
 def _write_current_note(
@@ -172,6 +183,32 @@ def _replace_toml_value(path: Path, key: str, replacement: str) -> None:
     assert len(matches) == 1
     lines[matches[0]] = f"{prefix}{replacement}"
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _amend_note_in_place(note_path: Path) -> None:
+    """Append one paper_fact to an admitted note: same path, new content and hash."""
+
+    note_path.write_text(
+        note_path.read_text(encoding="utf-8")
+        + """
+## Second observable [paper_fact]
+
+Fact ID: fact.controlled-second-observable
+Source locator: Sec. III, Eq. (7)
+PDF page: 7
+Claim: The Controlled source model reports a second observable at a declared rate.
+""",
+        encoding="utf-8",
+    )
+
+
+def _run_rebuild(root: Path, monkeypatch: pytest.MonkeyPatch, *argv: str) -> int:
+    monkeypatch.setattr(rebuild_manifest, "REPO", root)
+    monkeypatch.setattr(
+        rebuild_manifest, "MANIFEST", root / "docs" / "papers" / "CURRENT_CORPUS.toml"
+    )
+    monkeypatch.setattr(sys, "argv", ["rebuild_current_corpus_manifest.py", *argv])
+    return rebuild_manifest.main()
 
 
 def _assert_cli_error(
@@ -608,6 +645,91 @@ def test_current_corpus_always_verifies_source_artifact_and_hash(tmp_path: Path)
     artifact.write_bytes(b"%PDF-1.7\ncorrupted\n%%EOF\n")
     with pytest.raises(LiteratureSchemaError, match="SHA-256 mismatch"):
         load_current_corpus(manifest, tmp_path)
+
+
+def test_rebuild_sees_an_amended_note_that_a_path_set_comparison_cannot(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    note_path = _write_current_note(tmp_path)
+    manifest = _write_manifest(tmp_path, (note_path,))
+    _amend_note_in_place(note_path)
+    recorded = manifest.read_bytes()
+
+    # The state the rebuild script exists to repair: the retrieval surfaces fail closed
+    # here, so --check reporting OK is what makes the manifest unrepairable.
+    with pytest.raises(LiteratureSchemaError, match="identity mismatch"):
+        load_current_corpus(manifest, tmp_path)
+
+    assert _run_rebuild(tmp_path, monkeypatch, "--check") == 1
+    report = capsys.readouterr().out
+    assert "DRIFT" in report
+    assert "orphaned (valid, not retrievable)  0" in report
+    assert "stale (in manifest, not valid)     0" in report
+    assert "amended (admitted, recorded stale) 1" in report
+    assert "~ docs/papers/reading_notes/source_model.md  [note_sha256]" in report
+    assert manifest.read_bytes() == recorded
+
+    assert _run_rebuild(tmp_path, monkeypatch) == 0
+    assert "wrote 1 notes, 2 paper_facts" in capsys.readouterr().out
+
+    # load_current_corpus recomputes every identity, both counts, and corpus_sha256,
+    # so loading is the assertion that the rewritten manifest is internally exact.
+    notes = load_current_corpus(manifest, tmp_path)
+    assert tuple(note.relative_path for note in notes) == (
+        "docs/papers/reading_notes/source_model.md",
+    )
+    assert paper_fact_count(notes) == 2
+    assert _run_rebuild(tmp_path, monkeypatch, "--check") == 0
+
+
+def test_rebuild_leaves_an_in_sync_manifest_untouched(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    note_path = _write_current_note(tmp_path)
+    manifest = _write_manifest(tmp_path, (note_path,))
+    recorded = manifest.read_bytes()
+
+    assert _run_rebuild(tmp_path, monkeypatch, "--check") == 0
+    assert "OK — manifest equals the audited-valid set" in capsys.readouterr().out
+
+    assert _run_rebuild(tmp_path, monkeypatch) == 0
+    assert "no change" in capsys.readouterr().out
+    assert manifest.read_bytes() == recorded
+
+
+def test_rebuild_catches_a_stale_manifest_header_with_every_note_unchanged(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    note_path = _write_current_note(tmp_path)
+    manifest = _write_manifest(tmp_path, (note_path,))
+    _replace_toml_value(manifest, "corpus_sha256", f'"{"0" * 64}"')
+
+    assert _run_rebuild(tmp_path, monkeypatch, "--check") == 1
+    report = capsys.readouterr().out
+    assert "stale header fields                1" in report
+    assert "! corpus_sha256" in report
+
+    assert _run_rebuild(tmp_path, monkeypatch) == 0
+    assert load_current_corpus(manifest, tmp_path)[0].relative_path == (
+        "docs/papers/reading_notes/source_model.md"
+    )
+
+
+def test_rebuild_refreshes_identities_without_admitting_an_audit_failing_note(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    note_path = _write_current_note(tmp_path)
+    manifest = _write_manifest(tmp_path, (note_path,))
+    _amend_note_in_place(note_path)
+    unadmittable = tmp_path / "docs" / "papers" / "reading_notes" / "old_project.md"
+    unadmittable.write_text("legacy unvalidated project prose\n", encoding="utf-8")
+
+    assert _run_rebuild(tmp_path, monkeypatch) == 0
+
+    notes = load_current_corpus(manifest, tmp_path)
+    assert tuple(note.relative_path for note in notes) == (
+        "docs/papers/reading_notes/source_model.md",
+    )
 
 
 def test_retrieval_contains_only_single_source_located_paper_facts(tmp_path: Path) -> None:
