@@ -225,20 +225,20 @@ def test_development_mode_refuses_every_heldout_seed(runner, seed_index):
 # ---------------------------------------------------------------- release
 
 
-def test_owner_release_gate_is_the_single_remaining_registered_gate(runner):
-    """No token minted: registered refuses at the owner-release gate with
-    a message saying it is the ONE remaining gate."""
+def test_owner_release_gate_requires_the_minted_token(runner):
+    """Token minted (2026-08-01): registered still refuses without the
+    token, refuses a wrong token, and never stores the token value —
+    only its SHA-256 is frozen in the runner."""
 
     with pytest.raises(runner.Refusal, match="ONE remaining gate") as info:
         runner.enforce_owner_release("registered", None)
     assert "owner-release-token" in str(info.value)
-    assert "No token has been minted yet" in str(info.value)
 
-    # Any supplied token is refused while no token has been minted.
-    assert runner.OWNER_RELEASE_TOKEN_SHA256 is None
-    with pytest.raises(
-        runner.Refusal, match="no owner-release token has been minted"
-    ):
+    minted = runner.OWNER_RELEASE_TOKEN_SHA256
+    assert isinstance(minted, str)
+    assert len(minted) == 64
+    assert set(minted) <= set("0123456789abcdef")
+    with pytest.raises(runner.Refusal, match="does not match"):
         runner.enforce_owner_release("registered", "guessed-token")
 
 
