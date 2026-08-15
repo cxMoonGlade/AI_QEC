@@ -1,0 +1,71 @@
+## Provenance
+
+- **Source:** arXiv:2602.19722, fetched 2026-06-30
+- **Reading method:** FULL-TEXT read (精读) via arXiv HTML — all sections, equations, and appendices
+- **Status:** complete full-text close-read
+
+# Deep review — Cao, Feng, Ye & Pan, Differentiable Maximum Likelihood Noise Estimation for QEC (dMLE)
+
+> Deep reading note in the academic-paper-review format (full read: main Letter +
+> Supplementary A–C). Reframed for use as a project reference: the "recommendation"
+> section is "how much to trust / how to use for the twin," and a **Relevance to the
+> twin** section is the centerpiece.
+
+## Metadata
+- **Authors.** Hanyan Cao¹, Dongyang Feng², Cheng Ye²·³, Feng Pan¹ (¹SUTD Singapore; ²ITP-CAS; ³UCAS). Equal contribution Cao/Feng; corresponding Pan.
+- **Venue / status.** arXiv:2602.19722, Feb 2026 (Letter format + Supplementary). Code: `github.com/CHY-i/DMLE-QEC` (the cache README notes a fork `cxMoonGlade/DMLE-QEC`).
+- **Domain / type.** QEC noise characterization; **empirical + methods** (algorithm + simulation + real-data validation).
+
+## Executive summary
+The paper casts **DEM-prior estimation as maximum-likelihood inference**: the probability of an observed detection-event string `s` is the **partition function** of a stat-mech model summing all error configurations consistent with `s`, and this partition function is made **exact and fully differentiable**, so per-mechanism error rates `θ` are optimized directly by gradient descent on the syndrome NLL. The forward is exact via two routes: **Kac–Ward / dual-spin-glass** (a "Planar" solver) for the *planar* repetition-code DEM, and a **tensor network in the "detector picture"** (XOR parity tensors + probability tensors, with a Walsh–Hadamard decomposition of high-degree XOR tensors) for surface codes, tractable to **`d=5`, 25 rounds** (`6.3×10¹¹` FLOPs, ~1 GB, seconds/batch on an H200 — vs a "tens of CPU-years" boundary-MPS estimate). On simulation it recovers true rates near-exactly; on **BAQIS** superconducting repetition codes it cuts LER by up to **30.6(3)%** (Planar decoder) / 8.6(6)% (MWPM); on **Google Sycamore `d=5` surface** it beats correlation-analysis and RL DEMs by **8.1(2)% / 6.6(4)%** (TN / Tesseract decoders), with the key qualitative finding that its decoder-**independent** priors **transfer across decoders without retraining** while RL priors overfit their training decoder.
+
+Overall this is a **strong, well-executed methods paper** and the **closest external prior art to the twin's `recover` capability** — independently arriving at "exact differentiable syndrome-NLL → gradient descent on circuit-level rates." Its load-bearing limitation, *for the twin's purposes*, is that the model is **Pauli/DEM-parameterized** (`θ_i` = independent per-edge Pauli error probabilities): it is exactly the strong stochastic baseline that **Pauli-shadows** coherent structure, so it is the right **negative-control reference**, not a coherent twin.
+
+## Contributions (claim → evidence → strength)
+- **C1. DEM estimation = differentiable MLE / partition-function evaluation.** `p_θ(s) = Σ_{e∈C(s)} p_θ(e)`, the constrained sum over error configs giving syndrome `s`; loss `L(θ) = −E_{s∼data}[log p_θ(s)]` (Eq. 1–2). *Evidence:* clean stat-mech mapping; the Supplement derives `exp(−H_e) = p_θ(e)` exactly (Eq. S1–S4). *Strength: strong.*
+- **C2. Exact, efficient forward for both code families.** Planar/Kac–Ward for rep codes (planar DEM, Gaussian elimination + one auxiliary spin to restore planarity); a **detector-picture TN** for surface codes with a Walsh–Hadamard factorization of XOR tensors + OMEinsum contraction-path search (Eq. S5–S9, Figs. S3–S5). *Evidence:* `d=5,r=25` contraction at `6.3×10¹¹` FLOPs / ~1 GB (Fig. S5). *Strength: strong* (the surface-code scalability is the real engineering advance).
+- **C3. Decoder-independent priors with cross-decoder transfer.** Optimized DEM lowers LER across MWPM, Planar, TN, Tesseract, Belief-Matching **without retraining**; RL priors do not. *Evidence:* Fig. 3 (BAQIS rep + Google surface), Fig. S6. *Strength: strong, and the most distinctive claim.*
+- **C4. Real-data LER reductions.** Up to **30.6(3)%** (rep, Planar) and **8.1(2)%/6.6(4)%** (surface, TN/Tesseract over RL/correlation); 11.5(3)% (TN+optimal DEM over former-SOTA Belief Matching). *Evidence:* Fig. 3, BAQIS + Google Sycamore. *Strength: moderate-strong* (real hardware, but `d` limited).
+
+## Method (deep)
+- **Likelihood as partition function.** For an independent error model `e∈{0,1}^n`, `p_θ(e)=∏ θ_i^{e_i}(1−θ_i)^{1−e_i}`, and `p_θ(s)=Σ_e p_θ(e) δ_{s, A e}` — exactly a constrained Ising/Tanner partition function.
+- **Planar (rep codes).** Map to a dual spin glass with edge coupling `J_i=(−1)^{e_i}·½ log((1−θ_i)/θ_i)` (Eq. S1); `p_θ(s)=½ Σ_{s̃} exp(−H_{e(s)}(s̃))` (Eq. S4), evaluated **exactly by the Kac–Ward determinant** (planar Ising), with a single auxiliary spin to keep planarity. Spin-flip ↔ redefining the reference error `e→e'` triggering the same detectors (Fig. S1) → gauge-consistent.
+- **Surface TN ("detector picture").** Each detector = an **XOR tensor** enforcing even parity over incident error edges, with a **red dangling leg** imposing the observed `s` (halving the config space); each error edge = a 2-element **probability tensor** `(1−θ_i, θ_i)`. Contraction = `p_θ(s)`. High-degree XOR tensors are decomposed by **Walsh–Hadamard** into Hadamard matrices on each leg + a central copy/hyper-index (Eq. S7), shrinking memory so a single GPU suffices; decoding and optimization TNs are *identical up to tensor values*, and the logical decode reduces to the sign of `A₁∝p(l=0)−p(l=1)` (Eq. S8–S9).
+- **Optimization.** Everything differentiable → `θ←θ+η∇_θ L`. They train on 5-round data and **broadcast** repeated-cycle parameters to more rounds (time-translation symmetry), and note joint all-round optimization is also supported.
+
+## Results (deep)
+- **Sim (`d=7,r=7` rep, MC gradients).** Optimized rates converge to truth (Fig. 2 upper); an inset shows **NLL ↔ relative-error** are tightly correlated — minimizing approximate NLL provably drives down estimation error. A `d=3,r=5` toy with the *exact* NLL (4096 configs) confirms near-exact recovery (Fig. S2).
+- **BAQIS rep (`d∈{3,5,7,9}`).** Optimized DEM beats correlation-analysis initialization for MWPM **and** Planar at all distances; gains larger for the stronger Planar decoder (up to 30.6(3)%) (Fig. 3 left).
+- **Google Sycamore surface (`d=5`, 5–25 rounds, 10/53 subsets).** TN-optimized DEM gives the lowest LER for high-performance decoders; vs RL-Belief-Matching and correlation it is 8.1(2)%/4.9(0)% (TN) and 6.6(4)%/3.2(1)% (Tesseract) better; for matching-based Belief-Matching only marginal. **RL DEMs are decoder-overfit** (Fig. S6: RL ≈ correlation baseline in aggregate, i.e. a local fine-tune; TN-opt deviates = a genuinely different, transferable model).
+
+## Methodology assessment
+| Criterion | 1–5 | Assessment |
+|---|---|---|
+| Soundness | **5** | Exact partition-function evaluation (Kac–Ward / exact TN contraction); the stat-mech mapping is rigorously derived (Supp. A). No approximation in the likelihood for the reported sizes. |
+| Novelty | **4** | The MLE-via-partition-function idea exists (refs 12–14, 19); the **exact differentiable surface-code TN at `d=5,r=25`** and the decoder-transfer demonstration are the new, significant parts. |
+| Reproducibility | **5** | Public code; full hyperparameters (Tab. S1: shots, epochs, LR, batch), data sources (BAQIS, Google Sycamore), contraction-path tool named (OMEinsum). |
+| Experimental design | **4** | Real hardware + simulation, multiple decoders, NLL↔error-correlation ablation, RL/correlation baselines. Minus: only 10/53 Google subsets; no error bars on some aggregate %s beyond the cited `(·)`; `d=5` ceiling. |
+| Statistical rigor | **4** | Reports parenthetical uncertainties on headline %s; box plots (Fig. 3 right) show spread across instances; multiple decoders. Could state shot counts per LER point more explicitly. |
+| Scalability | **3** | Exact only to `d=5` surface (compute-bound); larger `d` needs the *proposed-but-unrealized* subsampling/translation-symmetry trick. Rep codes scale well (planar). |
+
+## Strengths
+- **S1 — exact + differentiable is the right primitive (Sec. II, Supp. A/B).** Casting LER-relevant noise estimation as gradient descent on an *exact* syndrome NLL avoids both the unphysical negative rates of correlation analysis and the decoder-coupling of RL. The NLL↔error correlation (Fig. 2 inset) is a clean justification that the surrogate objective is faithful.
+- **S2 — surface-code scalability via the detector-picture TN + Walsh–Hadamard (Supp. B, Fig. S5).** Turning a "tens-of-CPU-years" boundary-MPS problem into seconds-on-one-GPU at `d=5,r=25` is a real, reusable engineering contribution; the decode and optimization TNs sharing structure is elegant.
+- **S3 — decoder-agnostic transfer (Fig. 3 right, Fig. S6).** The cleanest result: a *physical* prior improves *every* decoder without retraining, whereas RL's reward-coupled prior is a decoder-specific fine-tune. This is the strongest evidence the method learns the noise, not the decoder.
+
+## Weaknesses / limitations
+- **W1 — Pauli/DEM parameterization (model class).** `θ_i` are independent per-edge Pauli error probabilities. Coherent / non-Clifford structure (interference, DEM hyperedges) is **outside the model**, so on coherent noise the recovered DEM is the Pauli-twirl — it will *reduce* LER (better than correlation) yet still **underestimate** coherent logical error. The paper does not test coherent noise. *(Fixable only by enriching the model — exactly the twin's wedge.)*
+- **W2 — exactness ceiling at `d=5` surface.** The headline scalability is real but bounded; the larger-`d` story rests on an unrealized subsampling/translation-symmetry extension. Independence + locality of `θ` is assumed (no cross-edge correlation in the prior).
+- **W3 — partial Google validation / decoder-dependent gains.** Only 10/53 subsets; the improvement vanishes for matching-based Belief-Matching (gains require a strong decoder like TN/Tesseract), so the practical benefit is conditional on the decoding stack.
+
+## Relevance to the twin
+This is the **single closest external prior art to the twin's `recover` capability**, and reading it sharpens three project positions:
+1. **It independently validates the objective.** dMLE = "exact differentiable Born/syndrome-NLL, gradient descent on circuit-level parameters" — *the same objective* as the twin's calibration (ADR 0003). That a separate group converged on it (with strong real-data wins) is external support for the twin's choice over moment-matching/correlation.
+2. **It is the twin's deferred scalable forward, in Pauli form.** The **Planar/Kac–Ward** (rep) and **detector-picture TN + Walsh–Hadamard** (surface) are exactly the kind of *scalable likelihood* the twin has **not** committed to (ADR 0005/0006 leave the carrier open). The twin's own forward is an **exact density-matrix / parity-projection** that is *coherent-capable but small* (`d≤5`, `R≤3`); dMLE's TN is *Pauli-only but scales to `d=5,r=25`*. The honest framing: dMLE's forward is the natural carrier **to borrow** *if/when* the twin needs scale — but it must be **enriched with coherent corrections** (DEM hyperedges / off-diagonal structure) to stay faithful, which is non-trivial and is precisely the "DEM-bulk + coherent corrections" idea the twin deferred.
+3. **It is the rigorous form of the twin's Pauli-shadowing negative control (ADR 0004 D4).** Because dMLE is DEM/Pauli-parameterized, it is a *strong stochastic twin*: it will match Z-basis syndrome statistics and lower LER, but — like the rep-code "moment-matched twin ≈ 900× worse on the coherent slice" — it should **fail on the out-of-basis / coherent exotic**. So the right experiment is: run dMLE (or its objective restricted to a Pauli model) as the baseline against the twin's coherent calibration on a coherent teacher; the predicted separation is on the phase-sensitive slice, *not* on Z-basis LER (where dMLE may even win). The twin's contribution over dMLE is exactly **the coherent slice + the alias band** — dMLE reports a point DEM, no model-uncertainty/alias band.
+4. **Cross-decoder transfer ↔ the frozen-decoder discipline.** dMLE's headline (priors transfer across decoders) is the empirical cousin of the twin's "score `do()`-ΔLER under a *predeclared, frozen* decoder `D`" — both insist the recovered object be decoder-independent. The twin can adopt dMLE's "improve every decoder without retraining" as a *validation axis* for `recover`.
+
+## How to use / trust for the twin + open questions
+- **Trust:** high for the **stochastic-Pauli** regime and as a **benchmark/baseline**; do **not** read its LER wins as coherent-mechanism recovery. Use `cxMoonGlade/DMLE-QEC` as the D4 negative-control reference and (optionally) the scalable-Pauli-forward donor.
+- **Open questions worth asking the authors / testing:** (i) How does the recovered DEM degrade under *coherent* (`R_z(2θ)`) data noise — does it inherit the Pauli-twirl underestimate of Takou–Brown (2510.23797)? (ii) Can the detector-picture TN carry **off-diagonal / hyperedge** weights to represent coherence, or is the XOR-parity structure intrinsically Pauli? (iii) Does the gate/pulse-level extension they tease expose a *coherent* parameterization the twin could share?
+- **Reading caveat (my review):** I read the Letter and Supplements A–C in full; I did **not** re-derive the Kac–Ward determinant or audit the OMEinsum contraction-cost figures — those are taken as stated.

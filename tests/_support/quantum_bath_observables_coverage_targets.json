@@ -1,0 +1,82 @@
+{
+  "_comment": [
+    "Per-owner coverage registry for quantum bath observables."
+  ],
+  "contract": "docs/SIMULATOR.md",
+  "default_target": {"statement": 1.0, "branch": 1.0},
+  "covered_by_test_files": [
+    "tests/test_quantum_bath_observables_units.py"
+  ],
+  "reconcile_modules": [
+    "src/error_coupling_simulator/quantum_bath/observables.py"
+  ],
+  "out_of_scope": {},
+  "canonical_units": [
+    "K_stat_joint",
+    "project_axis",
+    "K_stat_binary",
+    "M_mem_stat",
+    "exact_cmi_bits",
+    "tv_distance",
+    "record_distance"
+  ],
+  "units": [
+    {
+      "group": "quantum_bath_observables",
+      "module": "src/error_coupling_simulator/quantum_bath/observables.py",
+      "unit": "K_stat_joint",
+      "qualname": "K_stat_joint",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "quantum_bath_observables",
+      "module": "src/error_coupling_simulator/quantum_bath/observables.py",
+      "unit": "project_axis",
+      "qualname": "project_axis",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "quantum_bath_observables",
+      "module": "src/error_coupling_simulator/quantum_bath/observables.py",
+      "unit": "K_stat_binary",
+      "qualname": "K_stat_binary",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "quantum_bath_observables",
+      "module": "src/error_coupling_simulator/quantum_bath/observables.py",
+      "unit": "M_mem_stat",
+      "qualname": "M_mem_stat",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "quantum_bath_observables",
+      "module": "src/error_coupling_simulator/quantum_bath/observables.py",
+      "unit": "exact_cmi_bits",
+      "qualname": "exact_cmi_bits",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": [],
+      "note": "NO exemption (review finding 2 correction). The `if den>0 and num>0` guard's False arc is NOT dead: a valid non-negative normalized distribution with a tiny term (e.g. {(0,0,0):1e-200,(1,1,1):1-1e-200}) underflows num=p*P2 to exactly 0.0, so the False arc IS reachable and is covered honestly by test_L0_exact_cmi_bits_underflow_reaches_guard_false_arc. The guard does real work (returns 0.0 for that term instead of log2(0/0)=nan) -- it is a live underflow/validity guard, not defensive dead code."
+    },
+    {
+      "group": "quantum_bath_observables",
+      "module": "src/error_coupling_simulator/quantum_bath/observables.py",
+      "unit": "tv_distance",
+      "qualname": "tv_distance",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "quantum_bath_observables",
+      "module": "src/error_coupling_simulator/quantum_bath/observables.py",
+      "unit": "record_distance",
+      "qualname": "record_distance",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    }
+  ]
+}

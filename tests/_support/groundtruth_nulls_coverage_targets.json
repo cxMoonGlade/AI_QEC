@@ -1,0 +1,127 @@
+{
+  "_comment": [
+    "Per-owner coverage registry for groundtruth nulls."
+  ],
+  "contract": "docs/SIMULATOR.md",
+  "default_target": {"statement": 1.0, "branch": 1.0},
+  "covered_by_test_files": [
+    "tests/test_quantum_bath_groundtruth_nulls_units.py"
+  ],
+  "reconcile_modules": [
+    "src/error_coupling_simulator/quantum_bath/ground_truth.py",
+    "src/error_coupling_simulator/quantum_bath/nulls.py"
+  ],
+  "out_of_scope": {},
+  "canonical_units": [
+    "full_superop_bytes",
+    "factorization_check",
+    "extraction_gt_check",
+    "two_qubit_indep_boson_gt",
+    "sigma_minus_emission_gt",
+    "no_bath_sanity",
+    "axis_ad_null_point",
+    "coherent_ad_null_point",
+    "min_tv_to_incoherent",
+    "classical_ad_null_point",
+    "classical_nonmarkov_ad_null_point",
+    "collective_ad_null_point"
+  ],
+  "units": [
+    {
+      "group": "groundtruth_nulls",
+      "module": "src/error_coupling_simulator/quantum_bath/ground_truth.py",
+      "unit": "full_superop_bytes",
+      "qualname": "full_superop_bytes",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "groundtruth_nulls",
+      "module": "src/error_coupling_simulator/quantum_bath/ground_truth.py",
+      "unit": "factorization_check",
+      "qualname": "factorization_check",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "groundtruth_nulls",
+      "module": "src/error_coupling_simulator/quantum_bath/ground_truth.py",
+      "unit": "extraction_gt_check",
+      "qualname": "extraction_gt_check",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "groundtruth_nulls",
+      "module": "src/error_coupling_simulator/quantum_bath/ground_truth.py",
+      "unit": "two_qubit_indep_boson_gt",
+      "qualname": "two_qubit_indep_boson_gt",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "groundtruth_nulls",
+      "module": "src/error_coupling_simulator/quantum_bath/ground_truth.py",
+      "unit": "sigma_minus_emission_gt",
+      "qualname": "sigma_minus_emission_gt",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "groundtruth_nulls",
+      "module": "src/error_coupling_simulator/quantum_bath/ground_truth.py",
+      "unit": "no_bath_sanity",
+      "qualname": "no_bath_sanity",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "groundtruth_nulls",
+      "module": "src/error_coupling_simulator/quantum_bath/nulls.py",
+      "unit": "axis_ad_null_point",
+      "qualname": "axis_ad_null_point",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "groundtruth_nulls",
+      "module": "src/error_coupling_simulator/quantum_bath/nulls.py",
+      "unit": "coherent_ad_null_point",
+      "qualname": "coherent_ad_null_point",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "groundtruth_nulls",
+      "module": "src/error_coupling_simulator/quantum_bath/nulls.py",
+      "unit": "min_tv_to_incoherent",
+      "qualname": "min_tv_to_incoherent",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "groundtruth_nulls",
+      "module": "src/error_coupling_simulator/quantum_bath/nulls.py",
+      "unit": "classical_ad_null_point",
+      "qualname": "classical_ad_null_point",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "groundtruth_nulls",
+      "module": "src/error_coupling_simulator/quantum_bath/nulls.py",
+      "unit": "classical_nonmarkov_ad_null_point",
+      "qualname": "classical_nonmarkov_ad_null_point",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "groundtruth_nulls",
+      "module": "src/error_coupling_simulator/quantum_bath/nulls.py",
+      "unit": "collective_ad_null_point",
+      "qualname": "collective_ad_null_point",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    }
+  ]
+}

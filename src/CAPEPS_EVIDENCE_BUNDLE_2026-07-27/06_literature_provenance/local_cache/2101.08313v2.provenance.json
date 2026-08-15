@@ -1,0 +1,18 @@
+{
+  "arxiv_id": "2101.08313v2",
+  "cached_file_mtime_utc": "2026-07-20T10:09:49.471123+00:00",
+  "extractor": "pdftotext-layout",
+  "page_count": 16,
+  "pdf_bytes": 234415,
+  "pdf_sha256": "29bfff3bc43db7e5159529ae7be85f87de4803589703fe3f8fa8790f547986ee",
+  "processed_at_utc": "2026-07-20T10:09:49.300258+00:00",
+  "requested_spec": "2101.08313v2",
+  "retrieved_at_utc": "2026-07-20T10:09:49.300258+00:00",
+  "source_path": "/home/cx/AI_QEC/AI_QEC/docs/papers/2101.08313v2.pdf",
+  "source_type": "arxiv",
+  "source_version_date": null,
+  "source_version_date_status": "verify-from-primary-source",
+  "text_chars": 63323,
+  "text_path": "/home/cx/AI_QEC/AI_QEC/docs/papers/2101.08313v2.txt",
+  "version_status": "pinned-v2"
+}

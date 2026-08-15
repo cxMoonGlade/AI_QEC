@@ -1,97 +1,97 @@
-# AI QEC Domain Context
+# Domain context
 
-This repository is currently centered on the SCOPE family of QEC noise-learning experiments.
+This repository develops `error_coupling_simulator` (ECS), a backend-agnostic classical evaluator
+for caller-declared quantum-error processes interleaved with quantum error-correction (QEC)
+programs. The binding product contract is `docs/SIMULATOR.md`; capabilities and assurance are
+defined separately in `docs/CAPABILITY_MODEL.md` and `docs/FAITHFULNESS_PROTOCOL.md`.
 
-## Terms
+## Canonical terms
 
-- **SCOPE-Twin**: the larger future model class that maps QEC circuit/control context into a physically constrained noise parameter field.
-- **SCOPE-Static**: the fixed-context DEM/Bernoulli path. Stage 1 uses known orbit labels; Stage 2 static discovery learns hidden sharing assignments.
-- **SCOPE-Static Discovery**: the Stage 2 fixed-context prototype that replaces the known orbit map with a learned assignment matrix `S[j, k]` over DEM-fault prototypes.
-- **DEM parity map**: a binary matrix `A in F_2^{B x M}` mapping Bernoulli DEM fault bits to observed detector/logical bits via `y = A e mod 2`.
-- **Fault activation vector**: `e in {0,1}^M`; `e_j ~ Bernoulli(p_j)` records whether effective DEM fault `j` occurred in one shot.
-- **Observation bits**: the concatenation of detector bits and logical observable bits. Their count is `B`.
-- **Observation vector**: `y in {0,1}^B`; the sampled detector/logical bits for one shot.
-- **Fault mechanisms**: DEM error mechanisms. After duplicate-mask canonicalization, their effective count is `M`.
-- **Stage-1 fault logit**: `lambda_j = logit(p_j)`. Do not write this as `ell_j`.
-- **Orbit**: a known grouping of effective fault mechanisms used for hard sharing or soft feature sharing. Its count is `O`.
-- **Soft feature orbit field**: a compressed fault-logit field `lambda_j = alpha[omega(j)] + dot(beta[omega(j)], phi[j])`, where `phi[j]` is a fixed centered residual feature.
-- **Discovery assignment**: a learned row-stochastic matrix `S` or `Pi`. Do not call it `A`; `A` is reserved for the DEM parity map.
-- **Prototype count**: `K` is the number of discovered Stage 2 DEM-fault prototypes. `K_t` is reserved for later template-specific SCOPE-Discovery.
-- **d_Q^DEM**: the Stage-1 quotient-aware logit distance over only DEM-preserving fault permutations.
-- **Window plan**: a reproducible set of observation-bit windows used by local exact likelihood training/evaluation, including builder config and audit metadata.
-- **Logical-aware window plan**: a window plan that includes the logical observable bit directly, especially through deduplicated logical fault-support windows, so local exact likelihood evidence tests detector-logical coupling rather than detector-local syndromes alone.
-- **Excess window NLL**: local-window model cross-entropy minus the heldout empirical entropy of the same projected windows. It is reported in nats per window and is the real-data analogue of an oracle delta NLL when no hidden teacher distribution is available.
-- **Model-comparison effect sizes**: derived evidence fields that rescale excess window NLL into milli-nats per window, paired deltas versus the uncompressed `local` baseline, and diagnostic pseudo-likelihood deltas per shot. These make small but real local-window gaps readable; they do not change the training objective and are not global exact NLL claims.
-- **Likelihood objective**: a prepared training objective over the DEM parity map, such as global exact, detector-only exact, or local-window exact likelihood.
-- **Exact local-window parity likelihood**: the Stage-1 mathematical objective that evaluates the Bernoulli DEM parity model exactly on a prepared set of observation-bit windows. It consumes logits over effective DEM fault columns and is independent of orbit, discovery, Google schedule, or preprocessing choices. It does not choose the windows; detector/logical coverage belongs to the window plan and evidence audit.
-- **GPU batched local-window exact adapter**: the C++/CUDA implementation of local-window exact likelihood that evaluates all prepared windows in one extension call and returns a first-order gradient for SCOPE-Static training.
-- **Evidence record**: one metrics row for a trained SCOPE-Static model, including likelihood source, compression audit, baseline metadata, and threshold inputs.
-- **Experiment plan**: the normalized SCOPE-Static run matrix compiled from YAML, including residual ranks, teacher cases, shot budgets, model names, backend choice, and output identity.
-- **Catalog pipeline**: the pre-release controlled-catalog workflow. `data_preparation`, `teacher`, and `learner` are the public code responsibilities. `PHYC1/PHYC2/PHYC3` remain legacy artifact aliases.
-- **Data Preparation (Prep)**: generates mechanism-catalog records, probe schedules, sampled observations, teacher config, sampling audits, and active probe manifests. Legacy alias: `PHYC1`.
-- **Teacher Self-Distinguishment (Teacher)**: asks whether the declared teacher/catalog can distinguish every generated mechanism from teacher-internal mechanism evidence. A pass establishes teacher/catalog identifiability; it is not a no-leakage learner claim. Legacy alias: `PHYC2`.
-- **Learner Classification and Noise Generation (Learner)**: consumes learner-visible observations to classify mechanisms and score generated noise/error quality with channel-distance, NLL, and MAE diagnostics. It must not consume teacher-self predictions or hidden/oracle feature inputs. Legacy alias: `PHYC3`.
-- **Z/X visible repair**: the strict Y-free, Z/X-only visible probe surface that raises the deterministic visible ceiling before learner-head claims.
-- **Distributional Gaussian learner head**: the accepted multi-context learner head on Z/X visible features; it recovers drifted M13 only under a valid multi-context protocol.
-- **M13/M14 catalog distinction**: M13 is a context-varying coherent overrotation on its declared operation axis. M14 is operation-dependent error with a visible operation axis and a separate coherent error-generator axis; the first Stage 3 catalog default is `operation_axis=rx`, `error_axis=rz`.
-- **2+1 public program surface**: the pre-release toolbox has two supported capabilities plus one active research object: generate teacher-declared noisy QEC observations from a controlled physical-mechanism catalog; learn from learner-visible observations and replay similar visible noisy observation distributions; and, as the "+1", discover the latent mechanism quotient through Stage 3 discovery.
-- **Stage 3 discovery**: learning a latent mechanism quotient from observations, not predicting a provided mechanism label. The learner receives only visible noisy observations and approved visible features; evaluator-only labels, channels, PTMs, Kraus matrices, teacher IDs, and oracle prototypes are withheld from the learner path.
-- **Observational alias class**: a quotient class for mechanisms that induce indistinguishable or near-indistinguishable visible distributions. If `p(y | m_a) ~= p(y | m_b)` on the declared visible surface, the correct discovery output is `m_a ~_obs m_b`, not an arbitrary forced split.
-- **Physicality boundary**: data-preparation mechanism definitions are implemented as unitary channels, Kraus channels, or classical readout assignment matrices. Enabling a mechanism ID selects that catalog definition. The current learner does not yet learn an arbitrary CPTP/GKSL channel family by construction.
-- **CPTP guardrail audit**: the data-preparation artifact `cptp_guardrail_audit.json`; it checks complete-positivity representation class, channel dimension, unitary unitarity, Kraus trace preservation, readout stochasticity, and parameter validity for every enabled mechanism record.
-- **separability_v2**: the engineered local-observable sampled-response stress teacher. It is useful for separability and leakage-control evidence, but it is not a Born-rule physical baseline.
-- **Born-local**: an exact local Born-rule diagnostic where sampled local observations come from exact local Born probabilities for CPTP/readout mechanisms. It has effective depth one and is not the full-circuit teacher.
-- **full-circuit-cudaq**: the literal full n-qubit CUDA-Q teacher source at configured circuit depth.
-- **Six-axis physical generation problem**: the project-level SCOPE-Twin target. A physical constraint generation model is not validated merely by emitting CPTP/GKSL objects; it must hold simultaneously across generation fidelity, interpretability, decoder utility, cross-context generalization, drift prediction, and identifiability.
-- **Numerical floor**: floating numerical floors, thresholds, and probability leftovers use `scope_static.numerics.NUMERICAL_ZERO == 1e-12` instead of exact `0.0`. This value survives square/cube operations in GPU float32. It does not apply to structural zeros such as Pauli matrix entries, bit values, integer indices, counts, labels, or genuinely absent artifacts.
-- **Google S3 V2 visible surface**: the current Google real-data Stage 3
-  closeout surface. It maps public Google detection-event and observable-flip
-  data into public syndrome-response signatures with raw marginal, spatial
-  correlation, temporal correlation, logical-coupling, stability, and public
-  geometry blocks. It is not a true physical-mechanism label source.
-- **S4 neural syndrome-response discovery**: the next research stage after the
-  Stage 3 Google V2 closeout. It should use a neural representation with an
-  auditable prototype or VQ bottleneck while preserving the Stage 3 no-oracle,
-  no-surrogate-ID, shuffle/scramble, and public-stratified-null controls.
+- **QEC program** — the declared operations, measurements, resets, timing where relevant, classical
+  controls, and detector/logical-observable parity definitions.
+- **Declared error process** — the generative error model applied to the QEC program. It may contain
+  coherent, stochastic, spatially correlated, temporally correlated, classical-latent, or explicitly
+  declared quantum-memory components. It is not fitted physical ground truth.
+- **Private process state** — a latent variable, trajectory, channel field, or memory checkpoint used
+  to generate the declared process. It is evaluator-only and is not part of the public `Record`.
+- **Raw measurement coordinate** — the chronological measurement outputs consumed by a declared
+  Record layout. It is distinct from detector events.
+- **Record layout** — the frozen ordered XOR incidence that maps measurement columns to detector and
+  logical-observable rows. The adjacent-round syndrome fold is one layout profile, not a universal
+  definition.
+- **Record** — the ordered binary detector vector followed by the ordered logical-observable vector.
+- **Record law** — the joint probability law of the `Record` under the declared QEC program, error
+  process, and shot contract. It is the mathematical product semantics.
+- **Record interface** — samples, Record/prefix scores, named functionals, structured-law queries, or
+  complete enumeration exposing the Record law within a backend's capability.
+- **Backend** — an implementation that validates, compiles, executes, or queries a supported slice.
+  Hardware and numerical representation are backend choices rather than product definitions.
+- **Carrier** — a backend component that propagates the declared process. The name alone carries no
+  state-, Record-, metric-, scaling-, or assurance claim.
+- **Capability** — what a backend can return, such as sampling or scoring. It is not evidence that
+  the result is correct.
+- **Support envelope** — the exact semantic predicate covering a backend's operations, dimensions,
+  instruments, memory, shot semantics, Record layout, numerical guarantees, and exclusions.
+- **Assurance claim** — the scoped statement permitted by an evidence packet: execution, family,
+  run, metric, complete-law, or scientific-generalization assurance.
+- **Reference oracle** — an independent exact calculation, raw artifact, closed form, or from-scratch
+  reconstruction used to catch implementation errors. It is not physical truth.
+- **Controlled fixture** — a synthetic, explicitly parameterized input used to exercise a formula or
+  falsifier. Fixture values do not become measured parameters.
+- **DEM** — an optional decoder-facing Pauli reduction of a Record-generating process. It is not the
+  process or the Record law.
+- **Downstream estimator** — decoder, calibration, model-selection, parameter-recovery,
+  identifiability, or decoder-headroom logic consuming Records. It is outside the simulator product.
 
-## Claim Boundary
+## Memory claim classes
 
-The long-horizon problem for the project is the six-axis physical generation
-problem: prove that physically constrained generation is faithful, interpretable,
-useful to decoders, cross-context generalizing, drift-predictive, and
-identifiable at the same time. CPTP/GKSL parameterization is only one constraint
-mechanism, not the claim by itself.
+These are non-exclusive properties of different objects:
 
-The current implemented evidence package studies sample efficiency, compression,
-quotient-aware recovery, and controlled-catalog physical-mechanism observations.
-Data-preparation mechanisms are implemented as unitary/Kraus/readout
-definitions, but the learner does not yet learn an arbitrary CPTP/GKSL channel
-family by construction. The package does not claim unsupervised latent
-mechanism discovery, real-hardware ground-truth mechanism recovery, Born-rule
-likelihood, context-conditioned amortization, OOD transfer, temporal drift
-tracking, decoder utility, or a complete solution to the six-axis physical
-generation problem.
+- **Record memory** — temporal dependence or order in a fixed observed Record law;
+- **reduced-map divisibility or distinguishability backflow** — a property or witness of a declared
+  family of reduced system maps;
+- **process-tensor or environment memory** — a multi-time causal object requiring a declared
+  intervention family.
 
-Stage 2A static discovery is implemented as a synthetic-first identifiability
-path. It may claim latent assignment recovery only when synthetic teacher runs
-report permutation-invariant discovery metrics such as ARI/NMI and heldout NLL
-close to matched known-orbit oracles. Google hardware datasets are external
-empirical validation data, not oracle hidden-partition teachers.
+One class does not transfer to another without an explicit bridge. A classical latent source alone
+is not a reduced dynamical map. Passive Record statistics do not identify a quantum environmental
+origin. “Non-Markovian” must therefore name the object and access model to which it refers.
 
-Stage 2 is closed as a no-leakage physical-mechanism catalog validation stage:
-the system can generate controlled noisy QEC observations from declared
-mechanisms, verify teacher/catalog separability, and train learner models
-that recover and replay learner-visible noisy observation distributions without
-oracle leakage. Stage 3 is the next claim boundary: remove direct
-mechanism-label supervision and test whether latent mechanism structure can be
-inferred from visible observations alone. The catalog pipeline remains
-the pre-release validation surface for data preparation, teacher/catalog
-self-distinguishment, and no-leakage learner classification/visible-generation
-quality.
+## Numerical and evidence distinctions
 
-Stage 3's Google real-data closeout is bounded to no-oracle replay of public
-raw syndrome-response structure, not real physical mechanism recovery. The V2
-surface beats global/mean-only, assignment-shuffle, feature-scramble, and public
-stratified-null controls on raw-target-only scoring; Google still provides no
-ground-truth mechanism partition. Stronger learned representations belong to
-S4 neural syndrome-response discovery.
+- `ALGEBRAIC_EXACT`, `UNTRUNCATED_FLOATING`, `CERTIFIED_NUMERIC`, bounded approximation, and
+  unbounded research approximation are different guarantees.
+- A zero coefficient cutoff does not certify floating roundoff, time discretization, or the Record
+  law.
+- Structural zeros remain exact; numerical floors are never probability mass.
+- A local tensor, bond, entropy, active-rank, treewidth, fidelity, or discarded-weight diagnostic
+  does not substitute for a named Record-functional or full-law bound.
+- `CORE/RESEARCH` describes current service placement, not capability or correctness.
+- `PASS/FAIL/UNANCHORED` is a plan verdict; `CODE_BLOCKED` is a scoped workflow authorization.
+
+## Current implementation boundary
+
+The exact live services, owners, entry points, dependencies, output forms, and exclusions are in
+`docs/service_status.json`; `docs/ARCHITECTURE.md` is the human-readable map. Those documents describe
+the current implementation and may contain route-specific limitations. They do not narrow the
+backend-neutral product charter.
+
+The 2026-08-03 no-cutoff target-lowering plan validated static neutral, pair,
+dynamic-ADD-relation, and retained-boundary tensor-network definitions for its frozen cells. It
+executed no target solver and supplied no target-size full Record law. Its historical `CODE_BLOCKED`
+field remains unchanged; the current assurance mapping is recorded in
+`docs/simulator_validation/PRODUCT_BOUNDARY_V2_MIGRATION_2026-08-04.md`.
+
+## Claim boundary
+
+- No declared process is physical ground truth.
+- ECS models error processes, not microscopic open-system dynamics by default.
+- A paper equation supplies neither an implemented mechanism nor a numerical amplitude without a
+  verified transformation chain.
+- Cross-paper or cross-device tuples are composite benchmarks, not calibrated device cells.
+- PTM off-diagonal structure is basis-specific non-Pauli structure, not a standalone coherent-cause
+  certificate.
+- No metric, backend, distance, round count, or memory class transfers beyond its explicit support
+  and assurance scope.
+- No unsupported schema, silent reduction, compatibility fallback, or historical output is current
+  evidence for a new claim.

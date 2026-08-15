@@ -1,0 +1,18 @@
+{
+  "arxiv_id": "1912.10512v2",
+  "cached_file_mtime_utc": "2026-07-18T03:45:02.361535+00:00",
+  "extractor": "pdftotext-layout",
+  "page_count": 4,
+  "pdf_bytes": 520588,
+  "pdf_sha256": "53e4e79c4f08f14c603a29e066cd0e0e48bb5dc0a86c43039c5a599c9f9f80ba",
+  "processed_at_utc": "2026-07-18T03:45:02.225566+00:00",
+  "requested_spec": "1912.10512v2",
+  "retrieved_at_utc": "2026-07-18T03:45:02.225566+00:00",
+  "source_path": "/home/cx/AI_QEC/AI_QEC/outputs/papers/pepo_survey/1912.10512v2.pdf",
+  "source_type": "arxiv",
+  "source_version_date": null,
+  "source_version_date_status": "verify-from-primary-source",
+  "text_chars": 41019,
+  "text_path": "/home/cx/AI_QEC/AI_QEC/outputs/papers/pepo_survey/1912.10512v2.txt",
+  "version_status": "pinned-v2"
+}

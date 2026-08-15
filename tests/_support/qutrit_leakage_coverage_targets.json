@@ -1,0 +1,37 @@
+{
+  "_comment": [
+    "Per-owner coverage registry for qutrit leakage."
+  ],
+  "default_target": {"statement": 1.0, "branch": 1.0},
+  "covered_by_test_files": [
+    "tests/test_qutrit_leakage_units.py"
+  ],
+  "reconcile_modules": [
+    "src/error_coupling_simulator/mechanisms/qutrit_leakage.py"
+  ],
+  "out_of_scope": {},
+  "canonical_units": [
+    "leakage_channel_super",
+    "leakage_kraus",
+    "leakage_seepage_rates",
+    "level1_output_leakage_coherence",
+    "solve_exchange_angle_for_leakage_rate",
+    "leaked_readout_probabilities",
+    "leaked_readout_manifest",
+    "leakage_kraus_torch",
+    "qutrit_leakage_process",
+    "qutrit_leakage_process_heterogeneous"
+  ],
+  "units": [
+    {"group": "qutrit_leakage", "module": "src/error_coupling_simulator/mechanisms/qutrit_leakage.py", "unit": "leakage_channel_super", "qualname": "leakage_channel_super", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "qutrit_leakage", "module": "src/error_coupling_simulator/mechanisms/qutrit_leakage.py", "unit": "leakage_kraus", "qualname": "leakage_kraus", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "qutrit_leakage", "module": "src/error_coupling_simulator/mechanisms/qutrit_leakage.py", "unit": "leakage_seepage_rates", "qualname": "leakage_seepage_rates", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "qutrit_leakage", "module": "src/error_coupling_simulator/mechanisms/qutrit_leakage.py", "unit": "level1_output_leakage_coherence", "qualname": "level1_output_leakage_coherence", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "qutrit_leakage", "module": "src/error_coupling_simulator/mechanisms/qutrit_leakage.py", "unit": "solve_exchange_angle_for_leakage_rate", "qualname": "solve_exchange_angle_for_leakage_rate", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "qutrit_leakage", "module": "src/error_coupling_simulator/mechanisms/qutrit_leakage.py", "unit": "leaked_readout_probabilities", "qualname": "leaked_readout_probabilities", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "qutrit_leakage", "module": "src/error_coupling_simulator/mechanisms/qutrit_leakage.py", "unit": "leaked_readout_manifest", "qualname": "leaked_readout_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "qutrit_leakage", "module": "src/error_coupling_simulator/mechanisms/qutrit_leakage.py", "unit": "leakage_kraus_torch", "qualname": "leakage_kraus_torch", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "qutrit_leakage", "module": "src/error_coupling_simulator/mechanisms/qutrit_leakage.py", "unit": "qutrit_leakage_process", "qualname": "qutrit_leakage_process", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "qutrit_leakage", "module": "src/error_coupling_simulator/mechanisms/qutrit_leakage.py", "unit": "qutrit_leakage_process_heterogeneous", "qualname": "qutrit_leakage_process_heterogeneous", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []}
+  ]
+}

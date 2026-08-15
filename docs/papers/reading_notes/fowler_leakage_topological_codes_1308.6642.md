@@ -1,0 +1,146 @@
+# Full-text note — Fowler, *Coping with qubit leakage in topological codes*
+
+> Provenance: full-text read from the cached PDF
+> `docs/papers/fowler_leakage_topological_codes_1308.6642.pdf`
+> using `pdftotext -layout` for the body + `pdftoppm` raster of the figure
+> pages (Figs. 1–8 inspected visually). Facts below are taken only from the
+> paper. Page references are to the 5-page article body.
+
+> **[ours] reframed 2026-07-13** — the decoder-oriented framing below ('sim-only teacher / decoding headroom above MWPM') is SUPERSEDED by the simulator-forward-generation framing: validity = faithfulness vs an independent qutrit oracle + anti-toy discriminability against a registered Markov/DEM null; decoder/LER = downstream use. This paper supports persistent leakage-induced record correlations, not a universal non-forgeability theorem or process-level quantum-memory classification. See `docs/twin_validation/notion123_taxonomy_literature_closure_2026-07-13.md`.
+
+## Metadata
+
+- **Title.** Coping with qubit leakage in topological codes.
+- **Author.** Austin G. Fowler (UC Santa Barbara; Centre for Quantum Computation and Communication Technology, University of Melbourne).
+- **Identifiers.** arXiv:1308.6642v1 [quant-ph], 30 Aug 2013. Published as **Phys. Rev. A 88, 042308 (2013)**.
+- **Length.** 5 pages, single author, no separate appendix (references occupy the last page). 8 figures, no tables.
+- **Tooling cited.** Simulations run in the author's open-source package **Autotune** (Fowler, Whiteside, McInnes, Rabbani, *Phys. Rev. X* 2, 041003 (2012), arXiv:1202.6111). Decoding is minimum-weight perfect matching (MWPM) via Edmonds' blossom algorithm and the author's prior matching work.
+- **Role in our program.** This is a canonical early demonstration that leakage is a non-Pauli error which, in the paper's stochastic `L` model, persists and produces time-correlated detection events. It is the reference for the *multi-round leakage signature*: a leaked qubit randomizes neighbouring measurements for its lifetime, and Fig. 6 exhibits detection events separated by a long time gap. The paper then shows that the registered single-fault MWPM construction misdecodes some such ambiguous patterns and obtains the reported linear-in-`p` logical-error scaling. **[ours]** Whether a preregistered Pauli-DEM or finite-Markov-`k` *generative null* reproduces a chosen full-record observable is a separate empirical/model-class test; Fowler neither defines that null family nor proves universal generative non-representability.
+
+---
+
+## TL;DR
+
+A leaked qubit (population in a non-computational state, e.g. `|2⟩`) is invisible to the stabilizer measurement machinery and, crucially, *persists across many rounds of error detection*. While leaked, the qubit randomizes every neighbouring syndrome measurement it touches; when it eventually decays back to the computational subspace it lands in a random Pauli error. The observable consequence on a topological code is a pair of detection events **separated by a large number of rounds in time** (Fig. 6), which the MWPM decoder — built on a memoryless, single-fault space-time graph — matches as two independent local data-qubit errors. Because *one* leakage event can thereby flip a logical, the logical X error rate `pL` becomes **linear in the physical rate `p` independent of code distance `d`** (Fig. 5 vs. the clean Fig. 4). A threshold still exists, but is badly degraded. The fix (Sec. III) is purely hardware/circuit: after each detection round, **teleport every data qubit into a fresh qubit** (Fig. 7), which converts any leakage error into a standard Pauli error that the decoder *can* handle. This restores polynomial suppression `O(p^{d/4})` (Fig. 8), short of the leakage-free `O(p^{d/2})` because a leaked *measurement* qubit can corrupt both of its data neighbours and create a two-qubit error chain.
+
+The paper directly establishes a non-Pauli, persistent, time-correlated leakage mechanism and its failure mode for the specified MWPM graph. **[ours]** Our simulator should generate that mechanism and then test a *finite, preregistered* Markov/DEM null on declared full-record observables. Decoder failure on an ambiguous trajectory is not, by itself, proof that no generative Markov/DEM model can reproduce the record law.
+
+---
+
+## 1. Setting: repetition code as a faithful proxy for the surface code
+
+**Why the repetition code (Sec. I, p. 1, Fig. 1).** The surface code suppresses both logical `X` and logical `Z`; by the code's symmetry it suffices to study one logical type. A *vertical slice* of the distance-`d` surface code (the rectangle in Fig. 1) has the structure of a **repetition code** — a 1-D line of data qubits with `ZZ` stabilizer generators on neighbouring pairs. Logical failure in the surface code requires roughly half a line of qubits (top boundary to bottom boundary) to be in error; widening the strip only adds *more* logical-error pathways without changing that basic requirement. So the repetition code is "a good and simple model of failure within the surface code," and lets the paper isolate the *unique properties of leakage* without surface-code bookkeeping. The repetition-code **distance `d` = number of data qubits**; in theory a distance-`d` code fails only if `≥ d/2` errors occur.
+
+**Error-detection circuit (Sec. I, p. 2, Fig. 2).** One round of distance-3 detection: three data qubits (horizontal lines), measurement qubits initialized, two `H` gates, `CZ` couplings to neighbouring data qubits, then `M_Z`. In the absence of error, a measurement reports `0` for the `+1` eigenstate of `ZZ` and `1` for the `−1` eigenstate. A change in a measurement's value relative to its previous value is a **detection event**. Rounds repeat indefinitely.
+
+**The five geometric error classes (Sec. I, p. 2).** Every single fault location falls into one of five classes by its detection-event footprint (numbered 1–5 in Fig. 2):
+- **Location 1** → the *top* measurement differs from its previous value (one detection event).
+- **Location 2** → *two simultaneous* detection events.
+- **Location 3** → a single detection event on the *lower* measurement qubit.
+- **Location 4** → an *immediate* detection event on the top measurement qubit, but the partner detection event on the lower measurement qubit **does not occur until the next round** (a space-time–tilted edge).
+- **Location 5** (measurement error) → two *sequential* measurement changes (pattern `010` or `101`), i.e. a pair of *sequential-in-time* detection events.
+
+**Matching graph and decoding (Sec. I, p. 2, Fig. 3).** Each class is drawn as a **line connecting two dots** at the space-time locations of its potential detection events (Fig. 3a; the structure is periodic, one layer per round). Each line carries weight `∝ −ln p`, where `p` is the total probability of all errors producing detection events at that line's endpoints — so all weights are strictly positive and low-probability lines get high weights. Given the dots, the lines, and the observed detection events (Fig. 3b), **minimum-weight perfect matching** (Edmonds blossom; refs. [36–39]) finds the minimum-total-weight set of paths pairing all detection events with each other or with a boundary (Fig. 3c). Class-5 matches each flip a classical measurement bit; a class-4 match implies an `X` on the central data qubit. The matched correction is applied as a Pauli frame. **Key structural premise: the graph is built from single faults with fixed, memoryless edge weights — there is no edge for "a qubit that stays broken for many rounds."**
+
+**Baseline noise model (Sec. I, p. 2).** All gates — initialization, measurement, identity, Hadamard, `CZ` — carry an equal depolarizing rate `p` (Autotune also supports arbitrary asymmetric Pauli models per gate). Fig. 4 gives `pL(p)` for `d = 3, 5, 7, 9`. The low-`p` asymptotic slopes are **quadratic, cubic, quartic, quintic** respectively — i.e. `pL ∝ p^{⌈d/2⌉}`, the textbook `O(p^{d/2})` suppression confirming a well-behaved threshold without leakage.
+
+---
+
+## 2. Main contribution + core method: the stochastic leakage model
+
+This is the heart of the paper (Sec. II, pp. 2–3). The author augments the error alphabet `{I, X, Y, Z}` with a fifth symbol **`L` (leaked)** and specifies a fully concrete stochastic dynamics for it. The model is engineered to capture the *one physical fact that breaks Pauli decoders*: leakage is **long-lived** (persists across rounds) and **invisible** (no flag).
+
+**Leakage model — exact rules (Sec. II, p. 2).**
+1. **Where leakage is injected.** Leakage may occur *only after `H` and `CZ` gates* (initialization, measurement, identity are taken not to cause leakage; the author notes attaching leakage to other gates is straightforward). Per-gate leakage probability is set to **`0.1 p`** — described as a *high* probability of leakage. For a `CZ`, **each of the two involved qubits independently** leaks with probability `0.1 p`.
+2. **Absorption while leaked.** Once a qubit is in `L`, any further `X, Y, Z, L` event leaves it in `L` (leakage is absorbing under subsequent errors).
+3. **Decay back to the computational subspace.** Per `identity`, `H`, and `CZ` gate, a leaked qubit decays `L → {I, X, Y, Z}` (uniformly random) with **fixed probability `1%`**. Thus the mean leakage lifetime is `~100` gate-applications; *making the decay probability smaller makes leakage longer-lived and the model more severe.*
+4. **Measurement of a leaked qubit.** Returns a **random classical result with no indication that leakage occurred** — this is what makes leakage invisible to the syndrome stream.
+5. **Contamination through `CZ`.** When a `CZ` acts between a leaked qubit and a non-leaked qubit, the **non-leaked qubit is scrambled to a uniformly random `{I, X, Y, Z}`** error. This is the mechanism by which a single leaked qubit randomizes its neighbours every round it survives.
+6. **No leakage propagation.** Critically, **leakage does *not* spread** to other qubits (only Pauli scrambling does). The author flags that allowing leakage itself to propagate would cause "a catastrophic cascade … ending only when all qubits had leaked" — i.e. would void any threshold; excluding it is a deliberate, physically-motivated modelling choice.
+
+**The failure mechanism — why one leakage event flips a logical (Sec. II, p. 3, Fig. 6).** Consider the central data qubit of a distance-3 code leaking. Every time the two neighbouring measurement qubits interact with it via `CZ`, they are randomized (rule 5), so their reported syndrome bits are random for the *entire* leakage lifetime. Suppose the qubit then decays to an `X` error (rule 3). Fig. 6a shows a concrete sequence of randomized measurement values; the *net* effect is **two detection events separated by a large time gap** (one at the onset, one at the decay). Fig. 6b: MWPM, seeing two well-separated detection events and only having short memoryless edges, infers **two independent single-`X` data errors** and applies a correction that — combined with the real decayed `X` — produces a **logical error**.
+
+**The trajectory-level ambiguity argument (Sec. II, p. 3).** The author stresses that this exact pattern of detection events "could just as easily have been generated by two data-qubit errors, and there is no way to distinguish between these two cases with the available information." Therefore:
+- One could add **long-range time-like lines** to the matching graph so the two far-apart detection events match cheaply — but that *same* long edge would then mis-correct genuine *pairs* of independent data errors, creating logical errors there instead.
+- "**No matter how the matching problem is restructured, there will always be random patterns of measurements arising from single leakage events that lead to logical failure.**" In the paper this supports a negative result for matching-based decoding without a leakage flag: some individual trajectories do not identify whether leakage or two data faults caused them. It does **not** prove that the joint record distribution is outside every Pauli-DEM, HMM, or finite-Markov family, nor that population-level discrimination across many records is impossible.
+
+**Distance scaling under leakage (Sec. II, p. 3).** Higher-distance codes do suppress leakage-induced failure somewhat: the random-measurement chain needed to fool the decoder gets longer and hence less likely with larger `d`, so a **threshold still exists**. But because a *single* leakage event suffices to cause failure, `pL` is driven **linear in `p`** rather than `p^{d/2}` — the distance no longer buys exponential suppression of the leakage channel.
+
+---
+
+## 3. The fix: leakage reduction by per-round teleportation (Sec. III)
+
+**Circuit (p. 3, Fig. 7).** A minimal teleportation gadget moves the state of the top (data) qubit onto a fresh bottom qubit using one `H` and one `M_Z` (plus the appropriate Pauli-frame correction). Because the fresh target qubit starts in the computational subspace, **any leakage on the source qubit is converted into a standard Pauli `{I, X, Y, Z}` error on the target** — which regular error correction handles. This is a *leakage reduction unit* (LRU) realized by teleportation.
+
+**Where it is inserted (p. 3).** After each standard error-detection round (Fig. 2), every data qubit is teleported "to the qubit below." Concretely for `d=3` with data `q1 q3 q5` and measurement `q2 q4`: add an extra qubit `q6`, teleport each data qubit down so the next round runs on data `q2 q4 q6` / measurement `q3 q5`, then teleport back up — and the cycle repeats. So leakage on any data qubit lives at most one round.
+
+**Performance after the fix (p. 3–4, Fig. 8).** With the teleportation step applied once per data qubit per cycle, **polynomial suppression is restored**: Fig. 8 shows high powers of `p` for large distances (`d` up to 95). But the recovered exponent is only:
+- **Linear** at `d = 3`,
+- **Quadratic** at `d = 5`,
+- and in general **`O(p^{d/4})`**, not the leakage-free `O(p^{d/2})`.
+
+**Why `d/4` and not `d/2` (p. 4, explicit).** The residual loss is due to **leakage on *measurement* qubits**. A leaked measurement qubit, via its two `CZ`s, can corrupt **both** of its neighbouring data qubits in a single round — a **two-qubit error chain from one leakage event**. That halves the effective distance for the leakage channel, so `pL ∝ p^{d/4}`. The teleportation gadget as deployed only cleans *data* qubits after the round; it does not remove the within-round spatial correlation seeded by a leaked measurement qubit.
+
+**Author's outlook (p. 4–5).** One could insert an extra teleportation step *in the middle* of the stabilizer-measurement procedure to also kill the spatially-correlated measurement-qubit errors and recover the theoretical `O(p^{d/2})`. He notes a deeper, system-specific understanding of the physical leakage process (he names **superconducting qubits** specifically) should yield better/simpler restoration techniques, deferred to future work.
+
+---
+
+## 4. Key results — figures (no tables in the paper)
+
+| Fig. | Page | Content | What it shows |
+|---|---|---|---|
+| **1** | 1 | Distance-4 surface code with a highlighted vertical slice (rectangle). | Justifies using the repetition code (the slice) as a faithful failure proxy for the surface code. |
+| **2** | 2 | One round of distance-3 repetition-code detection: 3 data lines, measurement qubits with `H … CZ … H … M_Z`, error locations labelled **1–5**. | Defines detection events and the five geometric single-fault classes. |
+| **3** | 2 | (a) Periodic space-time graph of single-error classes as dot-pairs/lines (one layer per round); (b) a measurement sequence → inferred detection events (filled dots); (c) the MWPM solution + Pauli-frame correction. | The memoryless matching-decoder construction; edge weight `∝ −ln p`. |
+| **4** | 3 | `pL` vs depolarizing `p`, **no leakage**, `d = 3, 5, 7, 9` (top→bottom). Fitted slopes quadratic / cubic / quartic / quintic. | Clean baseline: textbook `O(p^{d/2})` suppression, healthy threshold. |
+| **5** | 3 | `pL` vs `p`, **with leakage `0.1 p`**, `d = 3 … 25`. | Severe degradation: curves bunch together, near-**linear in `p`**, distance buys little — the central negative result. |
+| **6** | 4 | (a) A single leakage event decaying to `X`; neighbouring measurements random during the leakage lifetime → **two detection events separated by a long time gap**. (b) MWPM mis-infers **two independent `X` errors** → logical error. | The non-Pauli, **time-correlated leakage signature** and exactly why a Pauli decoder fails on it. |
+| **7** | 4 | Teleportation circuit (top qubit → bottom qubit, `H` + `M_Z`). | The leakage-reduction gadget: converts `L` → Pauli on a fresh qubit. |
+| **8** | 4 | `pL` vs `p`, leakage `0.1 p`, **with Fig. 7 teleportation each round**, `d = 3 … 95`. | Recovery: polynomial suppression restored to **`O(p^{d/4})`** (linear at `d=3`, quadratic at `d=5`). |
+
+**Quantitative takeaways to carry forward.**
+- Leakage-free scaling: `pL ∝ p^{⌈d/2⌉}` (Fig. 4).
+- Leakage-on, no fix: `pL ∝ p^1` at all `d` — distance-independent linear floor from single leakage events (Fig. 5, Sec. II).
+- Leakage-on, with per-round data teleportation: `pL ∝ p^{d/4}` (Fig. 8, Sec. III).
+- Model constants: leakage rate `0.1 p` per `H`/`CZ` (per qubit for `CZ`); decay `L → {I,X,Y,Z}` at `1%` per `I`/`H`/`CZ` (mean lifetime ≈100 gates); leaked-measurement → uniformly random bit; leaked–non-leaked `CZ` → non-leaked qubit uniformly scrambled.
+
+---
+
+## 5. USEFUL FOR OUR PROJECT
+
+Our program: an **error-coupling SIMULATOR** — a faithful FORWARD GENERATOR of QEC records `{det, obs}`. Validity = **(i) FAITHFULNESS** (the generated record matches an INDEPENDENT oracle — exact qutrit-DM / from-scratch reconstruction / closed form) **+ (ii) ANTI-TOY LEGITIMACY** (the modeled feature is DISTINGUISHABLE from a preregistered CP-divisible / finite-Markov-`k` / Pauli-DEM null). The DECODER and LER are NOT in the validity chain; they are downstream uses. This paper is directly load-bearing for persistent, time-correlated leakage signatures in its **simulated stochastic model**. Whether a chosen null reproduces a registered observable is experiment-specific; the paper does not prove universal non-forgeability, a universal syndrome twirl, or closure of process-level quantum-memory classification.
+
+### (a) Canonical leakage model + bounding the approximation vs an independent qutrit oracle
+
+- **A concrete, citable stochastic leakage source (Sec. II, p. 2).** The five rules above are a self-contained classical-stochastic leakage model that needs **no qutrit Hilbert space** — leakage is a fifth classical symbol `L` with injection (`0.1p` after `H`/`CZ`), absorption, geometric decay (`1%` → random Pauli), invisible-random measurement, and `CZ` cross-scrambling. This is precisely the kind of *scalable, classical-stochastic approximation to full qutrit leakage* we want as a simulator source, and it is the standard early reference for it. Per `docs/FAITHFULNESS_PROTOCOL.md` we must **declare + BOUND** this simplification against an INDEPENDENT qutrit ground truth: the discrepancy between (i) this classical-`L` model and (ii) the exact qutrit-DM (`src/error_coupling_simulator/carrier/exact/qutrit_dm.py`, ≤ 9 qutrit) — with the scalable faithful reference being the qutrit-MPS of `leakage_tensor_network_simulation_2308.08186` — is the measurable approximation-error budget (compared on detection-event time-correlation statistics and on `pL(p)` slope). An unbounded gap = STOP.
+- **What the approximation deliberately omits — our bounds must respect these (Sec. II, p. 2).** (1) Leakage is **non-propagating** by fiat — only Pauli scrambling spreads. A qutrit model with real `|2⟩`-`|2⟩` `CZ` dynamics could leak the partner; if we use Fowler's model we must *not* claim it bounds the cascade regime. (2) Leakage injected **only after `H`/`CZ`**, not on idle/`T1` decay — a `T1/T2` idle-leakage/relaxation channel is a complementary source this model omits, not redundant. (3) **Uniform** depolarizing decay `L → {I,X,Y,Z}`; real seepage has a biased landing distribution. Each omission is a knob we can turn on in a richer source and a term in the bounded-simplification list.
+- **The decay probability is the source-realism dial (Sec. II, p. 3, "made more severe by decreasing the decay probability").** **[paper]** Lower decay probability lengthens leakage lifetime and worsens the simulated decoder failure. **[ours]** We may preregister a lifetime sweep and test its record against named slow-RTN / finite-Markov-`k` / DEM nulls, but the paper does not predict that every such null must fail or which observable maximizes separation.
+
+### (b) How to GENERATE the leakage record at scale (the faithful forward path)
+
+- **Classical stabilizer-frame simulation with an `L` flag scales to large `d` (Sec. II + Fig. 8 reaching `d=95`).** Because leakage is tracked as a *classical per-qubit symbol* layered on top of a Pauli-frame stabilizer simulation (Autotune), the generation cost stays in the efficiently-simulable regime — the paper itself runs `d` up to **95**. This is a concrete recipe for scalable generation **under Fowler's declared stochastic model**: use a Pauli-frame simulator extended with (i) a per-qubit `leaked` boolean, (ii) the injection/decay/scramble rules, and (iii) the rule that a measured leaked qubit emits a random bit. Calling that output physically faithful requires the separate qutrit-oracle comparison in (a); scale alone does not establish fidelity.
+- **Exact evaluator-side labels for free (isolation-clean).** The simulator *knows* which detection-event pairs came from a leakage event versus two independent data errors, while the specific ambiguous trajectories identified by Fowler do not carry an event-level leakage flag. That asymmetry supplies evaluator-only labels under the isolation contract. It does not establish a universal non-identifiability theorem for all record features, histories, or auxiliary readout channels.
+- **Caveat for surface-code generalization.** The paper validates on the *repetition slice*, explicitly arguing it is a faithful failure proxy (Sec. I, Fig. 1). For our surface-code source we should reproduce this argument and re-measure the leakage signature on the genuine 2-D code, since the measurement-qubit two-neighbour contamination (the `d/4` mechanism) is more intricate in 2-D.
+
+### (c) Anti-toy legitimacy — finite registered-null test required
+
+- **What the paper closes, and what it does not.** **[paper]** Fig. 6 plus Sec. II show that the specified single-fault MWPM graph, including simple long-edge reweighting, cannot avoid logical failures on all leakage-generated patterns. **[ours]** This motivates—but does not pass—the anti-toy gate. We must freeze a finite null class (for example a named independent-fault DEM and explicit Markov orders), a full-record observable, fitting access, and held-out criterion, then measure residual separation. Passing that test only rejects those registered nulls; it does not prove universal `non-DEM-reducibility` or defeat arbitrary HMM/history-dependent generators.
+- **Candidate feature for the legitimacy instrument: persistent, long-time-gap detection-event structure.** The leakage signature in Fig. 6 is temporal: separated detection events with randomized intervening measurements. **[ours]** Multi-time `p_ij(lag)` / `RR_CORR` / full-history diagnostics are candidates, not paper-certified sufficient statistics. The preregistration must include counterexamples in which a fitted finite null reproduces these low-order summaries while differing elsewhere in the joint record.
+- **Soft / erasure readout = an additional faithful OUTPUT channel.** The paper's leaked-qubit measurement returns a *random* hard bit with "no indication that leakage occurred" (Sec. II, p. 2) — i.e. hard readout throws away the leakage flag. Real **analog/IQ soft readout** can partially expose leakage (a `|2⟩` often lands in a distinguishable IQ region). So soft/erasure readout is an *additional faithful output channel the simulator must generate and certify* (`soft_readout.py`, ADR 0010): the generated soft record carries a (noisy) leakage indicator that Fowler's hard-measurement model deliberately withholds, and its faithfulness is itself an item to bound vs the qutrit oracle.
+- **LER / distance-scaling = the downstream PRODUCT, not the validity chain.** Fowler gives two reference points the generated record must reproduce as a downstream product: the **un-mitigated** `pL ∝ p` (Fig. 5) and the **circuit-mitigated** `pL ∝ p^{d/4}` (Fig. 8). Reproducing these scaling laws from the generated `{det, obs}` (scored via `docs/METRICS.md`) is a use/consistency check on the simulator, *not* part of its validity chain — validity is faithfulness vs the independent oracle + anti-toy discriminability of the record, per (a)–(c) above.
+
+---
+
+## 6. Limitations / what does NOT apply
+
+- **Repetition code, not the 2-D surface code.** All simulations are on the repetition (1-D) code, defended as a faithful *failure* proxy (Sec. I). The `d/4` measurement-qubit mechanism and any 2-D-specific leakage correlations are argued, not directly simulated here. Our surface-code source must re-derive/re-measure the signature in 2-D.
+- **Hard, classical-symbol leakage model — not full qutrit dynamics.** Leakage is the fifth classical symbol `L` with stochastic rules; there is **no coherent `|2⟩` amplitude, no seepage spectrum, no leakage propagation, and no `T1`/`T2`-driven idle leakage**. The model is a deliberately *severe but simplified* caricature (high `0.1p` injection, uniform decay). It is a scalable classical-stochastic source, **not** the faithful qutrit ground truth — and every simplification must be declared + BOUNDED against the exact qutrit-DM oracle (`qutrit_dm.py`, ≤ 9 qutrit) / the qutrit-MPS reference (2308.08186), per `docs/FAITHFULNESS_PROTOCOL.md`; the gap is itself an object to quantify (requirement (a)).
+- **Specific, somewhat arbitrary constants.** `0.1p` leakage and `1%` decay are stated as reasonable but not derived from a device; results (`linear`, `d/4`) are *scaling* statements, and the precise crossover/threshold values are model-specific. Do not cite the numerical `pL` values as device predictions.
+- **The negative result is decoder-scoped.** The paper studies MWPM and restructuring/reweighting of its matching graph; it does not evaluate TN-MLD, correlated decoders, HMMs, arbitrary history-dependent generators, or a best-fit full-record DEM null. The trajectory-level absence of a leakage flag explains decoder ambiguity, but does not imply generative impossibility. Establishing a held-out residual against the finite nulls in §5c is therefore our experiment, not a result to cite from Fowler.
+- **The fix is hardware/circuit, not part of our validity chain.** Fowler's solution (teleportation LRU) *removes* leakage at the device level. For us the LRU is simply another circuit configuration whose generated record the simulator must faithfully reproduce (the `p^{d/4}` regime, Fig. 8) — it is neither a validity criterion nor something we compete with; the simulator generates records under unmitigated, partially-mitigated, or LRU-mitigated circuits alike.
+
+---
+
+### One-line filing
+
+Cite for: (i) leakage as a **time-correlated, non-Pauli** error with a persistent multi-round detection signature in the paper's stochastic model (Fig. 6); (ii) trajectory-level ambiguity and failure of the specified matching-decoder construction (Sec. II); (iii) the reported linear-in-`p` logical-error scaling (Fig. 5) versus the clean `p^{d/2}` baseline (Fig. 4), as a downstream decoder result; and (iv) the classical-symbol leakage recipe and teleportation LRU yielding `p^{d/4}` (Figs. 7–8). Do **not** cite it as a 2-D surface-code simulation, full qutrit/seepage physics, a proof that arbitrary Markov-`k`/HMM/DEM generators cannot reproduce the record, or a universal `non-DEM-reducibility` theorem.

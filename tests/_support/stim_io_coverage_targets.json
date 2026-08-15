@@ -1,0 +1,32 @@
+{
+  "_comment": [
+    "Per-owner coverage registry for stim io."
+  ],
+  "contract": "docs/SIMULATOR.md",
+  "default_target": {"statement": 1.0, "branch": 1.0},
+  "covered_by_test_files": [
+    "tests/test_stim_io_units.py"
+  ],
+  "reconcile_modules": [
+    "src/error_coupling_simulator/frontend/stim_io.py"
+  ],
+  "out_of_scope": {},
+  "canonical_units": [
+    "circuit_to_stim",
+    "load_stim_circuit",
+    "write_stim_circuit",
+    "write_detector_error_model",
+    "detector_error_model",
+    "counts",
+    "sample_detector_records"
+  ],
+  "units": [
+    {"group": "stim_io", "module": "src/error_coupling_simulator/frontend/stim_io.py", "unit": "circuit_to_stim", "qualname": "circuit_to_stim", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "stim_io", "module": "src/error_coupling_simulator/frontend/stim_io.py", "unit": "load_stim_circuit", "qualname": "load_stim_circuit", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "stim_io", "module": "src/error_coupling_simulator/frontend/stim_io.py", "unit": "write_stim_circuit", "qualname": "write_stim_circuit", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "stim_io", "module": "src/error_coupling_simulator/frontend/stim_io.py", "unit": "write_detector_error_model", "qualname": "write_detector_error_model", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "stim_io", "module": "src/error_coupling_simulator/frontend/stim_io.py", "unit": "detector_error_model", "qualname": "detector_error_model", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "stim_io", "module": "src/error_coupling_simulator/frontend/stim_io.py", "unit": "counts", "qualname": "counts", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "stim_io", "module": "src/error_coupling_simulator/frontend/stim_io.py", "unit": "sample_detector_records", "qualname": "sample_detector_records", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []}
+  ]
+}

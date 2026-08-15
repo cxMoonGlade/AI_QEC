@@ -1,0 +1,91 @@
+{
+  "_comment": [
+    "Per-owner coverage registry for axis1 runners."
+  ],
+  "contract": "docs/SIMULATOR.md",
+  "default_target": {"statement": 1.0, "branch": 1.0},
+  "covered_by_test_files": [
+    "tests/test_axis1_runners_units.py"
+  ],
+  "reconcile_modules": [
+    "src/error_coupling_simulator/frontend/axis1_codespec_runner.py",
+    "src/error_coupling_simulator/frontend/joint_channel_comparison_runner.py"
+  ],
+  "out_of_scope": {},
+  "canonical_units": [
+    "build_axis1_codespec_frontend_spec",
+    "build_axis1_codespec_4q_frontend_spec",
+    "build_axis1_codespec_frontend_schedule",
+    "run_axis1_codespec_record_fixture",
+    "axis1_codespec_runner.main",
+    "build_joint_channel_comparison_schedule",
+    "run_joint_channel_comparison_fixture",
+    "joint_channel_comparison_runner.main"
+  ],
+  "units": [
+    {
+      "group": "codespec_runner",
+      "module": "src/error_coupling_simulator/frontend/axis1_codespec_runner.py",
+      "unit": "build_axis1_codespec_frontend_spec",
+      "qualname": "build_axis1_codespec_frontend_spec",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "codespec_runner",
+      "module": "src/error_coupling_simulator/frontend/axis1_codespec_runner.py",
+      "unit": "build_axis1_codespec_4q_frontend_spec",
+      "qualname": "build_axis1_codespec_4q_frontend_spec",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "codespec_runner",
+      "module": "src/error_coupling_simulator/frontend/axis1_codespec_runner.py",
+      "unit": "build_axis1_codespec_frontend_schedule",
+      "qualname": "build_axis1_codespec_frontend_schedule",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "codespec_runner",
+      "module": "src/error_coupling_simulator/frontend/axis1_codespec_runner.py",
+      "unit": "run_axis1_codespec_record_fixture",
+      "qualname": "run_axis1_codespec_record_fixture",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "codespec_runner",
+      "module": "src/error_coupling_simulator/frontend/axis1_codespec_runner.py",
+      "unit": "axis1_codespec_runner.main",
+      "qualname": "main",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "joint_channel_comparison_runner",
+      "module": "src/error_coupling_simulator/frontend/joint_channel_comparison_runner.py",
+      "unit": "build_joint_channel_comparison_schedule",
+      "qualname": "build_joint_channel_comparison_schedule",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "joint_channel_comparison_runner",
+      "module": "src/error_coupling_simulator/frontend/joint_channel_comparison_runner.py",
+      "unit": "run_joint_channel_comparison_fixture",
+      "qualname": "run_joint_channel_comparison_fixture",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "joint_channel_comparison_runner",
+      "module": "src/error_coupling_simulator/frontend/joint_channel_comparison_runner.py",
+      "unit": "joint_channel_comparison_runner.main",
+      "qualname": "main",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    }
+  ]
+}

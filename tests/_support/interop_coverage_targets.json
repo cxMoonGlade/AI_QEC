@@ -1,0 +1,64 @@
+{
+  "_comment": [
+    "Per-owner coverage registry for interop."
+  ],
+  "contract": "docs/SIMULATOR.md",
+  "default_target": {"statement": 1.0, "branch": 1.0},
+  "covered_by_test_files": [
+    "tests/test_interop_units.py"
+  ],
+  "reconcile_modules": [
+    "src/error_coupling_simulator/frontend/pij.py",
+    "src/error_coupling_simulator/frontend/interop.py"
+  ],
+  "out_of_scope": {},
+  "canonical_units": [
+    "spitz_pij_exact",
+    "spitz_pij_delta_se",
+    "records_to_dem",
+    "decode_records",
+    "insert_op_after_tick"
+  ],
+  "units": [
+    {
+      "group": "interop",
+      "module": "src/error_coupling_simulator/frontend/pij.py",
+      "unit": "spitz_pij_exact",
+      "qualname": "spitz_pij_exact",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "interop",
+      "module": "src/error_coupling_simulator/frontend/pij.py",
+      "unit": "spitz_pij_delta_se",
+      "qualname": "spitz_pij_delta_se",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "interop",
+      "module": "src/error_coupling_simulator/frontend/interop.py",
+      "unit": "records_to_dem",
+      "qualname": "records_to_dem",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "interop",
+      "module": "src/error_coupling_simulator/frontend/interop.py",
+      "unit": "decode_records",
+      "qualname": "decode_records",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "interop",
+      "module": "src/error_coupling_simulator/frontend/interop.py",
+      "unit": "insert_op_after_tick",
+      "qualname": "insert_op_after_tick",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    }
+  ]
+}

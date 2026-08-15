@@ -1,8 +1,0 @@
-stage3b0_nonlearned_clustering_baselines:
-  name: Stage3B0_nonlearned_clustering_baselines
-  stage3a_dir: outputs/scope_static/PHYC_STAGE3_discovery/S3A_protocol_freeze
-  stage3a5_dir: outputs/scope_static/PHYC_STAGE3_discovery/S3A5_observability_alias_ceiling
-  output_dir: outputs/scope_static/PHYC_STAGE3_discovery/S3B0_nonlearned_clustering_baselines
-  seed: 0
-  max_iter: 30
-  max_full_cov_features: 24

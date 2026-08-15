@@ -1,0 +1,19 @@
+include README.md
+include pyproject.toml
+include docs/SIMULATOR.md
+include docs/CAPABILITY_MODEL.md
+include docs/METRICS.md
+include docs/FAITHFULNESS_PROTOCOL.md
+include docs/NUMERICAL_PROVENANCE.md
+include docs/service_status.json
+include docs/CODE_MAP.md
+
+# Repository-local research, validation, and build trees are not
+# part of the independently distributed simulator source archive.  These prune
+# rules also override a stale setuptools SOURCES.txt left by an older broad
+# package-discovery configuration.
+prune src
+recursive-include src/error_coupling_simulator *.py *.cpp *.cu README.md
+prune external
+prune outputs
+prune tests

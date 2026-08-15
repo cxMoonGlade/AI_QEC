@@ -1,0 +1,180 @@
+{
+  "_comment": [
+    "Per-owner coverage registry for coupled cycle."
+  ],
+  "contract": "docs/SIMULATOR.md",
+  "default_target": {"statement": 1.0, "branch": 1.0},
+  "covered_by_test_files": [
+    "tests/test_coupled_cycle_units.py"
+  ],
+  "reconcile_modules": [
+    "src/error_coupling_simulator/noise_processes/coupled_cycle.py"
+  ],
+  "out_of_scope": {
+    "CoupledCycleNoiseProcess.emit": {
+      "class": "gpu_bound",
+      "reason": "torch multinomial MC emit on GPU; no CPU path, no L2 (the module lazily `import torch` inside emit/_tables_for; the CPU-prefix validation is mutation-covered here, the GPU sampling body is not)",
+      "covered_by": [
+        "tests/test_coupled_cycle_units.py::test_emit_rejects_unsupported_logical_state_before_gpu",
+        "tests/test_coupled_cycle_units.py::test_emit_rejects_nonpositive_shot_count_before_gpu"
+      ]
+    }
+  },
+  "canonical_units": [
+    "derive_round_map_for_substep_schedule",
+    "params_for_substep_from_round_map",
+    "per_round_axis1_params",
+    "trajectory_mean_instrument",
+    "default_coupled_code_spec",
+    "default_coupled_code_spec_4q",
+    "default_coupled_code_spec_d3_repz",
+    "CoupledCycleNoiseProcess.sched",
+    "CoupledCycleNoiseProcess.truth",
+    "CoupledCycleNoiseProcess.channels",
+    "CoupledCycleNoiseProcess.export_stim_circuit",
+    "CoupledCycleNoiseProcess.emit_clifford_slice",
+    "CoupledCycleNoiseProcess.matched_marginal_permutation_control",
+    "CoupledCycleNoiseProcess.off_source",
+    "CoupledCycleNoiseProcess.coupling_arm",
+    "CoupledCycleNoiseProcess.rounds",
+    "CoupledCycleNoiseProcess.n_stab"
+  ],
+  "units": [
+    {
+      "group": "coupled_cycle",
+      "module": "src/error_coupling_simulator/noise_processes/coupled_cycle.py",
+      "unit": "derive_round_map_for_substep_schedule",
+      "qualname": "derive_round_map_for_substep_schedule",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "coupled_cycle",
+      "module": "src/error_coupling_simulator/noise_processes/coupled_cycle.py",
+      "unit": "params_for_substep_from_round_map",
+      "qualname": "params_for_substep_from_round_map",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "coupled_cycle",
+      "module": "src/error_coupling_simulator/noise_processes/coupled_cycle.py",
+      "unit": "per_round_axis1_params",
+      "qualname": "per_round_axis1_params",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "coupled_cycle",
+      "module": "src/error_coupling_simulator/noise_processes/coupled_cycle.py",
+      "unit": "trajectory_mean_instrument",
+      "qualname": "trajectory_mean_instrument",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "coupled_cycle",
+      "module": "src/error_coupling_simulator/noise_processes/coupled_cycle.py",
+      "unit": "default_coupled_code_spec",
+      "qualname": "default_coupled_code_spec",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "coupled_cycle",
+      "module": "src/error_coupling_simulator/noise_processes/coupled_cycle.py",
+      "unit": "default_coupled_code_spec_4q",
+      "qualname": "default_coupled_code_spec_4q",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "coupled_cycle",
+      "module": "src/error_coupling_simulator/noise_processes/coupled_cycle.py",
+      "unit": "default_coupled_code_spec_d3_repz",
+      "qualname": "default_coupled_code_spec_d3_repz",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "coupled_cycle",
+      "module": "src/error_coupling_simulator/noise_processes/coupled_cycle.py",
+      "unit": "CoupledCycleNoiseProcess.sched",
+      "qualname": "CoupledCycleNoiseProcess.sched",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "coupled_cycle",
+      "module": "src/error_coupling_simulator/noise_processes/coupled_cycle.py",
+      "unit": "CoupledCycleNoiseProcess.truth",
+      "qualname": "CoupledCycleNoiseProcess.truth",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "coupled_cycle",
+      "module": "src/error_coupling_simulator/noise_processes/coupled_cycle.py",
+      "unit": "CoupledCycleNoiseProcess.channels",
+      "qualname": "CoupledCycleNoiseProcess.channels",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "coupled_cycle",
+      "module": "src/error_coupling_simulator/noise_processes/coupled_cycle.py",
+      "unit": "CoupledCycleNoiseProcess.export_stim_circuit",
+      "qualname": "CoupledCycleNoiseProcess.export_stim_circuit",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "coupled_cycle",
+      "module": "src/error_coupling_simulator/noise_processes/coupled_cycle.py",
+      "unit": "CoupledCycleNoiseProcess.emit_clifford_slice",
+      "qualname": "CoupledCycleNoiseProcess.emit_clifford_slice",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "coupled_cycle",
+      "module": "src/error_coupling_simulator/noise_processes/coupled_cycle.py",
+      "unit": "CoupledCycleNoiseProcess.matched_marginal_permutation_control",
+      "qualname": "CoupledCycleNoiseProcess.matched_marginal_permutation_control",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "coupled_cycle",
+      "module": "src/error_coupling_simulator/noise_processes/coupled_cycle.py",
+      "unit": "CoupledCycleNoiseProcess.off_source",
+      "qualname": "CoupledCycleNoiseProcess.off_source",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "coupled_cycle",
+      "module": "src/error_coupling_simulator/noise_processes/coupled_cycle.py",
+      "unit": "CoupledCycleNoiseProcess.coupling_arm",
+      "qualname": "CoupledCycleNoiseProcess.coupling_arm",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "coupled_cycle",
+      "module": "src/error_coupling_simulator/noise_processes/coupled_cycle.py",
+      "unit": "CoupledCycleNoiseProcess.rounds",
+      "qualname": "CoupledCycleNoiseProcess.rounds",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "coupled_cycle",
+      "module": "src/error_coupling_simulator/noise_processes/coupled_cycle.py",
+      "unit": "CoupledCycleNoiseProcess.n_stab",
+      "qualname": "CoupledCycleNoiseProcess.n_stab",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    }
+  ]
+}

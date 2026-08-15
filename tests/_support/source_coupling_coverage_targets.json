@@ -1,0 +1,58 @@
+{
+  "_comment": [
+    "Per-owner coverage registry for source coupling."
+  ],
+  "contract": "docs/SIMULATOR.md",
+  "default_target": {"statement": 1.0, "branch": 1.0},
+  "covered_by_test_files": [
+    "tests/test_source_coupling_units.py"
+  ],
+  "reconcile_modules": [
+    "src/error_coupling_simulator/source/coupling.py"
+  ],
+  "out_of_scope": {},
+  "canonical_units": [
+    "default_source_coupling_config",
+    "source_to_params",
+    "trajectory_to_params",
+    "independent_baseline_trajectory_to_params",
+    "parameter_series",
+    "cross_mechanism_correlation",
+    "static_zz_zeta",
+    "exchange_j_from_phi",
+    "zz_phi_from_frequency_drift",
+    "drift_to_t2",
+    "StaticZZParameters.__post_init__",
+    "StaticZZParameters.base_delta_radns",
+    "StaticZZParameters.alpha_radns",
+    "StaticZZParameters.exchange_j_radns",
+    "StaticZZParameters.to_manifest",
+    "SourceCouplingConfig.__post_init__",
+    "SourceCouplingConfig.to_manifest",
+    "CoupledNoiseParameters.__post_init__",
+    "CoupledNoiseParameters.source_draw_for",
+    "CoupledNoiseParameters.to_manifest"
+  ],
+  "units": [
+    {"group": "source_coupling", "module": "src/error_coupling_simulator/source/coupling.py", "unit": "default_source_coupling_config", "qualname": "default_source_coupling_config", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "source_coupling", "module": "src/error_coupling_simulator/source/coupling.py", "unit": "source_to_params", "qualname": "source_to_params", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "source_coupling", "module": "src/error_coupling_simulator/source/coupling.py", "unit": "trajectory_to_params", "qualname": "trajectory_to_params", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "source_coupling", "module": "src/error_coupling_simulator/source/coupling.py", "unit": "independent_baseline_trajectory_to_params", "qualname": "independent_baseline_trajectory_to_params", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "source_coupling", "module": "src/error_coupling_simulator/source/coupling.py", "unit": "parameter_series", "qualname": "parameter_series", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "source_coupling", "module": "src/error_coupling_simulator/source/coupling.py", "unit": "cross_mechanism_correlation", "qualname": "cross_mechanism_correlation", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "source_coupling", "module": "src/error_coupling_simulator/source/coupling.py", "unit": "static_zz_zeta", "qualname": "static_zz_zeta", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "source_coupling", "module": "src/error_coupling_simulator/source/coupling.py", "unit": "exchange_j_from_phi", "qualname": "exchange_j_from_phi", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "source_coupling", "module": "src/error_coupling_simulator/source/coupling.py", "unit": "zz_phi_from_frequency_drift", "qualname": "zz_phi_from_frequency_drift", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "source_coupling", "module": "src/error_coupling_simulator/source/coupling.py", "unit": "drift_to_t2", "qualname": "drift_to_t2", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "source_coupling", "module": "src/error_coupling_simulator/source/coupling.py", "unit": "StaticZZParameters.__post_init__", "qualname": "StaticZZParameters.__post_init__", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "source_coupling", "module": "src/error_coupling_simulator/source/coupling.py", "unit": "StaticZZParameters.base_delta_radns", "qualname": "StaticZZParameters.base_delta_radns", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "source_coupling", "module": "src/error_coupling_simulator/source/coupling.py", "unit": "StaticZZParameters.alpha_radns", "qualname": "StaticZZParameters.alpha_radns", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "source_coupling", "module": "src/error_coupling_simulator/source/coupling.py", "unit": "StaticZZParameters.exchange_j_radns", "qualname": "StaticZZParameters.exchange_j_radns", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "source_coupling", "module": "src/error_coupling_simulator/source/coupling.py", "unit": "StaticZZParameters.to_manifest", "qualname": "StaticZZParameters.to_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "source_coupling", "module": "src/error_coupling_simulator/source/coupling.py", "unit": "SourceCouplingConfig.__post_init__", "qualname": "SourceCouplingConfig.__post_init__", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "source_coupling", "module": "src/error_coupling_simulator/source/coupling.py", "unit": "SourceCouplingConfig.to_manifest", "qualname": "SourceCouplingConfig.to_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "source_coupling", "module": "src/error_coupling_simulator/source/coupling.py", "unit": "CoupledNoiseParameters.__post_init__", "qualname": "CoupledNoiseParameters.__post_init__", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "source_coupling", "module": "src/error_coupling_simulator/source/coupling.py", "unit": "CoupledNoiseParameters.source_draw_for", "qualname": "CoupledNoiseParameters.source_draw_for", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "source_coupling", "module": "src/error_coupling_simulator/source/coupling.py", "unit": "CoupledNoiseParameters.to_manifest", "qualname": "CoupledNoiseParameters.to_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []}
+  ]
+}

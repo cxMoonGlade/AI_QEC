@@ -1,0 +1,4 @@
+[deps]
+ITensorMPS = "0d1a4710-d33b-49a5-8f18-73bdf49b47e2"
+JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+SHA = "ea8e919c-243c-51af-8825-aaa63cd721ce"

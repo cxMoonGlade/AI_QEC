@@ -1,0 +1,184 @@
+{
+  "_comment": [
+    "Per-owner coverage registry for certify anchors."
+  ],
+  "contract": "docs/SIMULATOR.md",
+  "default_target": {"statement": 1.0, "branch": 1.0},
+  "covered_by_test_files": [
+    "tests/test_certify_anchors_units.py",
+    "tests/test_certify.py"
+  ],
+  "reconcile_modules": [
+    "src/error_coupling_simulator/certify/anchors/closed_form.py",
+    "src/error_coupling_simulator/certify/anchors/controls.py",
+    "src/error_coupling_simulator/certify/anchors/dm_oracle.py",
+    "src/error_coupling_simulator/certify/anchors/stim_clifford.py"
+  ],
+  "out_of_scope": {
+    "DMOracleAnchor.answer": {
+      "class": "gpu_bound",
+      "reason": "real cuda QutritDM compute + DMReplayable process; no CPU path, no L2",
+      "covered_by": [
+        "tests/test_certify.py::test_dm_anchor_capability_is_oom_safe",
+        "tests/test_certify.py::test_dm_anchor_moments_capability_is_oom_safe"
+      ]
+    }
+  },
+  "canonical_units": [
+    "ClosedFormAnchor.emit_kind",
+    "ClosedFormAnchor.answers",
+    "ClosedFormAnchor.capability",
+    "ClosedFormAnchor.predict_sequence",
+    "ClosedFormAnchor.answer",
+    "CorruptStabControl.guards",
+    "CorruptStabControl.expect",
+    "CorruptStabControl.run",
+    "ShuffleControl.guards",
+    "ShuffleControl.expect",
+    "ShuffleControl.run",
+    "StimCliffordAnchor.emit_kind",
+    "StimCliffordAnchor.answers",
+    "StimCliffordAnchor.capability",
+    "StimCliffordAnchor.answer",
+    "DMOracleAnchor.answers",
+    "DMOracleAnchor.capability"
+  ],
+  "units": [
+    {
+      "group": "closed_form",
+      "module": "src/error_coupling_simulator/certify/anchors/closed_form.py",
+      "unit": "ClosedFormAnchor.emit_kind",
+      "qualname": "ClosedFormAnchor.emit_kind",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "closed_form",
+      "module": "src/error_coupling_simulator/certify/anchors/closed_form.py",
+      "unit": "ClosedFormAnchor.answers",
+      "qualname": "ClosedFormAnchor.answers",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "closed_form",
+      "module": "src/error_coupling_simulator/certify/anchors/closed_form.py",
+      "unit": "ClosedFormAnchor.capability",
+      "qualname": "ClosedFormAnchor.capability",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "closed_form",
+      "module": "src/error_coupling_simulator/certify/anchors/closed_form.py",
+      "unit": "ClosedFormAnchor.predict_sequence",
+      "qualname": "ClosedFormAnchor.predict_sequence",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "closed_form",
+      "module": "src/error_coupling_simulator/certify/anchors/closed_form.py",
+      "unit": "ClosedFormAnchor.answer",
+      "qualname": "ClosedFormAnchor.answer",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "controls",
+      "module": "src/error_coupling_simulator/certify/anchors/controls.py",
+      "unit": "CorruptStabControl.guards",
+      "qualname": "CorruptStabControl.guards",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "controls",
+      "module": "src/error_coupling_simulator/certify/anchors/controls.py",
+      "unit": "CorruptStabControl.expect",
+      "qualname": "CorruptStabControl.expect",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "controls",
+      "module": "src/error_coupling_simulator/certify/anchors/controls.py",
+      "unit": "CorruptStabControl.run",
+      "qualname": "CorruptStabControl.run",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "controls",
+      "module": "src/error_coupling_simulator/certify/anchors/controls.py",
+      "unit": "ShuffleControl.guards",
+      "qualname": "ShuffleControl.guards",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "controls",
+      "module": "src/error_coupling_simulator/certify/anchors/controls.py",
+      "unit": "ShuffleControl.expect",
+      "qualname": "ShuffleControl.expect",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "controls",
+      "module": "src/error_coupling_simulator/certify/anchors/controls.py",
+      "unit": "ShuffleControl.run",
+      "qualname": "ShuffleControl.run",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "stim_clifford",
+      "module": "src/error_coupling_simulator/certify/anchors/stim_clifford.py",
+      "unit": "StimCliffordAnchor.emit_kind",
+      "qualname": "StimCliffordAnchor.emit_kind",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "stim_clifford",
+      "module": "src/error_coupling_simulator/certify/anchors/stim_clifford.py",
+      "unit": "StimCliffordAnchor.answers",
+      "qualname": "StimCliffordAnchor.answers",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "stim_clifford",
+      "module": "src/error_coupling_simulator/certify/anchors/stim_clifford.py",
+      "unit": "StimCliffordAnchor.capability",
+      "qualname": "StimCliffordAnchor.capability",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "stim_clifford",
+      "module": "src/error_coupling_simulator/certify/anchors/stim_clifford.py",
+      "unit": "StimCliffordAnchor.answer",
+      "qualname": "StimCliffordAnchor.answer",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "dm_oracle",
+      "module": "src/error_coupling_simulator/certify/anchors/dm_oracle.py",
+      "unit": "DMOracleAnchor.answers",
+      "qualname": "DMOracleAnchor.answers",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "dm_oracle",
+      "module": "src/error_coupling_simulator/certify/anchors/dm_oracle.py",
+      "unit": "DMOracleAnchor.capability",
+      "qualname": "DMOracleAnchor.capability",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    }
+  ]
+}

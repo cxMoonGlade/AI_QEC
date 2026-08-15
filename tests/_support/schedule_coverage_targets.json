@@ -1,0 +1,37 @@
+{
+  "_comment": [
+    "Per-owner coverage registry for schedule."
+  ],
+  "contract": "docs/SIMULATOR.md",
+  "default_target": {"statement": 1.0, "branch": 1.0},
+  "covered_by_test_files": [
+    "tests/test_schedule_units.py"
+  ],
+  "reconcile_modules": [
+    "src/error_coupling_simulator/frontend/schedule.py"
+  ],
+  "out_of_scope": {},
+  "canonical_units": [
+    "ScheduleTemplate.__post_init__",
+    "ScheduleTemplate.validate_for",
+    "ScheduleTemplate.to_manifest",
+    "repeated_memory_schedule",
+    "repeated_memory_schedule_manifest",
+    "canonical_schedule_name",
+    "resolve_schedule_template"
+  ],
+  "units": [
+    {"group": "schedule", "module": "src/error_coupling_simulator/frontend/schedule.py", "unit": "ScheduleTemplate.__post_init__", "qualname": "ScheduleTemplate.__post_init__", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": [
+      {"kind": "line", "selector": {"type": "line", "line": 46, "stmt_kind": "branch"}, "reason": "The `if self.name == 'repeated_memory_v1'` decision is ALWAYS True: line 33 assigned name = canonical_schedule_name(self.name), which returns only 'repeated_memory_v1' or raises. So the False arc (skip the manifest self-check) is STRUCTURALLY UNREACHABLE -- a defensive/forward-compat guard for a future second template. The True arc (running the manifest self-consistency check) IS covered on every valid construction, and the comparison's mutants divert the always-True path into a skipped check and are killed by the manifest-mismatch test (NOT a mutation gap).", "covered_by": ["tests/test_schedule_units.py::test_L0_schedule_template_canonicalizes_name_and_operations", "tests/test_schedule_units.py::test_L0_schedule_template_manifest_mismatch_raises_exact"]}
+    ]},
+    {"group": "schedule", "module": "src/error_coupling_simulator/frontend/schedule.py", "unit": "ScheduleTemplate.validate_for", "qualname": "ScheduleTemplate.validate_for", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "schedule", "module": "src/error_coupling_simulator/frontend/schedule.py", "unit": "ScheduleTemplate.to_manifest", "qualname": "ScheduleTemplate.to_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "schedule", "module": "src/error_coupling_simulator/frontend/schedule.py", "unit": "repeated_memory_schedule", "qualname": "repeated_memory_schedule", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "schedule", "module": "src/error_coupling_simulator/frontend/schedule.py", "unit": "repeated_memory_schedule_manifest", "qualname": "repeated_memory_schedule_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "schedule", "module": "src/error_coupling_simulator/frontend/schedule.py", "unit": "canonical_schedule_name", "qualname": "canonical_schedule_name", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "schedule", "module": "src/error_coupling_simulator/frontend/schedule.py", "unit": "resolve_schedule_template", "qualname": "resolve_schedule_template", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": [
+      {"kind": "line", "selector": {"type": "line", "line": 103, "stmt_kind": "branch"}, "reason": "The `if name == 'repeated_memory_v1'` decision is ALWAYS True: name = canonical_schedule_name(schedule_template) returns only 'repeated_memory_v1' or raises, so the False arc (falling through to the AssertionError) is STRUCTURALLY UNREACHABLE. The True arc (returning repeated_memory_schedule()) IS covered, and the comparison's mutants divert into the fall-through and are killed by test_L0_resolve_from_name.", "covered_by": ["tests/test_schedule_units.py::test_L0_resolve_from_name", "tests/test_schedule_units.py::test_L0_resolve_unsupported_raises_valueerror"]},
+      {"kind": "line", "selector": {"type": "line", "line": 105, "stmt_kind": "raise"}, "reason": "The trailing `raise AssertionError(...)` is DEAD CODE: canonical_schedule_name (called on line 102) already rejects every non-'repeated_memory_v1' name with a ValueError, so line 103 is always True and control never reaches this defensive fall-through. Its two f-string mutants never execute (genuine equivalents); the unsupported-name route is covered by test_L0_resolve_unsupported_raises_valueerror (a ValueError from canonical_schedule_name, NOT this AssertionError).", "covered_by": ["tests/test_schedule_units.py::test_L0_resolve_unsupported_raises_valueerror"]}
+    ]}
+  ]
+}

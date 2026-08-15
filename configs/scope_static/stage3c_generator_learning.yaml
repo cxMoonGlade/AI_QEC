@@ -1,9 +1,0 @@
-stage3c_prototype_generator_learning:
-  name: Stage3C_prototype_generator_learning
-  stage3a_dir: outputs/scope_static/PHYC_STAGE3_discovery/S3A_protocol_freeze
-  stage3a5_dir: outputs/scope_static/PHYC_STAGE3_discovery/S3A5_observability_alias_ceiling
-  stage3b1_dir: outputs/scope_static/PHYC_STAGE3_discovery/S3B1_first_discovery_model
-  output_dir: outputs/scope_static/PHYC_STAGE3_discovery/S3C_prototype_generator_learning
-  max_cv_folds: 5
-  variance_floor: 1.0e-6
-  evaluator_mode: controlled_catalog

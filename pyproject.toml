@@ -3,50 +3,147 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "scope-static"
+name = "error-coupling-simulator"
 version = "0.1.0"
-description = "Pre-release SCOPE-Static toolbox for QEC physical-mechanism data, teacher audits, and learner/noise-generation diagnostics"
-requires-python = ">=3.10"
+description = "A backend-agnostic classical evaluator for caller-declared, possibly memoryful quantum-error processes interleaved with QEC programs; exposes the induced detector/observable Record law through supported query interfaces."
+readme = {file = "README.md", content-type = "text/markdown"}
+requires-python = ">=3.11"
 dependencies = [
-    "numpy",
-    "PyYAML",
-    "stim",
-    "torch",
+    "numpy==2.4.6",
+    "opt_einsum==3.4.0",
+    "PyYAML==6.0.3",
+    "qutip==5.3.0; python_version >= '3.11'",
+    "quimb==1.14.0",
+    "scipy==1.17.1",
+    "stim==1.16.0",
+    "torch==2.12.0",
 ]
 
 [project.optional-dependencies]
-cuda-extension = ["ninja"]
-
-[project.scripts]
-scope-static-toolbox = "scope_static.toolbox:main"
-scope-catalog-teacher = "scope_static.experiments.qec_noise_catalog.controlled_catalog_teacher:main"
-scope-data-preparation-teacher = "scope_static.experiments.qec_noise_catalog.data_preparation_teacher:main"
-teacher-distinguishment = "scope_static.experiments.qec_noise_catalog.teacher_distinguishment:main"
-learner-acceptance = "scope_static.experiments.qec_noise_catalog.learner_acceptance:main"
-scope-stage3a-freeze = "scope_static.experiments.stage3.protocol_freeze:main"
-scope-stage3a5-ceiling = "scope_static.experiments.stage3.observability_ceiling:main"
-scope-stage3b0-baselines = "scope_static.experiments.stage3.baselines:main"
-scope-stage3b1-discovery = "scope_static.experiments.stage3.discovery_model:main"
-scope-stage3c-generator = "scope_static.experiments.stage3.generator_learning:main"
-scope-stage3d1-assignment-shuffle = "scope_static.experiments.stage3.assignment_shuffle_audit:main"
-scope-stage3d2-feature-scramble = "scope_static.experiments.stage3.feature_scramble_audit:main"
-scope-stage3d3-context-shuffle = "scope_static.experiments.stage3.context_shuffle_audit:main"
-scope-stage3d4-k-stress = "scope_static.experiments.stage3.k_stress_audit:main"
-scope-stage3d4b-overcomplete-merge-prune = "scope_static.experiments.stage3.overcomplete_merge_prune_audit:main"
-scope-google-s3-visible-adapter = "scope_static.experiments.willow_data.s3_visible_adapter:main"
-scope-google-s3-visible-cache-v2 = "scope_static.experiments.willow_data.s3_visible_cache_v2:main"
-scope-google-s3-visible-aggregate-v2 = "scope_static.experiments.willow_data.s3_visible_aggregate_v2:main"
-scope-google-s3-visible-adapter-v2 = "scope_static.experiments.willow_data.s3_visible_adapter_v2:main"
-scope-teacher-physicality-audit = "scope_static.experiments.qec_noise_catalog.teacher_physicality_audit:main"
+cuda-extension = ["ninja==1.13.0"]
+# Reproducible Linux/Blackwell GPU runtime for the canonical ecs simulator.
+# Pin the JIT compiler pieces so torch extensions do not silently compile
+# against a different host toolkit.
+gpu-cu130 = [
+    "qutip-cuquantum[cuda13]==0.3.1; python_version >= '3.11' and sys_platform == 'linux'",
+    "cupy-cuda13x==13.6.0; python_version >= '3.11' and sys_platform == 'linux'",
+    "cuquantum-python-cu13==26.3.2; python_version >= '3.11' and sys_platform == 'linux'",
+    "cudensitymat-cu13==0.5.2; python_version >= '3.11' and sys_platform == 'linux'",
+    "cupauliprop-cu13==0.3.2; python_version >= '3.11' and sys_platform == 'linux'",
+    "custabilizer-cu13==0.3.0; python_version >= '3.11' and sys_platform == 'linux'",
+    "custatevec-cu13==1.13.1; python_version >= '3.11' and sys_platform == 'linux'",
+    "cutensor-cu13==2.6.0; python_version >= '3.11' and sys_platform == 'linux'",
+    "cutensornet-cu13==2.12.2; python_version >= '3.11' and sys_platform == 'linux'",
+    "nvmath-python==0.9.0; python_version >= '3.11' and sys_platform == 'linux'",
+    "cuda-bindings==13.3.0; python_version >= '3.11' and sys_platform == 'linux'",
+    "cuda-core==0.7.0; python_version >= '3.11' and sys_platform == 'linux'",
+    "cuda-pathfinder==1.5.5; python_version >= '3.11' and sys_platform == 'linux'",
+    "cuda-toolkit[cccl,crt,cudart,nvcc,nvrtc,nvjitlink,nvvm]==13.0.2; python_version >= '3.11' and sys_platform == 'linux'",
+    "nvidia-cuda-cccl==13.0.85; python_version >= '3.11' and sys_platform == 'linux'",
+    "nvidia-cuda-runtime==13.0.96; python_version >= '3.11' and sys_platform == 'linux'",
+    "nvidia-cuda-nvcc==13.0.88; python_version >= '3.11' and sys_platform == 'linux'",
+    "nvidia-cuda-crt==13.0.88; python_version >= '3.11' and sys_platform == 'linux'",
+    "nvidia-cuda-nvrtc==13.0.88; python_version >= '3.11' and sys_platform == 'linux'",
+    "nvidia-nvjitlink==13.0.88; python_version >= '3.11' and sys_platform == 'linux'",
+    "nvidia-nvvm==13.0.88; python_version >= '3.11' and sys_platform == 'linux'",
+]
+# Optional noiseless Grover adapter.  Deliberately not selected by the ecs sync
+# wrapper: CUDA-Q remains isolated in the retained aiqec environment because it
+# is not part of the coupled-noise carrier and conflicts with the fused extension
+# during same-process native teardown.
+cudaq-grover = [
+    "cudaq[visualization]==0.14.2; python_version >= '3.11' and sys_platform == 'linux'",
+    "matplotlib==3.10.9; python_version >= '3.11' and sys_platform == 'linux'",
+    "cuda-quantum-cu13==0.14.2; python_version >= '3.11' and sys_platform == 'linux'",
+]
+# Optional evaluator-side decoder pin: CPU execution with upstream defaults; wheel identity is
+# recorded in error_coupling_simulator/frontend/decoder.py.
+hw = ["pymatching==2.4.0"]
+# INDEPENDENT-oracle test deps. tests/test_joint_lindbladian.py validates the joint-Lindbladian
+# assembler against QuTiP + scipy (NOT the module's own code — faithfulness protocol rule I); the
+# qutip_* gtchecks already use them. Declared so a bare `pytest` does not silently SKIP the oracle
+# tests and "pass" with zero coverage (the skip when missing is loud — NOT a release basis).
+test = [
+    "coverage==7.15.0",
+    "hypothesis==6.156.1",
+    "mpmath==1.3.0",
+    "mutmut==3.6.0",
+    "pytest==8.4.2",
+    "sympy==1.14.0",
+]
 
 [tool.setuptools]
 package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+include = ["error_coupling_simulator", "error_coupling_simulator.*"]
 
 [tool.setuptools.package-data]
-scope_static = ["cuda/*.cpp", "cuda/*.cu", "cuda/README.md"]
+"error_coupling_simulator.carrier.kernels" = ["*.cpp", "*.cu", "README.md"]
+
+[tool.setuptools.data-files]
+"share/doc/error-coupling-simulator" = [
+    "docs/SIMULATOR.md",
+    "docs/CAPABILITY_MODEL.md",
+    "docs/METRICS.md",
+    "docs/FAITHFULNESS_PROTOCOL.md",
+    "docs/NUMERICAL_PROVENANCE.md",
+    "docs/service_status.json",
+    "docs/CODE_MAP.md",
+]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
+testpaths = ["tests"]
+norecursedirs = ["external", "outputs", ".venv", ".hypothesis"]
+markers = [
+    "slow: opt-in heavy runs",
+    "mutation_trampoline_incompatible: raw-source scanner that cannot identify the active candidate inside a mutmut trampoline, or a cwd-changing test that breaks trampoline-hit source-path resolution",
+]
+
+[tool.aiqec.core-environment]
+conda_environment = "ecs"
+python = "3.12.13"
+pip = "26.0.1"
+uv = "0.11.21"
+torch_cuda = "13.0"
+cuda_provider = "nvidia/cu13"
+
+[tool.aiqec.core-environment.versions]
+coverage = "7.15.0"
+numpy = "2.4.6"
+opt-einsum = "3.4.0"
+PyYAML = "6.0.3"
+quimb = "1.14.0"
+stim = "1.16.0"
+scipy = "1.17.1"
+torch = "2.12.0"
+triton = "3.7.0"
+ninja = "1.13.0"
+pytest = "8.4.2"
+hypothesis = "6.156.1"
+mutmut = "3.6.0"
+sympy = "1.14.0"
+qutip = "5.3.0"
+qutip-cuquantum = "0.3.1"
+cupy-cuda13x = "13.6.0"
+cuquantum-python-cu13 = "26.3.2"
+cudensitymat-cu13 = "0.5.2"
+cupauliprop-cu13 = "0.3.2"
+custabilizer-cu13 = "0.3.0"
+custatevec-cu13 = "1.13.1"
+cutensor-cu13 = "2.6.0"
+cutensornet-cu13 = "2.12.2"
+nvmath-python = "0.9.0"
+cuda-bindings = "13.3.0"
+cuda-core = "0.7.0"
+cuda-pathfinder = "1.5.5"
+cuda-toolkit = "13.0.2"
+nvidia-cuda-cccl = "13.0.85"
+nvidia-cuda-runtime = "13.0.96"
+nvidia-cuda-nvcc = "13.0.88"
+nvidia-cuda-crt = "13.0.88"
+nvidia-cuda-nvrtc = "13.0.88"
+nvidia-nvjitlink = "13.0.88"
+nvidia-nvvm = "13.0.88"

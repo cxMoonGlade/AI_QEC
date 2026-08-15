@@ -1,0 +1,24 @@
+{
+  "_comment": [
+    "Per-owner coverage registry for shared float64 numerical primitives."
+  ],
+  "contract": "docs/NUMERICAL_PROVENANCE.md",
+  "default_target": {"statement": 1.0, "branch": 1.0},
+  "covered_by_test_files": [
+    "tests/test_numerics_units.py"
+  ],
+  "reconcile_modules": [
+    "src/error_coupling_simulator/numerics.py"
+  ],
+  "out_of_scope": {},
+  "canonical_units": [
+    "scaled_exp_multiply",
+    "scaled_product_ratio",
+    "shifted_probability_from_odds"
+  ],
+  "units": [
+    {"group": "numerics", "module": "src/error_coupling_simulator/numerics.py", "unit": "scaled_exp_multiply", "qualname": "scaled_exp_multiply", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "numerics", "module": "src/error_coupling_simulator/numerics.py", "unit": "scaled_product_ratio", "qualname": "scaled_product_ratio", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "numerics", "module": "src/error_coupling_simulator/numerics.py", "unit": "shifted_probability_from_odds", "qualname": "shifted_probability_from_odds", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []}
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "_comment": [
+    "Per-owner coverage registry for axis1 selection."
+  ],
+  "contract": "docs/SIMULATOR.md",
+  "default_target": {"statement": 1.0, "branch": 1.0},
+  "covered_by_test_files": [
+    "tests/test_axis1_selection_units.py"
+  ],
+  "reconcile_modules": [
+    "src/error_coupling_simulator/frontend/axis1_selection.py"
+  ],
+  "out_of_scope": {},
+  "canonical_units": [
+    "Axis1MechanismSelection.__post_init__",
+    "Axis1MechanismSelection.to_manifest",
+    "Axis1MechanismSelectionPlan.__post_init__",
+    "Axis1MechanismSelectionPlan.by_kind",
+    "Axis1MechanismSelectionPlan.require_kind",
+    "Axis1MechanismSelectionPlan.to_manifest",
+    "Axis1SelectionLayer.__post_init__",
+    "Axis1SelectionLayer.participants",
+    "Axis1SelectionLayer.selection_ids",
+    "Axis1SelectionLayer.to_manifest",
+    "axis1_selection_layers_in_schedule_order",
+    "axis1_selection_partition_manifest",
+    "build_axis1_joint_channel_selection_plan",
+    "build_axis1_schedule_selection_plan",
+    "flatten_axis1_selection_layers"
+  ],
+  "units": [
+    {"group": "axis1_selection", "module": "src/error_coupling_simulator/frontend/axis1_selection.py", "unit": "Axis1MechanismSelection.__post_init__", "qualname": "Axis1MechanismSelection.__post_init__", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": [
+      {"kind": "line", "selector": {"type": "line", "line": 153, "stmt_kind": "branch"}, "covered_by": ["tests/test_axis1_selection_units.py::test_L0_selection_post_init_coupling_edge_guards"], "reason": "DEAD-DEFENSIVE branch: every coupling edge is normalized through _normal_pair(*edge) on line 149 BEFORE this loop; _normal_pair returns a distinct 2-tuple (a<b) or raises 'Axis-1 mechanism-selection pair must contain distinct qubits'. So by line 152 every edge is a distinct 2-tuple and `len(edge) != 2 or edge[0] == edge[1]` can never be True. Probed: the equal-endpoint route raises _normal_pair's message (line 149), the len!=2 route is caught by the raw-edge loop (line 147); the reachable containment guard on line 155 is tripped separately. src-cleanup candidate."},
+      {"kind": "line", "selector": {"type": "line", "line": 154, "stmt_kind": "raise"}, "covered_by": ["tests/test_axis1_selection_units.py::test_L0_selection_post_init_coupling_edge_guards"], "reason": "DEAD-DEFENSIVE raise body of the unreachable line-153 guard (see the line-153 exemption): normalization by _normal_pair makes `len(edge) != 2 or edge[0] == edge[1]` always False, so this raise is never reached. src-cleanup candidate."},
+      {"kind": "line", "selector": {"type": "line", "line": 181, "stmt_kind": "branch"}, "covered_by": ["tests/test_axis1_selection_units.py::test_L0_selection_post_init_zz_cluster_two_qubit_participant_ok"], "reason": "DEAD-DEFENSIVE branch: an edge surviving the containment check (line 155) has two distinct endpoints both in participant_set, and participant duplicates already raised on line 129, so a zz-cluster row with a valid edge always has >= 2 distinct participants -> `len(participant) < 2` can never be True here. Probed: the minimal 2-participant zz-cluster is valid; the no-edge zz-cluster route raises earlier on line 178. src-cleanup candidate."},
+      {"kind": "line", "selector": {"type": "line", "line": 182, "stmt_kind": "raise"}, "covered_by": ["tests/test_axis1_selection_units.py::test_L0_selection_post_init_zz_cluster_two_qubit_participant_ok"], "reason": "DEAD-DEFENSIVE raise body of the unreachable line-181 guard (see the line-181 exemption): a valid-edge zz-cluster row always has >= 2 distinct participants, so this raise is never reached. src-cleanup candidate."}
+    ]},
+    {"group": "axis1_selection", "module": "src/error_coupling_simulator/frontend/axis1_selection.py", "unit": "Axis1MechanismSelection.to_manifest", "qualname": "Axis1MechanismSelection.to_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "axis1_selection", "module": "src/error_coupling_simulator/frontend/axis1_selection.py", "unit": "Axis1MechanismSelectionPlan.__post_init__", "qualname": "Axis1MechanismSelectionPlan.__post_init__", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "axis1_selection", "module": "src/error_coupling_simulator/frontend/axis1_selection.py", "unit": "Axis1MechanismSelectionPlan.by_kind", "qualname": "Axis1MechanismSelectionPlan.by_kind", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "axis1_selection", "module": "src/error_coupling_simulator/frontend/axis1_selection.py", "unit": "Axis1MechanismSelectionPlan.require_kind", "qualname": "Axis1MechanismSelectionPlan.require_kind", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "axis1_selection", "module": "src/error_coupling_simulator/frontend/axis1_selection.py", "unit": "Axis1MechanismSelectionPlan.to_manifest", "qualname": "Axis1MechanismSelectionPlan.to_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "axis1_selection", "module": "src/error_coupling_simulator/frontend/axis1_selection.py", "unit": "Axis1SelectionLayer.__post_init__", "qualname": "Axis1SelectionLayer.__post_init__", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "axis1_selection", "module": "src/error_coupling_simulator/frontend/axis1_selection.py", "unit": "Axis1SelectionLayer.participants", "qualname": "Axis1SelectionLayer.participants", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "axis1_selection", "module": "src/error_coupling_simulator/frontend/axis1_selection.py", "unit": "Axis1SelectionLayer.selection_ids", "qualname": "Axis1SelectionLayer.selection_ids", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "axis1_selection", "module": "src/error_coupling_simulator/frontend/axis1_selection.py", "unit": "Axis1SelectionLayer.to_manifest", "qualname": "Axis1SelectionLayer.to_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "axis1_selection", "module": "src/error_coupling_simulator/frontend/axis1_selection.py", "unit": "axis1_selection_layers_in_schedule_order", "qualname": "axis1_selection_layers_in_schedule_order", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "axis1_selection", "module": "src/error_coupling_simulator/frontend/axis1_selection.py", "unit": "axis1_selection_partition_manifest", "qualname": "axis1_selection_partition_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "axis1_selection", "module": "src/error_coupling_simulator/frontend/axis1_selection.py", "unit": "build_axis1_joint_channel_selection_plan", "qualname": "build_axis1_joint_channel_selection_plan", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "axis1_selection", "module": "src/error_coupling_simulator/frontend/axis1_selection.py", "unit": "build_axis1_schedule_selection_plan", "qualname": "build_axis1_schedule_selection_plan", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "axis1_selection", "module": "src/error_coupling_simulator/frontend/axis1_selection.py", "unit": "flatten_axis1_selection_layers", "qualname": "flatten_axis1_selection_layers", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []}
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "arxiv_id": null,
+  "cached_file_mtime_utc": "2026-07-26T09:43:20.276336+00:00",
+  "extractor": "pdftotext-layout",
+  "page_count": 4,
+  "pdf_bytes": 127365,
+  "pdf_sha256": "e996af2b5d573e3befd249f69fdfd29284c2a656134a80f46d9351eb9da51537",
+  "processed_at_utc": "2026-07-26T09:43:20.295097+00:00",
+  "requested_spec": "docs/papers/schuch_wolf_verstraete_cirac_prl_98_140506.pdf",
+  "retrieved_at_utc": null,
+  "source_path": "/home/cx/AI_QEC/AI_QEC/docs/papers/schuch_wolf_verstraete_cirac_prl_98_140506.pdf",
+  "source_type": "local-pdf",
+  "source_version_date": null,
+  "source_version_date_status": "verify-from-primary-source",
+  "text_chars": 28151,
+  "text_path": "/home/cx/AI_QEC/AI_QEC/docs/papers/schuch_wolf_verstraete_cirac_prl_98_140506.txt",
+  "version_status": "unknown-local-artifact-version"
+}

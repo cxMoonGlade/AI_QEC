@@ -1,0 +1,855 @@
+#!/usr/bin/env -S conda run --no-capture-output -n ecs python
+"""Direct single-process replay of the captured 170-call CUDA pinv sequence.
+
+Run from anywhere with ``/home/cx/AI_QEC/AI_QEC/test_170``.  The default
+execution is CUDA and uses the exact manifest and retained GA/GB snapshots
+that back the Spark/local differential diagnostic.  This direct variant has
+no SSH transport, controller process, or acknowledgement round-trip.
+
+This is a workload-reproduction tool, not simulator release evidence and not
+a hardware-health certification.  The matrices for each call are top-left
+principal submatrices of the retained largest side-specific snapshots; they
+are not claimed to be every exact historical tensor.
+"""
+
+from __future__ import annotations
+
+import argparse
+from collections import Counter
+from dataclasses import asdict, dataclass
+from datetime import datetime, timezone
+import hashlib
+import json
+import math
+import os
+from pathlib import Path
+import platform
+import re
+import subprocess
+import sys
+import time
+from typing import Any
+from uuid import uuid4
+
+
+EXPECTED_CALL_SCHEMA = "error_coupling_simulator.pepo_ntu_pinv_call.v1"
+EXPECTED_CALL_COUNT = 170
+EXPECTED_HASHES = {
+    "pinv_calls.jsonl": "1e0ae06d35e8bbb4869871cd2f6b7d2acda171ef0c481e80b39652653887b1da",
+    "largest-GA.json": "eee3adda0e05744ed0c16cbc69cdd337ed399efd36672f5eca84d123dd806b9b",
+    "largest-GA.pt": "33218533da10f0541f49f190596c75f9b5e0a3431df6ae361396f1461536a956",
+    "largest-GB.json": "28c95c214244fba0b9c96693acfbc2125b729da97754e5af7f884bf1ac13870f",
+    "largest-GB.pt": "8495aeeb228b2b56d8f9693e9519f3b9b8b2ea08116802811152cf88911d2fb4",
+}
+RUN_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,100}$")
+
+REPO_ROOT = Path(__file__).resolve().parent
+SNAPSHOT_ROOT = (
+    REPO_ROOT
+    / "outputs/simulator_validation/runtime_reset_watch/isolated_runs"
+    / "compressed_caps_v2_largest_capture_4b2a5f7_20260720_a1"
+    / "ntu_snapshots"
+)
+DEFAULT_OUTPUT_ROOT = (
+    REPO_ROOT
+    / "outputs/simulator_validation/runtime_reset_watch/pinv_direct_runs"
+)
+
+
+@dataclass(frozen=True, slots=True)
+class CallSpec:
+    call_index: int
+    side: str
+    side_length: int
+    rtol: float
+    bond: str
+    sweep_index: int
+    re: int
+
+
+def timestamp() -> str:
+    return datetime.now(timezone.utc).astimezone().isoformat(timespec="microseconds")
+
+
+def canonical_bytes(value: Any) -> bytes:
+    return json.dumps(
+        value,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    ).encode("utf-8")
+
+
+def canonical_sha256(value: Any) -> str:
+    return hashlib.sha256(canonical_bytes(value)).hexdigest()
+
+
+def file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def fsync_directory(path: Path) -> None:
+    descriptor = os.open(path, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+
+
+def append_jsonl(path: Path, value: Any) -> None:
+    with path.open("ab", buffering=0) as stream:
+        stream.write(canonical_bytes(value) + b"\n")
+        os.fsync(stream.fileno())
+
+
+def atomic_json(path: Path, value: Any) -> None:
+    """Publish JSON atomically; preserve a temporary file if publication fails."""
+
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.{uuid4().hex}.tmp")
+    with temporary.open("xb") as stream:
+        stream.write(canonical_bytes(value) + b"\n")
+        stream.flush()
+        os.fsync(stream.fileno())
+    os.replace(temporary, path)
+    fsync_directory(path.parent)
+
+
+def load_json_object(path: Path) -> dict[str, Any]:
+    value = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(value, dict):
+        raise TypeError(f"JSON root is not an object: {path}")
+    return value
+
+
+def load_jsonl_objects(path: Path) -> tuple[list[dict[str, Any]], bool]:
+    payload = path.read_bytes()
+    rows: list[dict[str, Any]] = []
+    ignored_incomplete_tail = False
+    pieces = payload.splitlines(keepends=True)
+    for index, raw in enumerate(pieces):
+        complete_line = raw.endswith((b"\n", b"\r"))
+        try:
+            value = json.loads(raw)
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            if index == len(pieces) - 1 and not complete_line:
+                ignored_incomplete_tail = True
+                break
+            raise
+        if not isinstance(value, dict):
+            raise TypeError(f"JSONL row {index + 1} is not an object")
+        rows.append(value)
+    if not rows:
+        raise ValueError("manifest has no complete JSON object rows")
+    return rows, ignored_incomplete_tail
+
+
+def require_int(value: object, *, name: str, minimum: int = 0) -> int:
+    if type(value) is not int or value < minimum:
+        raise ValueError(f"{name} must be an integer >= {minimum}")
+    return value
+
+
+def validate_call_plan(rows: list[dict[str, Any]]) -> list[CallSpec]:
+    calls: list[CallSpec] = []
+    for expected_index, row in enumerate(rows, start=1):
+        if row.get("schema") != EXPECTED_CALL_SCHEMA:
+            raise ValueError(f"call {expected_index} has an unsupported schema")
+        call_index = require_int(
+            row.get("pinv_call_sequence"),
+            name=f"call {expected_index} sequence",
+            minimum=1,
+        )
+        if call_index != expected_index:
+            raise ValueError(
+                f"manifest sequence is not contiguous at row {expected_index}"
+            )
+        solver = row.get("solver")
+        tensor = row.get("tensor")
+        health = row.get("health")
+        if not isinstance(solver, dict) or not isinstance(tensor, dict):
+            raise TypeError(f"call {call_index} lacks solver or tensor metadata")
+        if not isinstance(health, dict) or health.get("finite") is not True:
+            raise ValueError(f"call {call_index} was not captured as finite")
+        side = solver.get("solver_side")
+        if side not in ("A", "B"):
+            raise ValueError(f"call {call_index} has an invalid solver side")
+        shape = tensor.get("shape")
+        if (
+            not isinstance(shape, list)
+            or len(shape) != 2
+            or type(shape[0]) is not int
+            or type(shape[1]) is not int
+            or shape[0] != shape[1]
+            or not 1 <= shape[0] <= 1024
+        ):
+            raise ValueError(f"call {call_index} has an invalid square shape")
+        side_length = shape[0]
+        if tensor.get("dtype") != "torch.complex128":
+            raise ValueError(f"call {call_index} is not complex128")
+        if tensor.get("logical_nbytes") != side_length * side_length * 16:
+            raise ValueError(f"call {call_index} has inconsistent logical bytes")
+        rtol = solver.get("rtol")
+        if not isinstance(rtol, (int, float)) or not math.isfinite(rtol) or rtol <= 0:
+            raise ValueError(f"call {call_index} has an invalid rtol")
+        bond = solver.get("bond")
+        if not isinstance(bond, str) or not bond:
+            raise ValueError(f"call {call_index} has an invalid bond")
+        calls.append(
+            CallSpec(
+                call_index=call_index,
+                side=side,
+                side_length=side_length,
+                rtol=float(rtol),
+                bond=bond,
+                sweep_index=require_int(
+                    solver.get("sweep_index"),
+                    name=f"call {call_index} sweep_index",
+                    minimum=1,
+                ),
+                re=require_int(
+                    solver.get("re"),
+                    name=f"call {call_index} re",
+                    minimum=1,
+                ),
+            )
+        )
+    if len(calls) != EXPECTED_CALL_COUNT:
+        raise ValueError(
+            f"expected {EXPECTED_CALL_COUNT} calls, observed {len(calls)}"
+        )
+    return calls
+
+
+def call_plan_sha256(calls: list[CallSpec]) -> str:
+    return canonical_sha256([asdict(call) for call in calls])
+
+
+def validate_fixed_inputs() -> tuple[dict[str, Path], list[CallSpec], bool]:
+    paths = {name: (SNAPSHOT_ROOT / name).resolve(strict=True) for name in EXPECTED_HASHES}
+    for name, expected_hash in EXPECTED_HASHES.items():
+        observed_hash = file_sha256(paths[name])
+        if observed_hash != expected_hash:
+            raise ValueError(
+                f"fixed input hash mismatch for {name}: "
+                f"expected {expected_hash}, observed {observed_hash}"
+            )
+    rows, ignored_tail = load_jsonl_objects(paths["pinv_calls.jsonl"])
+    calls = validate_call_plan(rows)
+    for side in ("A", "B"):
+        metadata = load_json_object(paths[f"largest-G{side}.json"])
+        if metadata.get("sha256") != EXPECTED_HASHES[f"largest-G{side}.pt"]:
+            raise ValueError(f"side {side} snapshot metadata hash is inconsistent")
+        tensor = metadata.get("tensor")
+        solver = metadata.get("solver")
+        if not isinstance(tensor, dict) or tensor.get("shape") != [1024, 1024]:
+            raise ValueError(f"side {side} snapshot is not 1024 x 1024")
+        if tensor.get("dtype") != "torch.complex128":
+            raise ValueError(f"side {side} snapshot is not complex128")
+        if not isinstance(solver, dict) or solver.get("solver_side") != side:
+            raise ValueError(f"side {side} snapshot side metadata is inconsistent")
+    return paths, calls, ignored_tail
+
+
+def finite_number_or_label(value: float) -> float | str:
+    if math.isfinite(value):
+        return value
+    if math.isnan(value):
+        return "nan"
+    return "inf" if value > 0 else "-inf"
+
+
+def tensor_metadata(tensor: Any) -> dict[str, Any]:
+    import torch
+
+    value: dict[str, Any] = {
+        "shape": [int(size) for size in tensor.shape],
+        "stride": [int(stride) for stride in tensor.stride()],
+        "dtype": str(tensor.dtype),
+        "device": str(tensor.device),
+        "numel": int(tensor.numel()),
+        "logical_nbytes": int(tensor.numel() * tensor.element_size()),
+        "contiguous": bool(tensor.is_contiguous()),
+    }
+    if tensor.device.type == "cuda":
+        stats = torch.cuda.memory_stats(tensor.device)
+        value.update(
+            {
+                "cuda_allocated": int(torch.cuda.memory_allocated(tensor.device)),
+                "cuda_reserved": int(torch.cuda.memory_reserved(tensor.device)),
+                "cuda_max_allocated": int(
+                    torch.cuda.max_memory_allocated(tensor.device)
+                ),
+                "cuda_num_alloc_retries": int(stats.get("num_alloc_retries", 0)),
+                "cuda_num_ooms": int(stats.get("num_ooms", 0)),
+            }
+        )
+    return value
+
+
+def tensor_health(tensor: Any) -> dict[str, Any]:
+    import torch
+
+    with torch.no_grad():
+        finite = bool(torch.isfinite(tensor).all().item())
+        has_nan = bool(torch.isnan(tensor).any().item())
+        has_inf = bool(torch.isinf(tensor).any().item())
+        abs_max = 0.0 if tensor.numel() == 0 else float(tensor.abs().max().item())
+    return {
+        "finite": finite,
+        "has_nan": has_nan,
+        "has_inf": has_inf,
+        "abs_max": finite_number_or_label(abs_max),
+    }
+
+
+def nvidia_smi_identity() -> dict[str, Any]:
+    command = [
+        "nvidia-smi",
+        "--query-gpu=name,uuid,driver_version,pci.bus_id",
+        "--format=csv,noheader,nounits",
+    ]
+    try:
+        completed = subprocess.run(command, capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.SubprocessError) as error:
+        return {"error": f"{type(error).__name__}: {error}"}
+    return {
+        "returncode": completed.returncode,
+        "stdout": completed.stdout.strip(),
+        "stderr": completed.stderr.strip(),
+    }
+
+
+def nvidia_smi_hardware_report() -> str:
+    command = [
+        "nvidia-smi",
+        (
+            "--query-gpu=name,uuid,driver_version,vbios_version,pci.bus_id,pstate,"
+            "temperature.gpu,power.draw,power.limit,clocks.current.graphics,"
+            "clocks.current.memory,memory.total,pcie.link.gen.current,"
+            "pcie.link.gen.max,pcie.link.width.current,pcie.link.width.max"
+        ),
+        "--format=csv,noheader,nounits",
+    ]
+    try:
+        completed = subprocess.run(command, capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.SubprocessError) as error:
+        return f"unavailable ({type(error).__name__}: {error})"
+    if completed.returncode != 0:
+        return f"unavailable ({completed.stderr.strip()})"
+    fields = [field.strip() for field in completed.stdout.strip().split(",")]
+    labels = [
+        "GPU",
+        "GPU UUID",
+        "NVIDIA driver",
+        "VBIOS",
+        "PCI bus",
+        "P-state",
+        "Temperature C",
+        "Power draw W",
+        "Power limit W",
+        "Graphics clock MHz",
+        "Memory clock MHz",
+        "VRAM MiB",
+        "PCIe generation current",
+        "PCIe generation maximum",
+        "PCIe width current",
+        "PCIe width maximum",
+    ]
+    if len(fields) != len(labels):
+        return completed.stdout.strip()
+    return "\n".join(f"{label}: {value}" for label, value in zip(labels, fields))
+
+
+def cpu_model() -> str:
+    path = Path("/proc/cpuinfo")
+    if path.is_file():
+        for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+            if line.startswith("model name") and ":" in line:
+                return line.split(":", 1)[1].strip()
+    return platform.processor() or "unavailable"
+
+
+def installed_ram_gib() -> str:
+    path = Path("/proc/meminfo")
+    if path.is_file():
+        for line in path.read_text(encoding="ascii", errors="replace").splitlines():
+            if line.startswith("MemTotal:"):
+                kib = int(line.split()[1])
+                return f"{kib / (1024 * 1024):.1f} GiB"
+    return "unavailable"
+
+
+class DirectPublisher:
+    def __init__(self, *, run_root: Path, common: dict[str, Any]) -> None:
+        self.event_path = run_root / "events.jsonl"
+        self.state_path = run_root / "state.json"
+        self.common = common
+        self.sequence = 0
+
+    def send(self, kind: str, **fields: Any) -> None:
+        self.sequence += 1
+        payload = {
+            **self.common,
+            **fields,
+            "event_sequence": self.sequence,
+            "timestamp": timestamp(),
+            "kind": kind,
+        }
+        payload_sha256 = canonical_sha256(payload)
+        append_jsonl(self.event_path, payload)
+        terminal = kind in {
+            "pinv_shape_sequence_completed",
+            "pinv_shape_sequence_error_observed",
+            "monitor_signal_exit_PINV_SHAPE_SEQUENCE_REPRO",
+        }
+        atomic_json(
+            self.state_path,
+            {
+                "status": "terminal" if terminal else "armed",
+                "hard_reset": False,
+                "boot_id": self.common["boot_id"],
+                "run_id": self.common["run_id"],
+                "runner_pid": os.getpid(),
+                "last_event_sequence": self.sequence,
+                "last_event_kind": kind,
+                "last_event_sha256": payload_sha256,
+                "terminal_kind": kind if terminal else None,
+            },
+        )
+        phase_labels = {
+            "monitor_armed": "PROCESS STARTED",
+            "sequence_inputs_staged": "INPUT MATRICES LOADED INTO TARGET DEVICE",
+            "before_pre_pinv_sync": "INPUT READY; SYNCHRONIZING GPU",
+            "pre_pinv_synced": "GPU SYNC OK; STARTING torch.linalg.pinv / SVD NOW",
+            "pinv_returned_before_explicit_sync": "SVD CALL RETURNED; FINAL GPU SYNC STARTING",
+            "after_pinv_sync": "GPU JOB COMPLETE",
+            "pinv_shape_sequence_completed": "ALL REQUESTED GPU JOBS COMPLETE",
+            "pinv_shape_sequence_error_observed": "SOFTWARE ERROR OBSERVED",
+            "monitor_signal_exit_PINV_SHAPE_SEQUENCE_REPRO": "PROCESS EXIT RECORDED",
+        }
+        phase_label = phase_labels.get(kind, kind)
+        call = fields.get("call")
+        if isinstance(call, dict):
+            prefix = (
+                f"call={call['call_index']:03d}/{self.common['executed_call_count']} "
+                f"side={call['side']} shape={call['side_length']}x{call['side_length']} "
+                f"sweep={call['sweep_index']} bond={call['bond']} "
+                f"rtol={call['rtol']:.17g}"
+            )
+        else:
+            prefix = f"events={self.sequence}"
+        elapsed = fields.get("call_elapsed_s")
+        elapsed_text = f" elapsed={elapsed:.3f}s" if isinstance(elapsed, float) else ""
+        print(f"[{timestamp()}] {prefix} | {phase_label}{elapsed_text}", flush=True)
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--device", choices=("cpu", "cuda"), default="cuda")
+    parser.add_argument("--call-limit", type=int)
+    parser.add_argument("--run-id")
+    parser.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument(
+        "--check-only",
+        action="store_true",
+        help="validate the fixed files and 170-call plan without importing Torch",
+    )
+    mode.add_argument(
+        "--reconcile-only",
+        action="store_true",
+        help="classify the latest direct run without validating inputs or importing Torch",
+    )
+    args = parser.parse_args()
+    if args.call_limit is not None and not 1 <= args.call_limit <= EXPECTED_CALL_COUNT:
+        parser.error(f"--call-limit must be between 1 and {EXPECTED_CALL_COUNT}")
+    if args.run_id is not None and RUN_ID_PATTERN.fullmatch(args.run_id) is None:
+        parser.error("--run-id must match [A-Za-z0-9][A-Za-z0-9_.-]{0,100}")
+    return args
+
+
+def default_run_id() -> str:
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    return f"direct_pinv170_{stamp}_pid{os.getpid()}"
+
+
+def boot_id() -> str:
+    path = Path("/proc/sys/kernel/random/boot_id")
+    return path.read_text(encoding="ascii").strip() if path.is_file() else "unavailable"
+
+
+def process_exists(pid: object) -> bool:
+    if type(pid) is not int or pid <= 0:
+        return False
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def latest_run_state_path(output_root: Path) -> Path | None:
+    if not output_root.is_dir():
+        return None
+    candidates = [
+        path / "state.json"
+        for path in output_root.iterdir()
+        if path.is_dir() and (path / "state.json").is_file()
+    ]
+    if not candidates:
+        return None
+    return max(
+        candidates,
+        key=lambda path: (path.stat().st_mtime_ns, path.parent.name),
+    )
+
+
+def reconcile_latest_run(output_root: Path, current_boot_id: str) -> dict[str, Any]:
+    state_path = latest_run_state_path(output_root)
+    if state_path is None:
+        return {
+            "kind": "no_previous_run",
+            "hard_reset": False,
+            "reconciled_boot_id": current_boot_id,
+        }
+
+    state = load_json_object(state_path)
+    prior_status = state.get("status")
+    prior_boot_id = state.get("boot_id")
+    run_id = state.get("run_id")
+    common = {
+        "schema": "error_coupling_simulator.direct_pinv_reconciliation.v1",
+        "timestamp": timestamp(),
+        "run_id": run_id,
+        "previous_boot_id": prior_boot_id,
+        "reconciled_boot_id": current_boot_id,
+        "prior_status": prior_status,
+        "prior_last_event_kind": state.get("last_event_kind"),
+        "prior_last_event_sequence": state.get("last_event_sequence"),
+        "prior_last_event_sha256": state.get("last_event_sha256"),
+    }
+    if prior_status != "armed":
+        return {
+            **common,
+            "kind": "previous_run_already_terminal",
+            "hard_reset": bool(state.get("hard_reset", False)),
+        }
+    if current_boot_id == "unavailable" or not isinstance(prior_boot_id, str):
+        return {
+            **common,
+            "kind": "boot_identity_unavailable",
+            "hard_reset": False,
+        }
+    if prior_boot_id == current_boot_id and process_exists(state.get("runner_pid")):
+        return {
+            **common,
+            "kind": "previous_run_still_active_same_boot",
+            "hard_reset": False,
+        }
+
+    hard_reset = prior_boot_id != current_boot_id
+    kind = (
+        "previous_boot_ungraceful"
+        if hard_reset
+        else "previous_runner_ungraceful_same_boot"
+    )
+    reconciliation = {**common, "kind": kind, "hard_reset": hard_reset}
+    reconciliation_sha256 = canonical_sha256(reconciliation)
+    append_jsonl(state_path.parent / "reconciliation.jsonl", reconciliation)
+    atomic_json(
+        state_path,
+        {
+            **state,
+            "status": "terminal",
+            "hard_reset": hard_reset,
+            "terminal_kind": kind,
+            "reconciled_boot_id": current_boot_id,
+            "reconciled_at": reconciliation["timestamp"],
+            "reconciliation_sha256": reconciliation_sha256,
+        },
+    )
+    return reconciliation
+
+
+def main() -> int:
+    args = parse_args()
+    output_root = args.output_root.expanduser().resolve()
+    current_boot_id = boot_id()
+    reconciliation = reconcile_latest_run(output_root, current_boot_id)
+    if args.reconcile_only:
+        print(
+            json.dumps(
+                {
+                    "status": "PASS",
+                    "current_boot_id": current_boot_id,
+                    "output_root": str(output_root),
+                    "reconciliation": reconciliation,
+                },
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        return 0
+
+    paths, complete_plan, ignored_tail = validate_fixed_inputs()
+    if args.check_only:
+        print(
+            json.dumps(
+                {
+                    "status": "PASS",
+                    "call_count": len(complete_plan),
+                    "call_plan_sha256": call_plan_sha256(complete_plan),
+                    "fixed_input_hashes": EXPECTED_HASHES,
+                    "ignored_incomplete_manifest_tail": ignored_tail,
+                    "reconciliation": reconciliation,
+                },
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        return 0
+
+    run_id = args.run_id or default_run_id()
+    output_root.mkdir(mode=0o700, parents=True, exist_ok=True)
+    run_root = output_root / run_id
+    run_root.mkdir(mode=0o700, exist_ok=False)
+    fsync_directory(output_root)
+
+    calls = (
+        complete_plan[: args.call_limit]
+        if args.call_limit is not None
+        else complete_plan
+    )
+    shape_counts = Counter(call.side_length for call in calls)
+    side_counts = Counter(call.side for call in calls)
+    largest_side_length = max(shape_counts)
+    largest_input_mib = largest_side_length * largest_side_length * 16 / (1024 * 1024)
+    common = {
+        "schema": "error_coupling_simulator.direct_pinv_reproduction_event.v1",
+        "hard_reset": False,
+        "boot_id": current_boot_id,
+        "runner_pid": os.getpid(),
+        "run_id": run_id,
+        "target_device": args.device,
+        "complete_call_count": len(complete_plan),
+        "executed_call_count": len(calls),
+        "partial_prefix": len(calls) != len(complete_plan),
+        "ignored_incomplete_manifest_tail": ignored_tail,
+        "input_construction": (
+            "top_left_principal_submatrix_of_side_specific_largest_real_snapshot"
+        ),
+        "claims_exact_historical_tensor_replay": False,
+        "transport_mode": "direct_single_process_no_ssh_no_ack",
+        "source_identity": {
+            "script_sha256": file_sha256(Path(__file__).resolve()),
+            "manifest_sha256": EXPECTED_HASHES["pinv_calls.jsonl"],
+            "complete_plan_sha256": call_plan_sha256(complete_plan),
+            "executed_plan_sha256": call_plan_sha256(calls),
+            "ga_snapshot_sha256": EXPECTED_HASHES["largest-GA.pt"],
+            "gb_snapshot_sha256": EXPECTED_HASHES["largest-GB.pt"],
+        },
+        "evidence_class": "local_runtime_diagnostic_not_release_evidence",
+    }
+    publisher = DirectPublisher(run_root=run_root, common=common)
+    outcome = "error"
+    error_text: str | None = None
+    calls_completed = 0
+    active_call: int | None = None
+    sequence_started_ns: int | None = None
+    print("=" * 78, flush=True)
+    print("HARDWARE SERVICE COUNTER TEST: DIRECT CUDA HARD-RESET REPRODUCTION", flush=True)
+    print("", flush=True)
+    print("PURPOSE", flush=True)
+    print("  Reproduce an abrupt whole-computer reset during ordinary GPU linear algebra.", flush=True)
+    print("  Expected fault: the host powers off/reboots without a Python or CUDA error.", flush=True)
+    print("", flush=True)
+    print("SOFTWARE PATH", flush=True)
+    print("  One local Python process using only PyTorch and NVIDIA CUDA libraries.", flush=True)
+    print(
+        "  error_coupling_simulator imported: "
+        f"{'yes' if 'error_coupling_simulator' in sys.modules else 'no'}",
+        flush=True,
+    )
+    print("  Network/SSH/controller/watchdog: none", flush=True)
+    print("  Clock/power/overclock commands issued by this file: none", flush=True)
+    print("", flush=True)
+    print("WORKLOAD", flush=True)
+    print(f"  Sequential pseudoinverse/SVD jobs: {len(calls)}", flush=True)
+    print(f"  Matrix shapes: {dict(sorted(shape_counts.items()))}", flush=True)
+    print(f"  Matrix sides: {dict(sorted(side_counts.items()))}", flush=True)
+    print("  Data type: complex128 (16 bytes per matrix element)", flush=True)
+    print(
+        f"  Largest input matrix: {largest_side_length} x {largest_side_length} "
+        f"= {largest_input_mib:.0f} MiB before solver workspace",
+        flush=True,
+    )
+    print("", flush=True)
+    print("COMPUTER", flush=True)
+    print(f"  CPU: {cpu_model()}", flush=True)
+    print(f"  Installed RAM: {installed_ram_gib()}", flush=True)
+    print(f"  Kernel: {platform.release()}", flush=True)
+    print(f"  Boot ID: {current_boot_id}", flush=True)
+    print("", flush=True)
+    print("REPRODUCTION IDENTITY", flush=True)
+    print(f"  Run ID: {run_id}", flush=True)
+    print(f"  Evidence: {run_root}", flush=True)
+    print(f"  Plan SHA256: {common['source_identity']['complete_plan_sha256']}", flush=True)
+    print(f"  GA SHA256: {EXPECTED_HASHES['largest-GA.pt']}", flush=True)
+    print(f"  GB SHA256: {EXPECTED_HASHES['largest-GB.pt']}", flush=True)
+    print("=" * 78, flush=True)
+    try:
+        publisher.send(
+            "monitor_armed",
+            host={
+                "hostname": platform.node(),
+                "platform": platform.platform(),
+                "python": sys.version,
+                "nvidia_smi": nvidia_smi_identity(),
+            },
+        )
+        import torch
+
+        print(f"PyTorch:     {torch.__version__}", flush=True)
+        print(f"CUDA build:  {torch.version.cuda}", flush=True)
+        print(f"CUDA ready:  {torch.cuda.is_available()}", flush=True)
+        if torch.cuda.is_available():
+            print(f"GPU:         {torch.cuda.get_device_name(0)}", flush=True)
+            print(f"Capability:  {torch.cuda.get_device_capability(0)}", flush=True)
+        print("NVIDIA HARDWARE REPORT", flush=True)
+        for line in nvidia_smi_hardware_report().splitlines():
+            print(f"  {line}", flush=True)
+        print("=" * 78, flush=True)
+
+        cpu_bases = {
+            "A": torch.load(paths["largest-GA.pt"], map_location="cpu", weights_only=True),
+            "B": torch.load(paths["largest-GB.pt"], map_location="cpu", weights_only=True),
+        }
+        for side, tensor in cpu_bases.items():
+            if not isinstance(tensor, torch.Tensor):
+                raise TypeError(f"side {side} snapshot is not a tensor")
+            if tensor.shape != (1024, 1024) or tensor.dtype != torch.complex128:
+                raise ValueError(f"side {side} snapshot tensor identity is inconsistent")
+            if not tensor_health(tensor)["finite"]:
+                raise ValueError(f"side {side} snapshot contains non-finite values")
+        if args.device == "cuda" and not torch.cuda.is_available():
+            raise RuntimeError("CUDA is unavailable in the direct reproduction process")
+        target = torch.device(args.device)
+        base_tensors = {side: tensor.to(target) for side, tensor in cpu_bases.items()}
+        side_lengths = sorted({call.side_length for call in calls})
+        matrix_cache = {
+            (side, length): base[:length, :length].contiguous()
+            for side, base in base_tensors.items()
+            for length in side_lengths
+        }
+        if target.type == "cuda":
+            torch.cuda.synchronize(target)
+        publisher.send(
+            "sequence_inputs_staged",
+            torch=str(torch.__version__),
+            torch_cuda_build=torch.version.cuda,
+            cuda_available=torch.cuda.is_available(),
+            cuda_device=(
+                torch.cuda.get_device_name(target) if target.type == "cuda" else None
+            ),
+            cuda_capability=(
+                list(torch.cuda.get_device_capability(target))
+                if target.type == "cuda"
+                else None
+            ),
+            side_lengths=side_lengths,
+            cached_tensors={
+                f"{side}:{length}": tensor_metadata(tensor)
+                for (side, length), tensor in matrix_cache.items()
+            },
+        )
+
+        sequence_started_ns = time.monotonic_ns()
+        result = None
+        result_health = None
+        for call in calls:
+            active_call = call.call_index
+            matrix = matrix_cache[(call.side, call.side_length)]
+            call_started_ns = time.monotonic_ns()
+            call_fields = {"call": asdict(call), "calls_completed": calls_completed}
+            publisher.send(
+                "before_pre_pinv_sync",
+                **call_fields,
+                tensor=tensor_metadata(matrix),
+            )
+            if target.type == "cuda":
+                torch.cuda.synchronize(target)
+            publisher.send(
+                "pre_pinv_synced",
+                **call_fields,
+                tensor=tensor_metadata(matrix),
+            )
+            result = torch.linalg.pinv(matrix, rtol=call.rtol)
+            publisher.send(
+                "pinv_returned_before_explicit_sync",
+                **call_fields,
+                tensor=tensor_metadata(result),
+            )
+            if target.type == "cuda":
+                torch.cuda.synchronize(target)
+            result_health = tensor_health(result)
+            if not result_health["finite"]:
+                raise ValueError(f"pinv result for call {call.call_index} is non-finite")
+            calls_completed += 1
+            publisher.send(
+                "after_pinv_sync",
+                call=asdict(call),
+                calls_completed=calls_completed,
+                call_elapsed_s=(time.monotonic_ns() - call_started_ns) / 1e9,
+                tensor=tensor_metadata(result),
+                health=result_health,
+            )
+        publisher.send(
+            "pinv_shape_sequence_completed",
+            calls_completed=calls_completed,
+            sequence_elapsed_s=(time.monotonic_ns() - sequence_started_ns) / 1e9,
+            final_result=tensor_metadata(result),
+            final_health=result_health,
+        )
+        outcome = "sequence_completed"
+    except BaseException as error:
+        error_text = f"{type(error).__name__}: {error}"
+        try:
+            publisher.send(
+                "pinv_shape_sequence_error_observed",
+                error=error_text,
+                active_call=active_call,
+                calls_completed=calls_completed,
+            )
+        except BaseException:
+            pass
+    finally:
+        try:
+            publisher.send(
+                "monitor_signal_exit_PINV_SHAPE_SEQUENCE_REPRO",
+                outcome=outcome,
+                error=error_text,
+                active_call=active_call,
+                calls_completed=calls_completed,
+                sequence_elapsed_s=(
+                    None
+                    if sequence_started_ns is None
+                    else (time.monotonic_ns() - sequence_started_ns) / 1e9
+                ),
+            )
+        except BaseException:
+            pass
+    if outcome == "sequence_completed":
+        print(f"test_170 PASS calls={calls_completed} output={run_root}", flush=True)
+        return 0
+    print(f"test_170 FAIL error={error_text} output={run_root}", file=sys.stderr, flush=True)
+    return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

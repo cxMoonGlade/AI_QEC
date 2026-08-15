@@ -1,0 +1,52 @@
+{
+  "_comment": [
+    "Per-owner coverage registry for analog schedule."
+  ],
+  "contract": "docs/SIMULATOR.md",
+  "default_target": {"statement": 1.0, "branch": 1.0},
+  "covered_by_test_files": [
+    "tests/test_analog_schedule_units.py"
+  ],
+  "reconcile_modules": [
+    "src/error_coupling_simulator/frontend/analog_schedule.py"
+  ],
+  "out_of_scope": {},
+  "canonical_units": [
+    "DurationBracket.__post_init__",
+    "DurationBracket.to_manifest",
+    "DurationPolicy.__post_init__",
+    "DurationPolicy.bracket_for",
+    "DurationPolicy.to_manifest",
+    "SubstepOperation.__post_init__",
+    "SubstepOperation.to_manifest",
+    "AnalogSubstepIR.__post_init__",
+    "AnalogSubstepIR.to_manifest",
+    "SubstepSchedule.__post_init__",
+    "SubstepSchedule.to_manifest",
+    "default_duration_policy",
+    "compile_code_spec_to_substep_schedule",
+    "circuit_ir_to_substep_schedule",
+    "stim_circuit_to_substep_schedule",
+    "has_valid_compiler_schedule_seal",
+    "require_compiler_schedule_seal"
+  ],
+  "units": [
+    {"group": "analog_schedule", "module": "src/error_coupling_simulator/frontend/analog_schedule.py", "unit": "DurationBracket.__post_init__", "qualname": "DurationBracket.__post_init__", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "analog_schedule", "module": "src/error_coupling_simulator/frontend/analog_schedule.py", "unit": "DurationBracket.to_manifest", "qualname": "DurationBracket.to_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "analog_schedule", "module": "src/error_coupling_simulator/frontend/analog_schedule.py", "unit": "DurationPolicy.__post_init__", "qualname": "DurationPolicy.__post_init__", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "analog_schedule", "module": "src/error_coupling_simulator/frontend/analog_schedule.py", "unit": "DurationPolicy.bracket_for", "qualname": "DurationPolicy.bracket_for", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "analog_schedule", "module": "src/error_coupling_simulator/frontend/analog_schedule.py", "unit": "DurationPolicy.to_manifest", "qualname": "DurationPolicy.to_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "analog_schedule", "module": "src/error_coupling_simulator/frontend/analog_schedule.py", "unit": "SubstepOperation.__post_init__", "qualname": "SubstepOperation.__post_init__", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "analog_schedule", "module": "src/error_coupling_simulator/frontend/analog_schedule.py", "unit": "SubstepOperation.to_manifest", "qualname": "SubstepOperation.to_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "analog_schedule", "module": "src/error_coupling_simulator/frontend/analog_schedule.py", "unit": "AnalogSubstepIR.__post_init__", "qualname": "AnalogSubstepIR.__post_init__", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "analog_schedule", "module": "src/error_coupling_simulator/frontend/analog_schedule.py", "unit": "AnalogSubstepIR.to_manifest", "qualname": "AnalogSubstepIR.to_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "analog_schedule", "module": "src/error_coupling_simulator/frontend/analog_schedule.py", "unit": "SubstepSchedule.__post_init__", "qualname": "SubstepSchedule.__post_init__", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "analog_schedule", "module": "src/error_coupling_simulator/frontend/analog_schedule.py", "unit": "SubstepSchedule.to_manifest", "qualname": "SubstepSchedule.to_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "analog_schedule", "module": "src/error_coupling_simulator/frontend/analog_schedule.py", "unit": "default_duration_policy", "qualname": "default_duration_policy", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "analog_schedule", "module": "src/error_coupling_simulator/frontend/analog_schedule.py", "unit": "compile_code_spec_to_substep_schedule", "qualname": "compile_code_spec_to_substep_schedule", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "analog_schedule", "module": "src/error_coupling_simulator/frontend/analog_schedule.py", "unit": "circuit_ir_to_substep_schedule", "qualname": "circuit_ir_to_substep_schedule", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "analog_schedule", "module": "src/error_coupling_simulator/frontend/analog_schedule.py", "unit": "stim_circuit_to_substep_schedule", "qualname": "stim_circuit_to_substep_schedule", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "analog_schedule", "module": "src/error_coupling_simulator/frontend/analog_schedule.py", "unit": "has_valid_compiler_schedule_seal", "qualname": "has_valid_compiler_schedule_seal", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "analog_schedule", "module": "src/error_coupling_simulator/frontend/analog_schedule.py", "unit": "require_compiler_schedule_seal", "qualname": "require_compiler_schedule_seal", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []}
+  ]
+}

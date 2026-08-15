@@ -1,0 +1,38 @@
+{
+  "_comment": [
+    "Per-owner coverage registry for record schema."
+  ],
+  "contract": "docs/SIMULATOR.md",
+  "default_target": {"statement": 1.0, "branch": 1.0},
+  "covered_by_test_files": [
+    "tests/test_record_schema_units.py"
+  ],
+  "reconcile_modules": [
+    "src/error_coupling_simulator/frontend/record_schema.py"
+  ],
+  "out_of_scope": {},
+  "canonical_units": [
+    "RecordSchema.from_stim",
+    "RecordSchema.from_circuit_ir",
+    "RecordSchema.detector_bit_width",
+    "RecordSchema.observable_bit_width",
+    "RecordSchema.to_manifest",
+    "require_frontend_representability",
+    "require_stim_circuit",
+    "require_matching_schemas",
+    "validate_evaluator_sidecars",
+    "b8_manifest_entry"
+  ],
+  "units": [
+    {"group": "record_schema", "module": "src/error_coupling_simulator/frontend/record_schema.py", "unit": "RecordSchema.from_stim", "qualname": "RecordSchema.from_stim", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "record_schema", "module": "src/error_coupling_simulator/frontend/record_schema.py", "unit": "RecordSchema.from_circuit_ir", "qualname": "RecordSchema.from_circuit_ir", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "record_schema", "module": "src/error_coupling_simulator/frontend/record_schema.py", "unit": "RecordSchema.detector_bit_width", "qualname": "RecordSchema.detector_bit_width", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "record_schema", "module": "src/error_coupling_simulator/frontend/record_schema.py", "unit": "RecordSchema.observable_bit_width", "qualname": "RecordSchema.observable_bit_width", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "record_schema", "module": "src/error_coupling_simulator/frontend/record_schema.py", "unit": "RecordSchema.to_manifest", "qualname": "RecordSchema.to_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "record_schema", "module": "src/error_coupling_simulator/frontend/record_schema.py", "unit": "require_frontend_representability", "qualname": "require_frontend_representability", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "record_schema", "module": "src/error_coupling_simulator/frontend/record_schema.py", "unit": "require_stim_circuit", "qualname": "require_stim_circuit", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "record_schema", "module": "src/error_coupling_simulator/frontend/record_schema.py", "unit": "require_matching_schemas", "qualname": "require_matching_schemas", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "record_schema", "module": "src/error_coupling_simulator/frontend/record_schema.py", "unit": "validate_evaluator_sidecars", "qualname": "validate_evaluator_sidecars", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "record_schema", "module": "src/error_coupling_simulator/frontend/record_schema.py", "unit": "b8_manifest_entry", "qualname": "b8_manifest_entry", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []}
+  ]
+}

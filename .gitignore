@@ -2,12 +2,26 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.coverage
+.coverage.*
 
 # Experiment caches
 outputs/**/prepared_cache/
 
 # Generated experiment outputs and large data artifacts
 outputs/
+external/
+
+# Cached reference PDFs (the docs/papers/README.md index IS tracked; PDFs are a
+# local cache, fetch via the curl recipe in that README)
+docs/papers/*
+# ...but the 精读 reading notes ARE the theory-first deliverable and MUST track
+# (previously required `git add -f`; this negation lets them commit cleanly).
+!docs/papers/reading_notes/
+!docs/papers/reading_notes/**
+!docs/papers/CONCEPT_INDEX.md
+!docs/papers/CURRENT_CORPUS.toml
+*.txt
 
 # Packaging/build artifacts
 *.egg-info
@@ -15,5 +29,15 @@ build/
 dist/
 
 # Local environments and editor state
-.venv
-.vscode
+.*/
+*.tex
+skills-lock.json
+.chroma_notes/
+
+# mutmut L2 sandbox (regenerated per run)
+mutants/
+.mutmut-cache
+
+# Retired code attic (untracked, local-only record of explicitly RETIRED /
+# retracted units removed from the reachable package -- see retired/README.md).
+retired/

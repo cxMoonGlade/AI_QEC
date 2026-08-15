@@ -1,0 +1,42 @@
+# AI_QEC core GPU compatibility lock (Linux, Python 3.12, CUDA 13.0).
+# Human-auditable direct-pin contract.  The reproducible installation consumes
+# uv.lock via scripts/sync_core_environment.py; do not pip-install this file as
+# a substitute for the locked transitive resolution.
+
+numpy==2.4.6
+opt_einsum==3.4.0
+PyYAML==6.0.3
+quimb==1.14.0
+stim==1.16.0
+scipy==1.17.1
+torch==2.12.0
+triton==3.7.0
+ninja==1.13.0
+coverage==7.15.0
+pytest==8.4.2
+hypothesis==6.156.1
+mutmut==3.6.0
+
+qutip==5.3.0
+qutip-cuquantum[cuda13]==0.3.1
+cupy-cuda13x==13.6.0
+cuquantum-python-cu13==26.3.2
+cudensitymat-cu13==0.5.2
+cupauliprop-cu13==0.3.2
+custabilizer-cu13==0.3.0
+custatevec-cu13==1.13.1
+cutensor-cu13==2.6.0
+cutensornet-cu13==2.12.2
+nvmath-python==0.9.0
+cuda-bindings==13.3.0
+cuda-core==0.7.0
+cuda-pathfinder==1.5.5
+
+cuda-toolkit[cccl,crt,cudart,nvcc,nvrtc,nvjitlink,nvvm]==13.0.2
+nvidia-cuda-cccl==13.0.85
+nvidia-cuda-runtime==13.0.96
+nvidia-cuda-nvcc==13.0.88
+nvidia-cuda-crt==13.0.88
+nvidia-cuda-nvrtc==13.0.88
+nvidia-nvjitlink==13.0.88
+nvidia-nvvm==13.0.88

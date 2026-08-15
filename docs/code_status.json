@@ -1,0 +1,76 @@
+{
+  "_schema": "error_coupling_simulator.code_status.v2",
+  "_local_index": {},
+  "tools": {
+    "status": "TOOLING",
+    "note": "Repository development utilities; not installed as simulator runtime modules."
+  },
+  "tools/diagnostics": {
+    "status": "TOOLING",
+    "note": "Committed numerical diagnostics and differential-audit harnesses; not installed as simulator runtime modules."
+  },
+  "tests/harness": {
+    "status": "TOOLING",
+    "note": "Process-isolated service acceptance, coverage, mutation, GPU-lease, and subprocess supervision utilities."
+  },
+  "error_coupling_simulator": {
+    "status": "ACTIVE",
+    "note": "Installed simulator distribution. It consumes caller-declared circuits and specified noise processes and emits canonical detector/observable records or explicitly bounded carrier evidence."
+  },
+  "error_coupling_simulator/source": {
+    "status": "ACTIVE",
+    "note": "Replayable finite-RTN, finite-band 1/f, phase-burst, and temporal-storm source processes plus declared source-to-parameter maps."
+  },
+  "error_coupling_simulator/mechanisms": {
+    "status": "ACTIVE",
+    "note": "Explicit Axis-1 generator lowering, qutrit exchange/seepage/heating channels and specified processes, and two-transmon CZ leakage channel derivation."
+  },
+  "error_coupling_simulator/quantum_bath": {
+    "status": "RESEARCH",
+    "note": "Pseudomode-enlarged shared-bath GKSL research carriers, formal controls, record diagnostics, and quantum-memory witnesses."
+  },
+  "error_coupling_simulator/frontend": {
+    "status": "ACTIVE",
+    "note": "Circuit and code compilation, sealed schedules, Stim record generation, Axis-1 execution/evidence, record I/O, optional decoding, and isolated workload adapters."
+  },
+  "error_coupling_simulator/carrier": {
+    "status": "ACTIVE",
+    "note": "Joint-Lindbladian, exact density-matrix, MCWF, tensor-network, canonical record, and within-cycle propagation owners."
+  },
+  "error_coupling_simulator/carrier/exact": {
+    "status": "ACTIVE",
+    "note": "Exact small-register qubit, qutrit, and ququart density-matrix carriers and sequential measurement reference calculations."
+  },
+  "error_coupling_simulator/carrier/kernels": {
+    "status": "ACTIVE",
+    "note": "Optional fused CUDA and C++ kernels with package-owned loaders and reference-path contracts."
+  },
+  "error_coupling_simulator/carrier/mps": {
+    "status": "ACTIVE",
+    "note": "Bounded MPS execution mechanics for restricted verification routes; not a registered scientific carrier and no state-, Record-, LER-, or production-faithfulness claim."
+  },
+  "error_coupling_simulator/carrier/capeps": {
+    "status": "RESEARCH",
+    "note": "All-qubit Clifford-augmented PEPS engineering prototype with Stim as the accepted frame owner and a fail-closed optional SDIM seam; no canonical Record, leakage, finite-bond, efficiency, or scaling claim."
+  },
+  "error_coupling_simulator/carrier/pepo": {
+    "status": "RESEARCH",
+    "note": "Retained two-dimensional qutrit density-matrix PEPO carrier. Executable d3 reference checks remain; production record faithfulness and d5/d7 scientific claims remain open."
+  },
+  "error_coupling_simulator/carrier/peps": {
+    "status": "RESEARCH",
+    "note": "Current single-wire two-dimensional qutrit PEPS feasibility carrier. The d3 state/record test surface remains executable; finite-truncation full-record faithfulness and d5/d7 scientific claims remain open."
+  },
+  "error_coupling_simulator/certify": {
+    "status": "ACTIVE",
+    "note": "Protocol-based certification facade, capability/feasibility checks, channel diagnostics, independent reference anchors, and corruption controls."
+  },
+  "error_coupling_simulator/certify/anchors": {
+    "status": "ACTIVE",
+    "note": "Independent density-matrix, Stim-Clifford, closed-form, and corruption-control reference implementations."
+  },
+  "error_coupling_simulator/noise_processes": {
+    "status": "ACTIVE",
+    "note": "Specified record-generating processes with evaluator-only truth, a matched-marginal permutation control, and a source-off control."
+  }
+}

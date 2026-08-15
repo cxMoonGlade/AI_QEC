@@ -1,0 +1,38 @@
+{
+  "_comment": [
+    "Per-owner coverage registry for axis1 context."
+  ],
+  "contract": "docs/SIMULATOR.md",
+  "default_target": {"statement": 1.0, "branch": 1.0},
+  "covered_by_test_files": [
+    "tests/test_axis1_context_units.py"
+  ],
+  "reconcile_modules": [
+    "src/error_coupling_simulator/frontend/axis1_context.py"
+  ],
+  "out_of_scope": {},
+  "canonical_units": [
+    "Axis1LocalLindbladContextSpec.__post_init__",
+    "Axis1LocalLindbladContextSpec.is_trivial",
+    "Axis1LocalLindbladContextSpec.include_leakage",
+    "Axis1LocalLindbladContextSpec.to_manifest",
+    "Axis1LocalLindbladContextSpec.to_metadata",
+    "Axis1LocalLindbladContextSpec.to_axis1_primitive_params",
+    "normalize_axis1_local_lindblad_context",
+    "axis1_local_lindblad_context_from_schedule",
+    "axis1_contextual_primitive_names",
+    "axis1_contextual_fsim_residual_primitives"
+  ],
+  "units": [
+    {"group": "axis1_context", "module": "src/error_coupling_simulator/frontend/axis1_context.py", "unit": "Axis1LocalLindbladContextSpec.__post_init__", "qualname": "Axis1LocalLindbladContextSpec.__post_init__", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "axis1_context", "module": "src/error_coupling_simulator/frontend/axis1_context.py", "unit": "Axis1LocalLindbladContextSpec.is_trivial", "qualname": "Axis1LocalLindbladContextSpec.is_trivial", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "axis1_context", "module": "src/error_coupling_simulator/frontend/axis1_context.py", "unit": "Axis1LocalLindbladContextSpec.include_leakage", "qualname": "Axis1LocalLindbladContextSpec.include_leakage", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "axis1_context", "module": "src/error_coupling_simulator/frontend/axis1_context.py", "unit": "Axis1LocalLindbladContextSpec.to_manifest", "qualname": "Axis1LocalLindbladContextSpec.to_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "axis1_context", "module": "src/error_coupling_simulator/frontend/axis1_context.py", "unit": "Axis1LocalLindbladContextSpec.to_metadata", "qualname": "Axis1LocalLindbladContextSpec.to_metadata", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "axis1_context", "module": "src/error_coupling_simulator/frontend/axis1_context.py", "unit": "Axis1LocalLindbladContextSpec.to_axis1_primitive_params", "qualname": "Axis1LocalLindbladContextSpec.to_axis1_primitive_params", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "axis1_context", "module": "src/error_coupling_simulator/frontend/axis1_context.py", "unit": "normalize_axis1_local_lindblad_context", "qualname": "normalize_axis1_local_lindblad_context", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "axis1_context", "module": "src/error_coupling_simulator/frontend/axis1_context.py", "unit": "axis1_local_lindblad_context_from_schedule", "qualname": "axis1_local_lindblad_context_from_schedule", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "axis1_context", "module": "src/error_coupling_simulator/frontend/axis1_context.py", "unit": "axis1_contextual_primitive_names", "qualname": "axis1_contextual_primitive_names", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "axis1_context", "module": "src/error_coupling_simulator/frontend/axis1_context.py", "unit": "axis1_contextual_fsim_residual_primitives", "qualname": "axis1_contextual_fsim_residual_primitives", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []}
+  ]
+}

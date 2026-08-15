@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codebase Cleanup"
+  short_description: "Compress a codebase to its current core."
+  default_prompt: "Clean this codebase down to the current core: remove obsolete paths, merge duplicate helpers, shrink public surface/config/docs, and verify with scans and tests."

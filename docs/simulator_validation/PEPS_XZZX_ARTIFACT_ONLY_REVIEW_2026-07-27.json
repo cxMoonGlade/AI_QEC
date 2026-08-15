@@ -1,0 +1,61 @@
+{
+  "frozen_preregistration_commit": "dc7f6a6a4bbc2ae3e8ba8dea6f00343ef9a9fc67",
+  "frozen_preregistration_sha256": "76889bb6f9287ec7b5278257a81c71aacdbf697eb8a051003b1fbd90c05d4c36",
+  "implementation_modified": false,
+  "review_markdown_sha256": "3e2ec394622890b714d548f26a12a68c87e4abff3a6c400b9955033235786b08",
+  "reviewed_implementation_commit": "f89d04c22f003c265a28c765e7e4e65808ecf0f4",
+  "reviewed_inputs": {
+    "scripts/external_baselines/compare_xzzx_record_peps.py": {
+      "git_blob": "3c5bfecf4860653827426d86c4cfc82984ee5d53",
+      "sha256": "2336d70d139d40142e16690f7e1909c5ce5555c77f7864225fcb58be9e8e8ac4"
+    },
+    "scripts/external_baselines/emit_xzzx_record_peps_fixture.py": {
+      "git_blob": "f580d676d5e01166365680b88f711c29c343a519",
+      "sha256": "030a616b10cc5aeccce2be28f8d57d0afeb58567dc16ebce07eee864d1627097"
+    },
+    "scripts/external_baselines/run_xzzx_record_peps_experiment.py": {
+      "git_blob": "c85d173e95dde4fe30bcda33ceb44f8dddf32afd",
+      "sha256": "79cf12e77a0e9da0f4beafb15b1072b693047c05043a8269c5278e16c7f8833e"
+    },
+    "scripts/external_baselines/xzzx_record_dense_reference.py": {
+      "git_blob": "5d3a0e0623404fd75be45f795d95deaa28d4240e",
+      "sha256": "6d63967cf6c276f21d8954fadfe309214432f8f810068b4ad9a9421ab9dbca2f"
+    },
+    "scripts/external_baselines/xzzx_record_exact_data_reference.py": {
+      "git_blob": "a7b6b43951571d30e3b90760d25313b79c57a063",
+      "sha256": "c47bff9604286069f081fa205233a0f53a4e2a3064142da668c2159dd37ffdcb"
+    },
+    "scripts/external_baselines/xzzx_record_quimb_candidate.py": {
+      "git_blob": "c536639ea430b55275b0a16877c345b03af3bf24",
+      "sha256": "d60ec6eade0841622ea4889ad42b9bf38a31eda7c7a5629dce018c274df4e188"
+    },
+    "tests/test_external_xzzx_record_dense_reference.py": {
+      "git_blob": "92857505a9f242081185b115362c8ae42d3fed17",
+      "sha256": "6801a15a50a0b28ea344c4131f77bdb151909e4b896e064030accf157f266b7e"
+    },
+    "tests/test_external_xzzx_record_exact_data_reference.py": {
+      "git_blob": "2e29d26cb4ec0488689c21dc8b829cb16b9aba79",
+      "sha256": "669ff4bc6bfb11841849e1e9c74c15257a70c8ba88c53b965f24c3813a96afb9"
+    },
+    "tests/test_external_xzzx_record_fixture.py": {
+      "git_blob": "e029d7450017a620923a6d766294691628230183",
+      "sha256": "8ae7c13bc5276ea607e2a85918ac49407e2fe1be652716e0ac4d97a79bc7b4fc"
+    },
+    "tests/test_external_xzzx_record_metrics.py": {
+      "git_blob": "a1cd728228677d273048b1de2b145307bd949dc1",
+      "sha256": "d555bb7de152942efc439fc5920d219e76f2972b1b23a4f4719aef804eef7345"
+    },
+    "tests/test_external_xzzx_record_quimb_candidate.py": {
+      "git_blob": "4b54a97607a4e45144c21eb093153c7741d80016",
+      "sha256": "c2bd5d2ff1b6cd6d84036d83fe96e54f5e64b690d0e9cfb6738d41839fc629eb"
+    },
+    "tests/test_external_xzzx_record_runner.py": {
+      "git_blob": "f05ec0d72be6be7aad5479efec598a84a0751c7f",
+      "sha256": "cdbd934bfe1545e417c00bdfe16104db32e9c695228215fb9325302fb1f92251"
+    }
+  },
+  "reviewer_mode": "new_unled_read_only",
+  "schema": "error_coupling_simulator.external_xzzx_record_peps.artifact_only_review.v1",
+  "status": "pass",
+  "target_outputs_inspected": false
+}
