@@ -44,6 +44,71 @@ current finite-RTN source owner. Its post-result contract is in
 `docs/simulator_validation/finite_rtn_free_induction_diagnostic_contract_2026-07-15.md`; a pass does
 not assign CP-divisibility or BLP status to the production QEC channel or record.
 
+`test_external_no_cutoff_structure_census.py` protects the active, code-blocked
+no-cutoff structure instrument.  It independently checks the exact one-qubit
+persistent-sign law against SymPy matrix branching, the matched-marginal IID
+rival, complete-support TV, structural zeros, and the frozen positive
+sub-`1e-12` tail.  It also pins all eight Stim fixture identities and four
+nonzero parser shadows, algebraic deletion at `t=0`, binary64 rounding cells,
+the exact all-three-transition growth rule, Clifft squeeze-only worker output,
+actual SymFT planner spelling, full-history/sign/tiny invariance, inert controls,
+external commit/tree/source hashes, exact `2**k` burdens, and a fail-closed
+five-family report.  Mutations that promote a final-PMF MTBDD, use a proxy,
+leak evaluator truth, forge a burden/history/source/disposition, or serialize a
+numeric unavailable value are rejected.  External Clifft/SymFT execution is a
+separate compile-only runner and never allocates a state vector or samples a
+Record.  Passing this file or the bounded runner establishes only the frozen
+instrument and observed representation counts; by itself it does not supply
+target-QEC pair/ADD/TN lowerings or a d=3/5 full-Record oracle and cannot
+unblock a solver.
+
+The five focused files
+`test_external_no_cutoff_minimal_exact_pair_owner.py`,
+`test_external_no_cutoff_dynamic_add_micro_owner.py`,
+`test_external_no_cutoff_retained_boundary_tn_micro_owner.py`,
+`test_external_no_cutoff_independent_sympy_oracle.py`, and
+`test_external_no_cutoff_independent_tn_oracle.py` qualify three deliberately
+small exact owners.  They pin the pair support history `[2,8,2]`, direct-root
+dynamic-ADD history `[7,20,11]`, and separately optimized retained-boundary
+values `(width,lambda)=(3,6)`.  The SymPy oracle independently reconstructs all
+pair/relation truth tables; the stdlib TN oracle independently reconstructs all
+120 orders and both complete 32-cell DP proofs.  Corruptions cover exact-zero
+cancellation versus the positive `sqrt(2)/2^42` tail, codecs/weights/order/GC,
+KEEP/boundary semantics, both sensitive edge deletions, domain changes, and a
+tampered proof.  `test_external_no_cutoff_minimal_exact_owners_report.py`
+protects the strict canonical, no-replace, source/test-hashed qualification
+artifact.  These passes establish only `MICRO_QUALIFICATION_ONLY`: historical
+d=3/5 cells remain untouched, their then-current target lowerings and
+complete-Record TV stay unavailable, no route is killed or promoted, and
+`solver_permission` remains `CODE_BLOCKED`.  The immutable micro-owner report
+is historical evidence and is not rewritten by later qualifications.
+
+The six target-lowering files
+`test_external_no_cutoff_target_neutral.py`,
+`test_external_no_cutoff_target_pair_program.py`,
+`test_external_no_cutoff_target_add_relations.py`,
+`test_external_no_cutoff_target_tn_network.py`,
+`test_external_no_cutoff_target_independent_oracles.py`, and
+`test_external_no_cutoff_target_lowering_report.py` protect the later static,
+no-cutoff d=3/5 lowering qualification.  They bind all eight frozen source
+programs, actual qubit universes, chronological raw/Record incidence, complete
+local Pauli/Kraus component rows, signed-RREF checkpoints, root-independent
+ADD relation specifications, dense exact TN templates, sign/COPY/XOR/KEEP
+incidence, P1/P2 matrices, C1--C4 cosets, T1--T4 retained tensors, and every
+valid/invalid tiny ADD code.  Thirty-three separately parameterized
+corruptions must trip, including rehashed source/codec/table changes,
+structural-zero pruning, IID-sign substitution, metric injection, and prior
+artifact drift.  The report test requires 32 canonical programs, 56
+independent receipts, exact source/test manifests, a historical firewall, and
+exclusive no-replace publication.  These passes qualify static lowering
+definitions only: no target pair frontier, ADD root, TN order/contraction,
+Record probability, or route metric is executed; complete-Record TV remains
+unanchored and `solver_permission=CODE_BLOCKED`.  The terminal boundary and
+published hashes are recorded in
+`docs/simulator_validation/NO_CUTOFF_TARGET_LOWERING_RESULT_2026-08-03.md`;
+the canonical bundle is
+`outputs/external_baselines/no_cutoff_target_lowering_20260803/`.
+
 `test_capeps_hybrid.py` protects the all-qubit Clifford-augmented PEPS mechanics prototype. It checks
 left-composed Clifford frames, signed Pauli pullback, coherent rather than twirled non-Clifford
 updates, and untruncated Quimb local/nonlocal algebra against hand-written dense vectors on focused
