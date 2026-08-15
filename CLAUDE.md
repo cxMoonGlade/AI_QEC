@@ -4,10 +4,16 @@ Read `docs/SIMULATOR.md` first. It is the binding product and scientific contrac
 
 ## Main line
 
-`error_coupling_simulator` is a GPU-first specified-noise simulator for QEC circuits. A caller
-supplies a circuit or schedule plus a declared noise process; the product is the multi-time temporal
-detector/observable record. A `.dem` is an optional decoder-facing reduction, not the simulated
-object. Metrics are instruments on the record.
+`error_coupling_simulator` is a backend-agnostic classical evaluator for caller-declared
+quantum-error processes interleaved with QEC programs. Its mathematical target is the joint
+detector/observable Record law. A backend may expose samples, probability queries, named Record
+functionals, a structured law, or complete enumeration within an explicit support envelope. A
+`.dem` is an optional decoder-facing reduction, not the simulated object.
+
+Read `docs/CAPABILITY_MODEL.md` before describing what a backend supports and
+`docs/FAITHFULNESS_PROTOCOL.md` before describing what an execution or comparison proves.
+Implementation status, capability, numerical guarantee, assurance, and workflow authorization are
+different classifications.
 
 The only runtime package is `src/error_coupling_simulator/`. Exact installed ownership, service
 status, entry points, acceptance files, and the complete flow are defined by
@@ -25,7 +31,9 @@ inferring from module structure what is claimed, is the slow path and it has pro
 
 | question | read this first |
 |---|---|
-| what may be claimed at all; the product boundary | `docs/SIMULATOR.md` (wins every conflict), `CONTEXT.md` for the glossary and claim classes |
+| what is simulated and what is out of scope | `docs/SIMULATOR.md` (wins every conflict), `CONTEXT.md` for canonical terminology |
+| what a backend can return; support, shot, and guarantee semantics | `docs/CAPABILITY_MODEL.md` |
+| what execution, family, metric, law, or generalization claim is supported | `docs/FAITHFULNESS_PROTOCOL.md` |
 | what a service claims, and what it explicitly does **not** | `docs/service_status.json` — the per-service `note` and the `excluded_surfaces` dispositions |
 | what modules and services exist, who owns what, the flow | `docs/CODE_MAP.md`, `docs/ARCHITECTURE.md` |
 | what is executable acceptance versus regression | `tests/CODEBOOK.md` |
@@ -33,10 +41,10 @@ inferring from module structure what is claimed, is the slow path and it has pro
 | what the literature says | `tools/literature_rag.py query`, `tools/literature_kg.py concept` — then `audit` before treating the answer as coverage |
 | what matters at the current stage; what is in flight | `docs/READING_ORDER.md` |
 
-`service_status.json` is the claim boundary, and a service `note` usually answers a scope question
-outright: the `restricted_axis1_1d_mps` note states in its first sentence that `carrier/mps` "makes
-no state-, Record-, or LER-faithfulness claim and is not a registered scientific Carrier". Read it
-before writing any scope, status, or completion sentence.
+`service_status.json` is the current implementation and local-exclusion inventory, and a service
+`note` usually answers a route-specific scope question outright. It does not redefine the product or
+turn `CORE/RESEARCH` into a capability or assurance level. Read the relevant note before writing any
+implementation-status or completion sentence.
 
 Keep these honest rather than assuming they are: `python tools/gen_code_map.py --check` and
 `python scripts/rebuild_current_corpus_manifest.py --check`.
@@ -129,6 +137,10 @@ Scientific acceptance is subsystem-owned and listed in `tests/CODEBOOK.md` and t
   complex64, and only for optimization labeled `screening_only`.
 - Evaluator-only source trajectories, channel fields, and mechanism parameters never enter the
   emitted record or downstream estimator input.
+- Detector/observable rows are compiler- or caller-declared XOR incidence. The adjacent-round fold
+  is one supported layout profile, not a universal detector definition.
+- Unsupported semantics, resource blocking, and failed execution remain distinct. No reduction,
+  memory reset, cutoff, backend substitution, or guarantee downgrade is implicit.
 - Every claim-bearing value follows `docs/NUMERICAL_PROVENANCE.md`; every score follows
   `docs/METRICS.md`; every faithfulness claim follows `docs/FAITHFULNESS_PROTOCOL.md`.
 - Every retained scientific claim needs a physical name, formula, implementation owner, current

@@ -38,6 +38,12 @@ Runtime metadata does not override this ledger. If a manifest assigns a stronger
 underlying object and transformation support, the artifact is nonconforming and remains
 implementation-only.
 
+Assurance scope is orthogonal to value provenance. A `paper-measured` input does not certify the
+backend that consumes it, and a `project-design` fixture may qualify implementation semantics without
+becoming device truth. Conversely, clean publication, complex128 execution, exact source identity,
+or an `interface-identity` row does not by itself establish family, metric, or full Record-law
+assurance. Assurance claims and their evidence are defined in `docs/FAITHFULNESS_PROTOCOL.md`.
+
 ## Current value and default ledger
 
 ### Qutrit leakage and within-cycle execution
@@ -419,6 +425,12 @@ source DOI or dataset identifier | exact locator | device/protocol scope
 transformation or calibration chain | compatibility assumptions
 sweep/uncertainty | allowed claim | forbidden claim
 ```
+
+For a new or materially changed backend, the run must additionally bind its requested capability,
+support-decision identity, shot contract, numerical-guarantee class, separate reduction/
+time-discretization/arithmetic/truncation/sampling ledger entries, and any family/metric/full-law
+evidence references. This documentation rule does not retroactively add fields to an existing schema;
+a concrete schema upgrade must version and test them explicitly.
 
 The artifact must additionally bind:
 

@@ -1,9 +1,11 @@
 # METRICS — current simulator ledger
 
 This file defines only metrics that have a current implementation or registered test owner in
-`error_coupling_simulator`. The simulated object is the multi-time detector/observable record;
-metrics are measurements of that object, not substitutes for it. The binding product boundary is
-`docs/SIMULATOR.md`, and the machine-readable owner map is `docs/service_status.json`.
+`error_coupling_simulator`. The semantic object is the joint multi-time detector/observable Record
+law; samples, scores, structured laws, and enumerated laws are different interfaces to that object.
+Metrics measure the law or a named functional of it rather than replacing it. The binding product
+boundary is `docs/SIMULATOR.md`, the capability contract is `docs/CAPABILITY_MODEL.md`, and the
+machine-readable owner map is `docs/service_status.json`.
 
 The final preregistered-pending section freezes formulas for work that has not yet acquired a
 current implementation or test owner. It is not part of the current certification ledger and cannot
@@ -29,22 +31,30 @@ The current certification ledger uses the classes carried by
 - **(b) prediction band** — a falsifiable value with an explicitly declared comparison band;
 - **(c) heuristic gate** — a numerical or resource decision rule that is not a scientific premise.
 
-An undeclared value is class (c). `UNANCHORED` is an evidence gap, never a pass. Independent
-PEPO/PEPS reference evidence is currently bounded to d3; record-level finite-truncation fidelity
-and d5/d7 scientific certification are open.
+An undeclared value is class (c). Epistemic class `(a)/(b)/(c)` describes a metric row, not an
+assurance level. Exact class-(a) static evidence alone does not imply family, metric, or complete-law
+assurance. `UNANCHORED` is an evidence gap for the named claim, never a pass and never by itself a
+negation of an independently established execution fact. Independent PEPO/PEPS reference evidence
+is currently bounded to d3; record-level finite-truncation fidelity and d5/d7 scientific
+certification are open.
 
 ## Shared conventions
 
-- Records use `RecordBatch.det` and `RecordBatch.obs`. Detector bits are temporal events, with
-  `d[0,j]=s[0,j]` and `d[r,j]=s[r,j] XOR s[r-1,j]` for `r>=1`. A raw syndrome array must be named as
-  raw syndrome data. `tests/test_carrier_record_fold.py` owns the fold identities and corruption
-  checks.
+- Records use `RecordBatch.det` and `RecordBatch.obs`. Detector and observable rows are the explicit
+  parity incidence declared by the caller or compiler. The helper profile owned by
+  `carrier.record_fold` uses `d[0,j]=s[0,j]` and
+  `d[r,j]=s[r,j] XOR s[r-1,j]` for `r>=1` with an all-zero initial reference. A raw syndrome array
+  must be named as raw syndrome data, and this helper must not be presented as a universal detector
+  definition. `tests/test_carrier_record_fold.py` owns only that profile's identities and
+  corruption checks.
 - `NUMERICAL_ZERO == 1e-12` is a floating comparison threshold. It must not replace structural
   zeros, binary values, counts, or probability mass.
 - Population metrics and sampled estimates must be labelled separately. A project acceptance band
   is not a confidence interval unless a derivation explicitly establishes that interpretation.
-- A metric must be evaluated against an independent reference route. Shared-code agreement is a
-  regression check, not scientific certification.
+- An agreement metric used for family qualification, metric certification, or complete-law
+  certification requires an independent reference or rigorous bound. Identity, resource,
+  normalization, and execution guards may remain implementation metrics, but they cannot promote
+  Record-law assurance. Shared-code agreement is a regression check, not scientific certification.
 
 ## Record certification
 
@@ -53,7 +63,7 @@ These are the quantities implemented by `certify/core.py` and enumerated by
 
 | Quantity | Current formula and convention | Owner and executable gate |
 |---|---|---|
-| Full joint record distance | `TV(p,q)=0.5*sum_x abs(p(x)-q(x))` over the joint detector/observable support | `certify.core.total_variation`; `tests/test_certify_core_units.py` independently pins the half factor and mismatch verdict |
+| Full joint record distance | `TV(p,q)=0.5*sum_x abs(p(x)-q(x))` over the joint detector/observable support. This can support `FULL_RECORD_LAW_CERTIFIED` when paired with an eligible complete-law reference or global bound; it is not a universal backend-development prerequisite. | `certify.core.total_variation`; `tests/test_certify_core_units.py` independently pins the half factor and mismatch verdict |
 | MCWF declared-basis label and emitted-binary distance | Compute `TV_label=0.5*sum_l abs(p(l)-q(l))` over schedule-ordered local measurement-eigenlabel tuples and `TV_binary=0.5*sum_r abs(p(r)-q(r))` over the emitted binary Record, then report `max(TV_label,TV_binary)` and require both component gates to pass. X labels `0/1` mean `|+>/|->`, Z labels are computational local levels, and leakage labels `>=2` stay explicit. The binary reference is a certifier-local marginal of the dense label law: labels `0/1` map deterministically to bits `0/1`, while each label `>=2` emits bit `1` with caller-declared probability `b`. Sampled confidence uses a Bonferroni two-component, per-bin, two-sided Hoeffding bound capped at the gross-TV ceiling. This is a class-(c) restricted gate over the declared measurement columns, not a claim of full QEC Record faithfulness. | `certify.axis1_mps._certify_level_path` and `_dense_binary_record_distribution_from_levels`; independent X/Z projectors, reset instruments, and hand-typed readout marginalization plus corruption checks in `tests/test_axis1_mcwf_dense_certification.py`, `tests/test_mps_mcwf_measurement_semantics.py`, and `tests/test_mps_phase6_evaluator_metric_binding.py` |
 | MCWF frozen-fixture finite-step X/Z Record convergence | For the byte-pinned two-qubit T1 fixture only, a hand-written scalar recurrence reconstructs the normalized finite-step Record law without production-private helpers. Against the continuous law at `s=exp(-gamma*t)=0.25`, joint/Z TV is fixed at `0.0234098250, 0.0118596628, 0.0059679715, 0.0029934385` and X-after TV at `0.0102758610, 0.0050882834, 0.0025317938, 0.0012628171` for `m=10,20,40,80`; both must decrease and each doubling ratio must lie in `[1.85,2.15]`. The public `m=40`, `n=2048`, seed `19073` GPU histogram is compared to the finite-step law with one-sample Weissman radii at overall `alpha=0.01` split across joint, Z, and X views: `0.0640322086` for `k=16` and `0.0395189879` for `k=2`. Final Z remains an exact structural zero. These are class-(c), fixture-bound Record checks, not a global convergence order, linear channel, Choi, CPTP, calibration, or production claim. | `tests/test_axis1_mcwf_convergence.py`; neutral law/TV primitives in `scripts/external_baselines/qutip_mcwf_xz_protocol.py` |
 | MCWF no-measurement certification | No positive metric is registered. Canonical empty-column payloads must be `[[]]` with aligned counts/probabilities, then return `unavailable` and reason `mcwf_normalized_candidate_law_has_no_registered_linear_channel_metric`. The normalized candidate total mass is input-state dependent, so a linear CPTP Choi/process comparison is not defined for this path. | `certify.axis1_mps.dense_jointL_record_certification`, policy v7 fail-closed tests in `tests/test_mps_phase6_evaluator_metric_binding.py` and public direct/Carrier tests in `tests/test_axis1_mcwf_dense_certification.py` |
@@ -77,6 +87,14 @@ where `K` is the realized union support size. Array statistics use
 comparison band. These formulas are implementation policy in `certify/core.py`, not universal
 confidence bounds. Their branch and boundary behavior is pinned in
 `tests/test_certify_core_units.py`.
+
+Full joint distance can support `FULL_RECORD_LAW_CERTIFIED`. Detector marginals, correlations,
+logical error rate, or another named functional can support only the corresponding
+`METRIC_CERTIFIED` claim. Passing several named functionals does not aggregate into complete-law
+certification without a complete-law argument. Architecture and resource metrics such as bond,
+active rank, treewidth, node count, and allocator use are screening or execution evidence; they
+cannot substitute for metric or complete-law certification, and their absence does not itself
+prohibit an experimental owner.
 
 ## Channel diagnostics
 
@@ -1079,7 +1097,77 @@ launch durations are bootstrap telemetry and enter no case or efficiency ratio.
 
 ## Bounded research diagnostics
 
-Two research surfaces have current owners but do not certify the production record:
+The bounded research surfaces below do not certify the production record:
+
+Historical `solver_permission=CODE_BLOCKED` fields in this section remain literal results of their
+frozen v1 plans. Under the current assurance contract they mean neither that a target solver was
+executed nor that a full-law claim is available. The non-retroactive assurance mapping for the
+2026-08-03 static target lowering is owned by
+`docs/simulator_validation/PRODUCT_BOUNDARY_V2_MIGRATION_2026-08-04.md`. It does not rewrite an
+artifact, populate a metric, promote a route, or authorize `src/**`; it only prevents a plan-local
+complete-law gap from becoming a permanent product-wide development ban.
+
+- The no-cutoff structure census in
+  `scripts/external_baselines/no_cutoff_structure_census.py` owns a compile-only,
+  eight-cell `d in {3,5}`, `R in {1,3,5,7}` architecture falsifier for the
+  frozen persistent coherent declared-error scaffold.  Its headline exact
+  coordinate is
+  `k_max_clifft_squeeze_no_peephole=max(active_k_history)` under the pinned
+  squeeze-only Clifft pass manifest, with exact burden `B_frame_clifft=2**k`.
+  The exact SymFT `max_active_qubits`, monolithic `2**k`, selected-component
+  dimensions, and work estimates are supplemental diagnostics and cannot drive
+  a route disposition.  At fixed distance, a route is killed on this finite
+  grid only if all three transitions prove at least a doubling of the registered
+  burden; one proved non-doubling transition yields
+  `NOT_KILLED_ON_FROZEN_GRID` only when the complete slice is eligible.  This is
+  a class-(c) representation gate, not an asymptotic result.
+- The same historical report reserves `n_pauli_pair_states_peak`,
+  `n_exact_pair_add_nodes_peak`,
+  `record_boundary_constrained_induced_width`,
+  `tn_record_boundary_peak_dense_entries[_log2]`, and complete-Record
+  `delta_tv_cert`.  It continues to emit only its registered `UNAVAILABLE`
+  reason codes.  The later static target-lowering qualification now supplies
+  exact d=3/5 pair, root-independent ADD-relation, and retained-Record TN
+  definitions, but deliberately executes no target recurrence, ADD root,
+  elimination order, contraction, or complete Record law.  Thus the four
+  architecture metrics remain
+  `UNAVAILABLE/NOT_EXECUTED_STATIC_LOWERING_STAGE`, while `delta_tv_cert`
+  remains `UNAVAILABLE/UNANCHORED_FULL_RECORD`.
+  A final-PMF MTBDD, raw recursion count, heuristic width, sampled TV, fidelity,
+  or numerical zero cannot populate these fields.  The independent exact-SymPy
+  one-qubit tracer and its positive sub-`1e-12` tail atom qualify arithmetic and
+  cutoff resistance only; they are not a target-grid oracle.  Consequently the
+  current mandatory result remains `faithfulness_disposition=UNAVAILABLE`,
+  `certification_verdict=UNANCHORED`, and `solver_permission=CODE_BLOCKED`.
+- The separate minimal-owner qualification in
+  `scripts/external_baselines/no_cutoff_minimal_exact_owners/` now owns only
+  corruption-sensitive microfixture semantics.  Its exact pair peak is `8`
+  from support history `[2,8,2]`; its direct dynamic pair-map ADD peak is `20`
+  from terminal-inclusive reachable-node history `[7,20,11]`; and its frozen
+  retained-Record graph has separately optimized constrained induced width `3`
+  and mixed-domain bucket burden `lambda=6`, hence peak dense capacity `64`.
+  These are class-(c) architecture-instrument qualification values, not d=3/5
+  measurements.  The pair/ADD evidence is independently reconstructed by a
+  literal SymPy truth-table oracle, while the TN evidence is independently
+  reconstructed by a stdlib 120-order oracle and complete 32-cell subset-DP
+  verifier.  The qualification deliberately leaves the historical census
+  cells unchanged.  Its own published conclusion remains a historical
+  micro-only statement; it is not retroactively rewritten by the later static
+  target-lowering qualification.
+- The target-lowering qualification in
+  `scripts/external_baselines/no_cutoff_target_lowering/` owns exactly 32
+  canonical static programs over `d in {3,5}`, `R in {1,3,5,7}`: one
+  evaluator-truth-free `DeclaredErrorRecordProgram`, one complete local
+  `ExactPairTransitionProgram`, one root-independent
+  `DynamicADDRelationProgram`, and one uncontracted
+  `RetainedBoundaryFactorNetwork` per cell.  Independent source-text,
+  finite-matrix, signed-GF(2), target-relation, literal-table, incidence, and
+  direct-density oracles bind all eight cells and the frozen P1/P2, C1--C4,
+  and T1--T4 witnesses.  This is class-(a) static-definition evidence only.
+  No metric above receives a number, no route is killed or promoted, complete
+  Record TV is still unanchored, and `solver_permission=CODE_BLOCKED`.  The
+  terminal result and publication hashes are frozen in
+  `docs/simulator_validation/NO_CUTOFF_TARGET_LOWERING_RESULT_2026-08-03.md`.
 
 - `quantum_bath/observables.py` implements exact three-round distribution TV, Kolmogorov-consistency
   statistics, an L1 distance to the Markov-1 factorization, and conditional mutual information in

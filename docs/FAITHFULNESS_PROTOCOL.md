@@ -1,107 +1,200 @@
-# Faithfulness protocol — current simulator gate
+# Faithfulness and assurance protocol
 
-This protocol governs every claim that a current `error_coupling_simulator` process, channel,
-carrier, or emitted record represents its declared mathematical object. It is an acceptance
-contract, not a historical narrative. `docs/SIMULATOR.md` defines the product boundary;
-`docs/METRICS.md` defines the registered comparisons.
+This protocol governs claims that an `error_coupling_simulator` (ECS) backend realizes a declared
+error-to-Record object or a named functional of that object. It separates execution facts, reusable
+family qualification, instance-specific metric certification, complete-law certification, and
+scientific generalization.
 
-## Required gate
+`docs/SIMULATOR.md` defines the product. `docs/CAPABILITY_MODEL.md` defines capabilities and support.
+`docs/METRICS.md` defines registered quantities. `docs/NUMERICAL_PROVENANCE.md` defines where values
+come from and what physical interpretation they may support.
 
-A faithfulness claim is admissible only when all of the following are present.
+## Orthogonal classifications
 
-### 1. Freeze the object and coordinate
+The following classifications answer different questions and must not be substituted for one
+another:
 
-Name the process, carrier, parameter regime, record coordinate, precision, and supported horizon.
-Do not compare raw syndromes with temporal detector events, a reduced detector error model with an
-analog channel, or a state-only quantity with a multi-time record claim.
+| Classification | Question answered |
+|---|---|
+| capability | What operation or query can the backend perform? |
+| assurance claim | What correctness or scientific statement is supported? |
+| metric epistemic class `(a)/(b)/(c)` | Is a registered value exact, a prediction-band result, or a heuristic gate? |
+| numerical provenance kind | Where did a value come from and what physical interpretation is allowed? |
+| certification-plan verdict | What happened when one frozen evidence plan ran? |
+| workflow authorization such as `CODE_BLOCKED` | What implementation action did that plan permit at that time? |
 
-### 2. Use an independent reference
+An exact class-(a) static artifact may still lack family qualification. A paper-measured parameter
+does not certify a sampler. A `PASS` has meaning only with the object, metric, regime, and plan that
+produced it.
 
-The reference must be capable of failing differently from the implementation under test. Accepted
-routes are:
+## Assurance claims
+
+These claims are orthogonal scopes, not an automatic promotion ladder.
+
+| Claim | Permitted statement | Minimum evidence |
+|---|---|---|
+| `EXECUTION_ATTESTED` | A bound request was executed by a named implementation and produced schema-valid artifacts. | Input/program/backend identities, support decision, runtime invariants, output schema, truth firewall, numerical ledger, and provenance. |
+| `FAMILY_QUALIFIED(scope)` | A backend realizes a frozen semantic family within a declared grammar, mechanism, precision, and horizon. | Independent primitive and lowering checks, compositional closure or induction, small complete Record fixtures, temporal-memory controls, and corruption falsifiers. |
+| `RUN_WITHIN_QUALIFIED_SCOPE` | This run matches a qualified family scope and introduced no undeclared change or approximation. | Per-run scope match, translation validation, execution ledger, and all required run invariants. |
+| `METRIC_CERTIFIED(metric, regime, band)` | One named Record functional satisfies its registered comparison or bound. | A metric-matched independent reference or rigorous bound, preregistered band, and discriminating controls. |
+| `FULL_RECORD_LAW_CERTIFIED(metric, bound)` | The complete detector/observable joint law satisfies the declared global bound. | An independent complete law or a compositional proof with a certified global Record-law error bound. |
+| `SCIENTIFIC_GENERALIZATION_SUPPORTED(scope)` | A result generalizes across a stated distance, horizon, device, or mechanism family. | Separate literature closure, preregistration, cross-instance evidence, uncertainty treatment, and rival explanations. |
+
+`EXECUTION_ATTESTED`, `FAMILY_QUALIFIED`, and `RUN_WITHIN_QUALIFIED_SCOPE` do not imply
+`METRIC_CERTIFIED` or `FULL_RECORD_LAW_CERTIFIED`. Metric certification covers only the named
+functional and does not transfer to another functional. Complete-law certification is the only
+general route here for transferring a total-variation bound to every bounded Record functional.
+Scientific generalization is a separate argument rather than a reward for accumulating other
+labels.
+
+## Family qualification without target-size enumeration
+
+A sampler may be family-qualified without enumerating the target-size probability mass function
+when all of the following are available:
+
+1. an evaluator-truth-free neutral program and an independently reconstructed source-to-event
+   lowering;
+2. independent checks of every supported conditional instrument, error update, measurement, reset,
+   and Record-parity primitive;
+3. a closure or induction argument showing that those primitives compose within the frozen grammar;
+4. small complete Record-law fixtures, including structural zeros and non-degenerate persistent-
+   versus-IID temporal controls;
+5. a support predicate binding operation set, dimensions, memory, precision, horizon, and shot
+   semantics;
+6. per-run translation validation, normalization, provenance, and corruption-sensitive controls.
+
+This route can establish `FAMILY_QUALIFIED` and `RUN_WITHIN_QUALIFIED_SCOPE`. It does not establish
+a target-instance `FULL_RECORD_LAW_CERTIFIED` claim unless the composition argument also supplies a
+certified global Record-law bound, including numerical error.
+
+## Required gate for family, metric, and complete-law claims
+
+### Freeze the object and coordinate
+
+Name the QEC program, declared error process, backend, support envelope, Record coordinate, shot
+contract, precision, capability, metric where applicable, and supported horizon. Do not compare raw
+measurements with detector events, a DEM with an analog process, an unordered histogram with an
+ordered acquisition, or a state quantity with a Record-law claim.
+
+### Use an independent reference or derivation
+
+The evidence must be capable of failing differently from the implementation under test. Accepted
+forms include:
 
 - an exact or separately formulated density-matrix calculation;
-- a raw caller-supplied circuit artifact with independently checked semantics;
-- a closed-form identity derived from a cited primary source;
-- a from-scratch reconstruction that shares neither the implementation path nor the suspected
-  simplification.
+- a raw caller-supplied program with independently checked semantics;
+- a closed-form identity derived from a verified primary source;
+- a from-scratch reconstruction sharing neither the production lowering nor the suspected
+  simplification;
+- for `FAMILY_QUALIFIED`, independent lowering and per-event instruments plus a complete
+  compositional argument.
 
-An implementation compared with its own helper, cache, or reformatted output is a regression check,
-not an independent reference. If no feasible independent reference exists, the result is
-`UNANCHORED`.
+Agreement with an implementation's own helper, cache, compiler payload, or reformatted output is a
+regression check. It is not independent evidence.
 
-### 3. Require a discriminating falsifier
+If no eligible independent reference, derivation, or rigorous bound exists for a requested
+`METRIC_CERTIFIED` or `FULL_RECORD_LAW_CERTIFIED` claim, that claim is `UNANCHORED`. This does not
+negate an independently established execution, family, or run-scope claim.
 
-Every load-bearing invariant needs a deliberate corruption that the gate rejects. The corruption
-must alter the claimed object, and the unchanged positive path must still pass. An inert control
-forces `FAIL`; skipping or allowlisting it does not close the claim.
+### Require discriminating falsifiers
 
-### 4. Declare and bound simplifications
+Every load-bearing invariant needs a deliberate corruption that the gate rejects while the unchanged
+positive path passes. The corruption must change the claimed object. Inert controls, skipped controls,
+and allowlisted failures do not close a claim.
 
-Every truncation, projection, factorization, finite-step approximation, precision change, fitted
-contraction, and reduced representation must declare:
+Falsifiers must cover, where applicable, source lowering, operator sign/support/order, persistent
+versus resampled memory, measurement/reset instruments, Record incidence, structural zeros, shot
+order, approximation ledgers, and evaluator-truth isolation.
+
+### Declare and bound simplifications
+
+Every projection, factorization, finite-step approximation, precision change, fitted contraction,
+truncation, or reduced representation declares:
 
 - what object it changes;
-- where it is applied;
-- the metric used to compare it with the reference;
-- a bound or a paired independent comparison in the claimed regime.
+- where and when it is applied;
+- the output metric it is claimed to control;
+- a rigorous bound or an independent paired comparison in the claimed regime.
 
-An unbounded simplification cannot support a faithfulness conclusion. Resource caps and local
-tensor objectives remain implementation diagnostics unless a proved bridge connects them to the
-record metric.
+A simplification with neither a valid bound nor an eligible independent paired comparison on the
+named output cannot support faithful sampling of the original declared process or the corresponding
+metric/complete-law claim. It may remain an `UNBOUNDED_APPROXIMATION_RESEARCH` execution. A bound
+that closes one named functional can support only that `METRIC_CERTIFIED` claim; it does not repair
+the complete Record law. Resource caps and local tensor objectives remain implementation diagnostics
+unless a proved bridge connects them to the named Record metric.
 
-### 5. Freeze numerical provenance
+### Freeze numerical provenance
 
-Every claim-bearing value follows `docs/NUMERICAL_PROVENANCE.md`: source kind, exact locator,
-units, scope, and transformation chain. Literature equations justify a form, not an uncited
-amplitude. Project defaults, numerical tolerances, and resource limits are not evidence of hardware
-realism.
+Every claim-bearing value follows `docs/NUMERICAL_PROVENANCE.md`: source kind, exact locator, units,
+scope, and transformation chain. Literature equations justify a form, not an uncited amplitude.
+Project defaults, floating tolerances, clean artifacts, and resource limits are not evidence of
+hardware realism or sampler correctness.
 
-## Current owner-backed falsifiers
+## Operational eligibility
 
-| Surface | Required invariant and corruption | Current owner and gate |
-|---|---|---|
-| Record boundary | Inputs are binary before narrowing, copied, immutable, shape-consistent, and expressed in the declared raw-syndrome or detector coordinate. Corrupt values, padding, schema, prior, or fold direction must be rejected. | `carrier/records.py`, `carrier/record_fold.py`; `tests/test_record_batch_units.py`, `tests/test_carrier_record_fold.py` |
-| Formal certification | A feasible independent anchor must disagree after stabilizer corruption or destruction of record order. A control that does not fire makes the report fail. | `certify/core.py`, `certify/anchors/controls.py`; `tests/test_certify_core_units.py`, `tests/test_certify_contracts.py` |
-| Channel algebra | Kraus completeness, Choi/PTM construction, joint-vs-composed behavior, and exact commuting controls must respond to sign, support, ordering, and generator corruptions. | `carrier/cptp_channel.py`, `carrier/joint_lindbladian.py`, `certify/channel_diagnostics.py`; their registered owner tests |
-| Exact qutrit probabilities | Structural zero probabilities remain zero; non-finite, non-Hermitian, non-positive, or non-positive-trace states are rejected rather than repaired into a distribution. | `carrier/exact/qutrit_dm.py`; `tests/test_qutrit_dm_measurement_semantics.py` |
-| Qutrit leakage | Leakage rates, Kraus maps, readout semantics, and reference independence must change under physically targeted corruptions. | `mechanisms/qutrit_leakage.py`, `frontend/qutrit_leakage.py`; the `qutrit_leakage_channel_and_process` acceptance files |
-| Source-conditioned record process | Shared, matched-marginal, and source-off arms must remain distinct; schema, field routing, temporal order, and source-to-parameter corruptions must be detected. | `source/`, `noise_processes/coupled_cycle.py`; the `classical_finite_rtn_source_chain` acceptance files |
-| Finite-RTN research diagnostic | Factorized formulas must agree with separately formulated full-state oracles, while wrong rate convention and omitted-factor corruptions must disagree. | `scripts/finite_rtn_free_induction_diagnostic.py`; `tests/test_finite_rtn_free_induction_diagnostic.py` |
-| PEPO/PEPS research carriers | Dense d3 comparisons, trace/negativity checks, host ownership, truncation corruptions, and independent entropy checks remain mandatory. | `carrier/pepo/`, `carrier/peps/`; their registered acceptance files |
+The following are distinct decisions:
 
-Passing a local invariant does not promote an open carrier. PEPO remains a bounded research carrier;
-PEPS full-record finite-truncation fidelity remains open, and its current FET entropy falsifier is a
-scientific blocker.
+- Experimental-owner development may begin after a neutral lowering, capability/support contract,
+  independent small owner, composition proof obligation, and preregistered falsifiers are frozen.
+  It does not require a completed family proof or target-size complete-law oracle.
+- A faithful operational-sampling claim for the declared process requires `FAMILY_QUALIFIED` plus
+  `RUN_WITHIN_QUALIFIED_SCOPE`, plus a Record-law-level bound for every approximation affecting the
+  sampled Record distribution. A metric-only bound is insufficient.
+- Certification of a particular logical-error rate, correlation, or other Record functional
+  requires the matching `METRIC_CERTIFIED` claim.
+- A statement that the entire joint Record law is within a global distance requires
+  `FULL_RECORD_LAW_CERTIFIED`.
+- Cross-distance, cross-round, asymptotic, hardware, or physical-origin statements require
+  `SCIENTIFIC_GENERALIZATION_SUPPORTED`.
 
-## Verdict semantics
+Repository implementation authorization remains separate. In particular, every `src/**` phase
+still requires explicit user confirmation and a reviewed phase diff.
 
-The current certification types define the allowed outcomes:
+## Certification-plan verdicts
 
-- `PASS` — every required exact row passed and every required control fired;
-- `PASS*` — exact rows and controls passed, while sampled rows remain provisional;
-- `FINDING` — a registered sampled prediction missed its band;
+Existing runtime verdicts remain plan-local outcomes:
+
+- `PASS` — every required exact row and control in the named plan passed;
+- `PASS*` — exact rows and controls passed while sampled comparisons detected no discrepancy at the
+  registered plan; this is not proof of the sampler law;
+- `FINDING` — a registered prediction or comparison missed its band;
 - `FAIL` — an exact invariant failed or a required control was inert;
-- `UNANCHORED` — no feasible independent reference exists;
+- `UNANCHORED` — the requested claim lacks a feasible independent reference;
 - `CONTROL` — an explicit falsifier row, never a positive result.
 
-No status is upgraded because a carrier is expensive, a reference is infeasible, or a result looks
-plausible. A failed scientific gate remains visible until the current implementation passes the
-unchanged invariant or the claim is withdrawn.
+A verdict maps to an assurance claim only when its evidence packet explicitly names that claim and
+meets its requirements. Backend cost, reference infeasibility, plausible output, or schema-valid
+execution cannot upgrade a verdict.
 
-## Evidence packet
+## Historical policy and non-retroactivity
 
-Before a faithfulness claim enters current documentation, its packet must contain:
+Historical preregistrations, results, hashes, and `solver_permission` fields are immutable evidence.
+Their `CODE_BLOCKED` value continues to describe the action permitted by that frozen plan under the
+then-current policy. Under this contract it does not become a product-wide assurance label or a
+permanent ban on another experimental owner.
 
-1. the frozen object, supported regime, and excluded regimes;
-2. the source owner and exact source hash;
-3. the independent reference and an independence argument;
-4. the invariant ledger and one demonstrated corruption per load-bearing invariant;
-5. the simplification list and bound or paired comparison;
-6. the registered metric, epistemic class, and comparison band;
-7. the numerical-provenance manifest;
-8. the executable test or script, result artifact, environment identity, and artifact hashes.
+For the 2026-08-03 no-cutoff target-lowering result, the non-retroactive claim/disposition mapping is
+recorded in `docs/simulator_validation/PRODUCT_BOUNDARY_V2_MIGRATION_2026-08-04.md`. It does not
+rewrite the result artifact, populate a missing architecture metric, select a route, or authorize
+`src/**` work.
 
-Missing items stop claim propagation. Test success proves only the object named by the test; it does
-not automatically certify another carrier, a larger distance, a longer horizon, a hardware device,
-or the complete record.
+## Evidence packets
+
+Evidence is reusable only at its declared scope.
+
+An execution/run-attestation packet contains the bound request and program, support decision,
+backend and implementation identities, complete numerical ledger, runtime invariants, Record
+artifacts, provenance, and exclusions.
+
+A family-qualification packet additionally contains the frozen semantic envelope, independent
+lowering and primitive references, composition argument, complete small-law fixtures, temporal and
+structural controls, versioned support predicate, and corruption results.
+
+A metric/complete-law packet additionally contains the exact metric, regime, comparison band or
+bound, independent reference and independence argument, raw values, uncertainty treatment, and
+claim-specific verdict. A scientific-generalization packet separately contains the literature
+closure, preregistration, cross-instance design, rival explanations, and generalization boundary.
+
+Missing items stop only the claim that requires them. Test success proves the object named by the
+test; it does not automatically certify another backend, distance, horizon, device, metric, or the
+complete Record law.

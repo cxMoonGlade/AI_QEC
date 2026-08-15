@@ -1,8 +1,21 @@
 # Architecture
 
-The binding product boundary is `docs/SIMULATOR.md`. This file is a human-readable map; the exact
-machine-readable inventory is `docs/service_status.json`, and `docs/CODE_MAP.md` is generated from
-that inventory plus the installed source tree.
+The binding product boundary is `docs/SIMULATOR.md`, and the backend-neutral capability/support
+contract is `docs/CAPABILITY_MODEL.md`. This file is a human-readable map of current implementations;
+the exact machine-readable inventory is `docs/service_status.json`, and `docs/CODE_MAP.md` is
+generated from that inventory plus the installed source tree. Route status here does not redefine
+the product, capability vocabulary, or assurance claims.
+
+The architecture-level semantic flow is:
+
+```text
+caller QEC program + declared error process + requested capability/guarantee
+  -> neutral error-to-Record program and frozen parity/shot contract
+  -> backend support decision
+  -> eligible backend execution or explicit rejection/censor
+  -> sample, score, named functional, structured law, or enumerated law
+  -> execution attestation and separately scoped assurance evidence
+```
 
 `carrier/mps` is an execution-mechanics library for restricted verification routes. It makes
 no state-, Record-, or LER-faithfulness claim and is not a registered scientific Carrier.
@@ -23,7 +36,7 @@ ledger. It is not the qutrit PEPS carrier, a canonical Record backend, or an eff
 | `noise_processes/` | controlled generative processes with evaluator-only truth | emits declared records; no hidden-truth leakage |
 | `carrier/joint_lindbladian.py` | one-generator-per-substep channel assembly and exact connected-component factorization | GPU complex128 |
 | `carrier/cptp_channel.py` | backend-neutral CPTP channel object | channel representation, not a record backend |
-| `carrier/records.py`, `record_fold.py` | common record types, packed layout, raw-syndrome/detector conversion | binary, versioned, immutable, temporal-detector semantics |
+| `carrier/records.py`, `record_fold.py` | common record types, packed layout, and the consecutive-check raw-syndrome helper | binary, versioned, immutable; the helper owns one declared XOR-layout profile rather than universal detector semantics |
 | `carrier/exact/` | bounded qubit/qutrit density-matrix routes | implementation references; not scaling paths |
 | `carrier/kernels/` | scoped native CUDA acceleration | optional loading; scientific fallback rules remain explicit |
 | `carrier/mps/` | bounded MPS execution mechanics for restricted verification routes | not a registered scientific carrier; explicit-zero-cutoff uncapped nonlocal unitaries only within fixed numerical resource guards |

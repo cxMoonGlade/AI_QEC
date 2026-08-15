@@ -1,34 +1,30 @@
 # error_coupling_simulator
 
-A GPU-first specified-noise simulator for quantum error-correction circuits. It applies a declared
-noise process to a circuit or schedule and produces the multi-time temporal detector/observable
-record. A `.dem` is an optional decoder-facing reduction, not the simulated object.
+A backend-agnostic classical evaluator for caller-declared quantum-error processes interleaved with
+quantum error-correction programs. Its mathematical target is the joint detector/observable Record
+law. Depending on the selected backend, ECS may expose samples, probability queries, a named Record
+functional, a structured law, or complete enumeration. A `.dem` is an optional decoder-facing
+reduction, not the simulated object.
 
 The runtime and distribution namespace is `error_coupling_simulator`. External circuits, optional
 decoder inputs, explicit derived-channel caches, and the isolated CUDA-Q adapter are declared
 boundaries.
 
-Read [`docs/SIMULATOR.md`](docs/SIMULATOR.md) first; it is the binding product and scientific
-contract.
+Read [`docs/SIMULATOR.md`](docs/SIMULATOR.md) first; it is the binding product contract. Backend
+support is defined in [`docs/CAPABILITY_MODEL.md`](docs/CAPABILITY_MODEL.md), while assurance claims
+are defined in [`docs/FAITHFULNESS_PROTOCOL.md`](docs/FAITHFULNESS_PROTOCOL.md).
 
-## Current surface
+## Current implementation
 
-- Stim-representable circuit compilation and decoder-free record emission.
-- Within-substep joint-Lindbladian channels on bounded dense routes.
-- Replayable finite-RTN source timelines with explicit parameter mapping and matched controls.
-- Restricted one-dimensional MPS verification executors.
-- Qutrit leakage and explicit multi-level CZ transport channels.
-- Bounded exact-density references.
-- Retained density-matrix PEPO and single-wire PEPS research carriers.
-- Evaluator-only formal certification and bounded quantum-bath research models.
+The product contract deliberately does not select a code family, numerical representation, CPU/GPU
+policy, or solver architecture. Current installed services include Stim-representable compilation,
+bounded dense routes, replayable finite-memory sources, restricted MPS verification, multilevel
+leakage channels, exact references, tensor-network research carriers, and certification utilities.
 
-The source-conditioned dense-qubit process and the static qutrit XZZX leakage process are separate
-routes; there is no current integrated source-driven qutrit XZZX product.
-
-PEPO is retained as a tested research carrier but is not the canonical record backend. PEPS
-full-record finite-truncation faithfulness is open. At strict `eps_fid=1e-8`, its entropy equality to
-the independent GF(2) reference is currently all-noop: zero rank-reducing FET write-backs make the
-non-degeneracy gate RED.
+Their exact owners, entry points, outputs, support exclusions, and acceptance files are maintained in
+[`docs/service_status.json`](docs/service_status.json) and summarized in
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). A service's `CORE/OPTIONAL/RESEARCH` status describes
+placement only; it is not a capability or correctness grade.
 
 ## Install for development
 
@@ -69,6 +65,8 @@ for how to rebuild an environment and run a leg.
 ## Documentation
 
 - [`docs/SIMULATOR.md`](docs/SIMULATOR.md) — binding contract.
+- [`docs/CAPABILITY_MODEL.md`](docs/CAPABILITY_MODEL.md) — capability, support, shot, and numerical
+  guarantee contract.
 - [`CONTEXT.md`](CONTEXT.md) — glossary and claim boundary.
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — architecture summary.
 - [`docs/service_status.json`](docs/service_status.json) and

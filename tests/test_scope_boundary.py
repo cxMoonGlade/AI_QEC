@@ -25,6 +25,7 @@ CURRENT_AUTHORITY_MARKDOWN = (
     "CLAUDE.md",
     "CONTEXT.md",
     "docs/SIMULATOR.md",
+    "docs/CAPABILITY_MODEL.md",
     "docs/ARCHITECTURE.md",
     "docs/METRICS.md",
     "docs/FAITHFULNESS_PROTOCOL.md",

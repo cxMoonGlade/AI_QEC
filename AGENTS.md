@@ -6,13 +6,16 @@ the current repository workflow and command guide.
 ## Routing
 
 - `CONTEXT.md` — glossary and claim boundaries.
+- `docs/CAPABILITY_MODEL.md` — backend capability, support, Record-layout, shot-memory, and numerical
+  guarantee contract.
 - `docs/ARCHITECTURE.md` — human-readable package and flow map.
 - `docs/service_status.json` — exact machine-readable services, owners, entry points, and acceptance.
 - `docs/CODE_MAP.md` — generated complete source/service inventory.
 - owning `src/error_coupling_simulator/**/README.md` — module-local contract.
 - `tests/CODEBOOK.md` — current test, coverage, and mutation map.
 - `docs/METRICS.md` — metric definitions and epistemic classes.
-- `docs/FAITHFULNESS_PROTOCOL.md` — independent-reference and falsifier requirements.
+- `docs/FAITHFULNESS_PROTOCOL.md` — assurance claims, independent-reference, and falsifier
+  requirements.
 - `docs/NUMERICAL_PROVENANCE.md` — value-level evidence rules.
 - `docs/papers/README.md` + `docs/papers/CONCEPT_INDEX.md` — source-cache boundary and generated
   source-located discovery index.

@@ -54,6 +54,7 @@ def test_wheel_contains_only_the_active_runtime_package(tmp_path: Path) -> None:
     (active / "README.md").write_text("fixture package\n", encoding="utf-8")
     for name in (
         "SIMULATOR.md",
+        "CAPABILITY_MODEL.md",
         "METRICS.md",
         "FAITHFULNESS_PROTOCOL.md",
         "NUMERICAL_PROVENANCE.md",
@@ -122,6 +123,7 @@ def test_sdist_ignores_unrelated_package_even_with_a_stale_manifest(tmp_path: Pa
     (active / "README.md").write_text("fixture package\n", encoding="utf-8")
     for name in (
         "SIMULATOR.md",
+        "CAPABILITY_MODEL.md",
         "METRICS.md",
         "FAITHFULNESS_PROTOCOL.md",
         "NUMERICAL_PROVENANCE.md",
@@ -185,6 +187,7 @@ def test_real_sdist_wheel_installs_and_runs_without_the_repository(tmp_path: Pat
         shutil.copy2(REPO_ROOT / name, fixture / name)
     for name in (
         "SIMULATOR.md",
+        "CAPABILITY_MODEL.md",
         "METRICS.md",
         "FAITHFULNESS_PROTOCOL.md",
         "NUMERICAL_PROVENANCE.md",
@@ -260,6 +263,13 @@ def test_real_sdist_wheel_installs_and_runs_without_the_repository(tmp_path: Pat
         and name.endswith("/share/doc/error-coupling-simulator/SIMULATOR.md")
     ]
     assert len(simulator_doc_members) == 1
+    capability_doc_members = [
+        name
+        for name in wheel_members
+        if ".data/" in name
+        and name.endswith("/share/doc/error-coupling-simulator/CAPABILITY_MODEL.md")
+    ]
+    assert len(capability_doc_members) == 1
     service_catalog_members = [
         name
         for name in wheel_members
@@ -405,7 +415,7 @@ def test_real_sdist_wheel_installs_and_runs_without_the_repository(tmp_path: Pat
                 assert service_catalog["_schema"] == (
                     "error_coupling_simulator.service_status.v2"
                 )
-                assert len(service_catalog["services"]) == 27
+                assert len(service_catalog["services"]) == 28
                 assert installed_code_map.read_text(encoding="utf-8").startswith(
                     "# CODE_MAP"
                 )

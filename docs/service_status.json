@@ -867,7 +867,7 @@
     },
     {
       "id": "record_contract_and_packing",
-      "name": "Canonical detector/observable record contract, packing and temporal fold",
+      "name": "Canonical detector/observable record containers and consecutive-check fold helper",
       "status": "CORE",
       "kind": "record_contract",
       "canonical_record_output": true,
@@ -886,9 +886,9 @@
       ],
       "dependencies": {"core": ["numpy"], "extras": []},
       "external_inputs": ["Backend raw syndromes/observables or canonical detector/observable arrays"],
-      "outputs": ["Validated RecordBatch/PackedShotBatch and exact temporal XOR fold/unfold"],
+      "outputs": ["Validated RecordBatch/PackedShotBatch and exact consecutive-check XOR-layout fold/unfold"],
       "acceptance": ["tests/test_record_batch_units.py", "tests/test_carrier_record_fold.py"],
-      "note": "This is the backend-neutral simulator product boundary. It is data structure and exact record semantics, not a decoder or metric."
+      "note": "This service implements the current binary Record containers plus one exact consecutive-check raw-syndrome XOR-layout helper. General detector/observable parity incidence and the backend-neutral product boundary are defined by docs/SIMULATOR.md and docs/CAPABILITY_MODEL.md. The helper is not a universal detector definition, decoder, metric, capability grade, or assurance claim."
     },
     {
       "id": "record_io_and_dem_reduction",

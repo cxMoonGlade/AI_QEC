@@ -1,116 +1,97 @@
 # Domain context
 
-This repository develops `error_coupling_simulator`, a GPU-first specified-noise simulator for QEC
-circuits. The binding contract is `docs/SIMULATOR.md`.
+This repository develops `error_coupling_simulator` (ECS), a backend-agnostic classical evaluator
+for caller-declared quantum-error processes interleaved with quantum error-correction (QEC)
+programs. The binding product contract is `docs/SIMULATOR.md`; capabilities and assurance are
+defined separately in `docs/CAPABILITY_MODEL.md` and `docs/FAITHFULNESS_PROTOCOL.md`.
 
-## Terms
+## Canonical terms
 
-- **Specified noise process** — a declared generative model applied to a circuit or schedule. It is
-  not fitted physical ground truth. Its hidden trajectory and channel field are evaluator-only.
-- **Record** — temporal detector bits plus logical-observable flips across rounds. It is the product.
-  Raw stabilizer outcomes are a distinct diagnostic coordinate and require the declared temporal XOR
-  fold before they are called detectors.
-- **DEM** — an optional decoder-facing Pauli reduction of a record-generating process. It is not the
-  process or the record.
-- **Carrier** — the forward engine that propagates the declared process and emits or supports a
-  record. Current carriers have distinct support and evidence boundaries.
-- **Reference oracle** — an independent closed form, raw artifact, exact-density route, or
-  from-scratch reconstruction used to catch implementation errors. It is not physical truth.
+- **QEC program** — the declared operations, measurements, resets, timing where relevant, classical
+  controls, and detector/logical-observable parity definitions.
+- **Declared error process** — the generative error model applied to the QEC program. It may contain
+  coherent, stochastic, spatially correlated, temporally correlated, classical-latent, or explicitly
+  declared quantum-memory components. It is not fitted physical ground truth.
+- **Private process state** — a latent variable, trajectory, channel field, or memory checkpoint used
+  to generate the declared process. It is evaluator-only and is not part of the public `Record`.
+- **Raw measurement coordinate** — the chronological measurement outputs consumed by a declared
+  Record layout. It is distinct from detector events.
+- **Record layout** — the frozen ordered XOR incidence that maps measurement columns to detector and
+  logical-observable rows. The adjacent-round syndrome fold is one layout profile, not a universal
+  definition.
+- **Record** — the ordered binary detector vector followed by the ordered logical-observable vector.
+- **Record law** — the joint probability law of the `Record` under the declared QEC program, error
+  process, and shot contract. It is the mathematical product semantics.
+- **Record interface** — samples, Record/prefix scores, named functionals, structured-law queries, or
+  complete enumeration exposing the Record law within a backend's capability.
+- **Backend** — an implementation that validates, compiles, executes, or queries a supported slice.
+  Hardware and numerical representation are backend choices rather than product definitions.
+- **Carrier** — a backend component that propagates the declared process. The name alone carries no
+  state-, Record-, metric-, scaling-, or assurance claim.
+- **Capability** — what a backend can return, such as sampling or scoring. It is not evidence that
+  the result is correct.
+- **Support envelope** — the exact semantic predicate covering a backend's operations, dimensions,
+  instruments, memory, shot semantics, Record layout, numerical guarantees, and exclusions.
+- **Assurance claim** — the scoped statement permitted by an evidence packet: execution, family,
+  run, metric, complete-law, or scientific-generalization assurance.
+- **Reference oracle** — an independent exact calculation, raw artifact, closed form, or from-scratch
+  reconstruction used to catch implementation errors. It is not physical truth.
 - **Controlled fixture** — a synthetic, explicitly parameterized input used to exercise a formula or
   falsifier. Fixture values do not become measured parameters.
-- **Downstream estimator** — decoder, calibration, model-selection, parameter-recovery, or
-  identifiability logic consuming records. It is outside the simulator product.
-- **Axis-1** — within-substep joint-Lindbladian evolution: all declared local Hamiltonian and collapse
-  terms for a substep enter one generator before propagation.
-- **Axis-2** — a replayable classical latent timeline mapped into per-round process parameters. The
-  current finite-RTN route is a record-memory model, not a microscopic bath or reduced-map verdict.
-- **Leakage** — population or coherence outside the computational subspace. Current bounded owners
-  include qutrit leakage and explicit multi-level CZ transport.
-- **Record faithfulness** — agreement of the declared detector/observable record law with an
-  independent reference within a frozen band. Bond, state, entropy, or local environment agreement
-  alone is insufficient.
-
-## Current implementation boundary
-
-The frontend Stim route, dense Axis-1 route, finite-RTN source process, restricted one-dimensional MPS
-verification routes, the all-qubit Clifford-augmented PEPS prototype, qutrit/ququart channels, exact
-bounded references, PEPO, PEPS, certification, and quantum-bath research surface are separate
-registered services.
-
-The density-matrix PEPO and single-wire PEPS are retained research carriers. PEPO is not the canonical
-record backend. PEPS full-record finite-truncation faithfulness is open, and its current FET
-entropy equality is all-noop at the registered strict target: zero rank-reducing writes make the
-non-degeneracy gate RED. See `docs/simulator_validation/PEPO_VALIDATION.md` and
-`docs/simulator_validation/PEPS_FET_VALIDATION.md`.
-
-The Clifford-augmented PEPS prototype is a separate all-qubit restricted-verification surface. Its
-Stim frame plus dense/Quimb residual has focused untruncated-mechanics regressions for GCAMPS
-Eq. (5) generator/phase decomposition, coherent signed pullback, small-local-unitary expansion,
-exact local Clifford refactorization, Pauli expectations, and measurement/reset branches. SDIM is
-only a version-pinned fail-closed optional qubit seam without canonical live-backend acceptance;
-generalized-qutrit residual semantics and the paper's 20/90-candidate optimizer are not present.
-The dedicated 2026-07-29 closure and preregistration freeze one n=8,
-active-rank-3, untruncated differential between two equal-status candidate
-state-action lanes: plain Quimb PEPO-on-PEPS and GCAPEPS. An
-untimed NumPy-only exact-small anchor is frozen by design but not yet
-implemented. Once implemented and passing its controls, it may qualify only
-this one input-state action; it is not a performance lane or physical ground
-truth. Target execution remains
-control-, environment-, provenance-, and publication-gated. This does not
-create a canonical detector/observable Record, generic Carrier faithfulness,
-leakage-qutrit semantics, controlled finite-bond approximation, scalable PEPS
-evidence, or a general efficiency comparison. Record, leakage/qutrit,
-truncation, scaling, and efficiency certification remain open.
-
-A second 2026-07-29 theory-first packet froze a much narrower
-forced-truncation tracer before implementation: an exact tree-PEPO lane, an
-opt-in Quimb-native one/two-site compilation, and a NumPy-only dense anchor on
-one two-qubit bridge. The held-out run is now current as
-`PASS_BOUNDED_BRIDGE_TRANSIENT_TRUNCATION` in
-`docs/simulator_validation/GCAPEPS_NATIVE_FORCED_TRUNCATION_RESULT_2026-07-29.md`.
-It binds parent commit `1e9517af31f83d174bcbdf656c1955f12227b605`,
-tree `17c17eb549d5f091263e7deaa86476d90420174b`, and native fork commit
-`e6cbe016f336843925e01a559db26f209fa9d37b`, tree
-`854ff4d5ef692497f017a57250cf8f440e47110f`. Under `max_bond=1`,
-the first native CNOT discarded the registered positive squared tail `25/169`;
-the complete cap-only vector had `d2=d_inf=5/13` and normalized squared
-fidelity `144/169` against the dense anchor. Exact-tree, uncapped, high-cap,
-and direct controls agreed with that anchor to at most `3.8e-16` over complete
-vectors, while the reconstructed full operator had `d_inf=1.25e-16`. The
-cutoff control reproduced the same vector but a distinct ledger cause, and the
-final exact state had rank one. This establishes only exact-small, two-site
-transient path dependence. The per-split discarded weight remains a local
-diagnostic, not a global error, loopy-PEPS, accumulated-error, Born-mass,
-measurement/reset, or Record certificate; no performance, multiround,
-qutrit/SDIM, leakage, general-PEPS, or general-efficiency claim follows. The
-loopy 2-by-2 extension remains a separately preregistered P1 task.
-
-The source-conditioned dense-qubit process and static data-qutrit XZZX leakage process are not one
-integrated product. Their missing bridge is an implementation fact. No field-wide literature-gap
-claim is inferred from that absence.
+- **DEM** — an optional decoder-facing Pauli reduction of a Record-generating process. It is not the
+  process or the Record law.
+- **Downstream estimator** — decoder, calibration, model-selection, parameter-recovery,
+  identifiability, or decoder-headroom logic consuming Records. It is outside the simulator product.
 
 ## Memory claim classes
 
 These are non-exclusive properties of different objects:
 
-- **record memory** — dependence/order in a fixed observed record law;
+- **Record memory** — temporal dependence or order in a fixed observed Record law;
 - **reduced-map divisibility or distinguishability backflow** — a property or witness of a declared
-  family of system maps;
-- **process-tensor/environment memory** — a multi-time causal object requiring a declared instrument
-  or intervention family.
+  family of reduced system maps;
+- **process-tensor or environment memory** — a multi-time causal object requiring a declared
+  intervention family.
 
-One class does not transfer to another without an explicit bridge. A stochastic source alone is not a
-dynamical map. A passive record statistic does not identify a quantum environmental origin.
+One class does not transfer to another without an explicit bridge. A classical latent source alone
+is not a reduced dynamical map. Passive Record statistics do not identify a quantum environmental
+origin. “Non-Markovian” must therefore name the object and access model to which it refers.
+
+## Numerical and evidence distinctions
+
+- `ALGEBRAIC_EXACT`, `UNTRUNCATED_FLOATING`, `CERTIFIED_NUMERIC`, bounded approximation, and
+  unbounded research approximation are different guarantees.
+- A zero coefficient cutoff does not certify floating roundoff, time discretization, or the Record
+  law.
+- Structural zeros remain exact; numerical floors are never probability mass.
+- A local tensor, bond, entropy, active-rank, treewidth, fidelity, or discarded-weight diagnostic
+  does not substitute for a named Record-functional or full-law bound.
+- `CORE/RESEARCH` describes current service placement, not capability or correctness.
+- `PASS/FAIL/UNANCHORED` is a plan verdict; `CODE_BLOCKED` is a scoped workflow authorization.
+
+## Current implementation boundary
+
+The exact live services, owners, entry points, dependencies, output forms, and exclusions are in
+`docs/service_status.json`; `docs/ARCHITECTURE.md` is the human-readable map. Those documents describe
+the current implementation and may contain route-specific limitations. They do not narrow the
+backend-neutral product charter.
+
+The 2026-08-03 no-cutoff target-lowering plan validated static neutral, pair,
+dynamic-ADD-relation, and retained-boundary tensor-network definitions for its frozen cells. It
+executed no target solver and supplied no target-size full Record law. Its historical `CODE_BLOCKED`
+field remains unchanged; the current assurance mapping is recorded in
+`docs/simulator_validation/PRODUCT_BOUNDARY_V2_MIGRATION_2026-08-04.md`.
 
 ## Claim boundary
 
-- No specified process is physical ground truth.
-- No paper equation supplies an implemented amplitude unless the exact value and transformation chain
-  are separately grounded.
-- Cross-paper/device tuples are composite benchmarks, not calibrated device cells.
+- No declared process is physical ground truth.
+- ECS models error processes, not microscopic open-system dynamics by default.
+- A paper equation supplies neither an implemented mechanism nor a numerical amplitude without a
+  verified transformation chain.
+- Cross-paper or cross-device tuples are composite benchmarks, not calibrated device cells.
 - PTM off-diagonal structure is basis-specific non-Pauli structure, not a standalone coherent-cause
   certificate.
-- Structural zeros remain zero; numerical floors are not probability mass.
-- Every d5/d7 distributional claim is provisional and cannot be used as a scientific premise.
-- No local carrier statistic substitutes for a complete record-law comparison.
-- No unsupported schema, compatibility path, or historical output is current evidence.
+- No metric, backend, distance, round count, or memory class transfers beyond its explicit support
+  and assurance scope.
+- No unsupported schema, silent reduction, compatibility fallback, or historical output is current
+  evidence for a new claim.

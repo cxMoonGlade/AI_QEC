@@ -1,6 +1,7 @@
 include README.md
 include pyproject.toml
 include docs/SIMULATOR.md
+include docs/CAPABILITY_MODEL.md
 include docs/METRICS.md
 include docs/FAITHFULNESS_PROTOCOL.md
 include docs/NUMERICAL_PROVENANCE.md
