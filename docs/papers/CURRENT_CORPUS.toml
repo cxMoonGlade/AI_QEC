@@ -1,8 +1,8 @@
 schema = "error_coupling_simulator.literature.corpus_manifest.v1"
 status = "active"
-corpus_sha256 = "3482bcdeb9d2a1929bb4b8e51898590a3a870259ea64f8261c88974159e39da8"
-note_count = 53
-paper_fact_count = 770
+corpus_sha256 = "34d8e9c0884c9179f2db01543c7f59d3210a8d8e8906bb964bc984b981a49473"
+note_count = 77
+paper_fact_count = 1244
 
 [[notes]]
 path = "docs/papers/reading_notes/aaronson_gottesman_stabilizer_circuits_0406196v5_source_review.md"
@@ -12,11 +12,25 @@ source_version = "v5"
 source_sha256 = "ef9e472536b380b60c365ca6a03b92680a43d725cfe5f8189a8325fc16bc11ef"
 
 [[notes]]
+path = "docs/papers/reading_notes/alphaqubit_recurrent_decoder_2310.05900v1_source_review.md"
+note_sha256 = "bfb697f6f263bab43fa98fe6ea16cec240b4d2f7f0a9414dc19db611e2702fc6"
+source_id = "arxiv:2310.05900"
+source_version = "v1"
+source_sha256 = "6c38f70abfa12a3f622420fc0dc9ca18cc2086e9b0fc35014b3f6bcab298591c"
+
+[[notes]]
 path = "docs/papers/reading_notes/arsenijevic_bankovic_damping_1606.01145_source_review.md"
 note_sha256 = "1bb138455f6ca74c8794e5c41b5597b3ce4335331994c737a14cde5bcd3d5ee2"
 source_id = "arxiv:1606.01145"
 source_version = "v1"
 source_sha256 = "32e3d12077bef0b1e6eb84f2f85f5bc35fc1fce6b5f9a3e58c625cf902ee0694"
+
+[[notes]]
+path = "docs/papers/reading_notes/bhardwaj_adaptive_drift_2511.09491v1_source_review.md"
+note_sha256 = "92f925f80666258a5e15c0224019643fb2514fc0ebfdb6b6eeae0c9216be8582"
+source_id = "arxiv:2511.09491"
+source_version = "v1"
+source_sha256 = "cb2a52cb135c08d92118a672b9574c94aa53051280bc7d53993aebf83d7d3191"
 
 [[notes]]
 path = "docs/papers/reading_notes/bonilla_ataides_xzzx_2009.07851_source_review.md"
@@ -52,6 +66,13 @@ note_sha256 = "44c98f5703c4b018e2c8e02c6ba3b163d817ef1d3b54c307c7135e540e95d276"
 source_id = "arxiv:2606.12056"
 source_version = "v1"
 source_sha256 = "5c6eee55dda650c88a2d1db2b7812a6297f7af762842e7d4c00e03bd273c48aa"
+
+[[notes]]
+path = "docs/papers/reading_notes/chase_labib_clifft_2604.27058v2_source_review.md"
+note_sha256 = "517cbe0ac345e646a24b2f7815a6b394d985272dc0b095cdd35bbd8f8d8fa685"
+source_id = "arxiv:2604.27058"
+source_version = "v2"
+source_sha256 = "3dfea923648f67793c3e5f368bdedff15549312ad9d030b4264ef4bec619c421"
 
 [[notes]]
 path = "docs/papers/reading_notes/corcoles_two_qubit_clifford_decomposition_1210.7011v2_source_review.md"
@@ -103,6 +124,13 @@ source_version = "v2"
 source_sha256 = "a5578205d15a7c44a11e0508e400109393c555be243d8478c20f668f75997f40"
 
 [[notes]]
+path = "docs/papers/reading_notes/fang_lou_li_symft_2607.28600v1_source_review.md"
+note_sha256 = "a663214c5068469a4501b99b9075f3d89e44f8209f18aef23a95431a2ad3a54f"
+source_id = "arxiv:2607.28600"
+source_version = "v1"
+source_sha256 = "37c2e5b4276d4c348ee951b0c3fb8b72b5f1ac9893b707fecd3cad10ebc5af29"
+
+[[notes]]
 path = "docs/papers/reading_notes/froehlich_tensor_jump_2607.01323_source_review.md"
 note_sha256 = "686d8d3a7c24d3ea1ac8ae5d704e1488f1b538da9158cd85072be453af776c1c"
 source_id = "arxiv:2607.01323"
@@ -131,6 +159,13 @@ source_version = "v2"
 source_sha256 = "d2b630d8cee32a4e1ab5302fda3e4f7cee15849577565dff9eb63a10dd10f076"
 
 [[notes]]
+path = "docs/papers/reading_notes/google_qec_below_threshold_2408.13687v1_source_review.md"
+note_sha256 = "5ad7d2cc0cfa55623235d040677c204da192d38cc971c58ebefab1aca6757b6c"
+source_id = "arxiv:2408.13687"
+source_version = "v1"
+source_sha256 = "9ba05a64dfec13f5d733e0e22484e8f22db2482dc2a5a0d63e6f0766c9c3d368"
+
+[[notes]]
 path = "docs/papers/reading_notes/harper_gcamps_2511.06672v2.md"
 note_sha256 = "23c8444ea82a095ce374f5e2a3121c7785c67f3462383569e1d9bf1a2a5f86f9"
 source_id = "arxiv:2511.06672"
@@ -143,6 +178,13 @@ note_sha256 = "980501ee4e824c5e1fd3858d2724e2f48ce984565c7b630bf916a52fab351311"
 source_id = "arxiv:2605.29514"
 source_version = "v1"
 source_sha256 = "c13096aa841acf2b2161f18140c56dd9d3549b268969f79328ff0865583a35dd"
+
+[[notes]]
+path = "docs/papers/reading_notes/hockings_noise_aware_decoding_2502.21044v2_source_review.md"
+note_sha256 = "93e2d681cbbf365deeec1cd3051ee3a1bf1c228d6b68608f2f52066a38fb2e04"
+source_id = "arxiv:2502.21044"
+source_version = "v2"
+source_sha256 = "9477f3e1a195c59e92681ce7e026dc859323790fbeb62b66de63169915af3b46"
 
 [[notes]]
 path = "docs/papers/reading_notes/hostens_stabilizer_clifford_arbitrary_dimension_quant_ph_0408190v2_source_review.md"
@@ -159,6 +201,20 @@ source_version = "v2"
 source_sha256 = "62e6b0ceb9fbce3da5f938968a728873b50953d87e1506f43e1358828714919f"
 
 [[notes]]
+path = "docs/papers/reading_notes/kam_nonmarkovian_surface_code_2410.23779v4_source_review.md"
+note_sha256 = "c3a271a62768d96110901a977baa4731580c4d166a55624b0273af39d7e31866"
+source_id = "arxiv:2410.23779"
+source_version = "v4"
+source_sha256 = "9f7bfb374110dc76df3a60a0af3e16f64347ad80de999a2fce687d88936866bf"
+
+[[notes]]
+path = "docs/papers/reading_notes/kam_spatiotemporal_pauli_processes_2603.05474v2_source_review.md"
+note_sha256 = "69367b8340c8718cb9df01e083cff6d025cd672c0fc8ccae346e92181e3f3fd1"
+source_id = "arxiv:2603.05474"
+source_version = "v2"
+source_sha256 = "3929443fb4587fefdd675dd611e05c9ce41ec4d8d0aea774bc8efb8bb0407c80"
+
+[[notes]]
 path = "docs/papers/reading_notes/kilda_ipepo_stability_2012.03095.md"
 note_sha256 = "49274615199c038fadd45cc441ede16b05dd242060a91e2b1b2bda475b686448"
 source_id = "arxiv:2012.03095"
@@ -171,6 +227,20 @@ note_sha256 = "d2e484753b717f4639ca7c7ffd15591ad89b0547c375e3d8262cc4a67ac9c589"
 source_id = "arxiv:2607.03939"
 source_version = "v1"
 source_sha256 = "f02ec3815f3776c25b2e4a460eaaea2988b180deaecf9b602d4c0017c903cb9b"
+
+[[notes]]
+path = "docs/papers/reading_notes/kobayashi_process_tensor_decoder_2412.13739v1_source_review.md"
+note_sha256 = "c3fded8d0469755b91bbe36fbb22430b7e1cd033c057cf7d7155c96a8ddb981c"
+source_id = "arxiv:2412.13739"
+source_version = "v1"
+source_sha256 = "3d53154051bdc5a331238ba9c573ecff0237e4f52853e6f463e02090617b8ef1"
+
+[[notes]]
+path = "docs/papers/reading_notes/kurilovich_error_bursts_2506.18228v1_source_review.md"
+note_sha256 = "539fb8261e38ad35004257b8cc72ec7964c9f3155477908af5792bb52aff7c41"
+source_id = "arxiv:2506.18228"
+source_version = "v1"
+source_sha256 = "278f6adb6a48313d1ea21fb6f8775b106996ef373639b6c2e5078c8e9d10826c"
 
 [[notes]]
 path = "docs/papers/reading_notes/liao_heisenberg_pepo_2308.03082.md"
@@ -201,6 +271,27 @@ source_version = "v2"
 source_sha256 = "5d7e010293770b0c97ac9c0b88075710ceda3a68988da7933dd2130621d8269a"
 
 [[notes]]
+path = "docs/papers/reading_notes/manabe_suzuki_darmawan_leakage_mps_2308.08186v2_source_review.md"
+note_sha256 = "9bf8c6cf75777bb3290d2d57f6a24b64415d6b1fe78f247f9d781e0fe2ca3528"
+source_id = "arxiv:2308.08186"
+source_version = "v2"
+source_sha256 = "be54fe2ec199878855438bed58b4308172d02744cd8393f86765c151f25137fc"
+
+[[notes]]
+path = "docs/papers/reading_notes/markov_shi_tensor_contraction_quant_ph_0511069v4_source_review.md"
+note_sha256 = "2435362a04c6c5793421d871eab240174fb03b0883101401d31a28d91f30cb46"
+source_id = "arxiv:quant-ph/0511069"
+source_version = "v4"
+source_sha256 = "a1c7089d9f2059ea57c17a90a07e458ea90dc37f49f2d8c3db7e2019caddb371"
+
+[[notes]]
+path = "docs/papers/reading_notes/marshall_kafri_sta_2312.10277v2_source_review.md"
+note_sha256 = "3f0fe4ccf385f980fa87e43a892de18f0720cecf8c77c4eb13649913867277b1"
+source_id = "arxiv:2312.10277"
+source_version = "v2"
+source_sha256 = "82ddaa228d8b13e0f55a5fb1c1d18e688698698ffd102823fb0f4e47d10a6ada"
+
+[[notes]]
 path = "docs/papers/reading_notes/masot_limits_clifford_disentangling_2602.15942v2_source_review.md"
 note_sha256 = "55ec5e5cb94d5b0d2ed1c3cef360a9f3474f99fa94b694958a1af00551606932"
 source_id = "arxiv:2602.15942"
@@ -229,6 +320,13 @@ source_version = "v3"
 source_sha256 = "eee6e79e1f217b1c041ae524867c2785c773a9eb9050020927d1b485a0a846cc"
 
 [[notes]]
+path = "docs/papers/reading_notes/miao_dqlr_2211.04728v1_source_review.md"
+note_sha256 = "46e577c59e786fbf9d7018d38c025e186bb8641ea48bf1f296d56f03dd35eb82"
+source_id = "arxiv:2211.04728"
+source_version = "v1"
+source_sha256 = "f82e81b7f62dd1ac5d14e27c4d4b6c0b0a81f5aae9e96b1f45973a48d8991e40"
+
+[[notes]]
 path = "docs/papers/reading_notes/miyamura_heralded_leakage_2607.17204v1.md"
 note_sha256 = "639131afd588612718410cc61595915329e6d1fdb8ea55762316fcd478f724bf"
 source_id = "arxiv:2607.17204"
@@ -236,11 +334,25 @@ source_version = "v1"
 source_sha256 = "cb33dbc5eaddb400c0e04b63dfc9be199adfef2797e3133996b6aea32b0ed889"
 
 [[notes]]
+path = "docs/papers/reading_notes/molavi_decoder_robustness_2603.20127v1_source_review.md"
+note_sha256 = "1b1b477c6cb22b51587d1c47f87cfb5f0f0ac9573034bef0f73655643c2e9838"
+source_id = "arxiv:2603.20127"
+source_version = "v1"
+source_sha256 = "cf38579a83b0b21d2bb9f1bf2ee41249259e68c502589ffec446856eb5aebe90"
+
+[[notes]]
 path = "docs/papers/reading_notes/naumann_varipeps_lectures_source_review.md"
 note_sha256 = "e91f46dcd118617be7f6a6c18af76e589d72e4b57972aba9e4cea780f960f6d1"
 source_id = "doi:10.21468/SciPostPhysLectNotes.86"
 source_version = "version-of-record"
 source_sha256 = "9e34cadaa235c94efc03cf1b9bf795764b55a3c7a42e0168ee3949b283c66c45"
+
+[[notes]]
+path = "docs/papers/reading_notes/nayak_iterative_qp_decoder_2603.18231v1_source_review.md"
+note_sha256 = "8ddac8cbe19d9cd625f77c92051c5fe85e5d3990488e282e3c2166a02fe3e176"
+source_id = "arxiv:2603.18231"
+source_version = "v1"
+source_sha256 = "faf25f0c0c253199a5f45c4e5f511dcc2ec97ffad3761769780f1f118e264945"
 
 [[notes]]
 path = "docs/papers/reading_notes/oi_schirmer_pure_dephasing_1109.0954_source_review.md"
@@ -278,6 +390,13 @@ source_version = "version-of-record"
 source_sha256 = "81cc766164072cd022202357fec314684e8b0c28a2bfebd6132c1639af022426"
 
 [[notes]]
+path = "docs/papers/reading_notes/qadapt_2607.28422v1_source_review.md"
+note_sha256 = "9853b3f6a0afc36a12d991bbf0c3882d951721442094e83425c617203968fb48"
+source_id = "arxiv:2607.28422"
+source_version = "v1"
+source_sha256 = "2c8f6fec9a1dd0a76f041d76cdd4b76be74ee466a7cbb9719f15637f13144c7c"
+
+[[notes]]
 path = "docs/papers/reading_notes/qian_clifford_augmented_dmrg_2405.09217v2_source_review.md"
 note_sha256 = "4ecd9a07ed1b721b7e563a232c0dcca6b4bd87d4d17e1da95bfb2bad1d722d2b"
 source_id = "arxiv:2405.09217"
@@ -290,6 +409,13 @@ note_sha256 = "73d745ff4ac811ddf3b9abfa9d995184e7560d4147ab79c7c2154e257de8975a"
 source_id = "doi:10.21468/SciPostPhysCodeb.52"
 source_version = "version-of-record"
 source_sha256 = "44a7a77c86ec8f1f1298c12a6984717a6e5ed17ce66da2f9fa071270813a6c73"
+
+[[notes]]
+path = "docs/papers/reading_notes/remm_syndrome_correlations_2502.17722v1_source_review.md"
+note_sha256 = "fb6bed7a1c9a5db9b6f6e1c91008bed4129439ba575856856b6a77b0800405c7"
+source_id = "arxiv:2502.17722"
+source_version = "v1"
+source_sha256 = "e2c6f6261c134e510f00d9083cf87a6e98f1e79b414fdb7b6b259a64ba6054e2"
 
 [[notes]]
 path = "docs/papers/reading_notes/rudolph_tindall_gpu_peps_2507.11424.md"
@@ -327,6 +453,20 @@ source_version = "v2"
 source_sha256 = "bc240a9b78a84e886360d4d0a621a0b06b12fef93e4e399c6b9aa1f66d1e43c3"
 
 [[notes]]
+path = "docs/papers/reading_notes/stein_film_decoder_2601.16123v1_source_review.md"
+note_sha256 = "03fc630f47cc7b5c9aeffab88249ecb40ef4906e4af52bb19176391b4f3bd56a"
+source_id = "arxiv:2601.16123"
+source_version = "v1"
+source_sha256 = "f09848cdf8ed099ebf213750bdbf397a92659f04c4e8c6e5177454821b3de50e"
+
+[[notes]]
+path = "docs/papers/reading_notes/takou_syndrome_dem_2606.11496v2_source_review.md"
+note_sha256 = "eb33fef32de42519bce06b07be277782b94a25de724d9761405a953e9ee14357"
+source_id = "arxiv:2606.11496"
+source_version = "v2"
+source_sha256 = "4441789ebbe43aab4cae64bfda047ccd55c66c42acd9aada63fe87294767aaeb"
+
+[[notes]]
 path = "docs/papers/reading_notes/tepepo_2d_open_system_tn_2512.01781.md"
 note_sha256 = "3fddc43ffd5f318164a93e9106e9b951c9c3ff5749686849155a1b2b50212894"
 source_id = "arxiv:2512.01781"
@@ -355,6 +495,20 @@ source_version = "v1"
 source_sha256 = "e5e3f4756bcedac10a4016aaac957af41a7a560501033a7f43a993a7b22abbe9"
 
 [[notes]]
+path = "docs/papers/reading_notes/wang_ai_loss_decoder_2604.14269v2_source_review.md"
+note_sha256 = "9de816d7393db444d7f6c05d12cb73117308bc1d7beadbda0e14ad8ffb7d1752"
+source_id = "arxiv:2604.14269"
+source_version = "v2"
+source_sha256 = "098dc3506421d58a23a8a2cee15161d3de08a41228299470279319d9149c84dc"
+
+[[notes]]
+path = "docs/papers/reading_notes/wang_transformer_qec_2311.16082v1_source_review.md"
+note_sha256 = "5ebef8c158cc293dc1d8814245245d4bbb25829d35bc2a7ff6fbd002214fc534"
+source_id = "arxiv:2311.16082"
+source_version = "v1"
+source_sha256 = "cc4a5fce3676648a1cfd8cc378ac4bf0a8b994294cef02acff18422696f30aa1"
+
+[[notes]]
 path = "docs/papers/reading_notes/werner_positive_tensor_network_open_systems_1412.5746.md"
 note_sha256 = "08c8008672c5d09889eaa000dcf7e5fbb4b291dfccacbfc7a65ed7448f7065f1"
 source_id = "arxiv:1412.5746"
@@ -369,8 +523,22 @@ source_version = "version-of-record"
 source_sha256 = "66a9d749cdb5841b3cc565debc33bd17fcb46946c13d374ccd274fc87234169b"
 
 [[notes]]
+path = "docs/papers/reading_notes/yan_neural_decoder_transfer_2605.12046v1_source_review.md"
+note_sha256 = "fb3ba783589076fe07c8d828387705187280d0cde834b159984f1f3bd847aa63"
+source_id = "arxiv:2605.12046"
+source_version = "v1"
+source_sha256 = "6b06b88907705b4b9ce674751cf198a188ff1a0a4446fd12b754121116f58c8c"
+
+[[notes]]
 path = "docs/papers/reading_notes/zheng_yang_loop_update_1906.04085.md"
 note_sha256 = "9da48ee673313f0998d66d856bdf76008185875d71878d9a4cd98e387ad626c0"
 source_id = "arxiv:1906.04085"
 source_version = "v1"
 source_sha256 = "baa3c51fb6452c2a750b20ca9cada92f47cf3f24f700071de0faece318227567"
+
+[[notes]]
+path = "docs/papers/reading_notes/ziad_local_clustering_decoder_s41467_025_66773_x_source_review.md"
+note_sha256 = "4caa19f9197f22cf7084b66746fa2c3e670391a683f97eafc3c4f184294989e1"
+source_id = "doi:10.1038/s41467-025-66773-x"
+source_version = "version-of-record"
+source_sha256 = "e245fe9a81ef635d9cda9421f416e27372aecb37b283d25d7951333a47428fa0"
